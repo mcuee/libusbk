@@ -1,0 +1,37 @@
+TARGETNAME=LUsbWDF
+TARGETTYPE=DRIVER
+
+KMDF_VERSION_MAJOR=1
+
+MSC_WARNING_LEVEL=/W4 /WX
+
+INF_NAME=LUsbWDF
+NTTARGETFILE0=$(OBJ_PATH)\$(O)\$(INF_NAME).inf
+PASS0_BINPLACE=$(NTTARGETFILE0)
+
+C_DEFINES= $(C_DEFINES) 
+#-DBUFFERED_READ_WRITE=1
+
+TARGETLIBS=$(TARGETLIBS) $(DDK_LIB_PATH)\usbd.lib
+
+
+INCLUDES=..
+
+SOURCES= \
+     ..\lusbw_bulk.c  \
+     ..\lusbw_device.c  \
+     ..\lusbw_driver.c  \
+     ..\lusbw_descriptor.c \
+     ..\lusbw_iso.c  \
+     ..\lusbw_pipe.c  \
+     ..\lusbw_feature.c  \
+     ..\lusbw_ioctl.c  \
+     ..\lusbw_general.c \
+     ..\lusbw_vendor.c  \
+     ..\lusbw_queue.c  \
+     ..\lusbw_status.c  \
+     ..\lusbw_interface.c  \
+     ..\LUsbWDF.rc
+
+TARGET_DESTINATION=wdf
+
