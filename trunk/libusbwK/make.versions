@@ -1,0 +1,4 @@
+PACKAGE = 3.0.0.17; NUL; NUL;
+libusbwK.sys = PACKAGE; .\common_version_h.in; .\src\libusbwK.sys\lusbw_version.h;
+libusbwK.lib = PACKAGE; .\common_version_h.in; .\src\libusbwK.lib\lusbw_version.h;
+libusbwK.dll = libusbwK.lib; .\common_version_h.in; .\src\libusbwK.dll\lusbw_version.h;

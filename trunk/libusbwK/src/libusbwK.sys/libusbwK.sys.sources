@@ -1,0 +1,39 @@
+TARGETNAME = $(G_TARGET_OUTPUT_NAME)
+TARGETPATH = $(G_TARGET_OUTPUT_ABS_DIR)
+TARGETTYPE = DRIVER
+
+KMDF_VERSION_MAJOR=1
+
+!IFNDEF MSC_WARNING_LEVEL
+MSC_WARNING_LEVEL=/W4 /WX
+!ENDIF
+
+INF_NAME		= $(G_TARGET_OUTPUT_NAME)_simple
+INF_PREVIEW_NAME= $(G_TARGET_OUTPUT_NAME)
+NTTARGETFILE0	= $(OBJ_PATH)\$(O)\$(INF_NAME).inf
+NTTARGETFILE1	= $(OBJ_PATH)\$(O)\$(INF_PREVIEW_NAME).inf
+
+PASS0_BINPLACE	= $(NTTARGETFILE0)
+
+C_DEFINES  = $(C_DEFINES) 
+TARGETLIBS = $(TARGETLIBS) $(DDK_LIB_PATH)\usbd.lib $(DDK_LIB_PATH)\ntstrsafe.lib
+
+INCLUDES = $(INCLUDES) ..\ 
+
+SOURCES= \
+     drv_driver.c \
+     drv_device.c \
+     drv_interface.c \
+     drv_policy.c \
+     drv_request.c \
+     drv_pipe.c  \
+     drv_xfer_simple.c \
+     drv_xfer_iso.c \
+     drv_xfer_control.c \
+     drv_queue_default.c \
+     drv_queue_pipe.c \
+     drv_registry.c \
+     drv_general.c \
+     drv_lusbw_rc.rc
+
+TARGET_DESTINATION=wdf
