@@ -305,6 +305,7 @@ typedef struct _REQUEST_CONTEXT
 	libusb_request	  IoControlRequest;
 	UCHAR             QueueLocked;
 } REQUEST_CONTEXT, *PREQUEST_CONTEXT;
+
 C_ASSERT(sizeof(REQUEST_CONTEXT) <= 256);
 
 WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(REQUEST_CONTEXT            ,

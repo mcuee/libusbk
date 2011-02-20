@@ -26,7 +26,6 @@
 #pragma alloc_text(PAGE, DefaultQueue_OnWrite)
 #endif
 
-#define FUNCTION_FROM_CTL_CODE(ctrlCode) (((ULONG)(ctrlCode & 0x3FFC)) >> 2)
 
 #define GET_OUT_BUFFER(MinimumBufferSize, BufferRef, LengthRef, ErrorText) \
 	status = WdfRequestRetrieveOutputBuffer(Request, MinimumBufferSize, BufferRef, LengthRef); \
@@ -71,7 +70,6 @@ VOID DefaultQueue_OnIoControl(__in WDFQUEUE Queue,
 	ULONG					length = 0;
 	libusb_request*			libusbRequest;
 	WDF_MEMORY_DESCRIPTOR	memoryDescriptor;
-	WDFMEMORY_OFFSET		memoryOffset;
 	WDFMEMORY				memory;
 	PUCHAR					outputBuffer;
 	PUCHAR					inputBuffer;
@@ -91,7 +89,7 @@ VOID DefaultQueue_OnIoControl(__in WDFQUEUE Queue,
 	wdmFileObject = WdfFileObjectWdmGetFileObject(WdfRequestGetFileObject(Request));
 	requestContext = GetRequestContext(Request);
 
-	USBDBG("outLength=%u inLength=%u IoFunc=%03Xh\n",
+	USBDEV("outLength=%u inLength=%u IoFunc=%03Xh\n",
 	       OutputBufferLength, InputBufferLength, FUNCTION_FROM_CTL_CODE(IoControlCode));
 
 	if (!deviceContext || !requestContext || !wdmFileObject)
@@ -194,44 +192,30 @@ VOID DefaultQueue_OnIoControl(__in WDFQUEUE Queue,
 		requestContext->RequestType = WdfRequestTypeRead;
 		FormatDescriptorRequestAsControlTransfer(requestContext, FALSE);
 		ForwardToQueue(Request, requestContext);
+
 		return;
-		/*
-				GET_OUT_MEMORY("get_descriptor");
-				WDF_MEMORY_DESCRIPTOR_INIT_HANDLE(&memoryDescriptor, memory, NULL);
-
-				status = Request_Descriptor(deviceContext,
-				                            &memoryDescriptor,
-				                            FALSE,
-				                            (WDF_USB_BMREQUEST_RECIPIENT)libusbRequest->descriptor.recipient,
-				                            (UCHAR) libusbRequest->descriptor.type,
-				                            (UCHAR) libusbRequest->descriptor.index,
-				                            (USHORT) libusbRequest->descriptor.language_id,
-				                            &length,
-				                            libusbRequest->timeout);
-
-				break;
-		*/
 
 	case LIBUSB_IOCTL_SET_DESCRIPTOR:
 
-		GET_IN_MEMORY("set_descriptor");
+		requestContext->PipeContext = GetPipeContextByID(deviceContext, 0);
+		if (!requestContext->PipeContext || !requestContext->PipeContext->IsValid)
+		{
+			USBERR("set_feature: invalid pipe context\n");
+			status = STATUS_INVALID_PARAMETER;
+			break;
+		}
 
-		memoryOffset.BufferOffset = sizeof(libusb_request);
-		memoryOffset.BufferLength = inputBufferLen - sizeof(libusb_request);
+		// !IMPORTANT! This length must be reset to the total input buffer length
+		// for these legacy BUFFERED ioctl codes that are HostToDevice before they
+		// ae sent to the control pipe queue.
+		requestContext->Length		= (ULONG)InputBufferLength;
+		requestContext->RequestType = WdfRequestTypeWrite;
+		//////////////////////////////////////////////////////////////////////////
 
-		WDF_MEMORY_DESCRIPTOR_INIT_HANDLE(&memoryDescriptor, memory, &memoryOffset);
+		FormatDescriptorRequestAsControlTransfer(requestContext, TRUE);
+		ForwardToQueue(Request, requestContext);
 
-		status = Request_Descriptor(deviceContext,
-		                            &memoryDescriptor,
-		                            TRUE,
-		                            (WDF_USB_BMREQUEST_RECIPIENT)libusbRequest->descriptor.recipient,
-		                            (UCHAR) libusbRequest->descriptor.type,
-		                            (UCHAR) libusbRequest->descriptor.index,
-		                            (USHORT) libusbRequest->descriptor.language_id,
-		                            &length,
-		                            libusbRequest->timeout);
-
-		break;
+		return;
 
 	case LIBUSB_IOCTL_SET_CONFIGURATION:
 
@@ -253,13 +237,10 @@ VOID DefaultQueue_OnIoControl(__in WDFQUEUE Queue,
 		GET_OUT_BUFFER(1, &outputBuffer, &outputBufferLen, "get_configuration");
 
 		if (deviceContext->UsbConfigurationDescriptor)
-		{
 			*((UCHAR*)outputBuffer) = deviceContext->UsbConfigurationDescriptor->bConfigurationValue;
-		}
 		else
-		{
 			*((UCHAR*)outputBuffer) = 0;
-		}
+
 		length = 1;
 		status = STATUS_SUCCESS;
 
@@ -322,60 +303,85 @@ VOID DefaultQueue_OnIoControl(__in WDFQUEUE Queue,
 
 	case LIBUSB_IOCTL_SET_FEATURE:
 
-		status = Request_Feature(deviceContext,
-		                         (WDF_USB_BMREQUEST_RECIPIENT) libusbRequest->feature.recipient,
-		                         (USHORT) libusbRequest->feature.index,
-		                         (USHORT)libusbRequest->feature.feature,
-		                         TRUE,
-		                         libusbRequest->timeout);
+		requestContext->PipeContext = GetPipeContextByID(deviceContext, 0);
+		if (!requestContext->PipeContext || !requestContext->PipeContext->IsValid)
+		{
+			USBERR("set_feature: invalid pipe context\n");
+			status = STATUS_INVALID_PARAMETER;
+			break;
+		}
 
-		break;
+		// !IMPORTANT! This length must be reset to the total input buffer length
+		// for these legacy BUFFERED ioctl codes that are HostToDevice before they
+		// ae sent to the control pipe queue.
+		requestContext->Length		= (ULONG)InputBufferLength;
+		requestContext->RequestType = WdfRequestTypeWrite;
+		//////////////////////////////////////////////////////////////////////////
+
+		FormatFeatureRequestAsControlTransfer(requestContext, TRUE);
+		ForwardToQueue(Request, requestContext);
+
+		return;
 
 	case LIBUSB_IOCTL_CLEAR_FEATURE:
 
-		status = Request_Feature(deviceContext,
-		                         (WDF_USB_BMREQUEST_RECIPIENT) libusbRequest->feature.recipient,
-		                         (USHORT) libusbRequest->feature.index,
-		                         (USHORT)libusbRequest->feature.feature,
-		                         FALSE,
-		                         libusbRequest->timeout);
+		requestContext->PipeContext = GetPipeContextByID(deviceContext, 0);
+		if (!requestContext->PipeContext || !requestContext->PipeContext->IsValid)
+		{
+			USBERR("clear_feature: invalid pipe context\n");
+			status = STATUS_INVALID_PARAMETER;
+			break;
+		}
 
-		break;
+		// !IMPORTANT! This length must be reset to the total input buffer length
+		// for these legacy BUFFERED ioctl codes that are HostToDevice before they
+		// ae sent to the control pipe queue.
+		requestContext->Length		= (ULONG)InputBufferLength;
+		requestContext->RequestType = WdfRequestTypeWrite;
+		//////////////////////////////////////////////////////////////////////////
+
+		FormatFeatureRequestAsControlTransfer(requestContext, FALSE);
+		ForwardToQueue(Request, requestContext);
+
+		return;
 
 	case LIBUSB_IOCTL_VENDOR_READ:
 
-		GET_IN_MEMORY("vendor_read");
-		WDF_MEMORY_DESCRIPTOR_INIT_HANDLE(&memoryDescriptor, memory, NULL);
+		requestContext->PipeContext = GetPipeContextByID(deviceContext, 0);
+		if (!requestContext->PipeContext || !requestContext->PipeContext->IsValid)
+		{
+			USBERR("vendor_read: invalid pipe context\n");
+			status = STATUS_INVALID_PARAMETER;
+			break;
+		}
+		requestContext->RequestType = WdfRequestTypeRead;
 
-		status = Request_Vendor(deviceContext,
-		                        &memoryDescriptor,
-		                        BmRequestDeviceToHost,
-		                        (WDF_USB_BMREQUEST_RECIPIENT)libusbRequest->vendor.recipient,
-		                        (BYTE)libusbRequest->vendor.request,
-		                        (USHORT)libusbRequest->vendor.value,
-		                        (USHORT)libusbRequest->vendor.index,
-		                        libusbRequest->timeout,
-		                        &length);
-		break;
+		FormatVendorRequestAsControlTransfer(requestContext);
+		ForwardToQueue(Request, requestContext);
+
+		return;
 
 	case LIBUSB_IOCTL_VENDOR_WRITE:
 
-		GET_OUT_MEMORY("vendor_write");
-		memoryOffset.BufferOffset = sizeof(libusb_request);
-		memoryOffset.BufferLength = inputBufferLen - sizeof(libusb_request);
-		WDF_MEMORY_DESCRIPTOR_INIT_HANDLE(&memoryDescriptor, memory, &memoryOffset);
+		requestContext->PipeContext = GetPipeContextByID(deviceContext, 0);
+		if (!requestContext->PipeContext || !requestContext->PipeContext->IsValid)
+		{
+			USBERR("vendor_write: invalid pipe context\n");
+			status = STATUS_INVALID_PARAMETER;
+			break;
+		}
 
-		status = Request_Vendor(deviceContext,
-		                        &memoryDescriptor,
-		                        BmRequestHostToDevice,
-		                        (WDF_USB_BMREQUEST_RECIPIENT)libusbRequest->vendor.recipient,
-		                        (BYTE)libusbRequest->vendor.request,
-		                        (USHORT)libusbRequest->vendor.value,
-		                        (USHORT)libusbRequest->vendor.index,
-		                        libusbRequest->timeout,
-		                        &length);
+		// !IMPORTANT! This length must be reset to the total input buffer length
+		// for these legacy BUFFERED ioctl codes that are HostToDevice before they
+		// ae sent to the control pipe queue.
+		requestContext->Length		= (ULONG)InputBufferLength;
+		requestContext->RequestType = WdfRequestTypeWrite;
+		//////////////////////////////////////////////////////////////////////////
 
-		break;
+		FormatVendorRequestAsControlTransfer(requestContext);
+		ForwardToQueue(Request, requestContext);
+
+		return;
 
 	case LIBUSB_IOCTL_GET_STATUS:
 
@@ -525,13 +531,20 @@ VOID DefaultQueue_OnIoControl(__in WDFQUEUE Queue,
 		break;
 
 	default :
-		USBERR("unknown IoControlCode %Xh\n", IoControlCode);
+
+		USBERR("unknown IoControlCode %Xh (function=%04Xh)\n", IoControlCode, FUNCTION_FROM_CTL_CODE(IoControlCode));
 		status = STATUS_INVALID_DEVICE_REQUEST;
-		break;
+		WdfRequestCompleteWithInformation(Request, status, 0);
+
+		return;
 	}
 
 
-	USBDBG("status=%Xh\n", status);
+	if (!NT_SUCCESS(status))
+	{
+		USBDBG("status=%Xh\n", status);
+	}
+
 	WdfRequestCompleteWithInformation(Request, status, length);
 
 	return;

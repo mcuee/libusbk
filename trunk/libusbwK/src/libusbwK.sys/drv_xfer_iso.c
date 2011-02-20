@@ -34,41 +34,37 @@ WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(SUB_REQUEST_CONTEXT, GetSubRequestContext)
 
 // iso queue events
 EVT_WDF_REQUEST_CANCEL LUsbW_EvtRequestCancel;
-EVT_WDF_REQUEST_COMPLETION_ROUTINE SubRequestCompletionRoutine;
+EVT_WDF_REQUEST_COMPLETION_ROUTINE XferIsoComplete;
 EVT_WDF_REQUEST_COMPLETION_ROUTINE ReadWriteCompletion;
 
 VOID
-DoSubRequestCleanup(
+XferIsoCleanup(
     PREQUEST_CONTEXT    MainRequestContext,
     PLIST_ENTRY         SubRequestsList,
     PBOOLEAN            CompleteRequest);
 
-/*++
-
+/* ISOCHRONOUS TRANSFERS (for full speed devices)
+ *
 Routine Description:
-
-    This routine
     1. Creates a Sub Request for each irp/urb pair.
        (Each irp/urb pair can transfer a max of 1024 packets.)
     2. All the irp/urb pairs are initialized
     3. The subsidiary irps (of the irp/urb pair) are passed
        down the stack at once.
-    4. The main Read/Write is completed in the SubRequestCompletionRoutine
+    4. The main Read/Write is completed in the XferIsoComplete
        even if one SubRequest is sent successfully.
 
 Arguments:
-
-    Device - Device handle
-    Request - Default queue handle
+    Queue   - Default queue handle
     Request - Read/Write Request received from the user app.
-    TotalLength - Length of the user buffer.
-
-Return Value:
-
-    VOID
---*/
-VOID Xfer_IsoFS(__in WDFQUEUE Queue,
-                __in WDFREQUEST Request)
+	InputBufferLength  - Length of the transfer buffer for IoWrite request only.
+	OutputBufferLength - Length of transfer buffer for IoRead and DeviceIoControl request.
+*/
+VOID XferIsoFS (
+    __in WDFQUEUE Queue,
+    __in WDFREQUEST Request,
+    __in size_t InputBufferLength,
+    __in size_t OutputBufferLength)
 {
 	ULONG                   packetSize;
 	ULONG                   numSubRequests;
@@ -88,6 +84,9 @@ VOID Xfer_IsoFS(__in WDFQUEUE Queue,
 	USBD_PIPE_HANDLE        usbdPipeHandle;
 	BOOLEAN                 cancelable;
 	ULONG					TotalLength;
+
+	UNREFERENCED_PARAMETER(InputBufferLength);
+	UNREFERENCED_PARAMETER(OutputBufferLength);
 
 	cancelable = FALSE;
 
@@ -411,7 +410,7 @@ VOID Xfer_IsoFS(__in WDFQUEUE Queue,
 		}
 
 		WdfRequestSetCompletionRoutine(subRequest,
-		                               SubRequestCompletionRoutine,
+		                               XferIsoComplete,
 		                               requestContext);
 
 		if(TotalLength > (packetSize * 255))
@@ -513,7 +512,7 @@ Exit:
 
 		if(hCollection)
 		{
-			DoSubRequestCleanup(requestContext, &subRequestsList, &completeRequest);
+			XferIsoCleanup(requestContext, &subRequestsList, &completeRequest);
 		}
 
 		if (completeRequest)
@@ -551,7 +550,7 @@ Exit:
 	return;
 }
 
-VOID Xfer_IsoHS(
+VOID XferIsoHS(
     __in WDFQUEUE         Queue,
     __in WDFREQUEST       Request,
     __in ULONG            Length)
@@ -666,7 +665,7 @@ Routine Description:
     2. All the irp/urb pairs are initialized
     3. The subsidiary irps (of the irp/urb pair) are passed
        down the stack at once.
-    4. The main Read/Write is completed in the SubRequestCompletionRoutine
+    4. The main Read/Write is completed in the XferIsoComplete
        even if one SubRequest is sent successfully.
 
 Arguments:
@@ -1095,7 +1094,7 @@ Return Value:
 		}
 
 		WdfRequestSetCompletionRoutine(subRequest,
-		                               SubRequestCompletionRoutine,
+		                               XferIsoComplete,
 		                               requestContext);
 
 		//
@@ -1195,7 +1194,7 @@ Exit:
 
 		if(hCollection)
 		{
-			DoSubRequestCleanup(requestContext, &subRequestsList, &completeRequest);
+			XferIsoCleanup(requestContext, &subRequestsList, &completeRequest);
 		}
 
 		if (completeRequest)
@@ -1235,7 +1234,7 @@ Exit:
 }
 
 VOID
-DoSubRequestCleanup(
+XferIsoCleanup(
     PREQUEST_CONTEXT    MainRequestContext,
     PLIST_ENTRY         SubRequestsList,
     PBOOLEAN            CompleteRequest
@@ -1276,7 +1275,7 @@ DoSubRequestCleanup(
 }
 
 VOID
-SubRequestCompletionRoutine(
+XferIsoComplete(
     __in WDFREQUEST                  Request,
     __in WDFIOTARGET                 Target,
     PWDF_REQUEST_COMPLETION_PARAMS CompletionParams,
@@ -1312,8 +1311,6 @@ Return Value:
 
 	UNREFERENCED_PARAMETER(Target);
 
-	USBMSG("begins\n");
-
 	subReqContext = GetSubRequestContext(Request);
 
 	urb = (PURB) subReqContext->SubUrb;
@@ -1343,14 +1340,17 @@ Return Value:
 
 	}
 
-	for(i = 0; i < urb->UrbIsochronousTransfer.NumberOfPackets; i++)
+	if(!NT_SUCCESS(status))
 	{
+		for(i = 0; i < urb->UrbIsochronousTransfer.NumberOfPackets; i++)
+		{
 
-		USBDBG("IsoPacket[%d].Length = %X IsoPacket[%d].Status = %X\n",
-		       i,
-		       urb->UrbIsochronousTransfer.IsoPacket[i].Length,
-		       i,
-		       urb->UrbIsochronousTransfer.IsoPacket[i].Status);
+			USBDBG("IsoPacket[%d].Length = %X IsoPacket[%d].Status = %X\n",
+			       i,
+			       urb->UrbIsochronousTransfer.IsoPacket[i].Length,
+			       i,
+			       urb->UrbIsochronousTransfer.IsoPacket[i].Status);
+		}
 	}
 
 	//
@@ -1385,9 +1385,9 @@ Return Value:
 		//
 		// if we transferred some data, main Irp completes with success
 		//
-		USBMSG("Total data transferred = %X\n", requestContext->TotalTransferred);
+		USBMSG("Total data transferred = %u\n", requestContext->TotalTransferred);
 
-		USBMSG("SubRequestCompletionRoutine %s completed\n",
+		USBMSG("XferIsoComplete %s completed\n",
 		       requestContext->RequestType == WdfRequestTypeRead ? "Read" : "Write");
 		//
 		// Mark the main request as not cancelable before completing it.
@@ -1405,13 +1405,16 @@ Return Value:
 
 		if (requestContext->TotalTransferred > 0 )
 		{
-			WdfRequestCompleteWithInformation(mainRequest, STATUS_SUCCESS, requestContext->TotalTransferred);
+			WdfRequestCompleteWithInformation(mainRequest,
+			                                  STATUS_SUCCESS, requestContext->TotalTransferred);
 		}
 		else
 		{
-			USBMSG("SubRequestCompletionRoutine completiong with failure status %x\n",
+			USBMSG("XferIsoComplete failed. status=%Xh\n",
 			       CompletionParams->IoStatus.Status);
-			WdfRequestCompleteWithInformation(mainRequest, CompletionParams->IoStatus.Status, requestContext->TotalTransferred);
+
+			WdfRequestCompleteWithInformation(mainRequest,
+			                                  CompletionParams->IoStatus.Status, requestContext->TotalTransferred);
 		}
 
 	}
@@ -1421,8 +1424,6 @@ Return Value:
 	// reference.
 	//
 	WdfObjectDelete(Request);
-
-	USBMSG("ends\n");
 
 	return;
 }

@@ -68,22 +68,17 @@ extern ULONG DebugLevel;
 #endif
 
 #define IFDBGLVL(level) if (DebugLevel > level)
-#define USB_LN "\n" LOG_APPNAME
+#define USB_LN "\n     "
 
 #define USBLOG(MinDebugLevel,LogAppNameString,CategoryText,FunctionText,format,...) \
-	IFDBGLVL(MinDebugLevel) DebugOutputFunction("%s%s%s " format, LogAppNameString, CategoryText, FunctionText,__VA_ARGS__)
+	IFDBGLVL(MinDebugLevel) DebugOutputFunction("%s%s%s " format, CategoryText, LogAppNameString, FunctionText,__VA_ARGS__)
 
 #define USBERR(format,...) USBLOG(0, LOG_APPNAME, "[ERR]", "["__FUNCTION__"]",format,__VA_ARGS__)
 #define USBWRN(format,...) USBLOG(1, LOG_APPNAME, "[WRN]", "["__FUNCTION__"]",format,__VA_ARGS__)
 #define USBMSG(format,...) USBLOG(2, LOG_APPNAME, "", "["__FUNCTION__"]",format,__VA_ARGS__)
 #define USBDBG(format,...) USBLOG(3, LOG_APPNAME, "", "["__FUNCTION__"]",format,__VA_ARGS__)
+#define USBDEV(format,...) USBLOG(255, LOG_APPNAME, "", "["__FUNCTION__"]",format,__VA_ARGS__)
 
-/*
-#define USBERR(format,...) IFDBGLVL(0) DebugOutputFunction(_ERR_FMT __FUNCTION__ "] " format,LOG_APPNAME,__VA_ARGS__)
-#define USBWRN(format,...) IFDBGLVL(1) DebugOutputFunction(_WRN_FMT __FUNCTION__ "] " format,LOG_APPNAME,__VA_ARGS__)
-#define USBMSG(format,...) IFDBGLVL(2) DebugOutputFunction(_MSG_FMT __FUNCTION__ "] " format,LOG_APPNAME,__VA_ARGS__)
-#define USBDBG(format,...) IFDBGLVL(3) DebugOutputFunction(_DBG_FMT __FUNCTION__ "] " format,LOG_APPNAME,__VA_ARGS__)
-*/
 #define USBE_SUCCESS(success,format,...) USBLOG(2,LOG_APPNAME,((success)?"[Success!]":"[Fail!]"),__FUNCTION__,format,__VA_ARGS__)
 #define USBE_OK(format,...) USBMSG("[Ok!] " format,__VA_ARGS__)
 #define USBE_PARAM(ParameterName) USBERR("invalid parameter: %s\n",DEFINE_TO_STR(ParameterName))
@@ -98,6 +93,7 @@ FORCEINLINE VOID USB_LOG_NOP() {}
 #define USBMSG(format,...) USB_LOG_NOP()
 #define USBWRN(format,...) USB_LOG_NOP()
 #define USBDBG(format,...) USB_LOG_NOP()
+#define USBDEV(format,...) USB_LOG_NOP(
 
 #define USBE_OK(format,...) USB_LOG_NOP()
 #define USBE_PARAM(ParameterName) USB_LOG_NOP()

@@ -72,6 +72,7 @@ IF "%~1" NEQ "!WOUND_GUID!" (
 		
 		FOR /F "usebackq eol=; tokens=* delims=" %%K IN (`!DCMD! "-sp=;" "!G_DIST_BUILD_LIST!"`) DO (
 			CALL :SafeCMD %0 !WOUND_GUID! build %%K
+			IF DEFINED G_VERSION SET G_VERSION=
 			IF !BUILD_ERRORLEVEL! NEQ 0 GOTO DoneWithErrors
 		)
 		ECHO Dist Filelist [G_BUILD_OUTPUT_FILES=!G_BUILD_OUTPUT_FILES!]:

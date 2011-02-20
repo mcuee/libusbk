@@ -23,10 +23,28 @@
 #if (defined(ALLOC_PRAGMA) && defined(PAGING_ENABLED))
 #endif
 
-EVT_WDF_REQUEST_COMPLETION_ROUTINE Xfer_OnComplete;
+EVT_WDF_REQUEST_COMPLETION_ROUTINE XferComplete;
 
-VOID Xfer(__in WDFQUEUE Queue,
-          __in WDFREQUEST Request)
+/* BULK AND INTERRUPT TRANSFERS
+ *
+Routine Description:
+    1. Re-uses original request. If the transfer length is greater than stage length,
+	   the pipe context wait lock is acquired so the transfer can continue in it's
+	   completion routine without interruption from transfers behind it.
+    2. Applies WinUSB-like pipe policies; some policies also require the pipe context wait lock
+	   be held through the completion routine. (XferComplete)
+
+Arguments:
+    Queue   - Default queue handle
+    Request - Read/Write Request received from the user app.
+	InputBufferLength  - Length of the transfer buffer for IoWrite request only.
+	OutputBufferLength - Length of transfer buffer for IoRead and DeviceIoControl request.
+*/
+VOID Xfer (
+    __in WDFQUEUE Queue,
+    __in WDFREQUEST Request,
+    __in size_t InputBufferLength,
+    __in size_t OutputBufferLength)
 {
 	NTSTATUS                status;
 	PREQUEST_CONTEXT        requestContext = NULL;
@@ -36,6 +54,9 @@ VOID Xfer(__in WDFQUEUE Queue,
 	UCHAR					pipeID = 0;
 	BOOLEAN					queueLocked = TRUE;
 	WDF_REQUEST_SEND_OPTIONS sendOptions;
+
+	UNREFERENCED_PARAMETER(InputBufferLength);
+	UNREFERENCED_PARAMETER(OutputBufferLength);
 
 	deviceContext = GetDeviceContext(WdfIoQueueGetDevice(Queue));
 	requestContext = GetRequestContext(Request);
@@ -97,7 +118,7 @@ VOID Xfer(__in WDFQUEUE Queue,
 		goto Exit;
 	}
 
-	status = SubmitAsyncRequest(requestContext, Request, Xfer_OnComplete, &sendOptions);
+	status = SubmitAsyncRequest(requestContext, Request, XferComplete, &sendOptions);
 	if (!NT_SUCCESS(status) || !queueLocked)
 	{
 		WdfWaitLockRelease(requestContext->PipeContext->PipeLock);
@@ -124,10 +145,10 @@ Exit:
 	return;
 }
 
-VOID Xfer_OnComplete(__in WDFREQUEST Request,
-                     __in WDFIOTARGET Target,
-                     __in PWDF_REQUEST_COMPLETION_PARAMS CompletionParams,
-                     __in WDFCONTEXT Context)
+VOID XferComplete(__in WDFREQUEST Request,
+                  __in WDFIOTARGET Target,
+                  __in PWDF_REQUEST_COMPLETION_PARAMS CompletionParams,
+                  __in WDFCONTEXT Context)
 {
 	NTSTATUS status;
 	PREQUEST_CONTEXT requestContext;
@@ -153,7 +174,7 @@ VOID Xfer_OnComplete(__in WDFREQUEST Request,
 	case STATUS_SUCCESS:
 		break;
 	case STATUS_TIMEOUT:
-		status = STATUS_IO_TIMEOUT;
+		//status = STATUS_IO_TIMEOUT;
 	case STATUS_IO_TIMEOUT:
 		USBWRN("[Timeout] pipeID=%02Xh ioStatus=%Xh requestStatus=%Xh\n",
 		       pipeID, CompletionParams->IoStatus.Status, WdfRequestGetStatus(Request));
@@ -232,7 +253,7 @@ Continue:
 	if (!NT_SUCCESS((status = UrbFormatBulkRequestContext(Request, requestContext, NULL,  NULL))))
 		goto Exit;
 
-	status = SubmitAsyncRequest(requestContext, Request, Xfer_OnComplete, NULL);
+	status = SubmitAsyncRequest(requestContext, Request, XferComplete, NULL);
 	if (NT_SUCCESS(status))
 		return;
 

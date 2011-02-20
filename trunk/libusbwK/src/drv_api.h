@@ -276,6 +276,8 @@ typedef struct
 		{
 			unsigned int policy_type;
 		} power_policy;
+
+		// WDF_USB_CONTROL_SETUP_PACKET control;
 		struct
 		{
 			UCHAR   RequestType;

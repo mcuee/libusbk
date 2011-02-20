@@ -7,18 +7,27 @@
 	(GetPolicyValue(MAX_TRANSFER_STAGE_SIZE,ReqestContext->PipeContext->Policy))
 
 
-VOID Xfer(__in WDFQUEUE Queue,
-          __in WDFREQUEST Request);
+VOID Xfer (
+    __in WDFQUEUE Queue,
+    __in WDFREQUEST Request,
+    __in size_t InputBufferLength,
+    __in size_t OutputBufferLength);
 
-VOID Xfer_Control(__in WDFQUEUE Queue,
-                  __in WDFREQUEST Request);
+VOID XferCtrl (
+    __in WDFQUEUE Queue,
+    __in WDFREQUEST Request,
+    __in size_t InputBufferLength,
+    __in size_t OutputBufferLength);
 
-VOID Xfer_IsoFS(__in WDFQUEUE Queue,
-                __in WDFREQUEST Request);
+VOID XferIsoFS (
+    __in WDFQUEUE Queue,
+    __in WDFREQUEST Request,
+    __in size_t InputBufferLength,
+    __in size_t OutputBufferLength);
 
-VOID Xfer_IsoHS(__in WDFQUEUE Queue,
-                __in WDFREQUEST Request,
-                __in ULONG Length);
+VOID XferIsoHS(__in WDFQUEUE Queue,
+               __in WDFREQUEST Request,
+               __in ULONG Length);
 
 FORCEINLINE NTSTATUS SetRequestTimeout(__in PREQUEST_CONTEXT requestContext,
                                        __in WDFREQUEST wdfRequest,
@@ -38,18 +47,15 @@ FORCEINLINE NTSTATUS SetRequestTimeout(__in PREQUEST_CONTEXT requestContext,
 			USBERR("WdfRequestAllocateTimer failed. status=%Xh\n", status);
 		}
 	}
-	else
-	{
-		USBDBG("timeout=infinite\n");
-	}
 
 	return status;
 }
 
-FORCEINLINE NTSTATUS SubmitAsyncRequest(__in PREQUEST_CONTEXT requestContext,
-                                        __in WDFREQUEST wdfRequest,
-                                        __in EVT_WDF_REQUEST_COMPLETION_ROUTINE completionRoutine,
-                                        __in PWDF_REQUEST_SEND_OPTIONS wdfSendOptions)
+FORCEINLINE NTSTATUS SubmitAsyncRequest(
+    __in PREQUEST_CONTEXT requestContext,
+    __in WDFREQUEST wdfRequest,
+    __in EVT_WDF_REQUEST_COMPLETION_ROUTINE completionRoutine,
+    __in PWDF_REQUEST_SEND_OPTIONS wdfSendOptions)
 {
 	NTSTATUS status = STATUS_SUCCESS;
 	WdfRequestSetCompletionRoutine(wdfRequest, completionRoutine, NULL);
@@ -65,10 +71,11 @@ FORCEINLINE NTSTATUS SubmitAsyncRequest(__in PREQUEST_CONTEXT requestContext,
 	return status;
 }
 
-FORCEINLINE NTSTATUS UrbFormatBulkRequestContext(__in WDFREQUEST Request,
-        __in PREQUEST_CONTEXT requestContext,
-        __out_opt PULONG stageTransferSize,
-        __out_opt PULONG remainingTransferSize)
+FORCEINLINE NTSTATUS UrbFormatBulkRequestContext(
+    __in WDFREQUEST Request,
+    __in PREQUEST_CONTEXT requestContext,
+    __out_opt PULONG stageTransferSize,
+    __out_opt PULONG remainingTransferSize)
 {
 	NTSTATUS status;
 	PURB urb = NULL;

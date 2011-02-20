@@ -83,7 +83,7 @@ FORCEINLINE NTSTATUS GetInterfaceAltSettingIndexFromRequest(
 		{
 			USBERR("alternate interface index %u does not exist\n",
 			       requestContext->IoControlRequest.intf.altsettingIndex);
-			return STATUS_INVALID_PARAMETER;
+			return STATUS_NO_MORE_ENTRIES;
 		}
 		altIndex = requestContext->IoControlRequest.intf.altsettingIndex;
 		WdfUsbInterfaceGetDescriptor(interfaceContext->Interface, altIndex, &interfaceDescriptor);
@@ -107,7 +107,7 @@ FORCEINLINE NTSTATUS GetInterfaceAltSettingIndexFromRequest(
 	{
 		USBERR("alternate interface number %u does not exist\n",
 		       requestContext->IoControlRequest.intf.altsetting_number);
-		return STATUS_INVALID_PARAMETER;
+		return STATUS_NO_MORE_ENTRIES;
 	}
 
 	if (altSettingIndex)
@@ -140,7 +140,7 @@ FORCEINLINE NTSTATUS GetInterfaceContextFromRequest(
 		if (!(*interfaceContext))
 		{
 			USBERR("unable to get interface index %u\n", intfIndex);
-			return STATUS_INVALID_PARAMETER;
+			return STATUS_NO_MORE_ENTRIES;
 		}
 	}
 	else
@@ -150,7 +150,7 @@ FORCEINLINE NTSTATUS GetInterfaceContextFromRequest(
 		if (!(*interfaceContext))
 		{
 			USBERR("unable to get interface number %u\n", intfNumber);
-			return STATUS_INVALID_PARAMETER;
+			return STATUS_NO_MORE_ENTRIES;
 		}
 	}
 

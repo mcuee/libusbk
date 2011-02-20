@@ -25,6 +25,8 @@
 // Used to detect when a high speed isochronous transfer function is needed.
 #define IsHighSpeedDevice(DeviceContextPtr) (DeviceContextPtr->DeviceSpeed >= UsbHighSpeed ? TRUE : FALSE)
 
+#define FUNCTION_FROM_CTL_CODE(ctrlCode) (((ULONG)(ctrlCode & 0x3FFC)) >> 2)
+
 //////////////////////////////////////////////////////////////////////////////
 // lusbw_queue.c function prototypes.
 // Default queue events.

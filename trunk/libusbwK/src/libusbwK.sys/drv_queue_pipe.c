@@ -31,14 +31,16 @@ VOID NONPAGABLE PipeQueue_OnIoControl(__in WDFQUEUE Queue,
                                       __in size_t InputBufferLength,
                                       __in ULONG IoControlCode)
 {
-	NTSTATUS status = STATUS_INVALID_DEVICE_REQUEST;
+	NTSTATUS status;
 	ULONG length = 0;
 	PUCHAR inputBuffer, outputBuffer;
 	libusb_request* libusbRequest;
 	PDEVICE_CONTEXT deviceContext = GetDeviceContext(WdfIoQueueGetDevice(Queue));
 	PREQUEST_CONTEXT requestContext = GetRequestContext(Request);
 
-	UNREFERENCED_PARAMETER(InputBufferLength);
+	VALIDATE_REQUEST_CONTEXT(requestContext, status);
+	if (!NT_SUCCESS(status))
+		goto Done;
 
 	switch(IoControlCode)
 	{
@@ -52,28 +54,38 @@ VOID NONPAGABLE PipeQueue_OnIoControl(__in WDFQUEUE Queue,
 		case WdfUsbPipeTypeIsochronous:
 
 			if (IsHighSpeedDevice(deviceContext))
-				Xfer_IsoHS(Queue, Request, (ULONG)OutputBufferLength);
+			{
+				XferIsoHS(Queue, Request, (ULONG)OutputBufferLength);
+			}
 			else
-				Xfer_IsoFS(Queue, Request);
+			{
+				XferIsoFS(Queue, Request, InputBufferLength, OutputBufferLength);
+			}
+
 			return;
 
 		case WdfUsbPipeTypeBulk:
 		case WdfUsbPipeTypeInterrupt:
 
-			Xfer(Queue, Request);
+			Xfer(Queue, Request, InputBufferLength, OutputBufferLength);
+
 			return;
 
 		}
-
-		USBERR("invalid pipeType=%u\n", requestContext->PipeContext->PipeInformation.PipeType);
 		status = STATUS_INVALID_PARAMETER;
+		USBERR("invalid pipeType=%u\n", requestContext->PipeContext->PipeInformation.PipeType);
 		break;
 
+	case LIBUSB_IOCTL_SET_FEATURE:
+	case LIBUSB_IOCTL_CLEAR_FEATURE:
 	case LIBUSB_IOCTL_GET_DESCRIPTOR:
+	case LIBUSB_IOCTL_SET_DESCRIPTOR:
+	case LIBUSB_IOCTL_VENDOR_WRITE:
+	case LIBUSB_IOCTL_VENDOR_READ:
 	case LIBUSB_IOCTL_CONTROL_READ:
 	case LIBUSB_IOCTL_CONTROL_WRITE:
 
-		Xfer_Control(Queue, Request);
+		XferCtrl(Queue, Request, InputBufferLength, OutputBufferLength);
 		return;
 
 	case LIBUSB_IOCTL_GET_PIPE_POLICY:
@@ -136,18 +148,22 @@ VOID NONPAGABLE PipeQueue_OnIoControl(__in WDFQUEUE Queue,
 		break;
 
 	default:
-		USBERR("Invalid IoControlCode %Xh\n", IoControlCode);
+
+		USBERR("unknown IoControlCode %Xh (function=%04Xh)\n", IoControlCode, FUNCTION_FROM_CTL_CODE(IoControlCode));
 		status = STATUS_INVALID_DEVICE_REQUEST;
-		break;
+		WdfRequestCompleteWithInformation(Request, status, 0);
+
+		return;
 	}
 
+Done:
 	WdfRequestCompleteWithInformation(Request, status, length);
 	return;
 
 }
 VOID NONPAGABLE PipeQueue_OnRead(__in WDFQUEUE Queue,
                                  __in WDFREQUEST Request,
-                                 __in size_t Length)
+                                 __in size_t OutputBufferLength)
 {
 	NTSTATUS				status = STATUS_SUCCESS;
 	PDEVICE_CONTEXT         deviceContext;
@@ -170,12 +186,12 @@ VOID NONPAGABLE PipeQueue_OnRead(__in WDFQUEUE Queue,
 	if (requestContext->PipeContext->PipeInformation.PipeType == WdfUsbPipeTypeIsochronous)
 	{
 		if(IsHighSpeedDevice(deviceContext))
-			Xfer_IsoHS(Queue, Request, (ULONG)Length);
+			XferIsoHS(Queue, Request, (ULONG)OutputBufferLength);
 		else
-			Xfer_IsoFS(Queue, Request);
+			XferIsoFS(Queue, Request, SIZE_T_MAX, OutputBufferLength);
 	}
 	else // bulk/interrupt pipe.
-		Xfer(Queue, Request);
+		Xfer(Queue, Request, SIZE_T_MAX, OutputBufferLength);
 
 	return;
 
@@ -186,7 +202,7 @@ Done:
 
 VOID NONPAGABLE PipeQueue_OnWrite(__in WDFQUEUE Queue,
                                   __in WDFREQUEST Request,
-                                  __in size_t Length)
+                                  __in size_t InputBufferLength)
 {
 	NTSTATUS				status = STATUS_SUCCESS;
 	PDEVICE_CONTEXT         deviceContext;
@@ -209,12 +225,12 @@ VOID NONPAGABLE PipeQueue_OnWrite(__in WDFQUEUE Queue,
 	if (requestContext->PipeContext->PipeInformation.PipeType == WdfUsbPipeTypeIsochronous)
 	{
 		if(IsHighSpeedDevice(deviceContext))
-			Xfer_IsoHS(Queue, Request, (ULONG)Length);
+			XferIsoHS(Queue, Request, (ULONG)InputBufferLength);
 		else
-			Xfer_IsoFS(Queue, Request);
+			XferIsoFS(Queue, Request, InputBufferLength, SIZE_T_MAX);
 	}
 	else // bulk/interrupt pipe.
-		Xfer(Queue, Request);
+		Xfer(Queue, Request, InputBufferLength, SIZE_T_MAX);
 
 	return;
 
