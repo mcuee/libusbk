@@ -25,14 +25,17 @@
 	!requestContext->PipeContext || \
 	!requestContext->PipeContext->IsValid)
 
-EVT_WDF_REQUEST_COMPLETION_ROUTINE Xfer_ControlComplete;
+EVT_WDF_REQUEST_COMPLETION_ROUTINE XferCtrlComplete;
 
 #if (defined(ALLOC_PRAGMA) && defined(PAGING_ENABLED))
 
 #endif
 
-VOID Xfer_Control(__in WDFQUEUE Queue,
-                  __in WDFREQUEST Request)
+VOID XferCtrl (
+    __in WDFQUEUE Queue,
+    __in WDFREQUEST Request,
+    __in size_t InputBufferLength,
+    __in size_t OutputBufferLength)
 {
 	NTSTATUS                status;
 	PDEVICE_CONTEXT         deviceContext;
@@ -40,6 +43,12 @@ VOID Xfer_Control(__in WDFQUEUE Queue,
 	WDFMEMORY				transferMemory;
 	PWDF_USB_CONTROL_SETUP_PACKET setupPacket;
 	WDF_REQUEST_SEND_OPTIONS sendOptions;
+	WDFMEMORY_OFFSET		_transferOffset;
+	PWDFMEMORY_OFFSET		transferOffset = &_transferOffset;
+
+
+	UNREFERENCED_PARAMETER(InputBufferLength);
+	UNREFERENCED_PARAMETER(OutputBufferLength);
 
 	deviceContext = GetDeviceContext(WdfIoQueueGetDevice(Queue));
 	requestContext = GetRequestContext(Request);
@@ -104,26 +113,65 @@ VOID Xfer_Control(__in WDFQUEUE Queue,
 		}
 	}
 
-	status = WdfRequestRetrieveOutputMemory(Request, &transferMemory);
-	if (!NT_SUCCESS(status) && status != STATUS_BUFFER_TOO_SMALL)
+	if (METHOD_FROM_CTL_CODE(requestContext->IoControlCode) == METHOD_BUFFERED &&
+	        requestContext->RequestType == WdfRequestTypeWrite)
 	{
-		USBERR("WdfRequestRetrieveOutputMemory failed. status=%Xh\n", status);
-		goto Exit;
+		// support for some of the legacy LIBUSB_IOCTL codes which place the data input
+		// buffer at the end of the libusb_request structure.
+		status = WdfRequestRetrieveInputMemory(Request, &transferMemory);
+		if (!NT_SUCCESS(status))
+		{
+			USBERR("WdfRequestRetrieveInputMemory failed. status=%Xh\n", status);
+			goto Exit;
+		}
+
+		if (requestContext->Length < sizeof(libusb_request))
+		{
+			// this can never happen because the input buffer length is checked for
+			// this by the default IoControl event.
+			status = STATUS_BUFFER_TOO_SMALL;
+			USBERR("input buffer length is less than sizeof(libusb_request) status=%Xh\n", status);
+			goto Exit;
+		}
+
+		transferOffset->BufferOffset = sizeof(libusb_request);
+		transferOffset->BufferLength = requestContext->Length - sizeof(libusb_request);
+
+		if (transferOffset->BufferLength == 0)
+		{
+			// this is okay but no input data means transferOffset->BufferOffset is pointing
+			// to invalid memory; because the length is also zero it is still most likely safe.
+			transferOffset = NULL;
+			transferMemory = NULL;
+		}
+	}
+	else
+	{
+		// native control transfers are direct; data comes from/goes to the out buffer whether reading or writing.
+		transferOffset = NULL;
+		status = WdfRequestRetrieveOutputMemory(Request, &transferMemory);
+		if (!NT_SUCCESS(status) && status != STATUS_BUFFER_TOO_SMALL)
+		{
+			USBERR("WdfRequestRetrieveOutputMemory failed. status=%Xh\n", status);
+			goto Exit;
+		}
+
+		if (status == STATUS_BUFFER_TOO_SMALL)
+		{
+			// zero length transfer buffer, this is okay.
+			transferMemory = NULL;
+			USBMSG("zero-length transfer buffer\n");
+		}
 	}
 
-	if (status == STATUS_BUFFER_TOO_SMALL)
-	{
-		// zero length transfer buffer, this is okay.
-		transferMemory = NULL;
-		USBMSG("zero-length transfer buffer\n");
-	}
+
 
 	status = WdfUsbTargetDeviceFormatRequestForControlTransfer(
 	             deviceContext->WdfUsbTargetDevice,
 	             Request,
 	             setupPacket,
 	             transferMemory,
-	             NULL);
+	             transferOffset);
 
 	if (!NT_SUCCESS(status))
 	{
@@ -132,7 +180,7 @@ VOID Xfer_Control(__in WDFQUEUE Queue,
 	}
 
 	WdfRequestSetCompletionRoutine(Request,
-	                               Xfer_ControlComplete,
+	                               XferCtrlComplete,
 	                               NULL);
 
 	WDF_REQUEST_SEND_OPTIONS_INIT(&sendOptions, 0);
@@ -166,10 +214,10 @@ Exit:
 	return;
 }
 
-VOID Xfer_ControlComplete(__in WDFREQUEST Request,
-                          __in WDFIOTARGET Target,
-                          __in PWDF_REQUEST_COMPLETION_PARAMS Params,
-                          __in WDFCONTEXT Context)
+VOID XferCtrlComplete(__in WDFREQUEST Request,
+                      __in WDFIOTARGET Target,
+                      __in PWDF_REQUEST_COMPLETION_PARAMS Params,
+                      __in WDFCONTEXT Context)
 {
 	NTSTATUS status = Params->IoStatus.Status;
 	PWDF_USB_REQUEST_COMPLETION_PARAMS usbCompletionParams = Params->Parameters.Usb.Completion;

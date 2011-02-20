@@ -40,11 +40,28 @@
 #define FormatDescriptorRequestAsControlTransfer(requestContext, setDescriptor)												\
 	WDF_USB_CONTROL_SETUP_PACKET_INIT(																						\
 	(PWDF_USB_CONTROL_SETUP_PACKET)&requestContext->IoControlRequest.control,												\
-	BmRequestDeviceToHost,																									\
+	(requestContext->RequestType==WdfRequestTypeWrite) ? BmRequestHostToDevice : BmRequestDeviceToHost,						\
 	requestContext->IoControlRequest.descriptor.recipient,																	\
 	setDescriptor ? USB_REQUEST_SET_DESCRIPTOR : USB_REQUEST_GET_DESCRIPTOR,												\
 	(USHORT)((requestContext->IoControlRequest.descriptor.type << 8) | requestContext->IoControlRequest.descriptor.index),	\
 	(USHORT)requestContext->IoControlRequest.descriptor.language_id)
+
+#define FormatVendorRequestAsControlTransfer(requestContext)																\
+	WDF_USB_CONTROL_SETUP_PACKET_INIT_VENDOR(																				\
+	(PWDF_USB_CONTROL_SETUP_PACKET)&requestContext->IoControlRequest.control,												\
+	(requestContext->RequestType==WdfRequestTypeWrite) ? BmRequestHostToDevice : BmRequestDeviceToHost,						\
+	(WDF_USB_BMREQUEST_RECIPIENT)requestContext->IoControlRequest.vendor.recipient,											\
+	(BYTE)requestContext->IoControlRequest.vendor.request,																	\
+	(USHORT)requestContext->IoControlRequest.vendor.value,																	\
+	(USHORT)requestContext->IoControlRequest.vendor.index)
+
+#define FormatFeatureRequestAsControlTransfer(requestContext,SetFeature)													\
+	WDF_USB_CONTROL_SETUP_PACKET_INIT_FEATURE(																				\
+		(PWDF_USB_CONTROL_SETUP_PACKET)&requestContext->IoControlRequest.control,											\
+		(WDF_USB_BMREQUEST_RECIPIENT) libusbRequest->feature.recipient,														\
+		(USHORT)libusbRequest->feature.feature,																				\
+		(USHORT) libusbRequest->feature.index,																				\
+		SetFeature)
 
 NTSTATUS Request_Descriptor(__in PDEVICE_CONTEXT deviceContext,
                             __in PWDF_MEMORY_DESCRIPTOR memoryDescriptor,
