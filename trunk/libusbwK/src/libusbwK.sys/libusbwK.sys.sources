@@ -10,10 +10,15 @@ MSC_WARNING_LEVEL=/W4 /WX
 
 INF_NAME		= $(G_TARGET_OUTPUT_NAME)_simple
 INF_PREVIEW_NAME= $(G_TARGET_OUTPUT_NAME)
+
+#
+# To generate the test .inf files, make.cmd must be used to build the driver.
+#
+!IFDEF DCMD
 NTTARGETFILE0	= $(OBJ_PATH)\$(O)\$(INF_NAME).inf
 NTTARGETFILE1	= $(OBJ_PATH)\$(O)\$(INF_PREVIEW_NAME).inf
-
 PASS0_BINPLACE	= $(NTTARGETFILE0)
+!ENDIF
 
 C_DEFINES  = $(C_DEFINES) 
 TARGETLIBS = $(TARGETLIBS) $(DDK_LIB_PATH)\usbd.lib $(DDK_LIB_PATH)\ntstrsafe.lib
