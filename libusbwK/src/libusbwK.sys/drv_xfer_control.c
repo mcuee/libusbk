@@ -103,7 +103,7 @@ VOID XferCtrl (
 			status = WdfRequestRetrieveOutputBuffer(Request, 2, &outputBuffer, &outputBufferLength);
 			if (NT_SUCCESS(status))
 			{
-				descriptorSize=min(descriptorSize, outputBufferLength);
+				descriptorSize=(ULONG)min(descriptorSize, outputBufferLength);
 				RtlCopyMemory(outputBuffer, descriptorIn, descriptorSize);
 				WdfRequestCompleteWithInformation(Request, STATUS_SUCCESS, descriptorSize);
 				return;
