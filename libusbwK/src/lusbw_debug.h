@@ -93,7 +93,7 @@ FORCEINLINE VOID USB_LOG_NOP() {}
 #define USBMSG(format,...) USB_LOG_NOP()
 #define USBWRN(format,...) USB_LOG_NOP()
 #define USBDBG(format,...) USB_LOG_NOP()
-#define USBDEV(format,...) USB_LOG_NOP(
+#define USBDEV(format,...) USB_LOG_NOP()
 
 #define USBE_OK(format,...) USB_LOG_NOP()
 #define USBE_PARAM(ParameterName) USB_LOG_NOP()
