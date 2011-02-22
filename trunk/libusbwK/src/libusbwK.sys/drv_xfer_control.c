@@ -100,9 +100,10 @@ VOID XferCtrl (
 		if (descriptorIn && descriptorSize)
 		{
 			// handle (or fail) this standard request here.
-			status = WdfRequestRetrieveOutputBuffer(Request, descriptorSize, &outputBuffer, &outputBufferLength);
+			status = WdfRequestRetrieveOutputBuffer(Request, 2, &outputBuffer, &outputBufferLength);
 			if (NT_SUCCESS(status))
 			{
+				descriptorSize=min(descriptorSize, outputBufferLength);
 				RtlCopyMemory(outputBuffer, descriptorIn, descriptorSize);
 				WdfRequestCompleteWithInformation(Request, STATUS_SUCCESS, descriptorSize);
 				return;

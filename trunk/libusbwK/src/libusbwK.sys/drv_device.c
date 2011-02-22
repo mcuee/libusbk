@@ -174,7 +174,7 @@ Return Value:
 	}
 
 	/* create the libusb-win32 legacy symbolic link */
-	for (i = 1; i < LIBUSB_MAX_NUMBER_OF_DEVICES; i++)
+	for (i = LIBUSB_MAX_NUMBER_OF_DEVICES-1; i > 1; i--)
 	{
 		RtlZeroMemory(tmpName, sizeof(tmpName));
 
