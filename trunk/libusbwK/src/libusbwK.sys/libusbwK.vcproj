@@ -21,16 +21,16 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="$(ConfigurationName)"
-			IntermediateDirectory="$(ConfigurationName)"
+			OutputDirectory="$(SolutionDir)\output\chk\libusbwK_sys\i386"
+			IntermediateDirectory="$(ProjectDir)objchk_wxp_x86\i386"
 			ConfigurationType="0"
 			>
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="$(SolutionDir)make.cmd build nogetc chk WXP WDK_SOURCES_LIST=libusbwK.sys;"
-				ReBuildCommandLine="$(SolutionDir)make.cmd build nogetc chk WXP WDK_SOURCES_LIST=libusbwK.sys;"
-				CleanCommandLine="$(SolutionDir)make.cmd clean nogetc chk WXP WDK_SOURCES_LIST=libusbwK.sys;"
-				Output="libusbwf.sys"
+				BuildCommandLine="$(SolutionDir)make.cmd build nogetc BUILD_QUIET=0 chk WXP WDK_SOURCES_LIST=libusbwK.sys;"
+				ReBuildCommandLine="$(SolutionDir)make.cmd build nogetc BUILD_QUIET=0 chk WXP WDK_SOURCES_LIST=libusbwK.sys;"
+				CleanCommandLine="$(SolutionDir)make.cmd clean nogetc BUILD_QUIET=0 chk WXP WDK_SOURCES_LIST=libusbwK.sys;"
+				Output="libusbwK.sys"
 				PreprocessorDefinitions="_X86_=1;i386=1;STD_CALL;CONDITION_HANDLING=1;NT_UP=1;NT_INST=0;WIN32=100;_NT1X_=100;WINNT=1;_WIN32_WINNT=0x0601;WINVER=0x0601;_WIN32_IE=0x0800;WIN32_LEAN_AND_MEAN=1;DEVL=1;DBG=1;__BUILDMACHINE__=WinDDK;FPO=0;_DLL=1;NDEBUG;DEPRECATE_DDK_FUNCTIONS=1;MSC_NOOPT;NTDDI_VERSION=0x06010000;KMDF_MAJOR_VERSION=1;KMDF_MINOR_VERSION=9;KMDF_MAJOR_VERSION_STRING=01;KMDF_MINOR_VERSION_STRING=009"
 				IncludeSearchPath="..;Z:\WinDDK\7600.16385.1\inc\api;Z:\WinDDK\7600.16385.1\inc\ddk;Z:\WinDDK\7600.16385.1\inc\crt;Z:\WinDDK\7600.16385.1\inc\wdf\kmdf\1.9"
 				ForcedIncludes=""
@@ -41,16 +41,16 @@
 		</Configuration>
 		<Configuration
 			Name="Debug|x64"
-			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
-			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
+			OutputDirectory="$(SolutionDir)\output\chk\libusbwK_sys\amd64"
+			IntermediateDirectory="$(ProjectDir)objchk_win7_amd64\amd64"
 			ConfigurationType="0"
 			>
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="$(SolutionDir)make.cmd build nogetc chk x64 WDK_SOURCES_LIST=libusbwK.sys;"
-				ReBuildCommandLine="$(SolutionDir)make.cmd build nogetc chk x64 WDK_SOURCES_LIST=libusbwK.sys;"
-				CleanCommandLine="$(SolutionDir)make.cmd clean nogetc chk x64 WDK_SOURCES_LIST=libusbwK.sys;"
-				Output="libusbwf.sys"
+				BuildCommandLine="$(SolutionDir)make.cmd build nogetc BUILD_QUIET=0 chk x64 WDK_SOURCES_LIST=libusbwK.sys;"
+				ReBuildCommandLine="$(SolutionDir)make.cmd build nogetc BUILD_QUIET=0 chk x64 WDK_SOURCES_LIST=libusbwK.sys;"
+				CleanCommandLine="$(SolutionDir)make.cmd clean nogetc BUILD_QUIET=0 chk x64 WDK_SOURCES_LIST=libusbwK.sys;"
+				Output="libusbwK.sys"
 				PreprocessorDefinitions="_WIN64;_AMD64_;AMD64;CONDITION_HANDLING=1;NT_UP=1;NT_INST=0;WIN32=100;_NT1X_=100;WINNT=1;_WIN32_WINNT=0x0601;WINVER=0x0601;_WIN32_IE=0x0800;WIN32_LEAN_AND_MEAN=1;DEVL=1;DBG=1;__BUILDMACHINE__=WinDDK;_DLL=1;NDEBUG;DEPRECATE_DDK_FUNCTIONS=1;MSC_NOOPT;NTDDI_VERSION=0x06010000;KMDF_MAJOR_VERSION=1;KMDF_MINOR_VERSION=9;KMDF_MAJOR_VERSION_STRING=01;KMDF_MINOR_VERSION_STRING=009"
 				IncludeSearchPath="..;Z:\WinDDK\7600.16385.1\inc\api;Z:\WinDDK\7600.16385.1\inc\ddk;Z:\WinDDK\7600.16385.1\inc\crt;Z:\WinDDK\7600.16385.1\inc\wdf\kmdf\1.9"
 				ForcedIncludes=""
@@ -61,16 +61,16 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="$(ConfigurationName)"
-			IntermediateDirectory="$(ConfigurationName)"
+			OutputDirectory="$(SolutionDir)\output\fre\libusbwK_sys\i386"
+			IntermediateDirectory="$(ProjectDir)objfre_wxp_x86\i386"
 			ConfigurationType="0"
 			>
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="$(SolutionDir)make.cmd build nogetc fre WXP WDK_SOURCES_LIST=libusbwK.sys;"
-				ReBuildCommandLine="$(SolutionDir)make.cmd build nogetc fre WXP WDK_SOURCES_LIST=libusbwK.sys;"
-				CleanCommandLine="$(SolutionDir)make.cmd clean"
-				Output="libusbwf.sys"
+				BuildCommandLine="$(SolutionDir)make.cmd build nogetc BUILD_QUIET=0 fre WXP WDK_SOURCES_LIST=libusbwK.sys;"
+				ReBuildCommandLine="$(SolutionDir)make.cmd build nogetc BUILD_QUIET=0 fre WXP WDK_SOURCES_LIST=libusbwK.sys;"
+				CleanCommandLine="$(SolutionDir)make.cmd clean nogetc BUILD_QUIET=0 fre WXP WDK_SOURCES_LIST=libusbwK.sys;"
+				Output="libusbwK.sys"
 				PreprocessorDefinitions="WIN32;NDEBUG"
 				IncludeSearchPath="..;Z:\WinDDK\7600.16385.1\inc\api;Z:\WinDDK\7600.16385.1\inc\ddk;Z:\WinDDK\7600.16385.1\inc\crt;Z:\WinDDK\7600.16385.1\inc\wdf\kmdf\1.9"
 				ForcedIncludes=""
@@ -81,16 +81,16 @@
 		</Configuration>
 		<Configuration
 			Name="Release|x64"
-			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
-			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
+			OutputDirectory="$(SolutionDir)\output\fre\libusbwK_sys\amd64"
+			IntermediateDirectory="$(ProjectDir)objfre_win7_amd64\amd64"
 			ConfigurationType="0"
 			>
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="$(SolutionDir)make.cmd build nogetc fre x64 WDK_SOURCES_LIST=libusbwK.sys;"
-				ReBuildCommandLine="$(SolutionDir)make.cmd build nogetc fre x64 WDK_SOURCES_LIST=libusbwK.sys;"
-				CleanCommandLine="$(SolutionDir)make.cmd clean nogetc fre x64 WDK_SOURCES_LIST=libusbwK.sys;"
-				Output="libusbwf.sys"
+				BuildCommandLine="$(SolutionDir)make.cmd build nogetc BUILD_QUIET=0 fre x64 WDK_SOURCES_LIST=libusbwK.sys;"
+				ReBuildCommandLine="$(SolutionDir)make.cmd build nogetc BUILD_QUIET=0 fre x64 WDK_SOURCES_LIST=libusbwK.sys;"
+				CleanCommandLine="$(SolutionDir)make.cmd clean nogetc BUILD_QUIET=0 fre x64 WDK_SOURCES_LIST=libusbwK.sys;"
+				Output="$(TargetFileName)"
 				PreprocessorDefinitions="WIN32;NDEBUG"
 				IncludeSearchPath="..;Z:\WinDDK\7600.16385.1\inc\api;Z:\WinDDK\7600.16385.1\inc\ddk;Z:\WinDDK\7600.16385.1\inc\crt;Z:\WinDDK\7600.16385.1\inc\wdf\kmdf\1.9"
 				ForcedIncludes=""

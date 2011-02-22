@@ -277,6 +277,7 @@ GOTO :EOF
 		CALL :FindFileInPath G_FORMATCODE_EXE "!G_FORMATCODE_EXE!"
 		IF NOT EXIST "!G_FORMATCODE_EXE!" (
 			CALL :Print E "FMTCOD" "Failed locating @s in path\r\n\t\k0ADownload Astyle at astyle.sourceforge.net" "!__FORMATCODE_EXE!"
+			CALL :Print "FMTCOD" "make.cmd looks for optional programs in the path and the 'build_tools' sub-dir."
 			GOTO :EOF
 		) ELSE (
 			CALL :Print S "FMTCOD" "Updating @s\n\twith FORMATCODE_EXE=@s" "!G_MAKE_CFG_FILE!" "!G_FORMATCODE_EXE!"
@@ -393,10 +394,24 @@ GOTO :EOF
 	
 	SET __Zip_AbsFilename=!__Zip_PackageDir!\!G_PACKAGE_NAME_FORMAT!.zip
 	IF EXIST "!__Zip_AbsFilename!" DEL /Q "!__Zip_AbsFilename!"
+
+	SET __Zip_Cmd=7z.exe
+	!__Zip_Cmd! 2>NUL>NUL
+	IF "!ERRORLEVEL!" NEQ "0" (
+		SET __Zip_Cmd=7za.exe
+		!__Zip_Cmd! 2>NUL>NUL
+	)
+	IF "!ERRORLEVEL!" NEQ "0" (
+		CALL :Print E "ZIP" "7z.exe not found.\n\tDownload 7Zip at @s." "www.7-zip.org"
+		CALL :Print "ZIP" "make.cmd looks for optional programs in the path and the 'build_tools' sub-dir."
+		GOTO Zip_Done
+	)
 	
 	PUSHD !CD!
 	CD /D !__Zip_TempDir!
-	CALL :SafeCall 7z a -r -tzip "!__Zip_AbsFilename!" *
+
+	
+	CALL :SafeCall !__Zip_Cmd! a -r -tzip "!__Zip_AbsFilename!" *
 	POPD
 
 	IF "!BUILD_ERRORLEVEL!" NEQ "0" GOTO Zip_Error
@@ -405,6 +420,7 @@ GOTO :EOF
 	
 	:Zip_Error
 	CALL :Print E "ZIP" "Invalid zip option@s or other failure.\n\tUse the 'build_quiet=0' argument for more information." " !G_ZIP!"
+	CALL :Print "ZIP" "make.cmd looks for optional programs in the path and the 'build_tools' sub-dir."
 	
 	:Zip_Done
 	IF EXIST "!__Zip_TempDir!" RMDIR /S /Q "!__Zip_TempDir!"	
@@ -1310,6 +1326,7 @@ REM - [NOTE] This is the only form if input we request from the user
 :GetC
 	IF DEFINED G_NOGETC (
 		SET %1=%~5
+		SET GetC_Response=%~5
 		GOTO :EOF
 	)
 	CALL :CreateTempFile __GetC
