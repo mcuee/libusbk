@@ -1,5 +1,5 @@
 #summary libusbwK running to-do list.
-#labels Phase-Design
+#labels Phase-Design,Featured
 
 === Issues & missing features ===
   * Config and device descriptor request fail if the output buffer is not large enough.
