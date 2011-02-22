@@ -3,7 +3,9 @@
 
 === Issues & missing features ===
   * Config and device descriptor request fail if the output buffer is not large enough.
+
   * Set debug level IOCTL missing.
+
   * Untested functionality:
     * High speed iso transfers
     * Direct pipe file handles
@@ -11,6 +13,7 @@
     * CLEAR_FEATURE
     * SET_DESCRIPTOR
     * VENDOR (HostToDevice)
+
   * Unsupported pipe policies:
     * RESET_PIPE_ON_RESUME
     * AUTO_CLEAR_STALL
