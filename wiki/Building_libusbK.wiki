@@ -17,7 +17,7 @@ todo
 make.cmd is a build and packaging automation batch file for WDK.  The script itself is non-specific to libusbK so it can be used for any WDK project. 
   * make.cmd is configured through an ini-like .cfg file.
   * Most options set in make.cfg can be overridden by passing them on the command line.
-  * All param=value pair defined in make.cfg or passed or the command line are SET in dos environment space; available for the duration of the build.
+  * All param=value pairs defined in make.cfg or passed on the command line are SET in dos environment space; available for the duration of the build.
 
 ==== make.cmd usage: ====
   * todo
