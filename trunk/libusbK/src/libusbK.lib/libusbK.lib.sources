@@ -1,0 +1,20 @@
+TARGETNAME = $(G_TARGET_OUTPUT_NAME)
+TARGETPATH = $(G_TARGET_OUTPUT_ABS_DIR)
+TARGETTYPE = LIBRARY
+USE_MSVCRT = 1
+
+!IFNDEF MSC_WARNING_LEVEL
+MSC_WARNING_LEVEL=/W4 /WX
+!ENDIF
+
+C_DEFINES=$(C_DEFINES)
+
+TARGETLIBS=$(SDK_LIB_PATH)\kernel32.lib \
+           $(SDK_LIB_PATH)\advapi32.lib \
+           $(SDK_LIB_PATH)\user32.lib
+
+INCLUDES=.\;..\;$(DDK_INC_PATH);
+
+SOURCES=..\lusbk_usb.c \
+		..\lusbk_ioctl.c \
+		..\lusbk_debug_view_output.c

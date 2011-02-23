@@ -1,0 +1,4 @@
+DIRS= \
+     libusbK.dll \
+     libusbK.lib \
+     libusbK.sys

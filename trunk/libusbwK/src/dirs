@@ -1,4 +1,0 @@
-DIRS= \
-     libusbwK.dll \
-     libusbwK.lib \
-     libusbwK.sys
