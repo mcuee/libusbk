@@ -1,0 +1,43 @@
+LIBRARY
+EXPORTS
+	LUsbK_Initialize
+	LUsbK_Free
+	LUsbK_GetAssociatedInterface
+	LUsbK_GetDescriptor
+	LUsbK_QueryInterfaceSettings
+	LUsbK_QueryDeviceInformation
+	LUsbK_SetCurrentAlternateSetting
+	LUsbK_GetCurrentAlternateSetting
+	LUsbK_QueryPipe
+	LUsbK_SetPipePolicy
+	LUsbK_GetPipePolicy
+	LUsbK_ReadPipe
+	LUsbK_WritePipe
+	LUsbK_ControlTransfer
+	LUsbK_ResetPipe
+	LUsbK_AbortPipe
+	LUsbK_FlushPipe
+	LUsbK_SetPowerPolicy
+	LUsbK_GetPowerPolicy
+	LUsbK_GetOverlappedResult
+	
+	WinUsb_Initialize
+	WinUsb_Free
+	WinUsb_GetAssociatedInterface
+	WinUsb_GetDescriptor
+	WinUsb_QueryInterfaceSettings
+	WinUsb_QueryDeviceInformation
+	WinUsb_SetCurrentAlternateSetting
+	WinUsb_GetCurrentAlternateSetting
+	WinUsb_QueryPipe
+	WinUsb_SetPipePolicy
+	WinUsb_GetPipePolicy
+	WinUsb_ReadPipe
+	WinUsb_WritePipe
+	WinUsb_ControlTransfer
+	WinUsb_ResetPipe
+	WinUsb_AbortPipe
+	WinUsb_FlushPipe
+	WinUsb_SetPowerPolicy
+	WinUsb_GetPowerPolicy
+	WinUsb_GetOverlappedResult
