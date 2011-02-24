@@ -166,16 +166,26 @@ state according to the definition in the USB specification.
 #if defined(__18CXX)
 #pragma romdata
 #endif
+#if defined(DUAL_INTERFACE)
+	#if defined(DUAL_INTERFACE_WITH_ASSOCIATION)
+		#define DEVICE_CLASS_SUBLASS_AND_PROTOCOL 0xEF,0x02,0x01
+		#define CONFIG_TOTAL_SIZE DESC_CONFIG_WORD(0x003F)
+	#else
+		#define DEVICE_CLASS_SUBLASS_AND_PROTOCOL 0x00,0x00,0x00
+		#define CONFIG_TOTAL_SIZE DESC_CONFIG_WORD(0x0037)
+	#endif
+#else
+	#define DEVICE_CLASS_SUBLASS_AND_PROTOCOL 0x00,0x00,0x00
+	#define CONFIG_TOTAL_SIZE DESC_CONFIG_WORD(0x0020)
+#endif
 
 /* Device Descriptor */
 ROM USB_DEVICE_DESCRIPTOR device_dsc=
 {
     0x12,					// Size of this descriptor in bytes
     USB_DESCRIPTOR_DEVICE,	// DEVICE descriptor type
-    0x0200,					// USB Spec Release Number in BCD format        
-    0x00,					// Class Code
-    0x00,					// Subclass code
-    0x00,					// Protocol code
+    0x0200,					// USB Spec Release Number in BCD format
+	DEVICE_CLASS_SUBLASS_AND_PROTOCOL, // Class, Subclass, Protocol
     USB_EP0_BUFF_SIZE,		// Max packet size for EP0, (see usb_config.h)
     VENDOR_ID,				// Vendor ID (see usb_config.h)
     PRODUCT_ID,				// Product ID (see usb_config.h)
@@ -191,25 +201,25 @@ ROM USB_DEVICE_DESCRIPTOR device_dsc=
 /* Configuration 1 Descriptor */
 ROM BYTE configDescriptor1[]={
     /* Configuration Descriptor */
-    0x09,//sizeof(USB_CFG_DSC),    // Size of this descriptor in bytes
-    USB_DESCRIPTOR_CONFIGURATION,                // CONFIGURATION descriptor type
-    0x20,0x00,            // Total length of data for this cfg
-    1,                      // Number of interfaces in this cfg
-    1,                      // Index value of this configuration
-    0,                      // Configuration string index
+    0x09,							// Size of this descriptor in bytes
+    USB_DESCRIPTOR_CONFIGURATION,	// CONFIGURATION descriptor type
+    CONFIG_TOTAL_SIZE,				// Total length of data for this cfg
+    1,								// Number of interfaces in this cfg
+    1,								// Index value of this configuration
+    0,								// Configuration string index
     _DEFAULT | _SELF,               // Attributes, see usb_device.h
-    50,                     // Max power consumption (2X mA)
+    50,								// Max power consumption (2X mA)
 							
     /* Interface Descriptor */
-    0x09,//sizeof(USB_INTF_DSC),   // Size of this descriptor in bytes
-    USB_DESCRIPTOR_INTERFACE,               // INTERFACE descriptor type
-    0,                      // Interface Number
-    0,                      // Alternate Setting Number
-    2,                      // Number of endpoints in this intf
-    0x00,                   // Class code
-    0x00,                   // Subclass code
-    0x00,                   // Protocol code
-    0,                      // Interface string index
+    0x09,							// Size of this descriptor in bytes
+    USB_DESCRIPTOR_INTERFACE,		// INTERFACE descriptor type
+    0,								// Interface Number
+    0,								// Alternate Setting Number
+    2,								// Number of endpoints in this intf
+    0x00,							// Class code
+    0x00,							// Subclass code
+    0x00,							// Protocol code
+    0,								// Interface string index
     
     0x07,									// Endpoint descriptor size
     USB_DESCRIPTOR_ENDPOINT,				// Endpoint descriptor
@@ -233,23 +243,29 @@ ROM BYTE configDescriptor1[]={
 	//// CONFIG ////
     0x09,							// Size of this descriptor in bytes
     USB_DESCRIPTOR_CONFIGURATION,	// CONFIGURATION descriptor type
-    DESC_CONFIG_WORD(0x0037),		// Total length of data for this cfg
+    CONFIG_TOTAL_SIZE,				// Total length of data for this cfg
     2,								// Number of interfaces in this cfg
     1,								// Index value of this configuration
     0,								// Configuration string index
     _DEFAULT | _SELF,				// Attributes, see usb_device.h
     50,								// Max power consumption (2X mA)
-							
+#if defined(DUAL_INTERFACE_WITH_ASSOCIATION)
+	//// INTERFACE ASSOCIATION DESCRIPTOR ////
+    0x08,							// Interface association descriptor size
+	0x0B,							// Interface association descriptor type
+	0x00,							// (bFirstInterface) first asssociation interface number
+	0x02,							// (bInterfaceCount) count of interfaces to be 'associated' starting with bFirstInterface 
+	0x00, 0x00, 0x00,			    // Class, Subclass, Protocol
+    0x00,							// (iFunction)
+#endif
 	//// INTERFACE ////
-    0x09,						// Interface descriptor size
-    USB_DESCRIPTOR_INTERFACE,	// Interface descriptor
-    0,							// Interface Number
-    0,							// Alternate Setting Number
-    2,							// Number of endpoints in this intf
-    0x00,						// Class code
-    0x00,						// Subclass code
-    0x00,						// Protocol code
-    4,							// Interface string index
+    0x09,								// Interface descriptor size
+    USB_DESCRIPTOR_INTERFACE,			// Interface descriptor
+    0,									// Interface Number
+    0,									// Alternate Setting Number
+    2,									// Number of endpoints in this intf
+	0x00, 0x00, 0x00,					// Class, Subclass, Protocol
+    4,									// Interface string index
 	//// ENDPOINT ////
     0x07,											// Endpoint descriptor size
     USB_DESCRIPTOR_ENDPOINT,						// Endpoint descriptor
@@ -271,9 +287,7 @@ ROM BYTE configDescriptor1[]={
     1,							// Interface Number
     0,							// Alternate Setting Number
     2,							// Number of endpoints in this intf
-    0x00,						// Class code
-    0x00,						// Subclass code
-    0x00,						// Protocol code
+	0x00, 0x00, 0x00,			// Class, Subclass, Protocol
     5,							// Interface string index
 	//// ENDPOINT ////
     0x07,											// Endpoint descriptor size
@@ -289,7 +303,6 @@ ROM BYTE configDescriptor1[]={
     USBGEN_EP_ATTRIBUTES_INTF1,						// Attributes
     DESC_CONFIG_WORD(USBGEN_EP_SIZE_INTF1),			// Size
     USBGEN_EP_INTERVAL_INTF1,						// Interval
-
 };
 
 // Interface #0 String

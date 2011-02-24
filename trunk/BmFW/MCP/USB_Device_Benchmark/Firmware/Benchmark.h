@@ -47,6 +47,13 @@ enum TestType
     TEST_LOOP
 };
 
+// PicFW Vendor-Specific Requests
+enum PICFW_COMMANDS
+{
+    PICFW_SET_TEST		= 0x0E,
+    PICFW_GET_TEST		= 0x0F,
+};
+
 /** BMARK CALLBACKS ************************************************/
 void USBCBCheckOtherReq(void);
 void USBCBInitEP(void);
