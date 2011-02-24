@@ -241,10 +241,6 @@ void USBCBCheckOtherReq(void)
 			inPipes[0].info.bits.busy = 1;
 		}
 		break;
-	case PICFW_GET_EEDATA:
-		break;
-	case PICFW_SET_EEDATA:
-		break;
 	default:
 		break;
 	}//end switch

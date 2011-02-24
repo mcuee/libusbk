@@ -56,6 +56,11 @@
 // benchmark interfaces.
 // 
 // #define DUAL_INTERFACE
+#define DUAL_INTERFACE_WITH_ASSOCIATION
+
+#if defined(DUAL_INTERFACE_WITH_ASSOCIATION) && !defined(DUAL_INTERFACE)
+#define DUAL_INTERFACE
+#endif
 
 // HARDWARE ID CONFIGURATION ////////////////////////////////////////
 #define VENDOR_ID			0x1234
@@ -96,7 +101,7 @@
 
 /////////////////////////////////////////////////////////////////////
 // ENDPOINT #1 (IN,OUT) Size & Type
-#define USBGEN_EP_SIZE_INTF0	32
+#define USBGEN_EP_SIZE_INTF0	64
 //#define INTF0					EP_ISO
 #define INTF0					EP_BULK
 #define INTF0				EP_BULK
@@ -105,8 +110,8 @@
 /////////////////////////////////////////////////////////////////////
 // ENDPOINT #2 (IN,OUT) Size & Type
 #define USBGEN_EP_SIZE_INTF1	64
-#define INTF1					EP_ISO
-//#define INTF1					EP_BULK
+//#define INTF1					EP_ISO
+#define INTF1					EP_BULK
 //#define INTF1				EP_INT
 /////////////////////////////////////////////////////////////////////
 
