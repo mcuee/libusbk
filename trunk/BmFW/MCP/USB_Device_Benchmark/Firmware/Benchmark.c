@@ -169,17 +169,17 @@ void OnSetVendorBufferComplete(void)
 	// clear the callback function pointer.
 	outPipes[0].pFunc=NULL;
 
-} // EndOf OnSetDescriptorComplete
+} // EndOf OnSetVendorBufferComplete
 
 void PicFWSetVendorBufferHandler(void)
 {
 	BYTE bLength = SetupPkt.wLength & 0xFF;
 
-	// save host data into the first DeviceToHost endpoint buffer
+	// save host data into VendorBuffer
 	outPipes[0].pDst.bRam = VendorBuffer;
 	outPipes[0].wCount.v[0] = (bLength < sizeof(VendorBuffer)) ? bLength : sizeof(VendorBuffer);
 
-	// Tell the MCP framework to call OnSetDescriptorComplete() when we have
+	// Tell the MCP framework to call OnSetVendorBufferComplete() when we have
 	// all of the host data.
 	outPipes[0].pFunc = OnSetVendorBufferComplete;
 
