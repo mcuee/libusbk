@@ -259,6 +259,8 @@ unsigned char INPacket[64];		//User application buffer for sending IN packets to
 */
 #pragma udata
 BOOL blinkStatusValid;
+volatile WORD led_count;
+
 /*
 USB_HANDLE USBGenericOutHandle;
 USB_HANDLE USBGenericInHandle;
@@ -428,6 +430,7 @@ void main(void)
 int main(void)
 #endif
 {   
+	led_count=0;
     InitializeSystem();
 
     #if defined(USB_INTERRUPT)
@@ -718,8 +721,6 @@ void ProcessIO(void)
  *******************************************************************/
 void BlinkUSBStatus(void)
 {
-    static WORD led_count=0;
-    
     if(led_count == 0)led_count = 10000U;
     led_count--;
 
@@ -1042,10 +1043,10 @@ void USBCBCheckOtherReq(void)
  *
  * Note:            None
  *****************************************************************************/
-void USBCBStdSetDscHandler(void)
-{
+//void USBCBStdSetDscHandler(void)
+//{
     // Must claim session ownership if supporting this request
-}//end
+//}//end
 
 
 /******************************************************************************

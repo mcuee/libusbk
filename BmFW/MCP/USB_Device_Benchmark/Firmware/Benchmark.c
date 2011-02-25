@@ -71,6 +71,10 @@ BYTE BenchmarkBuffers_INTF0[2][PP_COUNT][USBGEN_EP_SIZE_INTF0];
 BYTE BenchmarkBuffers_INTF1[2][PP_COUNT][USBGEN_EP_SIZE_INTF1];
 #endif
 
+#ifdef ENABLE_VENDOR_BUFFER_AND_SET_DESCRIPTOR
+BYTE VendorBuffer[8];
+#endif
+
 // The below variables are only accessed by the CPU and can be placed anywhere in RAM.
 #pragma udata
 
@@ -95,6 +99,7 @@ volatile BYTE NextPacketKey_INTF0;
 /** EXTERNS ********************************************************/
 extern void BlinkUSBStatus(void);
 extern USB_VOLATILE BYTE USBAlternateInterface[USB_MAX_NUM_INT];
+extern volatile WORD led_count;
 
 /** BMARK FUNCTIONS ************************************************/
 void doBenchmarkLoop_INTF0(void);
@@ -153,6 +158,35 @@ void fillBuffer(BYTE* pBuffer, WORD size);
 
 /** BMARK DECLARATIONS *********************************************/
 #pragma code
+
+#if defined(ENABLE_VENDOR_BUFFER_AND_SET_DESCRIPTOR)
+
+void OnSetVendorBufferComplete(void)
+{
+	// set the blink rate to double (for one blink interval).
+	led_count=20000U;
+
+	// clear the callback function pointer.
+	outPipes[0].pFunc=NULL;
+
+} // EndOf OnSetDescriptorComplete
+
+void PicFWSetVendorBufferHandler(void)
+{
+	BYTE bLength = SetupPkt.wLength & 0xFF;
+
+	// save host data into the first DeviceToHost endpoint buffer
+	outPipes[0].pDst.bRam = VendorBuffer;
+	outPipes[0].wCount.v[0] = (bLength < sizeof(VendorBuffer)) ? bLength : sizeof(VendorBuffer);
+
+	// Tell the MCP framework to call OnSetDescriptorComplete() when we have
+	// all of the host data.
+	outPipes[0].pFunc = OnSetVendorBufferComplete;
+
+	outPipes[0].info.bits.busy = 1;	// claim HostToDevice session ownership
+	inPipes[0].info.bits.busy = 0;	// release DeviceToHost session ownership (Necessary?)
+}
+#endif
 
 // The Benchmark firmware "overrides" the USBCBInitEP to initialize
 // the OUT (MCU Rx) endpoint with the first BenchmarkBuffer.
@@ -231,25 +265,55 @@ void USBCBCheckOtherReq(void)
 #ifdef DUAL_INTERFACE
 		if ((SetupPkt.wIndex & 0xff) == 1)
 		{
-			inPipes[0].pSrc.bRam = (BYTE*)&TestType_INTF1;  // Set Source
-			inPipes[0].info.bits.ctrl_trf_mem = USB_EP0_RAM;		// Set memory type
-			inPipes[0].wCount.v[0] = 1;						// Set data count
+			inPipes[0].pSrc.bRam = (BYTE*)&TestType_INTF1;		// Set Source
+			inPipes[0].info.bits.ctrl_trf_mem = USB_EP0_RAM;	// Set memory type
+			inPipes[0].wCount.v[0] = 1;							// Set data count
 			inPipes[0].info.bits.busy = 1;
 		}
 		else
 #endif
 		{
-			inPipes[0].pSrc.bRam = (BYTE*)&TestType_INTF0;  // Set Source
-			inPipes[0].info.bits.ctrl_trf_mem = USB_EP0_RAM;		// Set memory type
-			inPipes[0].wCount.v[0] = 1;						// Set data count
+			inPipes[0].pSrc.bRam = (BYTE*)&TestType_INTF0;		// Set Source
+			inPipes[0].info.bits.ctrl_trf_mem = USB_EP0_RAM;	// Set memory type
+			inPipes[0].wCount.v[0] = 1;							// Set data count
 			inPipes[0].info.bits.busy = 1;
 		}
 		break;
+#if defined(ENABLE_VENDOR_BUFFER_AND_SET_DESCRIPTOR)
+
+	case PICFW_SET_VENDOR_BUFFER:
+		PicFWSetVendorBufferHandler();
+		break;
+
+	case PICFW_GET_VENDOR_BUFFER:
+		inPipes[0].pSrc.bRam = VendorBuffer;				// Set Source
+		inPipes[0].info.bits.ctrl_trf_mem = USB_EP0_RAM;	// Set memory type
+		
+		// Set data count
+		inPipes[0].wCount.v[0] = SetupPkt.wLength & 0xFF;
+		if (inPipes[0].wCount.v[0] > sizeof(VendorBuffer))
+			inPipes[0].wCount.v[0]=sizeof(VendorBuffer);
+
+		inPipes[0].info.bits.busy = 1;
+		break;
+
+#endif
 	default:
 		break;
 	}//end switch
 
-}//end
+} // EndOf USBCBCheckOtherReq
+
+
+void USBCBStdSetDscHandler(void)
+{
+#if defined(ENABLE_VENDOR_BUFFER_AND_SET_DESCRIPTOR)
+	if(SetupPkt.bDescriptorType == USB_DESCRIPTOR_STRING && SetupPkt.bDscIndex == 0x55)
+	{
+		PicFWSetVendorBufferHandler();
+	}//end if
+#endif
+} // EndOf USBCBStdSetDscHandler
 
 void Benchmark_Init(void)
 {
