@@ -55,11 +55,14 @@
 // If defined, creates a dual interfaces device with two separate
 // benchmark interfaces.
 // 
-// #define DUAL_INTERFACE
-//#define DUAL_INTERFACE_WITH_ASSOCIATION
-//#define SINGLE_INTERFACE_WITH_ALTSETTINGS
 
-//#define ENABLE_VENDOR_BUFFER_AND_SET_DESCRIPTOR
+// #define DUAL_INTERFACE
+
+// #define DUAL_INTERFACE_WITH_ASSOCIATION
+
+#define SINGLE_INTERFACE_WITH_ALTSETTINGS
+
+#define ENABLE_VENDOR_BUFFER_AND_SET_DESCRIPTOR
 
 #if defined(DUAL_INTERFACE_WITH_ASSOCIATION) && !defined(DUAL_INTERFACE)
 #define DUAL_INTERFACE
