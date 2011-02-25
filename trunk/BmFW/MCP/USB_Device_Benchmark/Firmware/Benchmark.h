@@ -52,11 +52,14 @@ enum PICFW_COMMANDS
 {
     PICFW_SET_TEST		= 0x0E,
     PICFW_GET_TEST		= 0x0F,
+	PICFW_SET_VENDOR_BUFFER= 0x10,
+	PICFW_GET_VENDOR_BUFFER= 0x11,
 };
 
 /** BMARK CALLBACKS ************************************************/
 void USBCBCheckOtherReq(void);
 void USBCBInitEP(void);
+void USBCBStdSetDscHandler(void);
 
 /** USB FW EXTERNS DEFINES *****************************************/
 extern volatile CTRL_TRF_SETUP SetupPkt;

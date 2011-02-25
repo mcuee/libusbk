@@ -57,7 +57,9 @@
 // 
 // #define DUAL_INTERFACE
 //#define DUAL_INTERFACE_WITH_ASSOCIATION
-#define SINGLE_INTERFACE_WITH_ALTSETTINGS
+//#define SINGLE_INTERFACE_WITH_ALTSETTINGS
+
+//#define ENABLE_VENDOR_BUFFER_AND_SET_DESCRIPTOR
 
 #if defined(DUAL_INTERFACE_WITH_ASSOCIATION) && !defined(DUAL_INTERFACE)
 #define DUAL_INTERFACE
@@ -107,17 +109,17 @@
 /////////////////////////////////////////////////////////////////////
 // ENDPOINT #1 (IN,OUT) Size & Type
 #define USBGEN_EP_SIZE_INTF0	64
-//#define INTF0					EP_ISO
-#define INTF0					EP_BULK
+// #define INTF0				EP_ISO
 #define INTF0				EP_BULK
+// #define INTF0				EP_INT
 /////////////////////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////////////////////
 // ENDPOINT #2 (IN,OUT) Size & Type
 #define USBGEN_EP_SIZE_INTF1	64
-//#define INTF1					EP_ISO
-#define INTF1					EP_BULK
-//#define INTF1				EP_INT
+// #define INTF1				EP_ISO
+#define INTF1				EP_BULK
+// #define INTF1				EP_INT
 /////////////////////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////////////////////

@@ -185,28 +185,6 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\..\Benchmark_DualInterface.c"
-				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCustomBuildTool"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\..\Benchmark_NoPP.c"
-				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCustomBuildTool"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
 				RelativePath="..\..\main.c"
 				>
 				<FileConfiguration
@@ -257,15 +235,15 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
+				RelativePath="..\..\BDT_transfer.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\Benchmark.h"
 				>
 			</File>
 			<File
 				RelativePath="..\..\HardwareProfile.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\PicFWCommands.h"
 				>
 			</File>
 			<File
