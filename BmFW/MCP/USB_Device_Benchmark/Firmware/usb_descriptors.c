@@ -176,7 +176,11 @@ state according to the definition in the USB specification.
 	#endif
 #else
 	#define DEVICE_CLASS_SUBLASS_AND_PROTOCOL 0x00,0x00,0x00
-	#define CONFIG_TOTAL_SIZE DESC_CONFIG_WORD(0x0020)
+	#if defined(SINGLE_INTERFACE_WITH_ALTSETTINGS)
+		#define CONFIG_TOTAL_SIZE DESC_CONFIG_WORD(0x0037)
+	#else
+		#define CONFIG_TOTAL_SIZE DESC_CONFIG_WORD(0x0020)
+	#endif
 #endif
 
 /* Device Descriptor */
@@ -209,16 +213,62 @@ ROM BYTE configDescriptor1[]={
     0,								// Configuration string index
     _DEFAULT | _SELF,               // Attributes, see usb_device.h
     50,								// Max power consumption (2X mA)
-							
+
+#if defined(SINGLE_INTERFACE_WITH_ALTSETTINGS)
     /* Interface Descriptor */
     0x09,							// Size of this descriptor in bytes
     USB_DESCRIPTOR_INTERFACE,		// INTERFACE descriptor type
     0,								// Interface Number
     0,								// Alternate Setting Number
     2,								// Number of endpoints in this intf
-    0x00,							// Class code
-    0x00,							// Subclass code
-    0x00,							// Protocol code
+	0x00, 0x00, 0x00,			    // Class, Subclass, Protocol
+    0,								// Interface string index
+    
+    0x07,									// Endpoint descriptor size
+    USB_DESCRIPTOR_ENDPOINT,				// Endpoint descriptor
+    USBGEN_EP_NUM_INTF0,					// Endpoint address
+    USBGEN_EP_ATTRIBUTES_INTF0,				// Endpoint Attributes
+    DESC_CONFIG_WORD(USBGEN_EP_SIZE_INTF0_ALT0),	// Endpoint Size
+    USBGEN_EP_INTERVAL_INTF0,				// Endpoint Interval
+    
+    0x07,									// Endpoint descriptor size
+    USB_DESCRIPTOR_ENDPOINT,				// Endpoint descriptor
+    USBGEN_EP_NUM_INTF0|0x80,				// Endpoint address
+    USBGEN_EP_ATTRIBUTES_INTF0,				// Endpoint Attributes
+    DESC_CONFIG_WORD(USBGEN_EP_SIZE_INTF0_ALT0),	// Endpoint Size
+    USBGEN_EP_INTERVAL_INTF0,				// Endpoint Interval
+
+    /* Interface Descriptor */
+    0x09,							// Size of this descriptor in bytes
+    USB_DESCRIPTOR_INTERFACE,		// INTERFACE descriptor type
+    0,								// Interface Number
+    1,								// Alternate Setting Number
+    2,								// Number of endpoints in this intf
+	0x00, 0x00, 0x00,			    // Class, Subclass, Protocol
+    0,								// Interface string index
+    
+    0x07,									// Endpoint descriptor size
+    USB_DESCRIPTOR_ENDPOINT,				// Endpoint descriptor
+    USBGEN_EP_NUM_INTF0,					// Endpoint address
+    USBGEN_EP_ATTRIBUTES_INTF0,				// Endpoint Attributes
+    DESC_CONFIG_WORD(USBGEN_EP_SIZE_INTF0_ALT1),	// Endpoint Size
+    USBGEN_EP_INTERVAL_INTF0,				// Endpoint Interval
+    
+    0x07,									// Endpoint descriptor size
+    USB_DESCRIPTOR_ENDPOINT,				// Endpoint descriptor
+    USBGEN_EP_NUM_INTF0|0x80,				// Endpoint address
+    USBGEN_EP_ATTRIBUTES_INTF0,				// Endpoint Attributes
+    DESC_CONFIG_WORD(USBGEN_EP_SIZE_INTF0_ALT1),	// Endpoint Size
+    USBGEN_EP_INTERVAL_INTF0,				// Endpoint Interval
+#else
+
+    /* Interface Descriptor */
+    0x09,							// Size of this descriptor in bytes
+    USB_DESCRIPTOR_INTERFACE,		// INTERFACE descriptor type
+    0,								// Interface Number
+    0,								// Alternate Setting Number
+    2,								// Number of endpoints in this intf
+	0x00, 0x00, 0x00,			    // Class, Subclass, Protocol
     0,								// Interface string index
     
     0x07,									// Endpoint descriptor size
@@ -233,7 +283,9 @@ ROM BYTE configDescriptor1[]={
     USBGEN_EP_NUM_INTF0|0x80,				// Endpoint address
     USBGEN_EP_ATTRIBUTES_INTF0,				// Endpoint Attributes
     DESC_CONFIG_WORD(USBGEN_EP_SIZE_INTF0),	// Endpoint Size
-    USBGEN_EP_INTERVAL_INTF0,										// Endpoint Interval
+    USBGEN_EP_INTERVAL_INTF0,				// Endpoint Interval
+
+#endif
 };
 
 #else // Dual interface config
