@@ -56,10 +56,15 @@
 // benchmark interfaces.
 // 
 // #define DUAL_INTERFACE
-#define DUAL_INTERFACE_WITH_ASSOCIATION
+//#define DUAL_INTERFACE_WITH_ASSOCIATION
+#define SINGLE_INTERFACE_WITH_ALTSETTINGS
 
 #if defined(DUAL_INTERFACE_WITH_ASSOCIATION) && !defined(DUAL_INTERFACE)
 #define DUAL_INTERFACE
+#endif
+
+#if defined(SINGLE_INTERFACE_WITH_ALTSETTINGS) && defined(DUAL_INTERFACE)
+#error "Dual interface and single interface with altsettings defines cannot be combined."
 #endif
 
 // HARDWARE ID CONFIGURATION ////////////////////////////////////////
@@ -148,6 +153,15 @@
 	#define USBGEN_EP_ATTRIBUTES_INTF1		EP_ISO|_AS|_DE
 	#define USBGEN_EP_HANDSHAKE_INTF1		0
 	#define USBGEN_EP_INTERVAL_INTF1		1
+#endif
+
+#if defined(SINGLE_INTERFACE_WITH_ALTSETTINGS)
+	#if (INTF0==EP_ISO)
+		#define USBGEN_EP_SIZE_INTF0_ALT0 (0)
+	#else
+		#define USBGEN_EP_SIZE_INTF0_ALT0 (USBGEN_EP_SIZE_INTF0/2)
+	#endif
+	#define USBGEN_EP_SIZE_INTF0_ALT1 USBGEN_EP_SIZE_INTF0
 #endif
 
 /////////////////////////////////////////////////////////////////////

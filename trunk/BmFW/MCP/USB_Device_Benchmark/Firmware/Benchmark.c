@@ -94,6 +94,7 @@ volatile BYTE NextPacketKey_INTF0;
 
 /** EXTERNS ********************************************************/
 extern void BlinkUSBStatus(void);
+extern USB_VOLATILE BYTE USBAlternateInterface[USB_MAX_NUM_INT];
 
 /** BMARK FUNCTIONS ************************************************/
 void doBenchmarkLoop_INTF0(void);
@@ -120,12 +121,15 @@ void fillBuffer(BYTE* pBuffer, WORD size);
 
 #define mSetWritePacketID(BufferPtr, BufferSize, FillCount, NextPacketKey)	\
 {																			\
-	if (FillCount < 3)														\
+	if ((BufferSize)>0)														\
 	{																		\
-		FillCount++;														\
-		fillBuffer((BYTE*)BufferPtr,BufferSize);							\
+		if (FillCount < 3)													\
+		{																	\
+			FillCount++;													\
+			fillBuffer((BYTE*)BufferPtr,BufferSize);						\
+		}																	\
+		BufferPtr[1]=NextPacketKey++;										\
 	}																		\
-	BufferPtr[1]=NextPacketKey++;											\
 }
 
 // If interface #0 is iso, use an iso specific submit macro
@@ -330,13 +334,21 @@ void Benchmark_ProcessIO(void)
 
 void doBenchmarkWrite_INTF0(void)
 {
+	WORD Length;
 	BYTE* pBufferTx;
+
 	if (!USBHandleBusy(pBdtTxEp1))
 	{
+		#if defined(SINGLE_INTERFACE_WITH_ALTSETTINGS)
+			Length=(USBAlternateInterface[0]==1) ? USBGEN_EP_SIZE_INTF0_ALT1 : USBGEN_EP_SIZE_INTF0_ALT0;
+		#else
+			Length=USBGEN_EP_SIZE_INTF0;
+		#endif
+
 		pBufferTx = USBHandleGetAddr(pBdtTxEp1);
-		mSetWritePacketID(pBufferTx, USBGEN_EP_SIZE_INTF0, FillCount_INTF0, NextPacketKey_INTF0);
-		mBDT_FillTransfer(pBdtTxEp1, pBufferTx, USBGEN_EP_SIZE_INTF0);
-		mSubmitTransfer_INTF0(pBdtTxEp1, USBGEN_EP_SIZE_INTF0);
+		mSetWritePacketID(pBufferTx, Length, FillCount_INTF0, NextPacketKey_INTF0);
+		mBDT_FillTransfer(pBdtTxEp1, pBufferTx, Length);
+		mSubmitTransfer_INTF0(pBdtTxEp1, Length);
 
 		mBDT_TogglePP(pBdtTxEp1);
 	}
@@ -352,17 +364,27 @@ void doBenchmarkLoop_INTF0(void)
 	{
 		pBufferTx = USBHandleGetAddr(pBdtRxEp1);
 		pBufferRx = USBHandleGetAddr(pBdtTxEp1);
-#if INTF0==EP_ISO
-		Length = USBGEN_EP_SIZE_INTF0;
-#else
-		Length = mBDT_GetLength(pBdtRxEp1);
-#endif
+		#if INTF0==EP_ISO
+			#if defined(SINGLE_INTERFACE_WITH_ALTSETTINGS)
+				Length=(USBAlternateInterface[0]==1) ? USBGEN_EP_SIZE_INTF0_ALT1 : USBGEN_EP_SIZE_INTF0_ALT0;
+			#else
+				Length=USBGEN_EP_SIZE_INTF0;
+			#endif
+		#else
+			Length = mBDT_GetLength(pBdtRxEp1);
+		#endif
 		mBDT_FillTransfer(pBdtTxEp1, pBufferTx, Length);
 		mSubmitTransfer_INTF0(pBdtTxEp1, Length);
 		mBDT_TogglePP(pBdtTxEp1);
 
-		mBDT_FillTransfer(pBdtRxEp1, pBufferRx, USBGEN_EP_SIZE_INTF0);
-		mSubmitTransfer_INTF0(pBdtRxEp1, USBGEN_EP_SIZE_INTF0);
+		#if defined(SINGLE_INTERFACE_WITH_ALTSETTINGS)
+			Length=(USBAlternateInterface[0]==1) ? USBGEN_EP_SIZE_INTF0_ALT1 : USBGEN_EP_SIZE_INTF0_ALT0;
+		#else
+			Length=USBGEN_EP_SIZE_INTF0;
+		#endif
+
+		mBDT_FillTransfer(pBdtRxEp1, pBufferRx, Length);
+		mSubmitTransfer_INTF0(pBdtRxEp1, Length);
 		mBDT_TogglePP(pBdtRxEp1);
 	
 	}
@@ -370,13 +392,20 @@ void doBenchmarkLoop_INTF0(void)
 
 void doBenchmarkRead_INTF0(void)
 {
+	WORD Length;
 	BYTE* pBufferRx;
 
 	if (!USBHandleBusy(pBdtRxEp1))
 	{
+		#if defined(SINGLE_INTERFACE_WITH_ALTSETTINGS)
+			Length=(USBAlternateInterface[0]==1) ? USBGEN_EP_SIZE_INTF0_ALT1 : USBGEN_EP_SIZE_INTF0_ALT0;
+		#else
+			Length=USBGEN_EP_SIZE_INTF0;
+		#endif
+
 		pBufferRx = USBHandleGetAddr(pBdtRxEp1);
-		mBDT_FillTransfer(pBdtRxEp1, pBufferRx, USBGEN_EP_SIZE_INTF0);
-		mSubmitTransfer_INTF0(pBdtRxEp1, USBGEN_EP_SIZE_INTF0);
+		mBDT_FillTransfer(pBdtRxEp1, pBufferRx, Length);
+		mSubmitTransfer_INTF0(pBdtRxEp1, Length);
 		mBDT_TogglePP(pBdtRxEp1);
 	}
 }
