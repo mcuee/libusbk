@@ -64,19 +64,20 @@ IF "%~1" NEQ "!WOUND_GUID!" (
 	REM - If the dist arg was specified, build all platforms/archs listed in the DIST_BUILD_LIST env var.
 	IF DEFINED G_DIST (
 	
-		CALL :CreateTempFile G_BUILD_OUTPUT_FILES lst
-		
 		REM - default to a FRE build if none was specified.
 		IF "!G_FRE!!G_CHK!" EQU "" SET G_FRE=FRE
 		CALL :ExecuteUserTask pre dist
 		
 		FOR /F "usebackq eol=; tokens=* delims=" %%K IN (`!DCMD! "-sp=;" "!G_DIST_BUILD_LIST!"`) DO (
-			CALL :SafeCMD %0 !WOUND_GUID! build %%K
-			IF DEFINED G_VERSION SET G_VERSION=
-			IF !BUILD_ERRORLEVEL! NEQ 0 GOTO DoneWithErrors
+			SET DIST_PLAT=%%~K
+			CALL :Trim DIST_PLAT
+			IF "!DIST_PLAT!" NEQ "" (
+				ECHO DIST:!DIST_PLAT!
+				CALL :SafeCMD %0 !WOUND_GUID! build !DIST_PLAT!
+				IF DEFINED G_VERSION SET G_VERSION=
+				IF !BUILD_ERRORLEVEL! NEQ 0 GOTO DoneWithErrors
+			)
 		)
-		ECHO Dist Filelist [G_BUILD_OUTPUT_FILES=!G_BUILD_OUTPUT_FILES!]:
-		IF EXIST "!G_BUILD_OUTPUT_FILES!" TYPE !G_BUILD_OUTPUT_FILES!
 		CALL :ExecuteUserTask post dist
 
 	) ELSE (
@@ -392,7 +393,7 @@ GOTO :EOF
 	
 	CALL :LoadCfgFile "!G_MAKE_CFG_FILE!" PACKAGE_NAME_FORMAT
 	
-	SET __Zip_AbsFilename=!__Zip_PackageDir!\!G_PACKAGE_NAME_FORMAT!.zip
+	SET __Zip_AbsFilename=!__Zip_PackageDir!\!G_PACKAGE_NAME_FORMAT!.!G_PACKAGE_ZIP_EXT!
 	IF EXIST "!__Zip_AbsFilename!" DEL /Q "!__Zip_AbsFilename!"
 
 	SET __Zip_Cmd=7z.exe
@@ -409,9 +410,7 @@ GOTO :EOF
 	
 	PUSHD !CD!
 	CD /D !__Zip_TempDir!
-
-	
-	CALL :SafeCall !__Zip_Cmd! a -r -tzip "!__Zip_AbsFilename!" *
+	CALL :SafeCall !__Zip_Cmd! a -mx9 -r "!__Zip_AbsFilename!" *
 	POPD
 
 	IF "!BUILD_ERRORLEVEL!" NEQ "0" GOTO Zip_Error
@@ -622,7 +621,7 @@ REM - %2 = Relative or absolute base output dir
 	SET G_TARGET_OUTPUT_FILENAME=%~n1
 	SET G_TARGET_OUTPUT_FRIENDLYNAME=!G_TARGET_OUTPUT_FILENAME:.=_!
 	SET G_TARGET_OUTPUT_NAME=!G_TARGET_OUTPUT_FILENAME:~0,-4!
-	SET G_TARGET_OUTPUT_FILENAME_EXT=!G_TARGET_OUTPUT_FILENAME:~-3!	
+	SET G_TARGET_OUTPUT_FILENAME_EXT=!G_TARGET_OUTPUT_FILENAME:~-3!
 	
 	REM - This one will always point to the CORRECT ddk 'final' output subdir.
 	REM - i386/x86 is a special feature exclusive to microsoft.
@@ -729,6 +728,8 @@ REM - [USES] BUILD_ALT_DIR
 REM - [USES] G_TARGET_OUTPUT_FRIENDLYNAME
 REM - [USES] G_TARGET_OUTPUT_NAME
 :Build_PostTasks
+
+	CALL :ExecuteUserTask post build !G_TARGET_OUTPUT_NAME!
 	
 	REM - If an error occurs we are all done
 	IF EXIST "build!BUILD_ALT_DIR!.err" (
@@ -736,40 +737,19 @@ REM - [USES] G_TARGET_OUTPUT_NAME
 		GOTO :EOF
 	)
 
-	REM - Call any user pre-build tasks here.
-	CALL :ExecuteUserTask post build !G_TARGET_OUTPUT_FRIENDLYNAME!
-	CALL :ExecuteUserTask post build !G_TARGET_OUTPUT_NAME!
-
-	REM - Find all the new output files and exclude the ones we would clean
-	CALL :CreateTempFile __Build_FileList
-	CALL :SyncPathList F __Build_FileList "!G_BUILD_OUTPUT_BASE_DIR!" "/AA-D-H-R-S /S" G_CLEAN_BIN_EXP "/I /V" @NULL ""
-
-	REM - Build a ff print message for the user
-	SET __Build_FileList_Fmt=""
-	SET __Build_FileList_Args=
-	FOR /F "eol=; tokens=* delims=" %%A IN (!__Build_FileList!) DO (
-		SET __Build_FileList_Fmt="!__Build_FileList_Fmt:~1,-1!\n\t@s"
-		SET __Build_FileList_Args=!__Build_FileList_Args! "%%~A"
-
-		REM - if G_BUILD_OUTPUT_FILES is defined, append these files to the list
-		IF DEFINED G_BUILD_OUTPUT_FILES ECHO !G_TARGET_OUTPUT_FILENAME!;%%~A>>"!G_BUILD_OUTPUT_FILES!"
-	)
-	IF !__Build_FileList_Fmt! NEQ "" SET __Build_FileList_Fmt="!__Build_FileList_Fmt:~5,-1!"
-	
-	
 	REM - If an warning occurs; display it
 	IF EXIST "build!BUILD_ALT_DIR!.wrn" (
-		CALL :Print SW "OUTPUT" !__Build_FileList_Fmt! !__Build_FileList_Args!
-		ECHO.
 		TYPE "build!BUILD_ALT_DIR!.wrn"
 		ECHO.
-	) ELSE (
-		CALL :Print S "OUTPUT" !__Build_FileList_Fmt! !__Build_FileList_Args!
 	)
 	IF NOT DEFINED G_WDK_NO_MAKEDIRS MAKEDIRS "!CD!">NUL
 	
 	REM - This is a good place to sign since we know where the files are at.
 	CALL :Build_Sign "%~1"
+
+	REM - Call any user pre-build tasks here.
+	CALL :ExecuteUserTask post build !G_TARGET_OUTPUT_FRIENDLYNAME!
+
 GOTO :EOF
 
 :KitSetupFound_Callback
@@ -945,10 +925,17 @@ REM - %2 = category. IE. build / dist /etc.
 REM - %3 = friendly name
 :ExecuteUserTask
 	SET __BAT_FILE=.\make_tasks\%~1_%~2_%~3.bat
-	IF "%~3" EQU "" SET __BAT_FILE=.\make_tasks\%~1_%~2.bat
+	SET __CFG_FILE=.\make_tasks\%~1_%~2_%~3.cfg
+	IF "%~3" EQU "" (
+		SET __BAT_FILE=.\make_tasks\%~1_%~2.bat
+		SET __CFG_FILE=.\make_tasks\%~1_%~2.cfg
+	)
+	CALL :Print D "USRCFG" "Looking for user config @s.." "!__CFG_FILE!"
 	CALL :Print D "USRBAT" "Looking for user task @s.." "!__BAT_FILE!"
+	IF EXIST "!__CFG_FILE!" CALL :LoadCfgFileEx "set-prefix=K_" "!__CFG_FILE!"
 	IF EXIST "!__BAT_FILE!" CALL "!__BAT_FILE!" %*
 	SET __BAT_FILE=
+	SET __CFG_FILE=
 GOTO :EOF
 
 REM :: Signs a binary using the cert options defined in make.cfg or passed as arguments.
@@ -1259,6 +1246,19 @@ REM %3 [OP] - prefix string added to the variables that are set. [set-prefix]
 		!DCMD! "--make-tokens=set-prefix=%~3;get-prefix=%~2" "%~1" "!__LoadCfgFile!"
 	)
 	
+	"!__LoadCfgFile!"
+	IF "%ERRORLEVEL%" NEQ "0" (
+		CALL :Print E "CFGFILE" "Failed loading cfg file @s." "%~1"
+		CALL :SetError 1
+		GOTO :EOF
+	)
+GOTO :EOF
+
+REM %1 - make-tokens arguments
+REM %2 - cfg file to load
+:LoadCfgFileEx
+	CALL :CreateTempFile __LoadCfgFile bat
+	!DCMD! "--make-tokens=%~1" "%~2" "!__LoadCfgFile!"
 	"!__LoadCfgFile!"
 	IF "%ERRORLEVEL%" NEQ "0" (
 		CALL :Print E "CFGFILE" "Failed loading cfg file @s." "%~1"
