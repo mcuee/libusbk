@@ -8,21 +8,8 @@ TARGETPATH = $(G_TARGET_OUTPUT_ABS_DIR)
 TARGETTYPE = DRIVER
 
 KMDF_VERSION_MAJOR=1
-
 !IFNDEF MSC_WARNING_LEVEL
 MSC_WARNING_LEVEL=/W4 /WX
-!ENDIF
-
-INF_NAME		= libusbK_simple
-INF_PREVIEW_NAME= libusbK
-
-#
-# To generate the test .inf files, make.cmd must be used to build the driver.
-#
-!IFDEF DCMD
-NTTARGETFILE0	= $(OBJ_PATH)\$(O)\$(INF_NAME).inf
-NTTARGETFILE1	= $(OBJ_PATH)\$(O)\$(INF_PREVIEW_NAME).inf
-PASS0_BINPLACE	= $(NTTARGETFILE0)
 !ENDIF
 
 C_DEFINES  = $(C_DEFINES) 
@@ -46,4 +33,3 @@ SOURCES= \
      drv_general.c \
      drv_lusbk_rc.rc
 
-TARGET_DESTINATION=wdf
