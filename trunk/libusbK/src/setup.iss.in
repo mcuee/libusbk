@@ -1,0 +1,99 @@
+; libusbK (KMDF) USB Library - installer/upgrader script
+; Copyright (c) 2011 Travis Robinson <libusbdotnet@gmail.com>
+; ============================================================================
+
+[Setup]
+AppName				= libusbK Installer
+AppVerName			= libusbK Installer v@TARGET_VERSION@
+AppId				= libusbK-installer
+AppPublisher		= Travis Robinson 
+AppPublisherURL		= http://libusb-win32.sourceforge.net
+AppVersion			= @TARGET_VERSION@
+VersionInfoVersion	= @TARGET_VERSION@
+DefaultDirName		= libusbK
+DisableFinishedPage = yes
+DisableDirPage		= yes
+DisableReadyPage	= yes
+UninstallLogMode    = overwrite
+Compression			= lzma/ultra64
+SolidCompression	= yes
+OutputDir			= @G_BUILD_OUTPUT_BASE_ABS_DIR@
+OutputBaseFilename	= @K_LIBUSBK_SETUP_NAME@
+PrivilegesRequired	= admin
+WizardSmallImageFile = libusbK.bmp
+
+; requires Win2k, or higher (x86 or amd64 only)
+MinVersion						= 0, 5.0.2195 
+ArchitecturesAllowed			= x86 x64
+ArchitecturesInstallIn64BitMode	= x64
+
+[Code]
+var
+  FinishedInstall: Boolean;
+
+function IsX64: Boolean;
+begin
+  Result := Is64BitInstallMode and (ProcessorArchitecture = paX64);
+end;
+
+function IsI64: Boolean;
+begin
+  Result := Is64BitInstallMode and (ProcessorArchitecture = paIA64);
+end;
+
+function IsX86: Boolean;
+begin
+  Result := not IsX64 and not IsI64;
+end;
+
+function Is64: Boolean;
+begin
+  Result := IsX64 or IsI64;
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssPostInstall then begin
+    FinishedInstall := True;
+    if not IsTaskSelected('installer') and not IsTaskSelected('upgrader\sys') and not IsTaskSelected('upgrader\dll') then
+      MsgBox('No task selected. No changes were made.', mbInformation, MB_OK);
+  end;
+end;
+
+[Tasks]
+Name: installer; Description: "Create a new libusbK USB driver installation package."; Flags: exclusive;
+Name: upgrader;  Description: "Upgrade libusbK driver and all supported libraries."; Flags: exclusive;
+Name: upgrader\sys;  Description: "Driver (libusbK.sys)";
+Name: upgrader\dll;  Description: "User libraries (libusbK, @K_LIBUSB10_NAME@, libusb0)";
+
+[Files]
+; ============================================================================
+; ** libusbK x86 (Windows 2000/XP and greater)
+Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\sys\x86\libusbK.sys"; DestDir: {sys}\drivers; Flags: uninsneveruninstall replacesameversion restartreplace promptifolder; Check: IsX86; Tasks: upgrader\sys;
+
+; 32 bit program support
+Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\dll\x86\libusbK.dll"; DestDir: {sys}; Flags: replacesameversion restartreplace promptifolder; Check: IsX86; Tasks: upgrader\dll;
+Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\dll\x86\libusb0.dll"; DestDir: {sys}; Flags: replacesameversion restartreplace promptifolder; Check: IsX86; Tasks: upgrader\dll;
+Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\dll\x86\@K_LIBUSB10_NAME@.dll"; DestDir: {sys}; Flags: replacesameversion restartreplace promptifolder; Check: IsX86; Tasks: upgrader\dll;
+
+; ============================================================================
+; ** libusbK AMD 64bit
+Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\sys\amd64\libusbK.sys"; DestDir: {sys}\drivers; Flags: uninsneveruninstall replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\sys;
+
+; 32 bit program support
+Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\dll\x86\libusbK.dll"; DestDir: {syswow64}; Flags: replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\dll;
+Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\dll\x86\libusb0.dll"; DestDir: {syswow64}; Flags: replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\dll;
+Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\dll\x86\@K_LIBUSB10_NAME@.dll"; DestDir: {syswow64}; Flags: replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\dll;
+
+; 64bit bit program support
+Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\dll\amd64\libusbK.dll"; DestDir: {sys}; Flags: replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\dll;
+Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\dll\amd64\libusb0.dll"; DestDir: {sys}; Flags: replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\dll;
+Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\dll\amd64\@K_LIBUSB10_NAME@.dll"; DestDir: {sys}; Flags: replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\dll;
+
+; ============================================================================
+; ** libusbK inf-wizard
+Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\libusbK-inf-wizard.exe"; DestDir: {tmp}; Flags: deleteafterinstall; Tasks: installer;
+
+[Run]
+Filename: "{tmp}\libusbK-inf-wizard.exe"; Parameters: "--no-welcome"; Description: "libusbK Driver Installer"; Flags: hidewizard runascurrentuser; Tasks: installer;
+

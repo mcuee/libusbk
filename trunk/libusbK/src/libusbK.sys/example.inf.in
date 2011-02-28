@@ -1,0 +1,112 @@
+;Copyright (c) #G__YYYY_# #USERDOMAIN#. All Rights Reserved.
+;
+; Module Name: #G_TARGET_OUTPUT_NAME#.inf
+; Description: Installation inf for the LibUsbDotNet benchmark device.
+;
+; THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY
+; KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+; IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR
+; PURPOSE.
+;
+
+[Strings]
+MfgName="Travis Robinson"
+;
+Benchmark_Device="Benchmark Device"
+Benchmark_Device_00="Benchmark Device Intf 0"
+Benchmark_Device_01="Benchmark Device Intf 1"
+;
+Benchmark_Device_00_HWID="#G_BENCHMARK_DEVICE_HWID#&MI_00"
+Benchmark_Device_01_HWID="#G_BENCHMARK_DEVICE_HWID#&MI_01"
+Benchmark_Device_HWID="#G_BENCHMARK_DEVICE_HWID#"
+
+[Version]
+Signature="$WINDOWS NT$"
+Class=LUsbKClass
+ClassGuid={ECFB0CFD-74C4-4f52-BBF7-343461CD72AC}
+Provider=%MfgName%
+DriverVer=#G__MM_#/#G__DD_#/#G__YYYY_#, #TARGET_VERSION#
+CatalogFile=#G_TARGET_OUTPUT_NAME#.cat
+
+; ============== Class section ==================
+[ClassInstall32]
+AddReg=LUsbK_Class_AddReg     
+
+[LUsbK_Class_AddReg]
+HKR,,,0,"#G_TARGET_OUTPUT_NAME# USB Devices"
+HKR,,Icon,,-5
+
+; ============== Device section =================
+[Manufacturer]
+%MfgName%=LUsbK_DeviceGroup,NT#_BUILDARCH#
+
+; For Win2K
+[LUsbK_DeviceGroup]
+%Benchmark_Device_00%=LUsbK_Device, %Benchmark_Device_00_HWID%
+%Benchmark_Device_01%=LUsbK_Device, %Benchmark_Device_01_HWID%
+%Benchmark_Device%=LUsbK_Device, %Benchmark_Device_HWID%
+
+; For XP and later
+[LUsbK_DeviceGroup.NT#_BUILDARCH#]
+%Benchmark_Device_00%=LUsbK_Device, %Benchmark_Device_00_HWID%
+%Benchmark_Device_01%=LUsbK_Device, %Benchmark_Device_01_HWID%
+%Benchmark_Device%=LUsbK_Device, %Benchmark_Device_HWID%
+
+[LUsbK_Device.NT]
+CopyFiles=LUsbK_Device_CopyFiles
+
+[LUsbK_Device.NT.HW]
+AddReg=LUsbK_Device_HW_AddReg
+
+[LUsbK_Device_HW_AddReg]
+HKR,,DeviceInterfaceGUIDs, 0x10000,"#G_BENCHMARK_DEVICE_GUID#"
+
+; ========== Driver/Servce section ==============
+[LUsbK_Device.NT.Services]
+Addservice=#G_TARGET_OUTPUT_NAME#,2,LUsbK_AddService
+
+[LUsbK_AddService]
+DisplayName="#G_TARGET_OUTPUT_NAME# USB Driver v#TARGET_VERSION# - #G__MM_#/#G__DD_#/#G__YYYY_# (KMDF v#KMDFVERSION#)"
+ServiceType=1
+StartType=3
+ErrorControl=1
+ServiceBinary=%12%\#G_TARGET_OUTPUT_FILENAME#
+AddReg=LUsbK_Driver_AddReg
+
+; This optional entry identifies the load order group of which this driver is a member.
+; LoadOrderGroup=Base
+
+[LUsbK_Driver_AddReg]
+HKR,"Parameters","DebugLevel",0x10001,4
+
+; =========== Sources/Destinations ==============
+[LUsbK_Device_CopyFiles]
+#G_TARGET_OUTPUT_FILENAME#
+
+[SourceDisksNames]
+1="#G_TARGET_OUTPUT_NAME# KMDF v#KMDFVERSION# Installation Disk",,,
+
+[SourceDisksFiles]
+#G_TARGET_OUTPUT_FILENAME#=1
+WdfCoInstaller#KMDFCOINSTALLERVERSION#.dll=1
+
+[DestinationDirs]
+DefaultDestDir=12
+CoInstaller_CopyFiles=11
+
+; ========= WDF/CoInstaller section =============
+[LUsbK_Device.NT.CoInstallers]
+AddReg=CoInstaller_AddReg
+CopyFiles=CoInstaller_CopyFiles
+
+[CoInstaller_CopyFiles]
+WdfCoInstaller#KMDFCOINSTALLERVERSION#.dll
+
+[CoInstaller_AddReg]
+HKR,,CoInstallers32,0x00010000, "WdfCoInstaller#KMDFCOINSTALLERVERSION#.dll,WdfCoInstaller"
+
+[LUsbK_Device.NT.Wdf]
+KmdfService = #G_TARGET_OUTPUT_NAME#, LUsbK_wdfsect
+
+[LUsbK_wdfsect]
+KmdfLibraryVersion=#KMDFVERSION#
