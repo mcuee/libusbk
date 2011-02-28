@@ -21,6 +21,8 @@ EXPORTS
 	LUsbK_GetPowerPolicy
 	LUsbK_GetOverlappedResult
 	
+	LUsbK_ResetDevice
+	
 	WinUsb_Initialize
 	WinUsb_Free
 	WinUsb_GetAssociatedInterface
