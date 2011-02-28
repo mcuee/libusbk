@@ -669,6 +669,24 @@ Done:
 	return LusbwError(ret);
 }
 
+LUSBW_EXP BOOL LUSBW_API LUsbK_ResetDevice (
+    __in  WINUSB_INTERFACE_HANDLE InterfaceHandle)
+{
+	DWORD ret = ERROR_SUCCESS;
+	libusb_request request = {0};
+	PLUSBW_INTERFACE_HANDLE_INTERNAL handle = PublicToPrivateHandle(InterfaceHandle);
+
+	FailIf(!handle || !IsHandleValid(handle->DeviceHandle), ERROR_INVALID_HANDLE, Done);
+
+	return Ioctl_Sync(handle->DeviceHandle, LIBUSB_IOCTL_RESET_DEVICE,
+	                  &request, sizeof(request),
+	                  NULL, 0,
+	                  NULL);
+
+Done:
+	return LusbwError(ret);
+}
+
 //////////////////////////////////////////////////////////////////////////////
 ///////////////  W I N U S B   W R A P P E R   S E C T I O N   ///////////////
 //////////////////////////////////////////////////////////////////////////////

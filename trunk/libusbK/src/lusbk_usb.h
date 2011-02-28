@@ -195,6 +195,9 @@ extern "C" {
 	    __in  BOOL bWait
 	);
 
+LUSBW_EXP BOOL LUSBW_API LUsbK_ResetDevice (
+    __in  WINUSB_INTERFACE_HANDLE InterfaceHandle);
+
 	LUSBW_EXP PUSB_INTERFACE_DESCRIPTOR LUsbK_ParseConfigurationDescriptor (
 	    __in  PUSB_CONFIGURATION_DESCRIPTOR ConfigurationDescriptor,
 	    __in  PVOID StartPosition,

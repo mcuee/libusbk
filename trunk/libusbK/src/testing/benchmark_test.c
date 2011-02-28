@@ -11,6 +11,8 @@ static ULONG timeoutValueLength = 4;
 static BOOL success = TRUE;
 static ULONG tickEnd;
 static ULONG tickStart;
+static USB_INTERFACE_DESCRIPTOR interfaceDescriptor;
+static WINUSB_PIPE_INFORMATION pipeInformation;
 
 typedef INT TEST_FN();
 typedef INT (*TEST_FN_T)();
@@ -29,13 +31,14 @@ extern LONG WinError(__in_opt DWORD errorCode);
 TEST_FN Query;
 TEST_FN PipeTimeout;
 TEST_FN FlushPipe;
-TEST_FN Vendor;
+TEST_FN TestType;
 TEST_FN SyncRead;
 TEST_FN SyncWrite;
 TEST_FN SyncLoop;
 TEST_FN Zlp;
-
-#define LUsbKF(functionName) LUsbK_##functionName
+TEST_FN VendorBuffer;
+TEST_FN AltInterface;
+TEST_FN ResetDevice;
 
 #define IsTestMatch(text,TestFnItem) (_strnicmp(TestFnItem->MatchString,text,strlen(text))==0)
 #define MAKE_FN(FnName) {FnName,#FnName}
@@ -45,11 +48,13 @@ TEST_FN_ITEM TestList[] =
 	MAKE_FN(Query),
 	MAKE_FN(PipeTimeout),
 	MAKE_FN(FlushPipe),
-	MAKE_FN(Vendor),
+	MAKE_FN(TestType),
 	MAKE_FN(SyncRead),
 	MAKE_FN(SyncWrite),
 	MAKE_FN(SyncLoop),
 	MAKE_FN(Zlp),
+	MAKE_FN(VendorBuffer),
+	MAKE_FN(AltInterface),
 
 	{NULL, NULL}
 };
@@ -58,7 +63,7 @@ static INT Xfer(LPCSTR catString, BM_TEST_TYPE testType, ULONG transferTestSize)
 
 static LPCSTR tabs[] = {"", "  ", "    ", "      ", "        ", "          ", "            "};
 
-#define TEST_FUNC_BEGIN() ret = ERROR_SUCCESS; timeout=1000; timeoutValueLength=4; success=TRUE; tickStart=GetTickCount()
+#define TEST_FUNC_BEGIN() BOOL isDeviceHandleOwner=FALSE; ret = ERROR_SUCCESS; timeout=1000; timeoutValueLength=4; success=TRUE; tickStart=GetTickCount()
 
 #define TESTMSG(format,...) USBLOG(2,LOG_APPNAME,"","["__FUNCTION__"]",format"\n",__VA_ARGS__)
 #define TESTPASS(format,...) USBLOG(2,LOG_APPNAME,"","["__FUNCTION__"][Ok!]",format"\n",__VA_ARGS__)
@@ -74,27 +79,31 @@ static LPCSTR tabs[] = {"", "  ", "    ", "      ", "        ", "          ", " 
 
 #define TEST_FUNC_END(success,format,...) TEST_FUNC_END_EX(success,__FUNCTION__,format,__VA_ARGS__)
 
-#define OpenDevice(DeviceIndex)	\
-	if ((ret = Bm_Open(DeviceIndex, NULL, &deviceHandle)) != ERROR_SUCCESS) { success=FALSE; goto Done; }		\
-	if ((success=LUsbKF(Initialize)(deviceHandle, &interfaceHandle)) != TRUE)										\
-	{																											\
-		ret = WinError(0);																						\
-		goto Done;																								\
+#define OpenDevice(DeviceIndex)																						\
+	if (!deviceHandle)																								\
+	{																												\
+		isDeviceHandleOwner=TRUE;																					\
+		if ((ret = Bm_Open(DeviceIndex, NULL, &deviceHandle)) != ERROR_SUCCESS) { success=FALSE; goto Done; }		\
+		if ((success=LUsbK_Initialize(deviceHandle, &interfaceHandle)) != TRUE)									\
+		{																											\
+			ret = WinError(0);																						\
+			goto Done;																								\
+		}																											\
 	}
 
-#define CloseDevice() { LUsbKF(Free)(interfaceHandle); Bm_Close(&deviceHandle); }
+#define CloseDevice() if (isDeviceHandleOwner) { LUsbK_Free(interfaceHandle); Bm_Close(&deviceHandle); }
 
 #define SetPipeTimeout(PipeID,TimeoutPtr)	\
-	if (!(success = LUsbKF(SetPipePolicy)(interfaceHandle,PipeID,PIPE_TRANSFER_TIMEOUT,4,TimeoutPtr)))	\
+	if (!(success = LUsbK_SetPipePolicy(interfaceHandle,PipeID,PIPE_TRANSFER_TIMEOUT,4,TimeoutPtr)))	\
 	{ ret = WinError(0); goto Done; }
 
 #define GetPipeTimeout(PipeID,TimeoutPtr)	\
 	timeoutValueLength=4;																								\
-	if (!(success = LUsbKF(GetPipePolicy)(interfaceHandle,PipeID,PIPE_TRANSFER_TIMEOUT,&timeoutValueLength,TimeoutPtr)))	\
+	if (!(success = LUsbK_GetPipePolicy(interfaceHandle,PipeID,PIPE_TRANSFER_TIMEOUT,&timeoutValueLength,TimeoutPtr)))	\
 	{ ret = WinError(0); goto Done; }
 
 #define Flush(PipeID)											\
-	if (!(success = LUsbKF(FlushPipe)(interfaceHandle, PipeID)))	\
+	if (!(success = LUsbK_FlushPipe(interfaceHandle, PipeID)))	\
 	{ ret = WinError(0); goto Done; }
 
 int main(int argCount, char** argv)
@@ -104,6 +113,12 @@ int main(int argCount, char** argv)
 	PTEST_FN_ITEM fnList = TestList;
 
 	TESTMSG("built-on: %s %s\n", __DATE__, __TIME__);
+
+	if (ResetDevice() >= 0)
+	{
+		return Query();
+	}
+	return;
 
 	if (argCount == 1)
 	{
@@ -144,7 +159,7 @@ Failed:
 	return ret;
 }
 
-INT Vendor()
+INT TestType()
 {
 	BM_TEST_TYPE testType = BmTestTypeNone;
 	TEST_FUNC_BEGIN();
@@ -156,6 +171,61 @@ INT Vendor()
 
 Done:
 	TEST_FUNC_END(ret == 1, "TestType=%s\n", BmGetTestTypeString(testType));
+	CloseDevice();
+	return ret;
+}
+
+INT VendorBuffer()
+{
+	BYTE vendorBuffer[8 + 1] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', '\0'};
+	ULONG transferred = 0;
+	WINUSB_SETUP_PACKET setupPacketSetBuffer =
+	{
+		(BMREQUEST_VENDOR << 5),	// RequestType
+		BmSetVBuf,	// Request	(BmCommand)
+		0,			// Value	(BmSetTest)
+		0,			// Index	(Interface#)
+		sizeof(vendorBuffer) - 1 // Length (Max=8)
+	};
+
+	WINUSB_SETUP_PACKET setupPacketGetBuffer =
+	{
+		(BMREQUEST_VENDOR << 5) | USB_ENDPOINT_DIRECTION_MASK,	// RequestType
+		BmGetVBuf,	// Request	(BmCommand)
+		0,			// Value	(BmSetTest)
+		0,			// Index	(Interface#)
+		sizeof(vendorBuffer) - 1 // Length (Max=8)
+	};
+
+	TEST_FUNC_BEGIN();
+
+	OpenDevice(0);
+
+	TESTMSG("setting vendor buffer to %s..", vendorBuffer);
+	success = LUsbK_ControlTransfer(interfaceHandle, setupPacketSetBuffer, vendorBuffer, sizeof(vendorBuffer) - 1, &transferred, NULL);
+	if (!success) goto Fail1;
+	TESTPASS("vendor buffer set.");
+
+	memset(vendorBuffer, 0, sizeof(vendorBuffer));
+
+	TESTMSG("getting vendor buffer..");
+	success = LUsbK_ControlTransfer(interfaceHandle, setupPacketGetBuffer, vendorBuffer, sizeof(vendorBuffer) - 1, &transferred, NULL);
+	if (!success) goto Fail2;
+	TESTPASS("vendor buffer=%s.", vendorBuffer);
+
+	TEST_FUNC_END(TRUE, "\n");
+	goto Done;
+
+Fail1:
+	ret = WinError(0);
+	TEST_FUNC_END(FALSE, "setting vendor buffer failed.\n");
+	goto Done;
+Fail2:
+	ret = WinError(0);
+	TEST_FUNC_END(FALSE, "getting vendor buffer failed.\n");
+	goto Done;
+
+Done:
 	CloseDevice();
 	return ret;
 }
@@ -184,7 +254,7 @@ INT PipeTimeout()
 
 	TESTPASS("pipeID=%02Xh loop test selected.  Reading until timeout..", pipeID);
 
-	while(LUsbKF(ReadPipe)(interfaceHandle, pipeID, transferBuffer, sizeof(transferBuffer), &transferTestSize, NULL));
+	while(LUsbK_ReadPipe(interfaceHandle, pipeID, transferBuffer, sizeof(transferBuffer), &transferTestSize, NULL));
 
 	ret = GetLastError();
 	if (ret == ERROR_SEM_TIMEOUT)
@@ -231,11 +301,83 @@ Done:
 	return ret;
 }
 
+INT AltInterface()
+{
+	UCHAR settingsNumber;
+	UCHAR pipeIndex = 0;
+
+	TEST_FUNC_BEGIN();
+	OpenDevice(0);
+
+	success = LUsbK_GetCurrentAlternateSetting(interfaceHandle, &settingsNumber);
+	if (!success) goto Fail1;
+
+	settingsNumber = (settingsNumber > 0) ? 0 : 1;
+
+	if (!LUsbK_QueryInterfaceSettings(interfaceHandle, settingsNumber, &interfaceDescriptor))
+	{
+		TESTPASS("skipping test. reason: incompatible device configuration.\n");
+		goto Done;
+	}
+
+	tab++;
+	printf("%s[Selecting Interface #%03u:%03u]\n",
+	       tabs[tab], interfaceDescriptor.bInterfaceNumber, interfaceDescriptor.bAlternateSetting);
+	while (LUsbK_QueryPipe(interfaceHandle, settingsNumber, pipeIndex++, &pipeInformation))
+	{
+		tab++;
+		printf("%s-%2u [PipeId %02Xh] Type=%s MaximumPacketSize=%u Interval=%u\n",
+		       tabs[tab], pipeIndex - 1, pipeInformation.PipeId, GetPipeTypeString(pipeInformation.PipeType), pipeInformation.MaximumPacketSize, pipeInformation.Interval);
+		tab--;
+	}
+	tab--;
+
+	success = LUsbK_SetCurrentAlternateSetting(interfaceHandle, interfaceDescriptor.bAlternateSetting);
+	if (!success) goto Fail2;
+
+	TEST_FUNC_END(success, "\n");
+	goto Done;
+
+Fail1:
+	ret = WinError(0);
+	TEST_FUNC_END(FALSE, "GetCurrentAlternateSetting failed.\n");
+	goto Done;
+
+Fail2:
+	ret = WinError(0);
+	TEST_FUNC_END(FALSE, "SetCurrentAlternateSetting failed.\n");
+	goto Done;
+
+Done:
+	CloseDevice();
+	return ret;
+}
+
+INT ResetDevice()
+{
+	TEST_FUNC_BEGIN();
+
+	OpenDevice(0);
+
+	success=LUsbK_ResetDevice(interfaceHandle);
+	if (!success)
+	{
+		ret = WinError(0);
+		TEST_FUNC_END(success, "reset device failed.\n");
+		goto Done;
+	}
+
+	TEST_FUNC_END(success, "\n");
+
+Done:
+	CloseDevice();
+	return ret;
+}
+
 INT Query()
 {
 	WINUSB_INTERFACE_HANDLE assocInterfaceHandle = NULL;
 	UCHAR altIndex;
-	USB_INTERFACE_DESCRIPTOR interfaceDescriptor;
 	TEST_FUNC_BEGIN();
 
 	OpenDevice(0);
@@ -244,11 +386,9 @@ AssociatedInterface:
 	altIndex = 0;
 
 	TESTMSG("Interface and pipe information..");
-	while (LUsbKF(QueryInterfaceSettings)(interfaceHandle, altIndex++, &interfaceDescriptor))
+	while (LUsbK_QueryInterfaceSettings(interfaceHandle, altIndex++, &interfaceDescriptor))
 	{
 		UCHAR pipeIndex = 0;
-		WINUSB_PIPE_INFORMATION pipeInformation;
-
 
 		tab++;
 		printf("%s[Interface #%03u:%03u] Type=%02Xh NumEndpoints=%02u Class=%02Xh Protocol=%02Xh SubClass=%02Xh Length=%u String=%03u\n",
@@ -256,7 +396,7 @@ AssociatedInterface:
 		       interfaceDescriptor.bDescriptorType, interfaceDescriptor.bNumEndpoints, interfaceDescriptor.bInterfaceClass,
 		       interfaceDescriptor.bInterfaceProtocol, interfaceDescriptor.bInterfaceSubClass, interfaceDescriptor.bLength, interfaceDescriptor.iInterface);
 
-		while (LUsbKF(QueryPipe)(interfaceHandle, altIndex - 1, pipeIndex++, &pipeInformation))
+		while (LUsbK_QueryPipe(interfaceHandle, altIndex - 1, pipeIndex++, &pipeInformation))
 		{
 			tab++;
 			printf("%s[PipeId %02Xh] Type=%s MaximumPacketSize=%u Interval=%u\n",
@@ -268,9 +408,9 @@ AssociatedInterface:
 	}
 	if ((success = (GetLastError() == ERROR_NO_MORE_ITEMS)) == FALSE) ret = WinError(0);
 
-	if (LUsbKF(GetAssociatedInterface)(interfaceHandle, 0, &assocInterfaceHandle))
+	if (LUsbK_GetAssociatedInterface(interfaceHandle, 0, &assocInterfaceHandle))
 	{
-		LUsbKF(Free)(interfaceHandle);
+		LUsbK_Free(interfaceHandle);
 		assocInterfaceHandle = interfaceHandle;
 		goto AssociatedInterface;
 	}
@@ -318,13 +458,13 @@ static INT Xfer(LPCSTR catString, BM_TEST_TYPE testType, ULONG transferTestSize)
 		transferBuffer = malloc(transferTestSize);
 
 	if(testType == BmTestTypeRead)
-		success = LUsbKF(ReadPipe)(interfaceHandle, 0x81, transferBuffer, transferTestSize, &transferTestSize, NULL);
+		success = LUsbK_ReadPipe(interfaceHandle, 0x81, transferBuffer, transferTestSize, &transferTestSize, NULL);
 	else if(testType == BmTestTypeWrite)
-		success = LUsbKF(WritePipe)(interfaceHandle, 0x01, transferBuffer, transferTestSize, &transferTestSize, NULL);
+		success = LUsbK_WritePipe(interfaceHandle, 0x01, transferBuffer, transferTestSize, &transferTestSize, NULL);
 	else if(testType == BmTestTypeLoop)
 	{
-		if ((success = LUsbKF(WritePipe)(interfaceHandle, 0x01, transferBuffer, transferTestSize, &transferTestSize, NULL)))
-			success = LUsbKF(ReadPipe)(interfaceHandle, 0x81, transferBuffer, transferTestSize, &transferTestSize, NULL);
+		if ((success = LUsbK_WritePipe(interfaceHandle, 0x01, transferBuffer, transferTestSize, &transferTestSize, NULL)))
+			success = LUsbK_ReadPipe(interfaceHandle, 0x81, transferBuffer, transferTestSize, &transferTestSize, NULL);
 	}
 
 	if (!success)
