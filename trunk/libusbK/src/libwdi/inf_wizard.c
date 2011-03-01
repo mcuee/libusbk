@@ -17,6 +17,47 @@
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
+
+/******************************************************************************
+Copyright (c) 2007-2010, Troy D. Hanson   http://uthash.sourceforge.net
+All rights reserved.
+ * doubly linked list macros (non-circular)                                   *
+ *****************************************************************************/
+#define DL_APPEND(head,add)                                                                    \
+do {                                                                                           \
+  if (head) {                                                                                  \
+      (add)->prev = (head)->prev;                                                              \
+      (head)->prev->next = (add);                                                              \
+      (head)->prev = (add);                                                                    \
+      (add)->next = NULL;                                                                      \
+  } else {                                                                                     \
+      (head)=(add);                                                                            \
+      (head)->prev = (head);                                                                   \
+      (head)->next = NULL;                                                                     \
+  }                                                                                            \
+} while (0);
+
+#define DL_DELETE(head,del)                                                                    \
+do {                                                                                           \
+  if ((del)->prev == (del)) {                                                                  \
+      (head)=NULL;                                                                             \
+  } else if ((del)==(head)) {                                                                  \
+      (del)->next->prev = (del)->prev;                                                         \
+      (head) = (del)->next;                                                                    \
+  } else {                                                                                     \
+      (del)->prev->next = (del)->next;                                                         \
+      if ((del)->next) {                                                                       \
+          (del)->next->prev = (del)->prev;                                                     \
+      } else {                                                                                 \
+          (head)->prev = (del)->prev;                                                          \
+      }                                                                                        \
+  }                                                                                            \
+} while (0);
+
+/* this version is safe for deleting the elements during iteration */
+#define DL_FOREACH_SAFE(head,el,tmp)                                                           \
+  for((el)=(head);(el) && (tmp = (el)->next, 1); (el) = tmp)
+
 #ifdef __GNUC__
 #if !defined(WINVER)
 #define WINVER 0x0500
@@ -82,6 +123,12 @@ DEFINE_GUID(GUID_DEVINTERFACE_USB_HUB, 0xf18a0e88, 0xc30c, 0x11d0, 0x88, \
 DEFINE_GUID(GUID_DEVINTERFACE_USB_DEVICE, 0xA5DCBF10L, 0x6530, 0x11D2, \
             0x90, 0x1F, 0x00, 0xC0, 0x4F, 0xB9, 0x51, 0xED);
 
+typedef struct _infdir_el {
+    char infdir[MAX_PATH];
+    struct _infdir_el *next;
+    struct _infdir_el *prev;
+} infdir_el;
+
 typedef struct
 {
 	struct wdi_device_info* wdi;
@@ -97,6 +144,15 @@ typedef struct
 	BOOL modified; // unused
 
 	VS_FIXEDFILEINFO driver_info;
+
+	int driver_prepared;
+	int driver_installed;
+	int driver_prepared_ret;
+	int driver_installed_ret;
+	BOOL driver_user_cancelled;
+
+	struct _infdir_el* prepared_infdirs;
+
 } device_context_t;
 
 typedef struct
@@ -243,18 +299,25 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prev_instance,
 {
 	device_context_t device;
 	int next_dialog;
+	int installerMode;
+	char currentDirectory[MAX_PATH];
 
 	LoadLibrary("comctl32.dll");
 	InitCommonControls();
 
 	memset(&device, 0, sizeof(device));
-
+	installerMode=0;
+	
 	next_dialog = ID_DIALOG_0;
 	if (cmd_line && strlen(cmd_line) == strlen("--no-welcome"))
 	{
 		if (_memicmp(cmd_line, "--no-welcome", strlen("--no-welcome")) == 0)
 		{
+			// running from the installer, we will need to report back to it when finished.
+			installerMode=1;
 			next_dialog = ID_DIALOG_1;
+			memset(currentDirectory,0,sizeof(currentDirectory));
+			GetCurrentDirectoryA(sizeof(currentDirectory)-1,currentDirectory);
 		}
 	}
 
@@ -298,6 +361,41 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prev_instance,
 		}
 	}
 
+	if (installerMode)
+	{
+		FILE* results_ini;
+		infdir_el* el = NULL;
+		infdir_el* el_tmp=NULL;
+		int inf_index=-1;
+
+		// write an ini file with installer results.
+		// the caller will be responsible for cleaning it up.
+		strncat(currentDirectory,"\\results.ini",sizeof(currentDirectory) - strlen(currentDirectory) - 1);
+		results_ini = fopen(currentDirectory,"w");
+		if (results_ini)
+		{
+			fprintf(results_ini,
+				"[InfWizard]\n"
+				"Cancelled=%u\n"
+				"Prepared=%u\n"
+				"Installed=%u\n",
+				device.driver_user_cancelled,
+				device.driver_prepared, 
+				device.driver_installed);
+
+			DL_FOREACH_SAFE(device.prepared_infdirs,el,el_tmp)
+			{
+				inf_index++;
+				fprintf(results_ini, "InfDir%u=%s\n",inf_index,el->infdir);
+				DL_DELETE(device.prepared_infdirs,el);
+				free(el);
+			}
+
+			fflush(results_ini);
+			fclose(results_ini);
+		}
+	}
+
 	if (device.user_allocated_wdi)
 	{
 		device.user_allocated_wdi = FALSE;
@@ -325,9 +423,12 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prev_instance,
 BOOL CALLBACK dialog_proc_0(HWND dialog, UINT message,
                             WPARAM wParam, LPARAM lParam)
 {
+	static device_context_t* device = NULL;
+
 	switch (message)
 	{
 	case WM_INITDIALOG:
+		device = (device_context_t*)lParam;
 		SendMessage(dialog, WM_SETICON, ICON_SMALL, (LPARAM)mIcon);
 		SendMessage(dialog, WM_SETICON, ICON_BIG,   (LPARAM)mIcon);
 		SetWindowText(GetDlgItem(dialog, ID_INFO_TEXT), info_text_0);
@@ -341,6 +442,7 @@ BOOL CALLBACK dialog_proc_0(HWND dialog, UINT message,
 			return TRUE ;
 		case ID_BUTTON_CANCEL:
 		case IDCANCEL:
+			device->driver_user_cancelled=TRUE;
 			EndDialog(dialog, 0);
 			return TRUE ;
 		}
@@ -570,6 +672,7 @@ BOOL CALLBACK dialog_proc_1(HWND dialog, UINT message,
 
 		case ID_BUTTON_CANCEL:
 		case IDCANCEL:
+			device->driver_user_cancelled=TRUE;
 			device_list_clean(list);
 			if (notification_handle_hub)
 				UnregisterDeviceNotification(notification_handle_hub);
@@ -665,6 +768,7 @@ BOOL CALLBACK dialog_proc_2(HWND dialog, UINT message,
 			return TRUE ;
 		case ID_BUTTON_CANCEL:
 		case IDCANCEL:
+			device->driver_user_cancelled=TRUE;
 			EndDialog(dialog, 0);
 			return TRUE ;
 		}
@@ -1149,7 +1253,6 @@ static int save_file(HWND dialog, device_context_t* device)
 int infwizard_prepare_driver(HWND dialog, device_context_t* device)
 {
 	struct wdi_options_prepare_driver options;
-	int ret;
 
 	memset(&options, 0, sizeof(options));
 	options.driver_type = INFWIZARD_DRIVER_TYPE;
@@ -1159,27 +1262,38 @@ int infwizard_prepare_driver(HWND dialog, device_context_t* device)
 		free(device->wdi->desc);
 	device->wdi->desc = safe_strdup(device->description);
 
-	if ((ret = wdi_prepare_driver(device->wdi, device->inf_dir, device->inf_name, &options) != WDI_SUCCESS))
+	if ((device->driver_prepared_ret = wdi_prepare_driver(device->wdi, device->inf_dir, device->inf_name, &options) != WDI_SUCCESS))
 	{
-		MessageBoxA(dialog, wdi_strerror(ret), "Error Preparing Driver", MB_OK | MB_ICONWARNING);
+		MessageBoxA(dialog, wdi_strerror(device->driver_prepared_ret), "Error Preparing Driver", MB_OK | MB_ICONWARNING);
+	}
+	else
+	{
+		infdir_el* el = calloc(1,sizeof(infdir_el));
+		device->driver_prepared++;
+	    strncpy(el->infdir,device->inf_dir,sizeof(el->infdir)-1);
+		DL_APPEND(device->prepared_infdirs,el);
+
 	}
 
-	return ret;
+	return device->driver_prepared_ret;
 }
 
 int infwizard_install_driver(HWND dialog, device_context_t* device)
 {
 	struct wdi_options_install_driver options;
-	int ret;
 
 	memset(&options, 0, sizeof(options));
 	options.hWnd = dialog;
-	if ((ret = wdi_install_driver(device->wdi, device->inf_dir, device->inf_name, &options)) != WDI_SUCCESS)
+	if ((device->driver_installed_ret = wdi_install_driver(device->wdi, device->inf_dir, device->inf_name, &options)) != WDI_SUCCESS)
 	{
-		MessageBoxA(dialog, wdi_strerror(ret), "Error Installing Driver", MB_OK | MB_ICONWARNING);
+		MessageBoxA(dialog, wdi_strerror(device->driver_installed_ret), "Error Installing Driver", MB_OK | MB_ICONWARNING);
+	}
+	else
+	{
+		device->driver_installed++;
 	}
 
-	return ret;
+	return device->driver_installed_ret;
 }
 
 /*

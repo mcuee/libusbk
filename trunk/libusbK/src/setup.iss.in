@@ -3,18 +3,21 @@
 ; ============================================================================
 
 [Setup]
-AppName				= libusbK Installer
-AppVerName			= libusbK Installer v@TARGET_VERSION@
-AppId				= libusbK-installer
+AppName				= libusbK
+AppVerName			= libusbK-Installer v@TARGET_VERSION@
+AppId				= libusbK-Installer
 AppPublisher		= Travis Robinson 
 AppPublisherURL		= http://libusb-win32.sourceforge.net
 AppVersion			= @TARGET_VERSION@
 VersionInfoVersion	= @TARGET_VERSION@
-DefaultDirName		= libusbK
-DisableFinishedPage = yes
+DefaultDirName		= {cf}\libusbK-Installer
+UninstallFilesDir	= {cf}\libusbK-Installer
+DisableFinishedPage = no
 DisableDirPage		= yes
 DisableReadyPage	= yes
 UninstallLogMode    = overwrite
+CreateUninstallRegKey = IsTaskSelected('upgrader\sys') or IsTaskSelected('upgrader\dll')
+Uninstallable		= IsTaskSelected('upgrader\sys') or IsTaskSelected('upgrader\dll')
 Compression			= lzma/ultra64
 SolidCompression	= yes
 OutputDir			= @G_BUILD_OUTPUT_BASE_ABS_DIR@
@@ -28,9 +31,6 @@ ArchitecturesAllowed			= x86 x64
 ArchitecturesInstallIn64BitMode	= x64
 
 [Code]
-var
-  FinishedInstall: Boolean;
-
 function IsX64: Boolean;
 begin
   Result := Is64BitInstallMode and (ProcessorArchitecture = paX64);
@@ -51,12 +51,69 @@ begin
   Result := IsX64 or IsI64;
 end;
 
-procedure CurStepChanged(CurStep: TSetupStep);
+function IntToBoolStr(val: Longint) : string;
 begin
-  if CurStep = ssPostInstall then begin
-    FinishedInstall := True;
-    if not IsTaskSelected('installer') and not IsTaskSelected('upgrader\sys') and not IsTaskSelected('upgrader\dll') then
-      MsgBox('No task selected. No changes were made.', mbInformation, MB_OK);
+  if val <> 0 then
+    Result := 'True';
+  if val=0 then
+    Result := 'False';
+end;
+
+procedure CheckInstallerResults();
+var
+  infDir : String;
+  resultsIni : String;
+  infIndex : Longint;
+  Installer_Cancelled: Longint;
+  Installer_Prepared: Longint;
+  Installer_Installed: Longint;
+begin
+  resultsIni := ExpandConstant('{tmp}')+'\results.ini';
+  Log('Results INI='+resultsIni);
+  
+  if IniKeyExists('InfWizard','Cancelled',resultsIni) then begin
+    Installer_Cancelled :=  GetIniInt('InfWizard','Cancelled',0,0,0,resultsIni);
+    Installer_Prepared :=  GetIniInt('InfWizard','Prepared',0,0,0,resultsIni);
+    Installer_Installed :=  GetIniInt('InfWizard','Installed',0,0,0,resultsIni);
+    
+    Log('Installer_Cancelled = '+IntToStr(Installer_Cancelled));
+    Log('Installer_Prepared  = '+IntToStr(Installer_Prepared));
+    Log('Installer_Installed = '+IntToStr(Installer_Installed));
+    
+    infIndex := -1;
+    repeat
+
+      infIndex := infIndex+1;
+      if not IniKeyExists('InfWizard','infDir'+IntToStr(infIndex),resultsIni) then break;
+
+      infDir := GetIniString('InfWizard','InfDir'+IntToStr(infIndex),'',resultsIni);
+      Log('InfDir'+IntToStr(infIndex)+' = '+infDir);
+      
+      if FileExists(infDir+'\installer_x86.exe') then
+        DeleteFile(infDir+'\installer_x86.exe');
+	    
+      if FileExists(infDir+'\installer_x64.exe') then
+	     DeleteFile(infDir+'\installer_x64.exe');
+
+    until False;
+  end;
+end;
+
+function ShouldSkipPage(PageID: Integer): Boolean;
+begin
+  Result := false;
+  if PageID=wpFinished then
+    Result := IsTaskSelected('installer');
+end;
+
+function NextButtonClick(CurPageID: Integer): Boolean;
+begin
+  Result := true;
+  if CurPageID = wpSelectTasks then begin
+    if not IsTaskSelected('installer') and not IsTaskSelected('upgrader\sys') and not IsTaskSelected('upgrader\dll') then begin
+      MsgBox('No tasks selected.',mbError, MB_OK);
+      Result := false;
+    end;
   end;
 end;
 
@@ -95,5 +152,6 @@ Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\dll\amd64\@K_LIBUSB10_NAME@
 Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\libusbK-inf-wizard.exe"; DestDir: {tmp}; Flags: deleteafterinstall; Tasks: installer;
 
 [Run]
-Filename: "{tmp}\libusbK-inf-wizard.exe"; Parameters: "--no-welcome"; Description: "libusbK Driver Installer"; Flags: hidewizard runascurrentuser; Tasks: installer;
+Filename: "{tmp}\libusbK-inf-wizard.exe"; Parameters: "--no-welcome"; Description: "libusbK Driver Installer"; Flags: hidewizard runascurrentuser; Tasks: installer; AfterInstall: CheckInstallerResults;
+
 
