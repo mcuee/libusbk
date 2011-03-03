@@ -222,7 +222,7 @@ ROM BYTE configDescriptor1[]={
     /* Interface Descriptor */
     0x09,							// Size of this descriptor in bytes
     USB_DESCRIPTOR_INTERFACE,		// INTERFACE descriptor type
-    0,								// Interface Number
+    INTF0_NUMBER,					// Interface Number
     0,								// Alternate Setting Number
     2,								// Number of endpoints in this intf
 	0x00, 0x00, 0x00,			    // Class, Subclass, Protocol
@@ -245,7 +245,7 @@ ROM BYTE configDescriptor1[]={
     /* Interface Descriptor */
     0x09,							// Size of this descriptor in bytes
     USB_DESCRIPTOR_INTERFACE,		// INTERFACE descriptor type
-    0,								// Interface Number
+    INTF0_NUMBER,					// Interface Number
     1,								// Alternate Setting Number
     2,								// Number of endpoints in this intf
 	0x00, 0x00, 0x00,			    // Class, Subclass, Protocol
@@ -269,7 +269,7 @@ ROM BYTE configDescriptor1[]={
     /* Interface Descriptor */
     0x09,							// Size of this descriptor in bytes
     USB_DESCRIPTOR_INTERFACE,		// INTERFACE descriptor type
-    0,								// Interface Number
+    INTF0_NUMBER,					// Interface Number
     0,								// Alternate Setting Number
     2,								// Number of endpoints in this intf
 	0x00, 0x00, 0x00,			    // Class, Subclass, Protocol
@@ -309,7 +309,7 @@ ROM BYTE configDescriptor1[]={
 	//// INTERFACE ASSOCIATION DESCRIPTOR ////
     0x08,							// Interface association descriptor size
 	0x0B,							// Interface association descriptor type
-	0x00,							// (bFirstInterface) first asssociation interface number
+	INTF0_NUMBER,					// (bFirstInterface) first asssociation interface number
 	0x02,							// (bInterfaceCount) count of interfaces to be 'associated' starting with bFirstInterface 
 	0x00, 0x00, 0x00,			    // Class, Subclass, Protocol
     0x00,							// (iFunction)
@@ -317,7 +317,7 @@ ROM BYTE configDescriptor1[]={
 	//// INTERFACE ////
     0x09,								// Interface descriptor size
     USB_DESCRIPTOR_INTERFACE,			// Interface descriptor
-    0,									// Interface Number
+    INTF0_NUMBER,						// Interface Number
     0,									// Alternate Setting Number
     2,									// Number of endpoints in this intf
 	0x00, 0x00, 0x00,					// Class, Subclass, Protocol
@@ -340,7 +340,7 @@ ROM BYTE configDescriptor1[]={
 	//// INTERFACE ////
     0x09,						// Interface descriptor size
     USB_DESCRIPTOR_INTERFACE,	// Interface descriptor
-    1,							// Interface Number
+    INTF1_NUMBER,				// Interface Number
     0,							// Alternate Setting Number
     2,							// Number of endpoints in this intf
 	0x00, 0x00, 0x00,			// Class, Subclass, Protocol
