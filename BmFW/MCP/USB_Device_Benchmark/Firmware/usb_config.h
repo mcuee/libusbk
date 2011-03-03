@@ -52,16 +52,29 @@
 // DESCRIPTOR CONFIGURATION /////////////////////////////////////////
 
 // DUAL_INTERFACE Selection:
-// If defined, creates a dual interfaces device with two separate
-// benchmark interfaces.
+// if defined, creates a dual interfaces device each interface will be 
+// exposed as a seperate device (windows). 
 // 
-
 // #define DUAL_INTERFACE
 
+// DUAL_INTERFACE_WITH_ASSOCIATION Selection:
+// If defined, creates a single device with two interfaces.
+//
 // #define DUAL_INTERFACE_WITH_ASSOCIATION
 
+// SINGLE_INTERFACE_WITH_ALTSETTINGS Selection:
+// If defined, creates a single interface device with an additional alt 
+// setting. By default, the first alt setting will have either 0 or 
+// USBGEN_EP_SIZE_INTF0/2 for its endpoints wMaxPacketSize's (0 for ISO 
+// endpoints). The second alt setting exposes the interface with the actual 
+// wMaxPacketSize setting. 
+//
 #define SINGLE_INTERFACE_WITH_ALTSETTINGS
 
+// ENABLE_VENDOR_BUFFER_AND_SET_DESCRIPTOR Selection:
+// Enables additinal control requests and an 8 byte buffer for storing and 
+// retrieving data. 
+//
 #define ENABLE_VENDOR_BUFFER_AND_SET_DESCRIPTOR
 
 #if defined(DUAL_INTERFACE_WITH_ASSOCIATION) && !defined(DUAL_INTERFACE)
@@ -108,6 +121,10 @@
 
 
 // INTERFACE & ENDPOINT CONFIGURATION ///////////////////////////////
+
+// Interface number to use in interface descriptor(s)
+#define INTF0_NUMBER 1
+#define INTF1_NUMBER 2
 
 /////////////////////////////////////////////////////////////////////
 // ENDPOINT #1 (IN,OUT) Size & Type
