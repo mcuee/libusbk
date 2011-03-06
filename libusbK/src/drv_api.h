@@ -156,6 +156,19 @@ enum
 #define LIBUSB_IOCTL_FLUSH_PIPE CTL_CODE(FILE_DEVICE_UNKNOWN,\
         0x90C, METHOD_BUFFERED, FILE_ANY_ACCESS)
 
+#define LIBUSBK_IOCTL_CLAIM_INTERFACE CTL_CODE(FILE_DEVICE_UNKNOWN,\
+        0x90D, METHOD_BUFFERED, FILE_ANY_ACCESS)
+
+#define LIBUSBK_IOCTL_RELEASE_INTERFACE CTL_CODE(FILE_DEVICE_UNKNOWN,\
+        0x90E, METHOD_BUFFERED, FILE_ANY_ACCESS)
+
+#define LIBUSBK_IOCTL_SET_INTERFACE CTL_CODE(FILE_DEVICE_UNKNOWN,\
+        0x910, METHOD_BUFFERED, FILE_ANY_ACCESS)
+
+#define LIBUSBK_IOCTL_GET_INTERFACE CTL_CODE(FILE_DEVICE_UNKNOWN,\
+        0x911, METHOD_BUFFERED, FILE_ANY_ACCESS)
+
+
 /////////////////////////////////////////////////////////////////////////////
 
 #include <pshpack1.h>
@@ -185,17 +198,18 @@ typedef struct
 		{
 			unsigned int configuration;
 		} configuration;
+
 		struct
 		{
 			unsigned int interface_number;
 			unsigned int altsetting_number;
 
-
-			unsigned char useInterfaceIndex;
-			unsigned char useAltSettingIndex;
-			unsigned char interfaceIndex;
-			unsigned char altsettingIndex;
+			unsigned char useInterfaceIndex;	// libusbK Only
+			unsigned char useAltSettingIndex;	// libusbK Only
+			unsigned char interfaceIndex;		// libusbK Only
+			unsigned char altsettingIndex;		// libusbK Only
 		} intf;
+
 		struct
 		{
 			unsigned int endpoint;

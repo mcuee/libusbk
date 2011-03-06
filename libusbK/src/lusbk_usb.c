@@ -73,7 +73,7 @@ LUSBW_EXP BOOL LUSBW_API LUsbK_Initialize
 
 	request.intf.useInterfaceIndex = TRUE;
 	request.intf.useAltSettingIndex = TRUE;
-	success = Ioctl_Sync(DeviceHandle, LIBUSB_IOCTL_CLAIM_INTERFACE,
+	success = Ioctl_Sync(DeviceHandle, LIBUSBK_IOCTL_CLAIM_INTERFACE,
 	                     &request, sizeof(request),
 	                     NULL, 0,
 	                     NULL);
@@ -126,7 +126,7 @@ LUSBW_EXP BOOL LUSBW_API LUsbK_Free (__in  WINUSB_INTERFACE_HANDLE InterfaceHand
 
 	request.intf.useInterfaceIndex = TRUE;
 	request.intf.useAltSettingIndex = TRUE;
-	Ioctl_Sync(deviceHandle, LIBUSB_IOCTL_RELEASE_INTERFACE,
+	Ioctl_Sync(deviceHandle, LIBUSBK_IOCTL_RELEASE_INTERFACE,
 	           &request, sizeof(request),
 	           NULL, 0,
 	           NULL);
@@ -163,7 +163,7 @@ LUSBW_EXP BOOL LUSBW_API LUsbK_GetAssociatedInterface (
 	request.intf.useInterfaceIndex = TRUE;
 	request.intf.useAltSettingIndex = TRUE;
 	request.intf.interfaceIndex = (UCHAR)(handle->InterfaceIndex + AssociatedInterfaceIndex + 1);
-	success = Ioctl_Sync(handle->DeviceHandle, LIBUSB_IOCTL_CLAIM_INTERFACE,
+	success = Ioctl_Sync(handle->DeviceHandle, LIBUSBK_IOCTL_CLAIM_INTERFACE,
 	                     &request, sizeof(request),
 	                     NULL, 0,
 	                     NULL);
@@ -285,7 +285,7 @@ LUSBW_EXP BOOL LUSBW_API LUsbK_SetCurrentAlternateSetting (
 
 	request.intf.useInterfaceIndex = TRUE;
 	request.intf.useAltSettingIndex = TRUE;
-	return Ioctl_Sync(handle->DeviceHandle, LIBUSB_IOCTL_SET_INTERFACE,
+	return Ioctl_Sync(handle->DeviceHandle, LIBUSBK_IOCTL_SET_INTERFACE,
 	                  &request, sizeof(request),
 	                  NULL, 0,
 	                  NULL);
@@ -310,7 +310,7 @@ LUSBW_EXP BOOL LUSBW_API LUsbK_GetCurrentAlternateSetting (
 
 	request.intf.useInterfaceIndex = TRUE;
 	request.intf.useAltSettingIndex = TRUE;
-	return Ioctl_Sync(handle->DeviceHandle, LIBUSB_IOCTL_GET_INTERFACE,
+	return Ioctl_Sync(handle->DeviceHandle, LIBUSBK_IOCTL_GET_INTERFACE,
 	                  &request, sizeof(request),
 	                  SettingNumber, sizeof(UCHAR),
 	                  NULL);

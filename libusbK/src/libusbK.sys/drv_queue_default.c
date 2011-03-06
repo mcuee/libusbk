@@ -247,20 +247,32 @@ VOID DefaultQueue_OnIoControl(__in WDFQUEUE Queue,
 		break;
 
 	case LIBUSB_IOCTL_CLAIM_INTERFACE:
+		requestContext->IoControlRequest.intf.useInterfaceIndex=0;
+		requestContext->IoControlRequest.intf.useAltSettingIndex=0;
+	case LIBUSBK_IOCTL_CLAIM_INTERFACE:
 		status = Interface_Claim(deviceContext, requestContext, wdmFileObject);
 		break;
 
 	case LIBUSB_IOCTL_RELEASE_INTERFACE:
+		requestContext->IoControlRequest.intf.useAltSettingIndex=0;
+		requestContext->IoControlRequest.intf.useInterfaceIndex=0;
+	case LIBUSBK_IOCTL_RELEASE_INTERFACE:
 		status = Interface_Release(deviceContext, requestContext, wdmFileObject);
 		break;
 
 	case LIBUSB_IOCTL_SET_INTERFACE:
+		requestContext->IoControlRequest.intf.useAltSettingIndex=0;
+		requestContext->IoControlRequest.intf.useInterfaceIndex=0;
+	case LIBUSBK_IOCTL_SET_INTERFACE:
 
 		status = Interface_SetAltSetting(deviceContext, requestContext);
 
 		break;
 
 	case LIBUSB_IOCTL_GET_INTERFACE:
+		requestContext->IoControlRequest.intf.useAltSettingIndex=0;
+		requestContext->IoControlRequest.intf.useInterfaceIndex=0;
+	case LIBUSBK_IOCTL_GET_INTERFACE:
 
 		GET_OUT_BUFFER(1, &outputBuffer, &outputBufferLen, "get_interface");
 		status = Interface_GetAltSetting(deviceContext, requestContext, (UCHAR*)outputBuffer);
