@@ -404,7 +404,7 @@ void doBenchmarkWrite_INTF0(void)
 	if (!USBHandleBusy(pBdtTxEp1))
 	{
 		#if defined(SINGLE_INTERFACE_WITH_ALTSETTINGS)
-			Length=(USBAlternateInterface[0]==1) ? USBGEN_EP_SIZE_INTF0_ALT1 : USBGEN_EP_SIZE_INTF0_ALT0;
+			Length=(USBAlternateInterface[INTF0_NUMBER]==1) ? USBGEN_EP_SIZE_INTF0_ALT1 : USBGEN_EP_SIZE_INTF0_ALT0;
 		#else
 			Length=USBGEN_EP_SIZE_INTF0;
 		#endif
@@ -430,7 +430,7 @@ void doBenchmarkLoop_INTF0(void)
 		pBufferRx = USBHandleGetAddr(pBdtTxEp1);
 		#if INTF0==EP_ISO
 			#if defined(SINGLE_INTERFACE_WITH_ALTSETTINGS)
-				Length=(USBAlternateInterface[0]==1) ? USBGEN_EP_SIZE_INTF0_ALT1 : USBGEN_EP_SIZE_INTF0_ALT0;
+				Length=(USBAlternateInterface[INTF0_NUMBER]==1) ? USBGEN_EP_SIZE_INTF0_ALT1 : USBGEN_EP_SIZE_INTF0_ALT0;
 			#else
 				Length=USBGEN_EP_SIZE_INTF0;
 			#endif
@@ -442,7 +442,7 @@ void doBenchmarkLoop_INTF0(void)
 		mBDT_TogglePP(pBdtTxEp1);
 
 		#if defined(SINGLE_INTERFACE_WITH_ALTSETTINGS)
-			Length=(USBAlternateInterface[0]==1) ? USBGEN_EP_SIZE_INTF0_ALT1 : USBGEN_EP_SIZE_INTF0_ALT0;
+			Length=(USBAlternateInterface[INTF0_NUMBER]==1) ? USBGEN_EP_SIZE_INTF0_ALT1 : USBGEN_EP_SIZE_INTF0_ALT0;
 		#else
 			Length=USBGEN_EP_SIZE_INTF0;
 		#endif
@@ -462,7 +462,7 @@ void doBenchmarkRead_INTF0(void)
 	if (!USBHandleBusy(pBdtRxEp1))
 	{
 		#if defined(SINGLE_INTERFACE_WITH_ALTSETTINGS)
-			Length=(USBAlternateInterface[0]==1) ? USBGEN_EP_SIZE_INTF0_ALT1 : USBGEN_EP_SIZE_INTF0_ALT0;
+			Length=(USBAlternateInterface[INTF0_NUMBER]==1) ? USBGEN_EP_SIZE_INTF0_ALT1 : USBGEN_EP_SIZE_INTF0_ALT0;
 		#else
 			Length=USBGEN_EP_SIZE_INTF0;
 		#endif

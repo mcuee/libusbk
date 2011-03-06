@@ -199,12 +199,13 @@
 								// of applications.  Exceptions to this, are applications
 								// that use EP0 IN or OUT for sending large amounts of
 								// application related data.
+
 #if defined(DUAL_INTERFACE)
-	#define USB_MAX_NUM_INT     		2   // For tracking Alternate Setting
+	#define USB_MAX_NUM_INT     		(INTF1_NUMBER+1)   // For tracking Alternate Setting
 	#define USB_MAX_EP_NUMBER			2
 	#define USB_NUM_STRING_DESCRIPTORS	6
 #else
-	#define USB_MAX_NUM_INT     		1   // For tracking Alternate Setting
+	#define USB_MAX_NUM_INT     		(INTF0_NUMBER+1)   // For tracking Alternate Setting
 	#define USB_MAX_EP_NUMBER			1
 	#define USB_NUM_STRING_DESCRIPTORS	4
 #endif
