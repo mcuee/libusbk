@@ -2,17 +2,18 @@
  FileName:      HardwareProfile.h
  Dependencies:  See INCLUDES section
  Processor:     PIC18, PIC24, or PIC32 USB Microcontrollers
- Hardware:      The code is natively intended to be used on the 
-                  following hardware platforms: 
+ Hardware:      The code is natively intended to be used on the
+                  following hardware platforms:
                     PICDEM™ FS USB Demo Board
                     PIC18F46J50 FS USB Plug-In Module
                     PIC18F87J50 FS USB Plug-In Module
                     Explorer 16 + PIC24 or PIC32 USB PIMs
                     PIC24F Starter Kit
                     Low Pin Count USB Development Kit
-                  The firmware may be modified for use on other USB 
+                    PICKit2 Kit
+                  The firmware may be modified for use on other USB
                     platforms by editing this file (HardwareProfile.h)
- Compiler:  	Microchip C18 (for PIC18), C30 (for PIC24), 
+ Compiler:  	Microchip C18 (for PIC18), C30 (for PIC24),
                   or C32 (for PIC32)
  Company:       Microchip Technology, Inc.
 
@@ -79,6 +80,8 @@
     #if defined(__18CXX)
         #if defined(__18F4550)
             #include "HardwareProfile - PICDEM FSUSB.h"
+        #elif defined(__18F2550)
+            #include "HardwareProfile - PICKit2 Kit.h"
         #elif defined(__18F87J50)
             #include "HardwareProfile - PIC18F87J50 PIM.h"
         #elif defined(__18F14K50)
