@@ -243,7 +243,7 @@ void USBCBCheckOtherReq(void)
 	{
 	case PICFW_SET_TEST:
 #ifdef DUAL_INTERFACE
-		if ((SetupPkt.wIndex & 0xff) == 1)
+		if ((SetupPkt.wIndex & 0xff) == INTF1_NUMBER)
 		{
 			TestType_INTF1=SetupPkt.wValue & 0xff;
 			inPipes[0].pSrc.bRam = (BYTE*)&TestType_INTF1;  // Set Source
@@ -263,7 +263,7 @@ void USBCBCheckOtherReq(void)
 		break;
 	case PICFW_GET_TEST:
 #ifdef DUAL_INTERFACE
-		if ((SetupPkt.wIndex & 0xff) == 1)
+		if ((SetupPkt.wIndex & 0xff) == INTF1_NUMBER)
 		{
 			inPipes[0].pSrc.bRam = (BYTE*)&TestType_INTF1;		// Set Source
 			inPipes[0].info.bits.ctrl_trf_mem = USB_EP0_RAM;	// Set memory type
