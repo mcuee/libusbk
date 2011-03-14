@@ -60,7 +60,7 @@
 // DUAL_INTERFACE_WITH_ASSOCIATION Selection:
 // If defined, creates a single device with two interfaces.
 //
-// #define DUAL_INTERFACE_WITH_ASSOCIATION
+#define DUAL_INTERFACE_WITH_ASSOCIATION
 
 // SINGLE_INTERFACE_WITH_ALTSETTINGS Selection:
 // If defined, creates a single interface device with an additional alt 
@@ -75,7 +75,7 @@
 // Enables additinal control requests and an 8 byte buffer for storing and 
 // retrieving data. 
 //
-// #define ENABLE_VENDOR_BUFFER_AND_SET_DESCRIPTOR
+#define ENABLE_VENDOR_BUFFER_AND_SET_DESCRIPTOR
 
 #if defined(DUAL_INTERFACE_WITH_ASSOCIATION) && !defined(DUAL_INTERFACE)
 #define DUAL_INTERFACE
@@ -123,8 +123,8 @@
 // INTERFACE & ENDPOINT CONFIGURATION ///////////////////////////////
 
 // Interface number to use in interface descriptor(s)
-#define INTF0_NUMBER 1
-#define INTF1_NUMBER 2
+#define INTF0_NUMBER 0
+#define INTF1_NUMBER 1
 
 /////////////////////////////////////////////////////////////////////
 // ENDPOINT #1 (IN,OUT) Size & Type
@@ -136,7 +136,7 @@
 
 /////////////////////////////////////////////////////////////////////
 // ENDPOINT #2 (IN,OUT) Size & Type
-#define USBGEN_EP_SIZE_INTF1	64
+#define USBGEN_EP_SIZE_INTF1	32
 // #define INTF1				EP_ISO
 #define INTF1				EP_BULK
 // #define INTF1				EP_INT
@@ -223,10 +223,16 @@
 
 //Make sure only one of the below "#define USB_PING_PONG_MODE"
 //is uncommented.
-//#define USB_PING_PONG_MODE USB_PING_PONG__NO_PING_PONG
-#define USB_PING_PONG_MODE USB_PING_PONG__FULL_PING_PONG
-//#define USB_PING_PONG_MODE USB_PING_PONG__EP0_OUT_ONLY
-//#define USB_PING_PONG_MODE USB_PING_PONG__ALL_BUT_EP0		//NOTE: This mode is not supported in PIC18F4550 family rev A3 devices
+
+#if defined(__C32__)
+  #define USB_PING_PONG_MODE USB_PING_PONG__FULL_PING_PONG
+#else
+  #define USB_PING_PONG_MODE USB_PING_PONG__NO_PING_PONG
+// #define USB_PING_PONG_MODE USB_PING_PONG__FULL_PING_PONG
+// #define USB_PING_PONG_MODE USB_PING_PONG__EP0_OUT_ONLY
+// #define USB_PING_PONG_MODE USB_PING_PONG__ALL_BUT_EP0		//NOTE: This mode is not supported in PIC18F4550 family rev A3 devices
+#endif
+
 
 /* Parameter definitions are defined in usb_device.h */
 #define USB_PULLUP_OPTION USB_PULLUP_ENABLE
