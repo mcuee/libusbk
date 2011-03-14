@@ -69,13 +69,13 @@
 // endpoints). The second alt setting exposes the interface with the actual 
 // wMaxPacketSize setting. 
 //
-#define SINGLE_INTERFACE_WITH_ALTSETTINGS
+// #define SINGLE_INTERFACE_WITH_ALTSETTINGS
 
 // ENABLE_VENDOR_BUFFER_AND_SET_DESCRIPTOR Selection:
 // Enables additinal control requests and an 8 byte buffer for storing and 
 // retrieving data. 
 //
-#define ENABLE_VENDOR_BUFFER_AND_SET_DESCRIPTOR
+// #define ENABLE_VENDOR_BUFFER_AND_SET_DESCRIPTOR
 
 #if defined(DUAL_INTERFACE_WITH_ASSOCIATION) && !defined(DUAL_INTERFACE)
 #define DUAL_INTERFACE
@@ -128,7 +128,7 @@
 
 /////////////////////////////////////////////////////////////////////
 // ENDPOINT #1 (IN,OUT) Size & Type
-#define USBGEN_EP_SIZE_INTF0	64
+#define USBGEN_EP_SIZE_INTF0	32
 // #define INTF0				EP_ISO
 #define INTF0				EP_BULK
 // #define INTF0				EP_INT
