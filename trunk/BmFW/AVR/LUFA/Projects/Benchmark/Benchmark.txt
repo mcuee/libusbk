@@ -1,0 +1,46 @@
+/** \file
+ *
+ *  This file contains special DoxyGen information for the generation of the main page and other special
+ *  documentation pages. It is not a project source file.
+ */
+
+/** \mainpage Libusb Benchmark device using AT90USB
+ *
+ *  \section SSec_Compat Project Compatibility:
+ *
+ *  The following list indicates what microcontrollers are compatible with this project.
+ *
+ *  - AT90USB162
+ *
+ *  \section SSec_Info USB Information:
+ *
+ *  The following table gives a rundown of the USB utilization of this project.
+ *
+ * <table>
+ *  <tr>
+ *   <td><b>USB Mode:</b></td>
+ *   <td>Device</td>
+ *  </tr>
+ *  <tr>
+ *   <td><b>USB Class:</b></td>
+ *   <td>None</td>
+ *  </tr>
+ *  <tr>
+ *   <td><b>USB Subclass:</b></td>
+ *   <td>None</td>
+ *  </tr>
+ *  <tr>
+ *   <td><b>Relevant Standards:</b></td>
+ *   <td>USB Standards</td>
+ *  </tr>
+ *  <tr>
+ *   <td><b>Usable Speeds:</b></td>
+ *   <td>Low Speed Mode, Full Speed Mode</td>
+ *  </tr>
+ * </table>
+ *
+ *  \section SSec_Description Project Description:
+ *
+ *  Firmware for a libusb device compatible with the Benchmark app
+ *
+ */
