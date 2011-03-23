@@ -1,22 +1,3 @@
-/* libusb-win32 WDF, Generic KMDF Windows USB Driver
- * Copyright (c) 2010-2011 Travis Robinson <libusbdotnet@gmail.com>
- * Copyright (c) 2002-2005 Stephan Meyer <ste_meyer@web.de>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
-
 
 #include "drv_common.h"
 
@@ -247,22 +228,22 @@ VOID DefaultQueue_OnIoControl(__in WDFQUEUE Queue,
 		break;
 
 	case LIBUSB_IOCTL_CLAIM_INTERFACE:
-		requestContext->IoControlRequest.intf.useInterfaceIndex=0;
-		requestContext->IoControlRequest.intf.useAltSettingIndex=0;
+		requestContext->IoControlRequest.intf.useInterfaceIndex = 0;
+		requestContext->IoControlRequest.intf.useAltSettingIndex = 0;
 	case LIBUSBK_IOCTL_CLAIM_INTERFACE:
 		status = Interface_Claim(deviceContext, requestContext, wdmFileObject);
 		break;
 
 	case LIBUSB_IOCTL_RELEASE_INTERFACE:
-		requestContext->IoControlRequest.intf.useAltSettingIndex=0;
-		requestContext->IoControlRequest.intf.useInterfaceIndex=0;
+		requestContext->IoControlRequest.intf.useAltSettingIndex = 0;
+		requestContext->IoControlRequest.intf.useInterfaceIndex = 0;
 	case LIBUSBK_IOCTL_RELEASE_INTERFACE:
 		status = Interface_Release(deviceContext, requestContext, wdmFileObject);
 		break;
 
 	case LIBUSB_IOCTL_SET_INTERFACE:
-		requestContext->IoControlRequest.intf.useAltSettingIndex=0;
-		requestContext->IoControlRequest.intf.useInterfaceIndex=0;
+		requestContext->IoControlRequest.intf.useAltSettingIndex = 0;
+		requestContext->IoControlRequest.intf.useInterfaceIndex = 0;
 	case LIBUSBK_IOCTL_SET_INTERFACE:
 
 		status = Interface_SetAltSetting(deviceContext, requestContext);
@@ -270,8 +251,8 @@ VOID DefaultQueue_OnIoControl(__in WDFQUEUE Queue,
 		break;
 
 	case LIBUSB_IOCTL_GET_INTERFACE:
-		requestContext->IoControlRequest.intf.useAltSettingIndex=0;
-		requestContext->IoControlRequest.intf.useInterfaceIndex=0;
+		requestContext->IoControlRequest.intf.useAltSettingIndex = 0;
+		requestContext->IoControlRequest.intf.useInterfaceIndex = 0;
 	case LIBUSBK_IOCTL_GET_INTERFACE:
 
 		GET_OUT_BUFFER(1, &outputBuffer, &outputBufferLen, "get_interface");

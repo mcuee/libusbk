@@ -36,3 +36,17 @@ pageable code every time that the driver raises IRQL to DISPATCH_LEVEL
 or above. Using the Driver Verifier, you can quickly find any driver 
 bugs in this area. Otherwise, these bugs will typically be found only by 
 customers and they can frequently be very hard for you to reproduce. 
+
+Regex vstudio match/replace transforms:
+
+[exported typedef transform]
+Match:
+{typedef}:b+{[A-Za-z_0-9]+}:b+{KUSB_API}:b+{KUSB_}{[A-Za-z_0-9]+}.*{\(}{([^\)]|\n)+}{\);}
+\1 =typedef
+\2 = [TYPE]
+\3 = KUSB_API
+\4 = KUSB_
+\5 = [FUNCTION_SHORTNAME]
+\6 = (
+\7 = [FUNCTION_PARAMETERS]
+\8 = );

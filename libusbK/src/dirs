@@ -1,4 +1,6 @@
 DIRS= \
+     kBench.exe \
+     kList.exe \
      libusbK.dll \
      libusbK.lib \
      libusbK.sys

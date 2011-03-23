@@ -16,8 +16,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef __LUSBW_BENCHMARK_API_H__
-#define __LUSBW_BENCHMARK_API_H__
+#ifndef __KUSB_BENCHMARK_API_H__
+#define __KUSB_BENCHMARK_API_H__
 
 #include <stdlib.h>
 #include <string.h>
@@ -57,7 +57,10 @@ typedef enum _BM_TEST_TYPE
 \remark {6C696275-7362-2D77-696E-33322D574446} is the default guid used by libusbK.sys.
 \remark Devices are created under this GUID when the DeviceInterfaceGUIDs registry key is invalid or non-existent.
 */
-#define Benchmark_DeviceInterfaceGUID {6C696275-7362-2D77-696E-33322D574446}
+#define Default_lusbK_Device_GUID {6C696275-7362-2D77-696E-33322D574446}
+#define Default_lusb0_Device_GUID {20343A29-6DA1-4db8-8A3C-16E774057BF5}
+#define Default_lusb0_Filter_GUID {F9F3FF14-AE21-48a0-8A25-8011A7A931D9}
+#define Benchmark_DeviceInterfaceGUID Default_lusb0_Device_GUID
 
 //! Opens a file handle to the device.
 /*!

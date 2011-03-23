@@ -1,20 +1,4 @@
-/* libusbK "Benchmark (LibUsbDotNet)" API
- * Copyright (c) 2010-2011 Travis Robinson <libusbdotnet@gmail.com>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
+
 #include "benchmark_api.h"
 #include <setupapi.h>
 
@@ -56,6 +40,106 @@ LONG WinError(__in_opt DWORD errorCode)
 }
 
 LONG Bm_Open(__in DWORD instanceIndex, __in_opt LPCSTR pipeSuffix, __inout HANDLE* fileHandle)
+{
+	LONG ret;
+	HDEVINFO hDevInfo;
+	SP_DEVICE_INTERFACE_DATA deviceInterfaceData;
+	UCHAR DeviceInterfaceDetailBuffer[DeviceInterfaceDetailMaxSize + 1];
+	GUID guidDevIntf = {0};
+	DWORD currentInstanceIndex = 0;
+	PSP_DEVICE_INTERFACE_DETAIL_DATA_A pDeviceInterfaceDetail;
+
+
+	if (!fileHandle)
+	{
+		USBE_PARAM(fileHandle);
+		ret = WinError(ERROR_INVALID_HANDLE);
+		return ret;
+	}
+	*fileHandle = NULL;
+
+	if ((ret = CLSIDFromString(DEFINE_TO_STRW(Benchmark_DeviceInterfaceGUID), &guidDevIntf)) != NOERROR)
+	{
+		USBERR("invalid DeviceInterfaceGUID define\n");
+		ret = WinError(ERROR_BAD_FORMAT);
+		return ret;
+	}
+
+	hDevInfo = SetupDiGetClassDevsA(&guidDevIntf, NULL, NULL, DIGCF_PRESENT | DIGCF_DEVICEINTERFACE);
+	if(!hDevInfo || hDevInfo == INVALID_HANDLE_VALUE)
+	{
+		USBERR("device is not (and has never been) installed\n");
+		ret = WinError(ERROR_CLASS_DOES_NOT_EXIST);
+		return ret;
+	}
+
+	// init vars
+	memset(&deviceInterfaceData, 0, sizeof(deviceInterfaceData));
+	deviceInterfaceData.cbSize = sizeof(deviceInterfaceData);
+
+	pDeviceInterfaceDetail = (PSP_DEVICE_INTERFACE_DETAIL_DATA_A)&DeviceInterfaceDetailBuffer;
+
+	while (SetupDiEnumDeviceInterfaces(hDevInfo, NULL, &guidDevIntf, currentInstanceIndex++, &deviceInterfaceData))
+	{
+		memset(pDeviceInterfaceDetail, 0, sizeof(DeviceInterfaceDetailBuffer));
+		pDeviceInterfaceDetail->cbSize = sizeof(SP_DEVICE_INTERFACE_DETAIL_DATA_A);
+
+		if (SetupDiGetDeviceInterfaceDetailA(hDevInfo,
+		                                     &deviceInterfaceData,
+		                                     pDeviceInterfaceDetail,
+		                                     DeviceInterfaceDetailMaxSize,
+		                                     NULL, NULL))
+		{
+			PCHAR devicePath = &pDeviceInterfaceDetail->DevicePath[0];
+			if (instanceIndex + 1 == currentInstanceIndex)
+			{
+				//USBDBG("using index=%u, devicePath=%s\n", currentInstanceIndex - 1, devicePath);
+				*fileHandle = CreateFileA(devicePath,
+				                          GENERIC_READ | GENERIC_WRITE,
+				                          FILE_SHARE_READ | FILE_SHARE_WRITE,
+				                          NULL,
+				                          OPEN_EXISTING,
+				                          FILE_FLAG_OVERLAPPED,
+				                          NULL);
+				if (!*fileHandle || *fileHandle == INVALID_HANDLE_VALUE)
+				{
+					*fileHandle = NULL;
+					USBWRN("failed creating device handle for existing device at index=%u\n",
+					       currentInstanceIndex - 1);
+					ret = WinError(0);
+				}
+				else
+				{
+					// success
+					ret = ERROR_SUCCESS;
+				}
+				break;
+
+			}
+			else
+			{
+				USBDBG("found index=%u, devicePath=%s\n", currentInstanceIndex - 1, devicePath);
+			}
+		}
+	}
+
+	if(hDevInfo && hDevInfo != INVALID_HANDLE_VALUE)
+		SetupDiDestroyDeviceInfoList(hDevInfo);
+
+	// success.
+	if (*fileHandle && ret == ERROR_SUCCESS)
+		return ret;
+
+	// not found.
+	if (!*fileHandle && ret == ERROR_SUCCESS)
+		return WinError(ERROR_DEVICE_NOT_CONNECTED);
+
+	// failed to open (in-use).
+	Bm_Close(fileHandle);
+	return ret;
+}
+
+LONG LusbK_GetDeviceList(__in DWORD instanceIndex, __in_opt LPCSTR pipeSuffix, __inout HANDLE* fileHandle)
 {
 	LONG ret;
 	HDEVINFO hDevInfo;

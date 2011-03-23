@@ -1,10 +1,14 @@
 # ++ AUTO-GENERATED - libusbK.lib.sources
-!IFNDEF G_TARGET_OUTPUT_ABS_DIR
-G_TARGET_OUTPUT_ABS_DIR=bin
+TARGET_OUTPUT_FILENAME_EXT=lib
+TARGET_OUTPUT_BASE_DIR=..\..\output
+TARGETNAME = libusbK
+TARGETPATH = $(TARGET_OUTPUT_BASE_DIR)\$(DDKBUILDENV)\$(TARGET_OUTPUT_FILENAME_EXT)
+
+WDK_OUTPUT_SUBDIR=$(_BUILDARCH)
+!IF "$(_BUILDARCH)"=="x86"
+WDK_OUTPUT_SUBDIR=i386
 !ENDIF
 
-TARGETNAME = libusbK
-TARGETPATH = $(G_TARGET_OUTPUT_ABS_DIR)
 TARGETTYPE = LIBRARY
 USE_MSVCRT = 1
 
@@ -20,6 +24,11 @@ TARGETLIBS=$(SDK_LIB_PATH)\kernel32.lib \
 
 INCLUDES=.\;..\;$(DDK_INC_PATH);
 
-SOURCES=..\lusbk_usb.c \
+SOURCES= \
+		..\lusbk_usb.c \
 		..\lusbk_ioctl.c \
+		..\lusbk_device_list.c \
+		..\lusbk_wrapper_winusb.c \
+		..\lusbk_bknd_winusb.c \
+		..\lusbk_bknd_libusb0.c \
 		..\lusbk_debug_view_output.c

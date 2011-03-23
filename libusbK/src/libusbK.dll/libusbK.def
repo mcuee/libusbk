@@ -1,5 +1,10 @@
 LIBRARY
 EXPORTS
+	LUsbK_GetProcAddress
+	LUsbK_LoadDriverApi
+	LUsbK_GetDeviceList
+	LUsbK_FreeDeviceList
+	
 	LUsbK_Initialize
 	LUsbK_Free
 	LUsbK_GetAssociatedInterface
@@ -20,7 +25,6 @@ EXPORTS
 	LUsbK_SetPowerPolicy
 	LUsbK_GetPowerPolicy
 	LUsbK_GetOverlappedResult
-	
 	LUsbK_ResetDevice
 	
 	WinUsb_Initialize

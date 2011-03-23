@@ -1,23 +1,6 @@
-/* libusb-win32 WDF, Generic KMDF Windows USB Driver
- * Copyright (c) 2010-2011 Travis Robinson <libusbdotnet@gmail.com>
- * Copyright (c) 2002-2005 Stephan Meyer <ste_meyer@web.de>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
-#ifndef __LUSBW_PRIVATE_H__
-#define __LUSBW_PRIVATE_H__
+
+#ifndef __KUSB_PRIVATE_H__
+#define __KUSB_PRIVATE_H__
 
 #pragma warning(disable:4200)  //
 #pragma warning(disable:4201)  // nameless struct/union
@@ -43,7 +26,7 @@
 
 #define LOG_APPNAME "(lusbk)"
 #include "lusbk_debug.h"
-#include "lusbk_winusb_compat_io.h"
+#include "lusbk_common.h"
 
 #define POOL_TAG (ULONG) 'BSUL'
 

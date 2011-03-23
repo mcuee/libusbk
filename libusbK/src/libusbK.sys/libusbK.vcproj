@@ -27,7 +27,7 @@
 			>
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="$(SolutionDir)make.cmd build nogetc BUILD_QUIET=0 chk WXP WDK_SOURCES_LIST=libusbK.sys;"
+				BuildCommandLine="$(SolutionDir)make.cmd build nogetc BUILD_QUIET=0 chk WXP WDK_SOURCES_LIST=libusbK.sys;&#x0D;&#x0A;ECHO DONE&#x0D;&#x0A;"
 				ReBuildCommandLine="$(SolutionDir)make.cmd build nogetc BUILD_QUIET=0 chk WXP WDK_SOURCES_LIST=libusbK.sys;"
 				CleanCommandLine="$(SolutionDir)make.cmd clean nogetc BUILD_QUIET=0 chk WXP WDK_SOURCES_LIST=libusbK.sys;"
 				Output="libusbK.sys"
@@ -210,15 +210,15 @@
 				Name="lusbk_public"
 				>
 				<File
+					RelativePath="..\lusbk_common.h"
+					>
+				</File>
+				<File
 					RelativePath="..\lusbk_debug.h"
 					>
 				</File>
 				<File
 					RelativePath=".\lusbk_version.h"
-					>
-				</File>
-				<File
-					RelativePath="..\lusbk_winusb_compat_io.h"
 					>
 				</File>
 			</Filter>

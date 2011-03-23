@@ -1,5 +1,5 @@
 #include "benchmark_api.h"
-
+#include "lusbk_device_list.h"
 static ULONG DebugLevel = 3;
 
 static UCHAR tab = 0;
@@ -114,11 +114,9 @@ int main(int argCount, char** argv)
 
 	TESTMSG("built-on: %s %s\n", __DATE__, __TIME__);
 
-	if (ResetDevice() >= 0)
-	{
-		return Query();
-	}
-	return;
+	return LUsbK_GetDeviceList(NULL, NULL);
+
+	return PipeTimeout();
 
 	if (argCount == 1)
 	{
@@ -257,7 +255,7 @@ INT PipeTimeout()
 	while(LUsbK_ReadPipe(interfaceHandle, pipeID, transferBuffer, sizeof(transferBuffer), &transferTestSize, NULL));
 
 	ret = GetLastError();
-	if (ret == ERROR_SEM_TIMEOUT)
+	if (ret == ERROR_SEM_TIMEOUT || ret == ERROR_OPERATION_ABORTED)
 		goto Success;
 
 	goto Fail3;
@@ -359,7 +357,7 @@ INT ResetDevice()
 
 	OpenDevice(0);
 
-	success=LUsbK_ResetDevice(interfaceHandle);
+	success = LUsbK_ResetDevice(interfaceHandle);
 	if (!success)
 	{
 		ret = WinError(0);
@@ -424,7 +422,7 @@ Done:
 
 INT SyncRead()
 {
-	return Xfer(__FUNCTION__, BmTestTypeRead, 64);
+	return Xfer(__FUNCTION__, BmTestTypeRead, 32);
 }
 INT SyncWrite()
 {

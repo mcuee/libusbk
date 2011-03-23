@@ -77,7 +77,8 @@ GOTO :EOF
 	REM - Copy in the libusbK includes
 	CALL :MakeIncludeDir libusbK
 	COPY /Y ".\src\lusbk_usb.h" "!INCDIR!"
-	COPY /Y ".\src\lusbk_winusb_compat_io.h" "!INCDIR!"
+	COPY /Y ".\src\lusbk_dynamic.h" "!INCDIR!"
+	COPY /Y ".\src\lusbk_device_list.h" "!INCDIR!"
 	
 	REM - Get rid of those i386 dirs.
 	CALL :RenameOutputSubDirs "\sys\i386" "\sys\x86" "\lib\i386" "\lib\x86" "\dll\i386" "\dll\x86"
@@ -92,7 +93,9 @@ GOTO :EOF
 	CD /D "!K_LIBWDI_DIR!"
 	SET K_LIBUSBK_DIR=!G_BUILD_OUTPUT_BASE_ABS_DIR!\!DDKBUILDENV!
 	SET K_LIBUSBK_DIR=!K_LIBUSBK_DIR:\=/!
-	SET C_DEFINES=/DLIBUSBK_DIR=\"!K_LIBUSBK_DIR!\" /DINFWIZARD_LIBUSBK=1
+	SET K_LIBUSB0_DIR=!K_LIBUSB_W32_DIR!
+	SET K_LIBUSB0_DIR=!K_LIBUSB0_DIR:\=/!
+	SET C_DEFINES=/DLIBUSBK_DIR=\"!K_LIBUSBK_DIR!\" /DLIBUSB0_DIR=\"!K_LIBUSB0_DIR!\" /DINFWIZARD_LIBUSBK=1
 	SET RC_DEFINES=!C_DEFINES!
 	CALL ddk_build inf_wizard_only
 	SET C_DEFINES=
@@ -111,6 +114,7 @@ GOTO :EOF
 	COPY /Y "!K_LIBWDI_DIR!\examples\inf-wizard.exe" "!G_BUILD_OUTPUT_BASE_ABS_DIR!\!DDKBUILDENV!\libusbK-inf-wizard.exe"
 	SET TOKVAR_LTAG=@
 	SET TOKVAR_RTAG=@
+	IF EXIST "!G_BUILD_OUTPUT_BASE_ABS_DIR!\!K_LIBUSBK_SETUP_NAME!.iss" DEL "!G_BUILD_OUTPUT_BASE_ABS_DIR!\!K_LIBUSBK_SETUP_NAME!.iss" >NUL
 	!DCMD! -et ".\src\setup.iss.in" "!G_BUILD_OUTPUT_BASE_ABS_DIR!\!K_LIBUSBK_SETUP_NAME!.iss"
 	SET TOKVAR_LTAG=
 	SET TOKVAR_RTAG=

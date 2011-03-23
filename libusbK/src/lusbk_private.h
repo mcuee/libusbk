@@ -1,24 +1,6 @@
-/* libusb-win32 WDF, Generic KMDF Windows USB Driver
- * Copyright (c) 2010-2011 Travis Robinson <libusbdotnet@gmail.com>
- * Copyright (c) 2002-2005 Stephan Meyer <ste_meyer@web.de>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
 
-#ifndef __LUSBW_USER_PRIVATE_API_H__
-#define __LUSBW_USER_PRIVATE_API_H__
+#ifndef __KUSB_USER_PRIVATE_API_H__
+#define __KUSB_USER_PRIVATE_API_H__
 
 #include <stdlib.h>
 #include <string.h>
@@ -28,6 +10,7 @@
 #include <ctype.h>
 #include <windows.h>
 #include <winioctl.h>
+#include <crtdbg.h>
 
 #include "lusbk_version.h"
 #include "lusbk_usb.h"
@@ -41,21 +24,49 @@
 // The maximum number of open interface handles per proccess.
 // Internal interface handles come from a fixed array so the memory is
 // always valid as long as the dll is loaded.
-#define LUSBW_MAX_INTERFACE_HANDLES 128
+#define KUSB_MAX_INTERFACE_HANDLES 128
+
+#define GetSetPipePolicy(InterfaceHandleInternal,pipeID)	\
+	(&InterfaceHandleInternal->PipePolicies[((((pipeID) & 0xF)|(((pipeID)>>3) & 0x10)) & 0x1F)])
 
 //////////////////////////////////////////////////////////////////////////////
 
 //////////////////////////////////////////////////////////////////////////////
 // Structs
 //
+#include <PSHPACK1.H>
+
+typedef struct _USER_PIPE_POLICY
+{
+	volatile ULONG timeout;
+
+} USER_PIPE_POLICY, *PUSER_PIPE_POLICY;
 
 // Internal libusbK interface handle
-typedef struct _LUSBW_INTERFACE_HANDLE_INTERNAL
+typedef struct _KUSB_INTERFACE_HANDLE_INTERNAL
 {
+	PVOID UserContext;
+	PVOID BackendContext;
 	HANDLE DeviceHandle;
 	INT InterfaceIndex;
-	volatile LONG ValidCount;
-} LUSBW_INTERFACE_HANDLE_INTERNAL, *PLUSBW_INTERFACE_HANDLE_INTERNAL;
+	USER_PIPE_POLICY PipePolicies[32];
+	struct
+	{
+		unsigned int Major;
+		unsigned int Minor;
+		unsigned int Micro;
+		unsigned int Nano;
+		unsigned int ModValue;
+	} Version;
+
+	struct
+	{
+		volatile LONG ValidCount;
+	} inst;
+
+} KUSB_INTERFACE_HANDLE_INTERNAL, *PKUSB_INTERFACE_HANDLE_INTERNAL;
+
+#include <POPPACK.H>
 
 //////////////////////////////////////////////////////////////////////////////
 // lusbk_ioctl.c - FUNCTION PROTOTYPES
@@ -75,11 +86,30 @@ BOOL Ioctl_Async(__in HANDLE dev,
                  __inout_opt PVOID out,
                  __in DWORD out_size,
                  __in LPOVERLAPPED overlapped);
+
+BOOL Ioctl_SyncTranfer(__in PKUSB_INTERFACE_HANDLE_INTERNAL interfaceHandle,
+                       __in INT code,
+                       __in libusb_request* request,
+                       __inout_opt PVOID out,
+                       __in DWORD out_size,
+                       __in INT timeout,
+                       __out_opt PDWORD ret);
+
+VOID InitInterfaceHandle(__in PKUSB_INTERFACE_HANDLE_INTERNAL InterfaceHandle,
+                         __in_opt HANDLE DeviceHandle,
+                         __in_opt UCHAR InterfaceIndex,
+                         __in_opt libusb_request* DriverVersionRequest,
+                         __in_opt PKUSB_INTERFACE_HANDLE_INTERNAL PreviousInterfaceHandle);
+
+VOID CheckLibInitialized();
+
 //////////////////////////////////////////////////////////////////////////////
 
 //////////////////////////////////////////////////////////////////////////////
 // Macros
 //
+#define InvalidateHandle(InterfaceHandleInternalPtr) \
+	if (InterfaceHandleInternalPtr) InterlockedDecrement(&InterfaceHandleInternalPtr->inst.ValidCount)
 
 // Sets 'RetErrorCode' and jumps to 'JumpStatement' if 'FailIfTrue' is non-zero.
 //
@@ -89,10 +119,13 @@ BOOL Ioctl_Async(__in HANDLE dev,
 // Checks for null and invalid handle value.
 #define IsHandleValid(MemoryPtrOrHandle) (((MemoryPtrOrHandle) && (MemoryPtrOrHandle) != INVALID_HANDLE_VALUE)?TRUE:FALSE)
 
-// Validatates the interface handle and cast it to a PLUSBW_INTERFACE_HANDLE_INTERNAL.
+#define IsLusbkHandle(PublicInterfaceHandle)	\
+	((((PVOID)PublicInterfaceHandle) >= ((PVOID)&HandleList[0])) && (((PVOID)PublicInterfaceHandle) <= ((PVOID)&HandleList[KUSB_MAX_INTERFACE_HANDLES-1])))
+
+// Validatates the interface handle and cast it to a PKUSB_INTERFACE_HANDLE_INTERNAL.
 //
 #define PublicToPrivateHandle(WinusbInterfaceHandle) \
-	(IsHandleValid(WinusbInterfaceHandle)?((PLUSBW_INTERFACE_HANDLE_INTERNAL)(WinusbInterfaceHandle)):(NULL))
+	(IsLusbkHandle(WinusbInterfaceHandle)?((PKUSB_INTERFACE_HANDLE_INTERNAL)(WinusbInterfaceHandle)):(NULL))
 
 // Macros for allocating a libusb_request and setting/getting the data that comes after it.
 //
@@ -117,6 +150,8 @@ FORCEINLINE BOOL LusbwError(__in LONG errorCode)
 	}
 	return TRUE;
 }
+
+PKUSB_INTERFACE_HANDLE_INTERNAL GetNextAvailableHandle();
 
 //////////////////////////////////////////////////////////////////////////////
 // Inline memory functions.
@@ -153,7 +188,7 @@ FORCEINLINE VOID Mem_Free(__deref_inout_opt PVOID* memoryRef)
 // Interface context locking functions and macros.
 #ifdef UNUSED_LOCK_FUNCTIONS_AND_MACROS
 
-// The semaphore lock structure use for LUSBW_INTERFACE_HANDLE_INTERNAL.
+// The semaphore lock structure use for KUSB_INTERFACE_HANDLE_INTERNAL.
 typedef struct _SYNC_LOCK
 {
 	HANDLE Handle;

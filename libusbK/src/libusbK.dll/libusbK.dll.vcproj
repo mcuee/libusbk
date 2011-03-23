@@ -20,8 +20,8 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="$(SolutionDir)output\$(ConfigurationName)\$(ProjectName)\$(PlatformName)"
-			IntermediateDirectory="$(SolutionDir)output\$(ConfigurationName)\$(ProjectName)\$(PlatformName)"
+			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
+			IntermediateDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="2"
 			CharacterSet="2"
 			>
@@ -43,7 +43,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories=".\;..\;Z:\WinDDK\7600.16385.1\inc\api\"
+				AdditionalIncludeDirectories=".\;..\"
 				PreprocessorDefinitions="_WIN32_WINNT=0x0500;DYNAMIC_DLL=1;_DEBUG=1"
 				ExceptionHandling="0"
 				BasicRuntimeChecks="3"
@@ -51,7 +51,7 @@
 				WarningLevel="3"
 				CallingConvention="2"
 				CompileAs="1"
-				ForcedIncludeFiles="$(DevEnvDir)..\..\VC\include\sal.h"
+				ForcedIncludeFiles=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -64,6 +64,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalDependencies="kernel32.lib user32.lib advapi32.lib $(NOINHERIT)"
 				OutputFile="$(OutDir)\$(ProjectName)"
 				ModuleDefinitionFile="libusbK.def"
 				AddModuleNamesToAssembly=""
@@ -92,8 +93,8 @@
 		</Configuration>
 		<Configuration
 			Name="Debug|x64"
-			OutputDirectory="$(SolutionDir)output\$(ConfigurationName)\$(ProjectName)\$(PlatformName)"
-			IntermediateDirectory="$(SolutionDir)output\$(ConfigurationName)\$(ProjectName)\$(PlatformName)"
+			OutputDirectory="$(SolutionDir)output\$(PlatformName)\$(ConfigurationName)"
+			IntermediateDirectory="$(SolutionDir)output\$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="2"
 			CharacterSet="2"
 			>
@@ -116,15 +117,15 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories=".\;..\;Z:\WinDDK\7600.16385.1\inc\api\"
-				PreprocessorDefinitions="_WIN32_WINNT=0x0500;DYNAMIC_DLL=1;_DEBUG=1"
+				AdditionalIncludeDirectories=".\;..\"
+				PreprocessorDefinitions="_WIN32_WINNT=0x0500;DYNAMIC_DLL=1;_DEBUG=1;_WIN64"
 				ExceptionHandling="0"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
 				WarningLevel="3"
 				CallingConvention="2"
 				CompileAs="1"
-				ForcedIncludeFiles="$(DevEnvDir)..\..\VC\include\sal.h"
+				ForcedIncludeFiles=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -137,6 +138,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalDependencies="kernel32.lib user32.lib advapi32.lib $(NOINHERIT)"
 				OutputFile="$(OutDir)\$(ProjectName)"
 				ModuleDefinitionFile="libusbK.def"
 				AddModuleNamesToAssembly=""
@@ -165,8 +167,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="$(SolutionDir)output\$(ConfigurationName)\$(ProjectName)\$(PlatformName)"
-			IntermediateDirectory="$(SolutionDir)output\$(ConfigurationName)\$(ProjectName)\$(PlatformName)"
+			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
+			IntermediateDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="2"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
@@ -190,7 +192,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories=".\;..\;Z:\WinDDK\7600.16385.1\inc\api\"
+				AdditionalIncludeDirectories=".\;..\"
 				PreprocessorDefinitions="_WIN32_WINNT=0x0500;DYNAMIC_DLL=1"
 				ExceptionHandling="0"
 				RuntimeLibrary="0"
@@ -198,7 +200,7 @@
 				WarningLevel="3"
 				CallingConvention="2"
 				CompileAs="1"
-				ForcedIncludeFiles="$(DevEnvDir)..\..\VC\include\sal.h"
+				ForcedIncludeFiles=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -211,6 +213,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalDependencies="kernel32.lib user32.lib advapi32.lib $(NOINHERIT)"
 				OutputFile="$(OutDir)\$(ProjectName)"
 				ModuleDefinitionFile="libusbK.def"
 				AddModuleNamesToAssembly=""
@@ -265,7 +268,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories=".\;..\;Z:\WinDDK\7600.16385.1\inc\api\"
+				AdditionalIncludeDirectories=".\;..\"
 				PreprocessorDefinitions="_WIN32_WINNT=0x0500;DYNAMIC_DLL=1"
 				ExceptionHandling="0"
 				RuntimeLibrary="0"
@@ -273,7 +276,7 @@
 				WarningLevel="3"
 				CallingConvention="2"
 				CompileAs="1"
-				ForcedIncludeFiles="$(DevEnvDir)..\..\VC\include\sal.h"
+				ForcedIncludeFiles=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -286,6 +289,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalDependencies="kernel32.lib user32.lib advapi32.lib $(NOINHERIT)"
 				OutputFile="$(OutDir)\$(ProjectName)"
 				ModuleDefinitionFile="libusbK.def"
 				AddModuleNamesToAssembly=""
@@ -322,7 +326,19 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
+				RelativePath="..\lusbk_bknd_libusb0.c"
+				>
+			</File>
+			<File
+				RelativePath="..\lusbk_bknd_winusb.c"
+				>
+			</File>
+			<File
 				RelativePath="..\lusbk_debug_view_output.c"
+				>
+			</File>
+			<File
+				RelativePath="..\lusbk_device_list.c"
 				>
 			</File>
 			<File
@@ -337,6 +353,10 @@
 				RelativePath="..\lusbk_usb.c"
 				>
 			</File>
+			<File
+				RelativePath="..\lusbk_wrapper_winusb.c"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
@@ -348,11 +368,27 @@
 				>
 			</File>
 			<File
+				RelativePath="..\lusbk_bknd.h"
+				>
+			</File>
+			<File
+				RelativePath="..\lusbk_common.h"
+				>
+			</File>
+			<File
 				RelativePath="..\lusbk_debug.h"
 				>
 			</File>
 			<File
 				RelativePath="..\lusbk_debug_view_output.h"
+				>
+			</File>
+			<File
+				RelativePath="..\lusbk_device_list.h"
+				>
+			</File>
+			<File
+				RelativePath="..\lusbk_dynamic.h"
 				>
 			</File>
 			<File
@@ -365,10 +401,6 @@
 			</File>
 			<File
 				RelativePath=".\lusbk_version.h"
-				>
-			</File>
-			<File
-				RelativePath="..\lusbk_winusb_compat_io.h"
 				>
 			</File>
 		</Filter>
