@@ -73,6 +73,7 @@ do {                                                                            
 #include "msapi_utf8.h"
 
 #include <windows.h>
+#include <windowsx.h>
 #include <commdlg.h>
 #include <dbt.h>
 #include <stdio.h>
@@ -83,13 +84,7 @@ do {                                                                            
 #include <setupapi.h>
 #include <time.h>
 
-#ifdef INFWIZARD_LIBUSBK
-#define INFWIZARD_DRIVER_NAME "libusbK"
-#define INFWIZARD_DRIVER_TYPE WDI_LIBUSBK
-#else
-#define INFWIZARD_DRIVER_NAME "libusb-win32"
-#define INFWIZARD_DRIVER_TYPE WDI_LIBUSB0
-#endif
+#define INFWIZARD_DRIVER_NAME "libusbK/win32"
 
 #define __INF_WIZARD_C__
 #include "inf_wizard_rc.rc"
@@ -123,10 +118,11 @@ DEFINE_GUID(GUID_DEVINTERFACE_USB_HUB, 0xf18a0e88, 0xc30c, 0x11d0, 0x88, \
 DEFINE_GUID(GUID_DEVINTERFACE_USB_DEVICE, 0xA5DCBF10L, 0x6530, 0x11D2, \
             0x90, 0x1F, 0x00, 0xC0, 0x4F, 0xB9, 0x51, 0xED);
 
-typedef struct _infdir_el {
-    char infdir[MAX_PATH];
-    struct _infdir_el *next;
-    struct _infdir_el *prev;
+typedef struct _infdir_el
+{
+	char infdir[MAX_PATH];
+	struct _infdir_el* next;
+	struct _infdir_el* prev;
 } infdir_el;
 
 typedef struct
@@ -143,7 +139,9 @@ typedef struct
 	BOOL user_allocated_wdi;
 	BOOL modified; // unused
 
-	VS_FIXEDFILEINFO driver_info;
+	VS_FIXEDFILEINFO lusbk_driver_info;
+	VS_FIXEDFILEINFO lusb0_driver_info;
+	int selected_driver;
 
 	int driver_prepared;
 	int driver_installed;
@@ -306,18 +304,18 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prev_instance,
 	InitCommonControls();
 
 	memset(&device, 0, sizeof(device));
-	installerMode=0;
-	
+	installerMode = 0;
+
 	next_dialog = ID_DIALOG_0;
 	if (cmd_line && strlen(cmd_line) == strlen("--no-welcome"))
 	{
 		if (_memicmp(cmd_line, "--no-welcome", strlen("--no-welcome")) == 0)
 		{
 			// running from the installer, we will need to report back to it when finished.
-			installerMode=1;
+			installerMode = 1;
 			next_dialog = ID_DIALOG_1;
-			memset(currentDirectory,0,sizeof(currentDirectory));
-			GetCurrentDirectoryA(sizeof(currentDirectory)-1,currentDirectory);
+			memset(currentDirectory, 0, sizeof(currentDirectory));
+			GetCurrentDirectoryA(sizeof(currentDirectory) - 1, currentDirectory);
 		}
 	}
 
@@ -365,29 +363,29 @@ int APIENTRY WinMain(HINSTANCE instance, HINSTANCE prev_instance,
 	{
 		FILE* results_ini;
 		infdir_el* el = NULL;
-		infdir_el* el_tmp=NULL;
-		int inf_index=-1;
+		infdir_el* el_tmp = NULL;
+		int inf_index = -1;
 
 		// write an ini file with installer results.
 		// the caller will be responsible for cleaning it up.
-		strncat(currentDirectory,"\\results.ini",sizeof(currentDirectory) - strlen(currentDirectory) - 1);
-		results_ini = fopen(currentDirectory,"w");
+		strncat(currentDirectory, "\\results.ini", sizeof(currentDirectory) - strlen(currentDirectory) - 1);
+		results_ini = fopen(currentDirectory, "w");
 		if (results_ini)
 		{
 			fprintf(results_ini,
-				"[InfWizard]\n"
-				"Cancelled=%u\n"
-				"Prepared=%u\n"
-				"Installed=%u\n",
-				device.driver_user_cancelled,
-				device.driver_prepared, 
-				device.driver_installed);
+			        "[InfWizard]\n"
+			        "Cancelled=%u\n"
+			        "Prepared=%u\n"
+			        "Installed=%u\n",
+			        device.driver_user_cancelled,
+			        device.driver_prepared,
+			        device.driver_installed);
 
-			DL_FOREACH_SAFE(device.prepared_infdirs,el,el_tmp)
+			DL_FOREACH_SAFE(device.prepared_infdirs, el, el_tmp)
 			{
 				inf_index++;
-				fprintf(results_ini, "InfDir%u=%s\n",inf_index,el->infdir);
-				DL_DELETE(device.prepared_infdirs,el);
+				fprintf(results_ini, "InfDir%u=%s\n", inf_index, el->infdir);
+				DL_DELETE(device.prepared_infdirs, el);
 				free(el);
 			}
 
@@ -442,7 +440,7 @@ BOOL CALLBACK dialog_proc_0(HWND dialog, UINT message,
 			return TRUE ;
 		case ID_BUTTON_CANCEL:
 		case IDCANCEL:
-			device->driver_user_cancelled=TRUE;
+			device->driver_user_cancelled = TRUE;
 			EndDialog(dialog, 0);
 			return TRUE ;
 		}
@@ -672,7 +670,7 @@ BOOL CALLBACK dialog_proc_1(HWND dialog, UINT message,
 
 		case ID_BUTTON_CANCEL:
 		case IDCANCEL:
-			device->driver_user_cancelled=TRUE;
+			device->driver_user_cancelled = TRUE;
 			device_list_clean(list);
 			if (notification_handle_hub)
 				UnregisterDeviceNotification(notification_handle_hub);
@@ -705,7 +703,23 @@ BOOL CALLBACK dialog_proc_2(HWND dialog, UINT message,
 
 		if (device)
 		{
-			wdi_is_driver_supported(INFWIZARD_DRIVER_TYPE, &device->driver_info);
+
+			if ( (Button_GetCheck(GetDlgItem(dialog, ID_LUSBK_DRIVER)) != BST_CHECKED) &&
+			        (Button_GetCheck(GetDlgItem(dialog, ID_LUSB0_DRIVER))) != BST_CHECKED )
+			{
+				Button_SetCheck(GetDlgItem(dialog, ID_LUSBK_DRIVER), BST_CHECKED);
+			}
+			if (!device->selected_driver)
+			{
+				device->selected_driver = WDI_LIBUSBK;
+				if ( (Button_GetCheck(GetDlgItem(dialog, ID_LUSB0_DRIVER)) == BST_CHECKED) )
+				{
+					device->selected_driver = WDI_LIBUSB0;
+				}
+			}
+
+			wdi_is_driver_supported(WDI_LIBUSBK, &device->lusbk_driver_info);
+			wdi_is_driver_supported(WDI_LIBUSB0, &device->lusb0_driver_info);
 
 			//g_hwndTrackingTT = CreateTrackingToolTip(dialog,TEXT(" "));
 			hToolTip = create_tooltip(dialog, g_hInst, 300, tooltips_dlg2);
@@ -735,6 +749,18 @@ BOOL CALLBACK dialog_proc_2(HWND dialog, UINT message,
 	case WM_COMMAND:
 		switch (LOWORD(wParam))
 		{
+		case ID_LUSBK_DRIVER:
+			Button_SetCheck(GetDlgItem(dialog, ID_LUSB0_DRIVER), BST_UNCHECKED);
+			Button_SetCheck(GetDlgItem(dialog, ID_LUSBK_DRIVER), BST_CHECKED);
+			device->selected_driver = WDI_LIBUSBK;
+			return TRUE;
+
+		case ID_LUSB0_DRIVER:
+			Button_SetCheck(GetDlgItem(dialog, ID_LUSBK_DRIVER), BST_UNCHECKED);
+			Button_SetCheck(GetDlgItem(dialog, ID_LUSB0_DRIVER), BST_CHECKED);
+			device->selected_driver = WDI_LIBUSB0;
+			return TRUE;
+
 		case ID_BUTTON_NEXT:
 			//memset(device, 0, sizeof(*device));
 			device->wdi->is_composite = false;
@@ -768,7 +794,7 @@ BOOL CALLBACK dialog_proc_2(HWND dialog, UINT message,
 			return TRUE ;
 		case ID_BUTTON_CANCEL:
 		case IDCANCEL:
-			device->driver_user_cancelled=TRUE;
+			device->driver_user_cancelled = TRUE;
 			EndDialog(dialog, 0);
 			return TRUE ;
 		}
@@ -847,6 +873,7 @@ BOOL CALLBACK dialog_proc_3(HWND dialog, UINT message,
 	UINT LBL_SEP = 5;
 	HWND hwnd;
 	static HBRUSH hBrushStatic = NULL;
+	VS_FIXEDFILEINFO* drv_info = NULL;
 
 	RECT rect;
 
@@ -857,6 +884,10 @@ BOOL CALLBACK dialog_proc_3(HWND dialog, UINT message,
 		SendMessage(dialog, WM_SETICON, ICON_BIG,   (LPARAM)mIcon);
 
 		device = (device_context_t*)lParam;
+		if (device->selected_driver == WDI_LIBUSBK)
+			drv_info = &device->lusbk_driver_info;
+		else
+			drv_info = &device->lusb0_driver_info;
 
 		create_tooltip(dialog, g_hInst, 300, tooltips_dlg3);
 
@@ -901,12 +932,13 @@ BOOL CALLBACK dialog_proc_3(HWND dialog, UINT message,
 			create_labeled_text(bufferLabel, bufferText, dialog, g_hInst, x, y, LBL_HEIGHT, LBL_WIDTH, TXT_WIDTH, ID_INFO_TEXT, ID_INFO_TEXT);
 
 			y += LBL_HEIGHT + LBL_SEP * 2;
-			if (device->driver_info.dwSignature)
+
+			if (drv_info->dwSignature)
 			{
 				safe_sprintf(bufferLabel, MAX_TEXT_LENGTH, package_contents_fmt_0, INFWIZARD_DRIVER_NAME,
-				             (int)device->driver_info.dwFileVersionMS >> 16, (int)device->driver_info.dwFileVersionMS & 0xFFFF,
-				             (int)device->driver_info.dwFileVersionLS >> 16, (int)device->driver_info.dwFileVersionLS & 0xFFFF,
-				             "x86, x64, ia64");
+				             (int)drv_info->dwFileVersionMS >> 16, (int)drv_info->dwFileVersionMS & 0xFFFF,
+				             (int)drv_info->dwFileVersionLS >> 16, (int)drv_info->dwFileVersionLS & 0xFFFF,
+				             "x86, x64");
 
 			}
 			else
@@ -918,7 +950,7 @@ BOOL CALLBACK dialog_proc_3(HWND dialog, UINT message,
 			free(bufferLabel);
 
 		}
-		if ((device->driver_info.dwSignature) && GetFileAttributesU(device->inf_path) != INVALID_FILE_ATTRIBUTES)
+		if ((drv_info->dwSignature) && GetFileAttributesU(device->inf_path) != INVALID_FILE_ATTRIBUTES)
 			EnableWindow(GetDlgItem(dialog, ID_BUTTON_INSTALLNOW), TRUE);
 		else
 			EnableWindow(GetDlgItem(dialog, ID_BUTTON_INSTALLNOW), FALSE);
@@ -981,6 +1013,7 @@ BOOL CALLBACK dialog_proc_3(HWND dialog, UINT message,
 				EndDialog(dialog, 0);
 			}
 			return TRUE;
+
 		case ID_BUTTON_NEXT:
 		case IDCANCEL:
 			EndDialog(dialog, 0);
@@ -1255,7 +1288,7 @@ int infwizard_prepare_driver(HWND dialog, device_context_t* device)
 	struct wdi_options_prepare_driver options;
 
 	memset(&options, 0, sizeof(options));
-	options.driver_type = INFWIZARD_DRIVER_TYPE;
+	options.driver_type = device->selected_driver;
 	options.vendor_name = device->manufacturer;
 
 	if (device->wdi->desc)
@@ -1268,10 +1301,10 @@ int infwizard_prepare_driver(HWND dialog, device_context_t* device)
 	}
 	else
 	{
-		infdir_el* el = calloc(1,sizeof(infdir_el));
+		infdir_el* el = calloc(1, sizeof(infdir_el));
 		device->driver_prepared++;
-	    strncpy(el->infdir,device->inf_dir,sizeof(el->infdir)-1);
-		DL_APPEND(device->prepared_infdirs,el);
+		strncpy(el->infdir, device->inf_dir, sizeof(el->infdir) - 1);
+		DL_APPEND(device->prepared_infdirs, el);
 
 	}
 

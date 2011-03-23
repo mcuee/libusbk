@@ -684,12 +684,16 @@ REM - [USES] G_WDK_BUILD_OPTIONS, BUILD_ALT_DIR
 		GOTO :EOF
 	)
 	
+	SET __SRCS_DIR=%~dp1
+	CALL :TrimExR "\" __SRCS_DIR
+	FOR /F "usebackq eol=; tokens=* delims=" %%A IN (`!DCMD! -rp d "!__SRCS_DIR!\\" d "!G_BUILD_OUTPUT_BASE_ABS_DIR!"`) DO IF "%%~A" NEQ "" SET G_TARGET_OUTPUT_REL_DIR=%%A
+
 	REM - copy the name.ext.sources file to sources
 	DEL /Q "%~dp1\sources" 2>NUL>NUL
 	!DCMD! -ff "%~dp1\sources" "# ++ @s - @s\n" "AUTO-GENERATED" "%~nx1"
-	!DCMD! -ff "%~dp1\sources" "\x21@s\n@s\n\x21@s\n\n" "IFNDEF G_TARGET_OUTPUT_ABS_DIR" "G_TARGET_OUTPUT_ABS_DIR=bin" "ENDIF"
-	CALL :Tokenizer "%~1" "%~dp1\sources" "G_TARGET_OUTPUT_NAME"
-	
+	!DCMD! -ff "%~dp1\sources" "@s@s\n@s@s\n" "TARGET_OUTPUT_FILENAME_EXT=" "!G_TARGET_OUTPUT_FILENAME_EXT!" "TARGET_OUTPUT_BASE_DIR=" "!G_TARGET_OUTPUT_REL_DIR!"
+	CALL :Tokenizer "%~1" "%~dp1\sources" "G_TARGET_OUTPUT"
+
 	REM - Clear the archive bit for everything in the output folder
 	ATTRIB -A /S "!G_BUILD_OUTPUT_BASE_ABS_DIR!\*" 2>NUL>NUL
 
@@ -1379,7 +1383,6 @@ REM :: Converts relative paths to absolute.
 	GOTO ToAbsPath
 GOTO :EOF
 
-REM :: Converts absolute to relative [for the current dir].
 :ToRelPath
 	IF "%~1" EQU "" GOTO :EOF
 	SET __ToRelPath=%~2

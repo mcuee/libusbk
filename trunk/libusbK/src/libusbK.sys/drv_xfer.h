@@ -1,5 +1,5 @@
-#ifndef __LUSBW_XFER_H__
-#define __LUSBW_XFER_H__
+#ifndef __KUSB_XFER_H__
+#define __KUSB_XFER_H__
 
 #include "drv_private.h"
 

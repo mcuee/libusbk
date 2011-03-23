@@ -1,76 +1,153 @@
-/* libusb-win32 WDF, Generic KMDF Windows USB Driver
- * Copyright (c) 2010-2011 Travis Robinson <libusbdotnet@gmail.com>
- * Copyright (c) 2002-2005 Stephan Meyer <ste_meyer@web.de>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
-#include "lusbk_private.h"
+
+#include "lusbk_bknd.h"
+
+BOOL LibInitialized = FALSE;
+volatile LONG LibInitializedLockCount = 0;
 
 // Default loggging level
 ULONG DebugLevel = 4;
 
 volatile LONG NextHandlePos = -1;
-LUSBW_INTERFACE_HANDLE_INTERNAL HandleList[LUSBW_MAX_INTERFACE_HANDLES] = {0};
+KUSB_INTERFACE_HANDLE_INTERNAL HandleList[KUSB_MAX_INTERFACE_HANDLES];
 
-#define InvalidateHandle(InterfaceHandleInternalPtr) \
-	if (InterfaceHandleInternalPtr) InterlockedDecrement(&InterfaceHandleInternalPtr->ValidCount)
+HMODULE winusb_dll = NULL;
 
 ///////////////////////////////////////////////////////////////////////
 
-PLUSBW_INTERFACE_HANDLE_INTERNAL GetNextAvailableHandle()
+VOID CheckLibInitialized()
+{
+recheck:
+	if (!LibInitialized)
+	{
+		if (InterlockedIncrement(&LibInitializedLockCount) == 1)
+		{
+			Mem_Zero(HandleList, sizeof(HandleList));
+			winusb_dll = LoadLibraryA("winusb.dll");
+			LibInitialized = TRUE;
+		}
+		else
+		{
+			// this should never happen, but it would be devastating if it did.
+			// for this reason a very crude home-rolled spinlock is used.
+			Sleep(1);
+			InterlockedDecrement(&LibInitializedLockCount);
+			goto recheck;
+		}
+	}
+}
+
+PKUSB_INTERFACE_HANDLE_INTERNAL GetNextAvailableHandle()
 {
 	LONG index = NextHandlePos;
-	LONG count = LUSBW_MAX_INTERFACE_HANDLES;
+	LONG count = KUSB_MAX_INTERFACE_HANDLES;
 	while (count--)
 	{
-		if ((++index) >= LUSBW_MAX_INTERFACE_HANDLES)
+		if ((++index) >= KUSB_MAX_INTERFACE_HANDLES)
 			index = 0;
 
-		if (InterlockedIncrement(&HandleList[index].ValidCount) == 1)
+		if (InterlockedIncrement(&HandleList[index].inst.ValidCount) == 1)
 		{
+			// try and keep NextHandlePos at an index that will work good for the next
+			// GetNextAvailableHandle() call.
 			InterlockedExchange(&NextHandlePos, index);
 			return &HandleList[index];
 		}
 
 		// this handle is in use.
-		InterlockedDecrement(&HandleList[index].ValidCount);
+		InterlockedDecrement(&HandleList[index].inst.ValidCount);
 	}
-	USBERR("no more internal interface handles! (max=%d)\n", LUSBW_MAX_INTERFACE_HANDLES);
+	USBERR("no more internal interface handles! (max=%d)\n", KUSB_MAX_INTERFACE_HANDLES);
 	return NULL;
+}
+
+VOID InitInterfaceHandle(__in PKUSB_INTERFACE_HANDLE_INTERNAL InterfaceHandle,
+                         __in_opt HANDLE DeviceHandle,
+                         __in_opt UCHAR InterfaceIndex,
+                         __in_opt libusb_request* DriverVersionRequest,
+                         __in_opt PKUSB_INTERFACE_HANDLE_INTERNAL PreviousInterfaceHandle)
+
+{
+	memset(InterfaceHandle, 0, sizeof(*InterfaceHandle) - sizeof(InterfaceHandle->inst));
+	if (PreviousInterfaceHandle)
+	{
+		memcpy(InterfaceHandle, PreviousInterfaceHandle, sizeof(*InterfaceHandle) - sizeof(InterfaceHandle->inst));
+	}
+	else
+	{
+		InterfaceHandle->DeviceHandle = DeviceHandle;
+		if (DriverVersionRequest)
+		{
+			memcpy(&InterfaceHandle->Version, &DriverVersionRequest->version, sizeof(InterfaceHandle->Version));
+		}
+	}
+
+	InterfaceHandle->InterfaceIndex = InterfaceIndex;
 }
 
 // ErrorCodes:
 // ERROR_INVALID_HANDLE
 // ERROR_NOT_ENOUGH_MEMORY
 // ERROR_BAD_DEVICE
-LUSBW_EXP BOOL LUSBW_API LUsbK_Initialize
-(
+KUSB_EXP BOOL KUSB_API LUsbK_Initialize(
     __in  HANDLE DeviceHandle,
     __out PWINUSB_INTERFACE_HANDLE InterfaceHandle)
 {
 	DWORD ret = ERROR_SUCCESS;
 	BOOL success;
-	PLUSBW_INTERFACE_HANDLE_INTERNAL interfaceHandle = NULL;
+	PKUSB_INTERFACE_HANDLE_INTERNAL interfaceHandle = NULL;
 	libusb_request request = {0};
+	libusb_request ver_request = {0};
+	DWORD transferred = 0;
+
+	CheckLibInitialized();
 
 	if(!DeviceHandle || !InterfaceHandle)
-		return LusbwError(ERROR_INVALID_HANDLE);
+	{
+		success = LusbwError(ERROR_INVALID_HANDLE);
+		goto Error;
+	}
+	success = Ioctl_Sync(DeviceHandle, LIBUSB_IOCTL_GET_CACHED_CONFIGURATION,
+	                     &request, sizeof(request),
+	                     &request, sizeof(request),
+	                     &transferred);
+
+	if (!success || transferred != 1)
+	{
+		success = LusbwError(ERROR_ACCESS_DENIED);
+		goto Error;
+	}
+
+	if (!((PUCHAR)&request)[0])
+	{
+		USBWRN("Device not configured. Attempting to set configuration #1.\n");
+		request.configuration.configuration = 1;
+		success = Ioctl_Sync(DeviceHandle, LIBUSB_IOCTL_SET_CONFIGURATION,
+		                     &request, sizeof(request),
+		                     &request, sizeof(request),
+		                     NULL);
+		if (!success)
+		{
+			goto Error;
+		}
+	}
+	Mem_Zero(&ver_request, sizeof(ver_request));
+	Ioctl_Sync(DeviceHandle, LIBUSB_IOCTL_GET_VERSION,
+	           &ver_request, sizeof(ver_request),
+	           &ver_request, sizeof(ver_request),
+	           NULL);
+
+	USBMSG("%s.sys v%u.%u.%u.%u\n",
+	       ver_request.version.major <= 1 ? "libusb0" : "libusbK",
+	       ver_request.version.major,
+	       ver_request.version.minor,
+	       ver_request.version.micro,
+	       ver_request.version.nano);
+
 
 	interfaceHandle = GetNextAvailableHandle();
 	FailIf(!interfaceHandle, ERROR_OUT_OF_STRUCTURES, Done);
 
+	Mem_Zero(&request, sizeof(request));
 	request.intf.useInterfaceIndex = TRUE;
 	request.intf.useAltSettingIndex = TRUE;
 	success = Ioctl_Sync(DeviceHandle, LIBUSBK_IOCTL_CLAIM_INTERFACE,
@@ -85,13 +162,11 @@ LUSBW_EXP BOOL LUSBW_API LUsbK_Initialize
 		goto Done;
 	}
 
-
-	// Initialize the internal interface structure.
-	interfaceHandle->DeviceHandle = DeviceHandle;
-	interfaceHandle->InterfaceIndex = 0;
+	InitInterfaceHandle(interfaceHandle, DeviceHandle, 0, &ver_request, NULL);
 
 Done:
 	success = LusbwError(ret);
+Error:
 	if (success)
 	{
 		*InterfaceHandle = interfaceHandle;
@@ -100,16 +175,15 @@ Done:
 	{
 		InvalidateHandle(interfaceHandle);
 	}
-
 	return success;
 }
 
 // ErrorCodes: NONE
-LUSBW_EXP BOOL LUSBW_API LUsbK_Free (__in  WINUSB_INTERFACE_HANDLE InterfaceHandle)
+KUSB_EXP BOOL KUSB_API LUsbK_Free (__in  WINUSB_INTERFACE_HANDLE InterfaceHandle)
 {
 	libusb_request request = {0};
 	HANDLE deviceHandle;
-	PLUSBW_INTERFACE_HANDLE_INTERNAL handle = PublicToPrivateHandle(InterfaceHandle);
+	PKUSB_INTERFACE_HANDLE_INTERNAL handle = PublicToPrivateHandle(InterfaceHandle);
 
 	if (!handle || !IsHandleValid(handle->DeviceHandle))
 		return TRUE;
@@ -117,10 +191,10 @@ LUSBW_EXP BOOL LUSBW_API LUsbK_Free (__in  WINUSB_INTERFACE_HANDLE InterfaceHand
 	request.intf.interfaceIndex = (UCHAR)handle->InterfaceIndex;
 	deviceHandle = handle->DeviceHandle;
 
-	if (InterlockedDecrement(&handle->ValidCount) <= -1)
+	if (InterlockedDecrement(&handle->inst.ValidCount) <= -1)
 	{
 		// handle allready freed.
-		InterlockedIncrement(&handle->ValidCount);
+		InterlockedIncrement(&handle->inst.ValidCount);
 		return TRUE;
 	}
 
@@ -140,16 +214,16 @@ LUSBW_EXP BOOL LUSBW_API LUsbK_Free (__in  WINUSB_INTERFACE_HANDLE InterfaceHand
 // ERROR_INVALID_PARAMETER
 // ERROR_NO_MORE_ITEMS
 // ERROR_NOT_ENOUGH_MEMORY
-LUSBW_EXP BOOL LUSBW_API LUsbK_GetAssociatedInterface (
+KUSB_EXP BOOL KUSB_API LUsbK_GetAssociatedInterface (
     __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
     __in  UCHAR AssociatedInterfaceIndex,
     __out PWINUSB_INTERFACE_HANDLE AssociatedInterfaceHandle)
 {
-	PLUSBW_INTERFACE_HANDLE_INTERNAL associatedHandle = NULL;
+	PKUSB_INTERFACE_HANDLE_INTERNAL associatedHandle = NULL;
 	BOOL success;
 	DWORD ret = ERROR_SUCCESS;
 	libusb_request request = {0};
-	PLUSBW_INTERFACE_HANDLE_INTERNAL handle = PublicToPrivateHandle(InterfaceHandle);
+	PKUSB_INTERFACE_HANDLE_INTERNAL handle = PublicToPrivateHandle(InterfaceHandle);
 
 	if (!handle || !IsHandleValid(handle->DeviceHandle))
 		return LusbwError(ERROR_INVALID_HANDLE);
@@ -170,9 +244,7 @@ LUSBW_EXP BOOL LUSBW_API LUsbK_GetAssociatedInterface (
 
 	FailIf(!success, GetLastError(), Done);
 
-	// Initialize the internal interface structure.
-	associatedHandle->DeviceHandle = handle->DeviceHandle;
-	associatedHandle->InterfaceIndex = request.intf.interfaceIndex;
+	InitInterfaceHandle(associatedHandle, NULL, request.intf.interfaceIndex, NULL, handle);
 
 Done:
 	success = LusbwError(ret);
@@ -188,18 +260,18 @@ Done:
 	return success;
 }
 
-LUSBW_EXP BOOL LUSBW_API LUsbK_GetDescriptor (
+KUSB_EXP BOOL KUSB_API LUsbK_GetDescriptor (
     __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
     __in  UCHAR DescriptorType,
     __in  UCHAR Index,
     __in  USHORT LanguageID,
-    __out_bcount_part_opt(BufferLength, *LengthTransferred) PUCHAR Buffer,
+    __out_opt PUCHAR Buffer,
     __in  ULONG BufferLength,
     __out PULONG LengthTransferred)
 {
 	DWORD ret = ERROR_SUCCESS;
 	libusb_request request = {0};
-	PLUSBW_INTERFACE_HANDLE_INTERNAL handle = PublicToPrivateHandle(InterfaceHandle);
+	PKUSB_INTERFACE_HANDLE_INTERNAL handle = PublicToPrivateHandle(InterfaceHandle);
 
 	FailIf(!handle || !IsHandleValid(handle->DeviceHandle), ERROR_INVALID_HANDLE, Done);
 
@@ -218,14 +290,14 @@ Done:
 
 // ERROR_INVALID_HANDLE
 // ERROR_NO_MORE_ITEMS
-LUSBW_EXP BOOL LUSBW_API LUsbK_QueryInterfaceSettings (
+KUSB_EXP BOOL KUSB_API LUsbK_QueryInterfaceSettings (
     __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
     __in  UCHAR AlternateInterfaceNumber,
     __out PUSB_INTERFACE_DESCRIPTOR UsbAltInterfaceDescriptor)
 {
 	DWORD ret = ERROR_SUCCESS;
 	libusb_request request = {0};
-	PLUSBW_INTERFACE_HANDLE_INTERNAL handle = PublicToPrivateHandle(InterfaceHandle);
+	PKUSB_INTERFACE_HANDLE_INTERNAL handle = PublicToPrivateHandle(InterfaceHandle);
 
 	FailIf(!handle || !IsHandleValid(handle->DeviceHandle), ERROR_INVALID_HANDLE, Done);
 
@@ -245,15 +317,15 @@ Done:
 	return LusbwError(ret);
 }
 
-LUSBW_EXP BOOL LUSBW_API LUsbK_QueryDeviceInformation (
+KUSB_EXP BOOL KUSB_API LUsbK_QueryDeviceInformation (
     __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
     __in  ULONG InformationType,
     __inout PULONG BufferLength,
-    __out_bcount(*BufferLength) PVOID Buffer)
+    __out PVOID Buffer)
 {
 	DWORD ret = ERROR_SUCCESS;
 	libusb_request request = {0};
-	PLUSBW_INTERFACE_HANDLE_INTERNAL handle = PublicToPrivateHandle(InterfaceHandle);
+	PKUSB_INTERFACE_HANDLE_INTERNAL handle = PublicToPrivateHandle(InterfaceHandle);
 
 	FailIf(!handle || !IsHandleValid(handle->DeviceHandle), ERROR_INVALID_HANDLE, Done);
 
@@ -270,13 +342,13 @@ Done:
 	return LusbwError(ret);
 }
 
-LUSBW_EXP BOOL LUSBW_API LUsbK_SetCurrentAlternateSetting (
+KUSB_EXP BOOL KUSB_API LUsbK_SetCurrentAlternateSetting (
     __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
     __in  UCHAR SettingNumber)
 {
 	DWORD ret = ERROR_SUCCESS;
 	libusb_request request = {0};
-	PLUSBW_INTERFACE_HANDLE_INTERNAL handle = PublicToPrivateHandle(InterfaceHandle);
+	PKUSB_INTERFACE_HANDLE_INTERNAL handle = PublicToPrivateHandle(InterfaceHandle);
 
 	FailIf(!handle || !IsHandleValid(handle->DeviceHandle), ERROR_INVALID_HANDLE, Done);
 
@@ -294,13 +366,13 @@ Done:
 	return LusbwError(ret);
 }
 
-LUSBW_EXP BOOL LUSBW_API LUsbK_GetCurrentAlternateSetting (
+KUSB_EXP BOOL KUSB_API LUsbK_GetCurrentAlternateSetting (
     __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
     __out PUCHAR SettingNumber)
 {
 	DWORD ret = ERROR_SUCCESS;
 	libusb_request request = {0};
-	PLUSBW_INTERFACE_HANDLE_INTERNAL handle = PublicToPrivateHandle(InterfaceHandle);
+	PKUSB_INTERFACE_HANDLE_INTERNAL handle = PublicToPrivateHandle(InterfaceHandle);
 
 	FailIf(!handle || !IsHandleValid(handle->DeviceHandle), ERROR_INVALID_HANDLE, Done);
 
@@ -319,7 +391,7 @@ Done:
 	return LusbwError(ret);
 }
 
-LUSBW_EXP BOOL LUSBW_API LUsbK_QueryPipe (
+KUSB_EXP BOOL KUSB_API LUsbK_QueryPipe (
     __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
     __in  UCHAR AlternateInterfaceNumber,
     __in  UCHAR PipeIndex,
@@ -330,7 +402,7 @@ LUSBW_EXP BOOL LUSBW_API LUsbK_QueryPipe (
 
 	DWORD ret = ERROR_SUCCESS;
 	libusb_request request = {0};
-	PLUSBW_INTERFACE_HANDLE_INTERNAL handle = PublicToPrivateHandle(InterfaceHandle);
+	PKUSB_INTERFACE_HANDLE_INTERNAL handle = PublicToPrivateHandle(InterfaceHandle);
 
 	FailIf(!handle || !IsHandleValid(handle->DeviceHandle), ERROR_INVALID_HANDLE, Done);
 
@@ -360,17 +432,17 @@ Done:
 	return LusbwError(ret);
 }
 
-LUSBW_EXP BOOL LUSBW_API LUsbK_SetPipePolicy (
+KUSB_EXP BOOL KUSB_API LUsbK_SetPipePolicy (
     __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
     __in  UCHAR PipeID,
     __in  ULONG PolicyType,
     __in  ULONG ValueLength,
-    __in_bcount(ValueLength) PVOID Value)
+    __in PVOID Value)
 {
 	DWORD ret = ERROR_SUCCESS;
 	ULONG requestLength = sizeof(libusb_request) + ValueLength;
 	libusb_request* request = Mem_Alloc(requestLength);
-	PLUSBW_INTERFACE_HANDLE_INTERNAL handle = PublicToPrivateHandle(InterfaceHandle);
+	PKUSB_INTERFACE_HANDLE_INTERNAL handle = PublicToPrivateHandle(InterfaceHandle);
 	FailIf(!handle || !IsHandleValid(handle->DeviceHandle), ERROR_INVALID_HANDLE, Done);
 	FailIf(!Value, ERROR_INVALID_PARAMETER, Done);
 
@@ -379,33 +451,54 @@ LUSBW_EXP BOOL LUSBW_API LUsbK_SetPipePolicy (
 	request->pipe_policy.pipe_id = PipeID;
 	request->pipe_policy.policy_type = PolicyType;
 
-	SetRequestData(request, Value, ValueLength);
-
-	if (ValueLength == 4)
-		USBDBG("ValueLength=%u ULONG Value=%u\n", ValueLength, *((PULONG)GetRequestDataPtr(request)));
-	else if (ValueLength == 1)
-		USBDBG("ValueLength=%u UCHAR Value=%u\n", ValueLength, *((PUCHAR)GetRequestDataPtr(request)));
-
-
-	return Ioctl_Sync(handle->DeviceHandle, LIBUSB_IOCTL_SET_PIPE_POLICY,
-	                  request, sizeof(libusb_request) + ValueLength,
-	                  NULL, 0, NULL);
+	if (handle->Version.Major > 1)
+	{
+		return Ioctl_Sync(handle->DeviceHandle, LIBUSB_IOCTL_SET_PIPE_POLICY,
+		                  request, sizeof(libusb_request) + ValueLength,
+		                  NULL, 0, NULL);
+	}
+	else
+	{
+		if (!(PipeID & 0x0F))
+		{
+			// this pipe policy is for the default pipe; they are handled by the driver.
+			SetRequestData(request, Value, ValueLength);
+			return Ioctl_Sync(handle->DeviceHandle, LIBUSB_IOCTL_SET_PIPE_POLICY,
+			                  request, sizeof(libusb_request) + ValueLength,
+			                  NULL, 0, NULL);
+		}
+		else
+		{
+			// sync pipe transfer timeouts must be handled in user mode for libusb0.
+			// setting the user pipe policy timeout causes the SyncTransfer function
+			// to wait and cancel if the timeout expires.
+			switch(PolicyType)
+			{
+			case PIPE_TRANSFER_TIMEOUT:
+				if (Value && (ValueLength >= 4))
+				{
+					InterlockedExchange((PLONG)&GetSetPipePolicy(handle, PipeID)->timeout, (LONG) * ((PULONG)Value));
+				}
+				break;
+			}
+		}
+	}
 
 Done:
 	Mem_Free(&request);
 	return LusbwError(ret);
 }
 
-LUSBW_EXP BOOL LUSBW_API LUsbK_GetPipePolicy (
+KUSB_EXP BOOL KUSB_API LUsbK_GetPipePolicy (
     __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
     __in  UCHAR PipeID,
     __in  ULONG PolicyType,
     __inout PULONG ValueLength,
-    __out_bcount(*ValueLength) PVOID Value)
+    __out PVOID Value)
 {
 	DWORD ret = ERROR_SUCCESS;
 	libusb_request request = {0};
-	PLUSBW_INTERFACE_HANDLE_INTERNAL handle = PublicToPrivateHandle(InterfaceHandle);
+	PKUSB_INTERFACE_HANDLE_INTERNAL handle = PublicToPrivateHandle(InterfaceHandle);
 
 	FailIf(!handle || !IsHandleValid(handle->DeviceHandle), ERROR_INVALID_HANDLE, Done);
 
@@ -414,27 +507,44 @@ LUSBW_EXP BOOL LUSBW_API LUsbK_GetPipePolicy (
 	request.pipe_policy.interface_index = handle->InterfaceIndex;
 	request.pipe_policy.pipe_id = PipeID;
 	request.pipe_policy.policy_type = PolicyType;
-
-	return Ioctl_Sync(handle->DeviceHandle, LIBUSB_IOCTL_GET_PIPE_POLICY,
-	                  &request, sizeof(request),
-	                  Value, *ValueLength,
-	                  ValueLength);
-
+	if (handle->Version.Major > 1)
+	{
+		return Ioctl_Sync(handle->DeviceHandle, LIBUSB_IOCTL_GET_PIPE_POLICY,
+		                  &request, sizeof(request),
+		                  Value, *ValueLength,
+		                  ValueLength);
+	}
+	else
+	{
+		// sync pipe transfer timeouts must be handled in user mode for libusb0.
+		// setting the user pipe policy timeout causes the SyncTransfer function
+		// to wait and cancel if the timeout expires.
+		switch(PolicyType)
+		{
+		case PIPE_TRANSFER_TIMEOUT:
+			if (Value && ValueLength && (*ValueLength >= 4))
+			{
+				((PULONG)Value)[0] = GetSetPipePolicy(handle, PipeID)->timeout;
+				*ValueLength = 4;
+			}
+			break;
+		}
+	}
 Done:
 	return LusbwError(ret);
 }
 
-LUSBW_EXP BOOL LUSBW_API LUsbK_ReadPipe (
+KUSB_EXP BOOL KUSB_API LUsbK_ReadPipe (
     __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
     __in  UCHAR PipeID,
-    __out_bcount_part_opt(BufferLength, *LengthTransferred) PUCHAR Buffer,
+    __out_opt PUCHAR Buffer,
     __in  ULONG BufferLength,
     __out_opt PULONG LengthTransferred,
     __in_opt LPOVERLAPPED Overlapped)
 {
 	DWORD ret = ERROR_SUCCESS;
 	libusb_request request = {0};
-	PLUSBW_INTERFACE_HANDLE_INTERNAL handle = PublicToPrivateHandle(InterfaceHandle);
+	PKUSB_INTERFACE_HANDLE_INTERNAL handle = PublicToPrivateHandle(InterfaceHandle);
 
 	FailIf(!handle || !IsHandleValid(handle->DeviceHandle), ERROR_INVALID_HANDLE, Done);
 
@@ -449,27 +559,29 @@ LUSBW_EXP BOOL LUSBW_API LUsbK_ReadPipe (
 	}
 	else
 	{
-		return Ioctl_Sync(handle->DeviceHandle, LIBUSB_IOCTL_INTERRUPT_OR_BULK_READ,
-		                  &request, sizeof(request),
-		                  Buffer, BufferLength,
-		                  LengthTransferred);
+		return Ioctl_SyncTranfer(handle,
+		                         LIBUSB_IOCTL_INTERRUPT_OR_BULK_READ,
+		                         &request,
+		                         Buffer, BufferLength,
+		                         GetSetPipePolicy(handle, PipeID)->timeout,
+		                         LengthTransferred);
 	}
 
 Done:
 	return LusbwError(ret);
 }
 
-LUSBW_EXP BOOL LUSBW_API LUsbK_WritePipe (
+KUSB_EXP BOOL KUSB_API LUsbK_WritePipe (
     __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
     __in  UCHAR PipeID,
-    __in_bcount(BufferLength) PUCHAR Buffer,
+    __in PUCHAR Buffer,
     __in  ULONG BufferLength,
     __out_opt PULONG LengthTransferred,
     __in_opt LPOVERLAPPED Overlapped)
 {
 	DWORD ret = ERROR_SUCCESS;
 	libusb_request request = {0};
-	PLUSBW_INTERFACE_HANDLE_INTERNAL handle = PublicToPrivateHandle(InterfaceHandle);
+	PKUSB_INTERFACE_HANDLE_INTERNAL handle = PublicToPrivateHandle(InterfaceHandle);
 
 	FailIf(!handle || !IsHandleValid(handle->DeviceHandle), ERROR_INVALID_HANDLE, Done);
 
@@ -484,20 +596,22 @@ LUSBW_EXP BOOL LUSBW_API LUsbK_WritePipe (
 	}
 	else
 	{
-		return Ioctl_Sync(handle->DeviceHandle, LIBUSB_IOCTL_INTERRUPT_OR_BULK_WRITE,
-		                  &request, sizeof(request),
-		                  Buffer, BufferLength,
-		                  LengthTransferred);
+		return Ioctl_SyncTranfer(handle,
+		                         LIBUSB_IOCTL_INTERRUPT_OR_BULK_WRITE,
+		                         &request,
+		                         Buffer, BufferLength,
+		                         0,
+		                         LengthTransferred);
 	}
 
 Done:
 	return LusbwError(ret);
 }
 
-LUSBW_EXP BOOL LUSBW_API LUsbK_ControlTransfer (
+KUSB_EXP BOOL KUSB_API LUsbK_ControlTransfer (
     __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
     __in  WINUSB_SETUP_PACKET SetupPacket,
-    __out_bcount_part_opt(BufferLength, *LengthTransferred) PUCHAR Buffer,
+    __out_opt PUCHAR Buffer,
     __in  ULONG BufferLength,
     __out_opt PULONG LengthTransferred,
     __in_opt  LPOVERLAPPED Overlapped)
@@ -505,7 +619,7 @@ LUSBW_EXP BOOL LUSBW_API LUsbK_ControlTransfer (
 	INT ioctlCode;
 	DWORD ret = ERROR_SUCCESS;
 	libusb_request request = {0};
-	PLUSBW_INTERFACE_HANDLE_INTERNAL handle = PublicToPrivateHandle(InterfaceHandle);
+	PKUSB_INTERFACE_HANDLE_INTERNAL handle = PublicToPrivateHandle(InterfaceHandle);
 
 	FailIf(!handle || !IsHandleValid(handle->DeviceHandle), ERROR_INVALID_HANDLE, Done);
 
@@ -522,23 +636,26 @@ LUSBW_EXP BOOL LUSBW_API LUsbK_ControlTransfer (
 	}
 	else
 	{
-		return Ioctl_Sync(handle->DeviceHandle, ioctlCode,
-		                  &request, sizeof(request),
-		                  Buffer, BufferLength,
-		                  LengthTransferred);
+		UCHAR pipeID = (SetupPacket.RequestType & USB_ENDPOINT_DIRECTION_MASK) ? 0x80 : 0x00;
+		return Ioctl_SyncTranfer(handle,
+		                         ioctlCode,
+		                         &request,
+		                         Buffer, BufferLength,
+		                         GetSetPipePolicy(handle, pipeID)->timeout,
+		                         LengthTransferred);
 	}
 
 Done:
 	return LusbwError(ret);
 }
 
-LUSBW_EXP BOOL LUSBW_API LUsbK_ResetPipe (
+KUSB_EXP BOOL KUSB_API LUsbK_ResetPipe (
     __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
     __in  UCHAR PipeID)
 {
 	DWORD ret = ERROR_SUCCESS;
 	libusb_request request = {0};
-	PLUSBW_INTERFACE_HANDLE_INTERNAL handle = PublicToPrivateHandle(InterfaceHandle);
+	PKUSB_INTERFACE_HANDLE_INTERNAL handle = PublicToPrivateHandle(InterfaceHandle);
 
 	FailIf(!handle || !IsHandleValid(handle->DeviceHandle), ERROR_INVALID_HANDLE, Done);
 
@@ -553,13 +670,13 @@ Done:
 	return LusbwError(ret);
 }
 
-LUSBW_EXP BOOL LUSBW_API LUsbK_AbortPipe (
+KUSB_EXP BOOL KUSB_API LUsbK_AbortPipe (
     __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
     __in  UCHAR PipeID)
 {
 	DWORD ret = ERROR_SUCCESS;
 	libusb_request request = {0};
-	PLUSBW_INTERFACE_HANDLE_INTERNAL handle = PublicToPrivateHandle(InterfaceHandle);
+	PKUSB_INTERFACE_HANDLE_INTERNAL handle = PublicToPrivateHandle(InterfaceHandle);
 
 	FailIf(!handle || !IsHandleValid(handle->DeviceHandle), ERROR_INVALID_HANDLE, Done);
 
@@ -574,13 +691,13 @@ Done:
 	return LusbwError(ret);
 }
 
-LUSBW_EXP BOOL LUSBW_API LUsbK_FlushPipe (
+KUSB_EXP BOOL KUSB_API LUsbK_FlushPipe (
     __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
     __in  UCHAR PipeID)
 {
 	DWORD ret = ERROR_SUCCESS;
 	libusb_request request = {0};
-	PLUSBW_INTERFACE_HANDLE_INTERNAL handle = PublicToPrivateHandle(InterfaceHandle);
+	PKUSB_INTERFACE_HANDLE_INTERNAL handle = PublicToPrivateHandle(InterfaceHandle);
 
 	FailIf(!handle || !IsHandleValid(handle->DeviceHandle), ERROR_INVALID_HANDLE, Done);
 
@@ -595,16 +712,16 @@ Done:
 	return LusbwError(ret);
 }
 
-LUSBW_EXP BOOL LUSBW_API LUsbK_SetPowerPolicy (
+KUSB_EXP BOOL KUSB_API LUsbK_SetPowerPolicy (
     __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
     __in  ULONG PolicyType,
     __in  ULONG ValueLength,
-    __in_bcount(ValueLength) PVOID Value)
+    __in PVOID Value)
 {
 	DWORD ret = ERROR_SUCCESS;
 	BOOL success;
 	libusb_request* request;
-	PLUSBW_INTERFACE_HANDLE_INTERNAL handle = PublicToPrivateHandle(InterfaceHandle);
+	PKUSB_INTERFACE_HANDLE_INTERNAL handle = PublicToPrivateHandle(InterfaceHandle);
 	FailIf(!handle || !IsHandleValid(handle->DeviceHandle), ERROR_INVALID_HANDLE, Done);
 
 	FailIf(!Value, ERROR_INVALID_PARAMETER, Done);
@@ -628,15 +745,15 @@ Done:
 	return LusbwError(ret);
 }
 
-LUSBW_EXP BOOL LUSBW_API LUsbK_GetPowerPolicy (
+KUSB_EXP BOOL KUSB_API LUsbK_GetPowerPolicy (
     __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
     __in  ULONG PolicyType,
     __inout PULONG ValueLength,
-    __out_bcount(*ValueLength) PVOID Value)
+    __out PVOID Value)
 {
 	DWORD ret = ERROR_SUCCESS;
 	libusb_request request = {0};
-	PLUSBW_INTERFACE_HANDLE_INTERNAL handle = PublicToPrivateHandle(InterfaceHandle);
+	PKUSB_INTERFACE_HANDLE_INTERNAL handle = PublicToPrivateHandle(InterfaceHandle);
 
 	FailIf(!handle || !IsHandleValid(handle->DeviceHandle), ERROR_INVALID_HANDLE, Done);
 
@@ -653,14 +770,14 @@ Done:
 	return LusbwError(ret);
 }
 
-LUSBW_EXP BOOL LUSBW_API LUsbK_GetOverlappedResult (
+KUSB_EXP BOOL KUSB_API LUsbK_GetOverlappedResult (
     __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
     __in  LPOVERLAPPED lpOverlapped,
     __out LPDWORD lpNumberOfBytesTransferred,
     __in  BOOL bWait)
 {
 	DWORD ret = ERROR_SUCCESS;
-	PLUSBW_INTERFACE_HANDLE_INTERNAL handle = PublicToPrivateHandle(InterfaceHandle);
+	PKUSB_INTERFACE_HANDLE_INTERNAL handle = PublicToPrivateHandle(InterfaceHandle);
 	FailIf(!handle || !lpOverlapped || !IsHandleValid(handle->DeviceHandle), ERROR_INVALID_HANDLE, Done);
 
 	return GetOverlappedResult(handle->DeviceHandle, lpOverlapped, lpNumberOfBytesTransferred, bWait);
@@ -669,12 +786,15 @@ Done:
 	return LusbwError(ret);
 }
 
-LUSBW_EXP BOOL LUSBW_API LUsbK_ResetDevice (
+
+
+
+KUSB_EXP BOOL KUSB_API LUsbK_ResetDevice (
     __in  WINUSB_INTERFACE_HANDLE InterfaceHandle)
 {
 	DWORD ret = ERROR_SUCCESS;
 	libusb_request request = {0};
-	PLUSBW_INTERFACE_HANDLE_INTERNAL handle = PublicToPrivateHandle(InterfaceHandle);
+	PKUSB_INTERFACE_HANDLE_INTERNAL handle = PublicToPrivateHandle(InterfaceHandle);
 
 	FailIf(!handle || !IsHandleValid(handle->DeviceHandle), ERROR_INVALID_HANDLE, Done);
 
@@ -687,201 +807,172 @@ Done:
 	return LusbwError(ret);
 }
 
-//////////////////////////////////////////////////////////////////////////////
-///////////////  W I N U S B   W R A P P E R   S E C T I O N   ///////////////
-//////////////////////////////////////////////////////////////////////////////
-#ifndef EXCLUDE_WINUSB_WRAPPER
-
-LUSBW_EXP BOOL LUSBW_API WinUsb_Initialize (
-    __in  HANDLE DeviceHandle,
-    __out PWINUSB_INTERFACE_HANDLE InterfaceHandle)
+KUSB_EXP BOOL KUSB_API LUsbK_GetProcAddress(__out KPROC* ProcAddress, __in ULONG DriverID, __in ULONG FunctionID)
 {
-	return LUsbK_Initialize(DeviceHandle, InterfaceHandle);
+	CheckLibInitialized();
+
+	switch(DriverID)
+	{
+	case KUSB_DRVID_LIBUSBK:
+		return GetProcAddress_libusbk(ProcAddress, FunctionID);
+	case KUSB_DRVID_LIBUSB0_FILTER:
+	case KUSB_DRVID_LIBUSB0:
+		return GetProcAddress_libusb0(ProcAddress, FunctionID);
+	case KUSB_DRVID_WINUSB:
+		return GetProcAddress_winusb(ProcAddress, FunctionID);
+	}
+
+	return LusbwError(ERROR_NOT_SUPPORTED);
 }
 
-LUSBW_EXP BOOL LUSBW_API WinUsb_Free (
-    __in  WINUSB_INTERFACE_HANDLE InterfaceHandle)
+
+KUSB_EXP BOOL KUSB_API LUsbK_LoadDriverApi(
+    __inout PKUSB_DRIVER_API DriverAPI,
+    __in ULONG DriverID)
 {
-	return LUsbK_Free(InterfaceHandle);
+#define CASE_FNID_LOAD(FunctionName)															\
+		case KUSB_FNID_##FunctionName:																\
+		if (LUsbK_GetProcAddress((KPROC*)&DriverAPI->FunctionName, DriverID, fnIdIndex) == FALSE)	\
+		{																							\
+			USBWRN("function id %u for driver id %u does not exist.\n",fnIdIndex,DriverID);			\
+		}																							\
+		break
+
+	int fnIdIndex;
+	if (!IsHandleValid(DriverAPI))
+	{
+		SetLastError(ERROR_INVALID_HANDLE);
+		return FALSE;
+	}
+
+	for (fnIdIndex = 0; fnIdIndex < KUSB_FNID_COUNT; fnIdIndex++)
+	{
+		switch(fnIdIndex)
+		{
+			CASE_FNID_LOAD(Initialize);
+			CASE_FNID_LOAD(Free);
+			CASE_FNID_LOAD(GetAssociatedInterface);
+			CASE_FNID_LOAD(GetDescriptor);
+			CASE_FNID_LOAD(QueryInterfaceSettings);
+			CASE_FNID_LOAD(QueryDeviceInformation);
+			CASE_FNID_LOAD(SetCurrentAlternateSetting);
+			CASE_FNID_LOAD(GetCurrentAlternateSetting);
+			CASE_FNID_LOAD(QueryPipe);
+			CASE_FNID_LOAD(SetPipePolicy);
+			CASE_FNID_LOAD(GetPipePolicy);
+			CASE_FNID_LOAD(ReadPipe);
+			CASE_FNID_LOAD(WritePipe);
+			CASE_FNID_LOAD(ControlTransfer);
+			CASE_FNID_LOAD(ResetPipe);
+			CASE_FNID_LOAD(AbortPipe);
+			CASE_FNID_LOAD(FlushPipe);
+			CASE_FNID_LOAD(SetPowerPolicy);
+			CASE_FNID_LOAD(GetPowerPolicy);
+			CASE_FNID_LOAD(GetOverlappedResult);
+			CASE_FNID_LOAD(ResetDevice);
+
+		default:
+			USBERR("undeclared api function %u!\n", fnIdIndex);
+			return LusbwError(ERROR_NOT_SUPPORTED);
+		}
+	}
+
+	return TRUE;
 }
 
-LUSBW_EXP BOOL LUSBW_API WinUsb_GetAssociatedInterface (
-    __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
-    __in  UCHAR AssociatedInterfaceIndex,
-    __out PWINUSB_INTERFACE_HANDLE AssociatedInterfaceHandle)
+BOOL GetProcAddress_libusbk(__out KPROC* ProcAddress, __in ULONG FunctionID)
 {
-	return LUsbK_GetAssociatedInterface(InterfaceHandle, AssociatedInterfaceIndex, AssociatedInterfaceHandle);
+	DWORD rtn = ERROR_SUCCESS;
+
+	switch(FunctionID)
+	{
+	case KUSB_FNID_Initialize:
+		*ProcAddress = (KPROC)LUsbK_Initialize;
+		break;
+
+	case KUSB_FNID_Free:
+		*ProcAddress = (KPROC)LUsbK_Free;
+		break;
+
+	case KUSB_FNID_GetAssociatedInterface:
+		*ProcAddress = (KPROC)LUsbK_GetAssociatedInterface;
+		break;
+
+	case KUSB_FNID_GetDescriptor:
+		*ProcAddress = (KPROC)LUsbK_GetDescriptor;
+		break;
+
+	case KUSB_FNID_QueryInterfaceSettings:
+		*ProcAddress = (KPROC)LUsbK_QueryInterfaceSettings;
+		break;
+
+	case KUSB_FNID_QueryDeviceInformation:
+		*ProcAddress = (KPROC)LUsbK_QueryDeviceInformation;
+		break;
+
+	case KUSB_FNID_SetCurrentAlternateSetting:
+		*ProcAddress = (KPROC)LUsbK_SetCurrentAlternateSetting;
+		break;
+
+	case KUSB_FNID_GetCurrentAlternateSetting:
+		*ProcAddress = (KPROC)LUsbK_GetCurrentAlternateSetting;
+		break;
+
+	case KUSB_FNID_QueryPipe:
+		*ProcAddress = (KPROC)LUsbK_QueryPipe;
+		break;
+
+	case KUSB_FNID_SetPipePolicy:
+		*ProcAddress = (KPROC)LUsbK_SetPipePolicy;
+		break;
+
+	case KUSB_FNID_GetPipePolicy:
+		*ProcAddress = (KPROC)LUsbK_GetPipePolicy;
+		break;
+
+	case KUSB_FNID_ReadPipe:
+		*ProcAddress = (KPROC)LUsbK_ReadPipe;
+		break;
+
+	case KUSB_FNID_WritePipe:
+		*ProcAddress = (KPROC)LUsbK_WritePipe;
+		break;
+
+	case KUSB_FNID_ControlTransfer:
+		*ProcAddress = (KPROC)LUsbK_ControlTransfer;
+		break;
+
+	case KUSB_FNID_ResetPipe:
+		*ProcAddress = (KPROC)LUsbK_ResetPipe;
+		break;
+
+	case KUSB_FNID_AbortPipe:
+		*ProcAddress = (KPROC)LUsbK_AbortPipe;
+		break;
+
+	case KUSB_FNID_FlushPipe:
+		*ProcAddress = (KPROC)LUsbK_FlushPipe;
+		break;
+
+	case KUSB_FNID_SetPowerPolicy:
+		*ProcAddress = (KPROC)LUsbK_SetPowerPolicy;
+		break;
+
+	case KUSB_FNID_GetPowerPolicy:
+		*ProcAddress = (KPROC)LUsbK_GetPowerPolicy;
+		break;
+
+	case KUSB_FNID_GetOverlappedResult:
+		*ProcAddress = (KPROC)LUsbK_GetOverlappedResult;
+		break;
+
+	case KUSB_FNID_ResetDevice:
+		*ProcAddress = (KPROC)LUsbK_ResetDevice;
+		break;
+	default:
+		rtn = ERROR_NOT_SUPPORTED;
+		break;
+
+	}
+	return LusbwError(rtn);
 }
-
-LUSBW_EXP BOOL LUSBW_API WinUsb_GetDescriptor (
-    __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
-    __in  UCHAR DescriptorType,
-    __in  UCHAR Index,
-    __in  USHORT LanguageID,
-    __out_bcount_part_opt(BufferLength, *LengthTransferred) PUCHAR Buffer,
-    __in  ULONG BufferLength,
-    __out PULONG LengthTransferred)
-{
-	return LUsbK_GetDescriptor(InterfaceHandle, DescriptorType, Index, LanguageID, Buffer, BufferLength, LengthTransferred);
-}
-
-LUSBW_EXP BOOL LUSBW_API WinUsb_QueryInterfaceSettings (
-    __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
-    __in  UCHAR AlternateInterfaceNumber,
-    __out PUSB_INTERFACE_DESCRIPTOR UsbAltInterfaceDescriptor)
-{
-	return LUsbK_QueryInterfaceSettings(InterfaceHandle, AlternateInterfaceNumber, UsbAltInterfaceDescriptor);
-}
-
-LUSBW_EXP BOOL LUSBW_API WinUsb_QueryDeviceInformation (
-    __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
-    __in  ULONG InformationType,
-    __inout PULONG BufferLength,
-    __out_bcount(*BufferLength) PVOID Buffer)
-{
-	return LUsbK_QueryDeviceInformation(InterfaceHandle, InformationType, BufferLength, Buffer);
-}
-
-LUSBW_EXP BOOL LUSBW_API WinUsb_SetCurrentAlternateSetting (
-    __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
-    __in  UCHAR SettingNumber)
-{
-	return LUsbK_SetCurrentAlternateSetting(InterfaceHandle, SettingNumber);
-}
-
-LUSBW_EXP BOOL LUSBW_API WinUsb_GetCurrentAlternateSetting (
-    __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
-    __out PUCHAR SettingNumber)
-{
-	return LUsbK_GetCurrentAlternateSetting(InterfaceHandle, SettingNumber);
-}
-
-LUSBW_EXP BOOL LUSBW_API WinUsb_QueryPipe (
-    __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
-    __in  UCHAR AlternateInterfaceNumber,
-    __in  UCHAR PipeIndex,
-    __out PWINUSB_PIPE_INFORMATION PipeInformation)
-{
-	return LUsbK_QueryPipe(InterfaceHandle, AlternateInterfaceNumber, PipeIndex, PipeInformation);
-}
-
-LUSBW_EXP BOOL LUSBW_API WinUsb_SetPipePolicy (
-    __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
-    __in  UCHAR PipeID,
-    __in  ULONG PolicyType,
-    __in  ULONG ValueLength,
-    __in_bcount(ValueLength) PVOID Value)
-{
-	return LUsbK_SetPipePolicy(InterfaceHandle, PipeID, PolicyType, ValueLength, Value);
-}
-
-LUSBW_EXP BOOL LUSBW_API WinUsb_GetPipePolicy (
-    __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
-    __in  UCHAR PipeID,
-    __in  ULONG PolicyType,
-    __inout PULONG ValueLength,
-    __out_bcount(*ValueLength) PVOID Value)
-{
-	return LUsbK_GetPipePolicy(InterfaceHandle, PipeID, PolicyType, ValueLength, Value);
-}
-
-LUSBW_EXP BOOL LUSBW_API WinUsb_ReadPipe (
-    __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
-    __in  UCHAR PipeID,
-    __out_bcount_part_opt(BufferLength, *LengthTransferred) PUCHAR Buffer,
-    __in  ULONG BufferLength,
-    __out_opt PULONG LengthTransferred,
-    __in_opt LPOVERLAPPED Overlapped)
-{
-	return LUsbK_ReadPipe(InterfaceHandle, PipeID, Buffer, BufferLength, LengthTransferred, Overlapped);
-}
-
-LUSBW_EXP BOOL LUSBW_API WinUsb_WritePipe (
-    __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
-    __in  UCHAR PipeID,
-    __in_bcount(BufferLength) PUCHAR Buffer,
-    __in  ULONG BufferLength,
-    __out_opt PULONG LengthTransferred,
-    __in_opt LPOVERLAPPED Overlapped)
-{
-	return LUsbK_WritePipe(InterfaceHandle, PipeID, Buffer, BufferLength, LengthTransferred, Overlapped);
-}
-
-LUSBW_EXP BOOL LUSBW_API WinUsb_ControlTransfer (
-    __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
-    __in  WINUSB_SETUP_PACKET SetupPacket,
-    __out_bcount_part_opt(BufferLength, *LengthTransferred) PUCHAR Buffer,
-    __in  ULONG BufferLength,
-    __out_opt PULONG LengthTransferred,
-    __in_opt  LPOVERLAPPED Overlapped)
-{
-	return LUsbK_ControlTransfer(InterfaceHandle, SetupPacket, Buffer, BufferLength, LengthTransferred, Overlapped);
-}
-
-LUSBW_EXP BOOL LUSBW_API WinUsb_ResetPipe (
-    __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
-    __in  UCHAR PipeID)
-{
-	return LUsbK_ResetPipe(InterfaceHandle, PipeID);
-}
-
-LUSBW_EXP BOOL LUSBW_API WinUsb_AbortPipe (
-    __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
-    __in  UCHAR PipeID)
-{
-	return LUsbK_AbortPipe(InterfaceHandle, PipeID);
-}
-
-LUSBW_EXP BOOL LUSBW_API WinUsb_FlushPipe (
-    __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
-    __in  UCHAR PipeID)
-{
-	return LUsbK_FlushPipe(InterfaceHandle, PipeID);
-}
-
-LUSBW_EXP BOOL LUSBW_API WinUsb_SetPowerPolicy (
-    __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
-    __in  ULONG PolicyType,
-    __in  ULONG ValueLength,
-    __in_bcount(ValueLength) PVOID Value)
-{
-	return LUsbK_SetPowerPolicy(InterfaceHandle, PolicyType, ValueLength, Value);
-}
-
-LUSBW_EXP BOOL LUSBW_API WinUsb_GetPowerPolicy (
-    __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
-    __in  ULONG PolicyType,
-    __inout PULONG ValueLength,
-    __out_bcount(*ValueLength) PVOID Value)
-{
-	return LUsbK_GetPowerPolicy(InterfaceHandle, PolicyType, ValueLength, Value);
-}
-
-LUSBW_EXP BOOL LUSBW_API WinUsb_GetOverlappedResult (
-    __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
-    __in  LPOVERLAPPED lpOverlapped,
-    __out LPDWORD lpNumberOfBytesTransferred,
-    __in  BOOL bWait)
-{
-	return LUsbK_GetOverlappedResult(InterfaceHandle, lpOverlapped, lpNumberOfBytesTransferred, bWait);
-}
-/*
-	LUSBW_EXP PUSB_INTERFACE_DESCRIPTOR WinUsb_ParseConfigurationDescriptor (
-	    __in  PUSB_CONFIGURATION_DESCRIPTOR ConfigurationDescriptor,
-	    __in  PVOID StartPosition,
-	    __in  LONG InterfaceNumber,
-	    __in  LONG AlternateSetting,
-	    __in  LONG InterfaceClass,
-	    __in  LONG InterfaceSubClass,
-	    __in  LONG InterfaceProtocol
-		) {return LUsbK_ParseConfigurationDescriptor(ConfigurationDescriptor,StartPosition,InterfaceNumber,AlternateSetting,InterfaceClass,InterfaceSubClass,InterfaceProtocol); }
-
-	LUSBW_EXP PUSB_COMMON_DESCRIPTOR WinUsb_ParseDescriptors (
-	    __in_bcount(TotalLength) PVOID    DescriptorBuffer,
-	    __in  ULONG    TotalLength,
-	    __in  PVOID    StartPosition,
-	    __in  LONG     DescriptorType
-		) {return LUsbK_ParseDescriptors(DescriptorBuffer,TotalLength,StartPosition,DescriptorType); }
-*/
-
-#endif // EXCLUDE_WINUSB_WRAPPER
