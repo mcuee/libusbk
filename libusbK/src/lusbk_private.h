@@ -45,11 +45,12 @@ typedef struct _USER_PIPE_POLICY
 // Internal libusbK interface handle
 typedef struct _KUSB_INTERFACE_HANDLE_INTERNAL
 {
-	PVOID UserContext;
+	KUSB_USER_CONTEXT UserContezt;
 	PVOID BackendContext;
 	HANDLE DeviceHandle;
 	INT InterfaceIndex;
 	USER_PIPE_POLICY PipePolicies[32];
+
 	struct
 	{
 		unsigned int Major;
@@ -58,7 +59,6 @@ typedef struct _KUSB_INTERFACE_HANDLE_INTERNAL
 		unsigned int Nano;
 		unsigned int ModValue;
 	} Version;
-
 	struct
 	{
 		volatile LONG ValidCount;

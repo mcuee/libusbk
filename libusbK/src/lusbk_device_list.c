@@ -25,6 +25,12 @@ typedef struct _SERVICE_DRVID_MAP
 	LPCSTR* MapNames;
 } SERVICE_DRVID_MAP, *PSERVICE_DRVID_MAP;
 
+typedef struct _DEV_INTF_VALUENAME_MAP
+{
+	LPCSTR ValueName;
+	DWORD RegValueType;
+} DEV_INTF_VALUENAME_MAP, *PDEV_INTF_VALUENAME_MAP;
+
 #define KEY_DEVICECLASSES "SYSTEM\\CurrentControlSet\\Control\\DeviceClasses"
 
 static BOOL False = FALSE;
@@ -305,6 +311,7 @@ KUSB_EXP LONG KUSB_API LUsbK_GetDeviceList(
 
 			if (IsUsbRegKey(deviceInstanceKeyPath))
 			{
+				DWORD lusb0SymbolicLinkIndex;
 				// query device instance id
 				// e.g. HKLM\SYSTEM\CurrentControlSet\Control\DeviceClasses\{20343a29-6da1-4db8-8a3c-16e774057bf5}\##?#USB#VID_1234&PID_0001#BMD001#{20343a29-6da1-4db8-8a3c-16e774057bf5}\DeviceInstance
 				status = RegGetValueString(hDeviceInterfaceGuid, deviceInstanceKeyPath, NULL, "DeviceInstance", devIntfElement.DeviceInstance);
@@ -316,12 +323,15 @@ KUSB_EXP LONG KUSB_API LUsbK_GetDeviceList(
 				status = RegGetValueString(hDeviceInterfaceGuid, deviceInstanceKeyPath, "\\#", "SymbolicLink", devIntfElement.SymbolicLink);
 				if (status != ERROR_SUCCESS)
 					continue;
+				strcpy_s(devIntfElement.DevicePath,sizeof(devIntfElement.DevicePath)-1, devIntfElement.SymbolicLink);
 
 				// query reference count (connected device instance id count)
 				// e.g. HKLM\SYSTEM\CurrentControlSet\Control\DeviceClasses\{20343a29-6da1-4db8-8a3c-16e774057bf5}\##?#USB#VID_1234&PID_0001#BMD001#{20343a29-6da1-4db8-8a3c-16e774057bf5}\Control\ReferenceCount
 				status = RegGetValueDWord(hDeviceInterfaceGuid, deviceInstanceKeyPath, "\\Control", "ReferenceCount", &devIntfElement.ReferenceCount);
 				if (status != ERROR_SUCCESS)
 					continue;
+				
+				status = ERROR_SUCCESS;
 
 				if (devIntfElement.ReferenceCount)
 				{
@@ -336,6 +346,19 @@ KUSB_EXP LONG KUSB_API LUsbK_GetDeviceList(
 
 					HKEY hDevRegEnumKey = NULL;
 					DWORD devRegEnumKeyIndex = (DWORD) - 1;
+
+					// query LUsb0
+					// e.g. HKLM\SYSTEM\CurrentControlSet\Control\DeviceClasses\{20343a29-6da1-4db8-8a3c-16e774057bf5}\##?#USB#VID_1234&PID_0001#BMD001#{20343a29-6da1-4db8-8a3c-16e774057bf5}\#\Device Parameters\LUsb0
+					status = RegGetValueDWord(hDeviceInterfaceGuid, deviceInstanceKeyPath, "\\#\\Device Parameters", "LUsb0", &lusb0SymbolicLinkIndex);
+					if (status == ERROR_SUCCESS)
+					{
+						sprintf_s(devIntfElement.DevicePath,sizeof(devIntfElement.DevicePath)-1,
+							"\\\\.\\libusb0-%04d",lusb0SymbolicLinkIndex);
+					}
+
+					// query Linked
+					// e.g. HKLM\SYSTEM\CurrentControlSet\Control\DeviceClasses\{20343a29-6da1-4db8-8a3c-16e774057bf5}\##?#USB#VID_1234&PID_0001#BMD001#{20343a29-6da1-4db8-8a3c-16e774057bf5}\#\Control\Linked
+					RegGetValueDWord(hDeviceInterfaceGuid, deviceInstanceKeyPath, "\\#\\Control", "Linked", &devIntfElement.Linked);
 
 					memset(devRegEnumKey, 0, sizeof(devRegEnumKey));
 					strcat_s(devRegEnumKey, sizeof(devRegEnumKey), "SYSTEM\\CurrentControlSet\\Enum\\");

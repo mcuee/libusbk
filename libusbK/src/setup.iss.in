@@ -139,7 +139,7 @@ Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\dll\x86\@K_LIBUSB10_NAME@.d
 ; ============================================================================
 ; ** libusbK AMD 64bit
 Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\sys\amd64\libusbK.sys"; DestDir: {sys}\drivers; Flags: uninsneveruninstall replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\sys;
-Source: "@K_LIBUSB_W32_DIR@\bin\x86\libusb0.sys"; DestDir: {sys}\drivers; Flags: uninsneveruninstall replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\libusb0sys;
+Source: "@K_LIBUSB_W32_DIR@\bin\amd64\libusb0.sys"; DestDir: {sys}\drivers; Flags: uninsneveruninstall replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\libusb0sys;
 
 ; 32 bit program support
 Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\dll\x86\libusbK.dll"; DestDir: {syswow64}; Flags: replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\dll;

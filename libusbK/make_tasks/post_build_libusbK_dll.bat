@@ -67,7 +67,7 @@ GOTO :EOF
 
 	REM - Copy in the libusb-win32 includes
 	CALL :MakeIncludeDir libusb0
-	COPY /Y "!K_LIBUSB_W32_DIR!\include\usb.h" "!INCDIR!"
+	COPY /Y "!K_LIBUSB_W32_DIR!\include\lusb0_usb.h" "!INCDIR!"
 	COPY /Y "!K_LIBUSB_W32_DIR!\lib\dynamic\libusb_dyn.c" "!INCDIR!"
 
 	REM - Copy in the libusb-1.x includes
@@ -77,6 +77,7 @@ GOTO :EOF
 	REM - Copy in the libusbK includes
 	CALL :MakeIncludeDir libusbK
 	COPY /Y ".\src\lusbk_usb.h" "!INCDIR!"
+	COPY /Y ".\src\lusbk_common.h" "!INCDIR!"
 	COPY /Y ".\src\lusbk_dynamic.h" "!INCDIR!"
 	COPY /Y ".\src\lusbk_device_list.h" "!INCDIR!"
 	

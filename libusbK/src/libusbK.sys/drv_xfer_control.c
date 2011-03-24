@@ -63,36 +63,41 @@ VOID XferCtrl (
 	        setupPacket->Packet.bRequest == USB_REQUEST_GET_DESCRIPTOR)
 	{
 		UCHAR descriptorType = setupPacket->Packet.wValue.Bytes.HiByte;
+		// UCHAR descriptorIndex = setupPacket->Packet.wValue.Bytes.LowByte;
 		ULONG descriptorSize = 0;
 		PVOID descriptorIn = NULL;
 		PVOID outputBuffer = NULL;
 		size_t outputBufferLength = 0;
 
-		if (descriptorType == USB_DEVICE_DESCRIPTOR_TYPE)
+		if (requestContext->IoControlCode == LIBUSB_IOCTL_GET_DESCRIPTOR)
 		{
-			descriptorSize = sizeof(deviceContext->UsbDeviceDescriptor);
-			descriptorIn = &deviceContext->UsbDeviceDescriptor;
-		}
-		else if (descriptorType == USB_CONFIGURATION_DESCRIPTOR_TYPE)
-		{
-			descriptorSize = deviceContext->ConfigurationDescriptorSize;
-			descriptorIn = deviceContext->UsbConfigurationDescriptor;
-		}
-
-		if (descriptorIn && descriptorSize)
-		{
-			// handle (or fail) this standard request here.
-			status = WdfRequestRetrieveOutputBuffer(Request, 2, &outputBuffer, &outputBufferLength);
-			if (NT_SUCCESS(status))
+			switch(descriptorType)
 			{
-				descriptorSize = (ULONG)min(descriptorSize, outputBufferLength);
-				RtlCopyMemory(outputBuffer, descriptorIn, descriptorSize);
-				WdfRequestCompleteWithInformation(Request, STATUS_SUCCESS, descriptorSize);
+			case USB_DEVICE_DESCRIPTOR_TYPE:
+				descriptorSize = sizeof(deviceContext->UsbDeviceDescriptor);
+				descriptorIn = &deviceContext->UsbDeviceDescriptor;
+				break;
+			case USB_CONFIGURATION_DESCRIPTOR_TYPE:
+				descriptorSize = deviceContext->ConfigurationDescriptorSize;
+				descriptorIn = deviceContext->UsbConfigurationDescriptor;
+				break;
+			}
+
+			if (descriptorIn && descriptorSize)
+			{
+				// handle (or fail) this standard request here.
+				status = WdfRequestRetrieveOutputBuffer(Request, 2, &outputBuffer, &outputBufferLength);
+				if (NT_SUCCESS(status))
+				{
+					descriptorSize = (ULONG)min(descriptorSize, outputBufferLength);
+					RtlCopyMemory(outputBuffer, descriptorIn, descriptorSize);
+					WdfRequestCompleteWithInformation(Request, STATUS_SUCCESS, descriptorSize);
+					return;
+				}
+				USBERR("WdfRequestRetrieveOutputBuffer failed. status=%Xh\n", status);
+				WdfRequestCompleteWithInformation(Request, status, 0);
 				return;
 			}
-			USBERR("WdfRequestRetrieveOutputBuffer failed. status=%Xh\n", status);
-			WdfRequestCompleteWithInformation(Request, status, 0);
-			return;
 		}
 	}
 

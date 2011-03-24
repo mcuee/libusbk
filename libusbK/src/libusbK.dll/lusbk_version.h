@@ -16,7 +16,7 @@
 #define VERSION_MAJOR 3
 #define VERSION_MINOR 0
 #define VERSION_MICRO 1
-#define VERSION_NANO 8
+#define VERSION_NANO 9
 #define VERSION_DATE 03/23/2011
 #define RC_FILENAME_STR "libusbK.dll"
 

@@ -9,27 +9,7 @@
 #define LUSB0_REG_DEFAULT_DEVICE_GUID {20343A29-6DA1-4DB8-8A3C-16E774057BF5}
 #define LUSBK_REG_DEFAULT_DEVICE_GUID {6C696275-7362-2D77-696E-33322D574446}
 
-#define KUSB_CONTEXT_SIZE 32
-
 #include <PSHPACK1.H>
-#pragma warning(disable:4201)
-typedef struct _KUSB_USER_CONTEXT
-{
-	union
-	{
-		UCHAR		Byte[KUSB_CONTEXT_SIZE];
-		CHAR		Char[KUSB_CONTEXT_SIZE];
-
-		USHORT		Word[KUSB_CONTEXT_SIZE / 2];
-		SHORT		Short[KUSB_CONTEXT_SIZE / 2];
-
-		ULONG		ULong[KUSB_CONTEXT_SIZE / 4];
-		LONG		Long[KUSB_CONTEXT_SIZE / 4];
-
-		ULONG_PTR	Ptr[KUSB_CONTEXT_SIZE / 8];
-	};
-} KUSB_USER_CONTEXT, *PKUSB_USER_CONTEXT;
-#pragma warning(default:4201)
 
 typedef struct _KUSB_DEV_LIST_SEARCH
 {
@@ -44,6 +24,7 @@ typedef struct _KUSB_DEV_LIST
 {
 	KUSB_USER_CONTEXT My;
 
+	INT DrvId;
 	CHAR DeviceInterfaceGUID[MAX_PATH];
 	CHAR DeviceInstance[MAX_PATH];
 	CHAR ClassGUID[MAX_PATH];
@@ -51,8 +32,9 @@ typedef struct _KUSB_DEV_LIST
 	CHAR DeviceDesc[MAX_PATH];
 	CHAR Service[MAX_PATH];
 	CHAR SymbolicLink[MAX_PATH];
+	CHAR DevicePath[MAX_PATH];
 	DWORD ReferenceCount;
-	INT DrvId;
+	DWORD Linked;
 
 	struct _KUSB_DEV_LIST* next;
 	struct _KUSB_DEV_LIST* prev;
