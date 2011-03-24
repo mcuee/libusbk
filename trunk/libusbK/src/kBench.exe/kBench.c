@@ -281,7 +281,7 @@ BOOL Bench_Open(PBENCHMARK_TEST_PARAM test)
 			return FALSE;
 		}
 
-		test->DeviceHandle = CreateFileA(list->SymbolicLink,
+		test->DeviceHandle = CreateFileA(list->DevicePath,
 		                                 GENERIC_READ | GENERIC_WRITE,
 		                                 FILE_SHARE_READ | FILE_SHARE_WRITE,
 		                                 NULL,

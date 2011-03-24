@@ -21,13 +21,25 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <conio.h>
+#include <setupapi.h>
 
 #include "lusbk_usb.h"
 #include "lusbk_version.h"
 
 KUSB_DRIVER_API K;
 LONG WinError(__in_opt DWORD errorCode);
-BOOL GetDescriptorReport(__in PKUSB_DEV_LIST deviceElement, __in  PKUSB_DRIVER_API driverApi);
+
+BOOL GetDescriptorReport(__in PKUSB_DEV_LIST deviceElement,
+                         __in PKUSB_DRIVER_API driverApi,
+                         __in BOOL detailed);
+
+BOOL GetRealConfigDescriptor(__in  PKUSB_DRIVER_API driverApi, 
+							 __in WINUSB_INTERFACE_HANDLE InterfaceHandle, 
+							 __in UCHAR Index,
+							 __out_opt PUCHAR Buffer, 
+							 __in ULONG BufferLength, 
+							 __out PULONG LengthTransferred);
+
 
 static LPCSTR gTabIndents[] = {"", "  ", "    ", "      ", "        ", "          ", "            "};
 static UCHAR gTab = 0;
@@ -54,6 +66,7 @@ int __cdecl main(int argc, char** argv)
 	UNREFERENCED_PARAMETER(argv);
 
 	ShowCopyright();
+
 	ec = LUsbK_GetDeviceList(NULL, &deviceList);
 	if (ec < 0)
 	{
@@ -69,6 +82,8 @@ int __cdecl main(int argc, char** argv)
 		PrintfDeviceElement(ClassGUID);
 		PrintfDeviceElement(DeviceInstance);
 		PrintfDeviceElement(DeviceInterfaceGUID);
+		PrintfDeviceElement(SymbolicLink);
+		PrintfDeviceElement(DevicePath);
 		printf("\n");
 
 		devicePos++;
@@ -118,7 +133,7 @@ int __cdecl main(int argc, char** argv)
 		goto Done;
 	}
 	printf("Getting desciptor report..\n");
-	if (!GetDescriptorReport(deviceElement, &K))
+	if (!GetDescriptorReport(deviceElement, &K, TRUE))
 	{
 		ec = WinError(0);
 		goto Done;
@@ -129,11 +144,33 @@ Done:
 	return ec;
 }
 
+BOOL GetRealConfigDescriptor(__in  PKUSB_DRIVER_API driverApi, 
+							 __in WINUSB_INTERFACE_HANDLE InterfaceHandle, 
+							 __in UCHAR Index,
+							 __out_opt PUCHAR Buffer, 
+							 __in ULONG BufferLength, 
+							 __out PULONG LengthTransferred)
+{
+	USB_DEFAULT_PIPE_SETUP_PACKET Pkt;
+	WINUSB_SETUP_PACKET Pkt2;
+	
+	memset(&Pkt,0,sizeof(Pkt));
+	Pkt.bmRequestType.Dir=BMREQUEST_DEVICE_TO_HOST;
+	Pkt.bRequest=USB_REQUEST_GET_DESCRIPTOR;
+	Pkt.wValue.HiByte=USB_CONFIGURATION_DESCRIPTOR_TYPE;
+	Pkt.wValue.LowByte=Index;
+	Pkt.wLength=(USHORT)BufferLength;
 
-BOOL GetDescriptorReport(__in PKUSB_DEV_LIST deviceElement, __in  PKUSB_DRIVER_API driverApi)
+
+	memcpy(&Pkt2,&Pkt,sizeof(Pkt2));
+	return driverApi->ControlTransfer(InterfaceHandle,Pkt2,Buffer,BufferLength,LengthTransferred,NULL);
+}
+
+BOOL GetDescriptorReport(__in PKUSB_DEV_LIST deviceElement, __in  PKUSB_DRIVER_API driverApi, __in BOOL detailed)
 {
 #define START_DESC(DisplayName) printf("\n%s[%s]\n",gTabIndents[gTab++], DisplayName)
-#define DESC_VALUE(Descriptor,FieldName,FieldFormat) printf("%s%-18s:"FieldFormat, gTabIndents[gTab], DEFINE_TO_STR(FieldName), Descriptor.FieldName)
+#define DESC_VALUE(Descriptor,FieldName,format,...) printf("%s%-18s:"format, gTabIndents[gTab], DEFINE_TO_STR(FieldName),Descriptor.FieldName,__VA_ARGS__)
+#define DESC_PVALUE(Descriptor,FieldName,format,...) printf("%s%-18s:"format, gTabIndents[gTab], DEFINE_TO_STR(FieldName),Descriptor->FieldName,__VA_ARGS__)
 #define END_DESC() (--gTab)
 
 	UCHAR altSetting;
@@ -144,12 +181,12 @@ BOOL GetDescriptorReport(__in PKUSB_DEV_LIST deviceElement, __in  PKUSB_DRIVER_A
 	ULONG length;
 	USB_DEVICE_DESCRIPTOR deviceDescriptor;
 	USB_INTERFACE_DESCRIPTOR interfaceDescriptor;
-	WINUSB_PIPE_INFORMATION pipeInfo[32];
+	WINUSB_PIPE_INFORMATION pipeInfo;
 	BOOL success = TRUE;
-
+	PUSB_CONFIGURATION_DESCRIPTOR configDescriptor = NULL;
 	if (deviceElement)
 	{
-		fileHandle = CreateFileA(deviceElement->SymbolicLink,
+		fileHandle = CreateFileA(deviceElement->DevicePath,
 		                         GENERIC_READ | GENERIC_WRITE,
 		                         FILE_SHARE_READ | FILE_SHARE_WRITE,
 		                         NULL,
@@ -196,6 +233,81 @@ BOOL GetDescriptorReport(__in PKUSB_DEV_LIST deviceElement, __in  PKUSB_DRIVER_A
 		DESC_VALUE(deviceDescriptor, iSerialNumber, "%u\n");
 		DESC_VALUE(deviceDescriptor, bNumConfigurations, "%u\n");
 
+		if (detailed)
+		{
+			LONG size = 0;
+
+			configDescriptor = malloc(4096);
+			memset(configDescriptor, 0, 4096);
+
+			if (GetRealConfigDescriptor(driverApi,handle,0,(PUCHAR)configDescriptor,4096,&length))
+			/*
+			if (driverApi->GetDescriptor(handle,
+			                             USB_CONFIGURATION_DESCRIPTOR_TYPE,
+			                             ++configIndex, 0,
+			                             (PUCHAR)configDescriptor,
+			                             4096,
+			                             &length))
+			 */
+			{
+				PUSB_COMMON_DESCRIPTOR hdr = (PUSB_COMMON_DESCRIPTOR)configDescriptor;
+				PUCHAR uc = (PUCHAR)hdr;
+				size = (LONG)length;
+				START_DESC("Config Descriptor");
+				DESC_PVALUE(configDescriptor, bLength, "%u\n");
+				DESC_PVALUE(configDescriptor, bDescriptorType, "%02Xh\n");
+				DESC_PVALUE(configDescriptor, wTotalLength, "%u\n");
+				DESC_PVALUE(configDescriptor, bNumInterfaces, "%u\n");
+				DESC_PVALUE(configDescriptor, bConfigurationValue, "%02Xh\n");
+				DESC_PVALUE(configDescriptor, iConfiguration, "%u\n");
+				DESC_PVALUE(configDescriptor, bmAttributes, "%02Xh\n");
+				DESC_PVALUE(configDescriptor, MaxPower, "%u\n");
+
+
+				length = sizeof(USB_CONFIGURATION_DESCRIPTOR);
+				uc += length;
+				size -= length;
+				hdr = (PUSB_COMMON_DESCRIPTOR)uc;
+				while((size > sizeof(USB_COMMON_DESCRIPTOR)) && size >= hdr->bLength)
+				{
+					switch(hdr->bDescriptorType)
+					{
+					case USB_INTERFACE_DESCRIPTOR_TYPE:
+						START_DESC("Interface Descriptor");
+						DESC_PVALUE(((PUSB_INTERFACE_DESCRIPTOR)hdr), bLength, "%u\n");
+						DESC_PVALUE(((PUSB_INTERFACE_DESCRIPTOR)hdr), bDescriptorType, "%02Xh\n");
+						DESC_PVALUE(((PUSB_INTERFACE_DESCRIPTOR)hdr), bInterfaceNumber, "%02u\n");
+						DESC_PVALUE(((PUSB_INTERFACE_DESCRIPTOR)hdr), bAlternateSetting, "%02u\n");
+						DESC_PVALUE(((PUSB_INTERFACE_DESCRIPTOR)hdr), bNumEndpoints, "%u\n");
+						DESC_PVALUE(((PUSB_INTERFACE_DESCRIPTOR)hdr), bInterfaceClass, "%02Xh\n");
+						DESC_PVALUE(((PUSB_INTERFACE_DESCRIPTOR)hdr), bInterfaceSubClass, "%02Xh\n");
+						DESC_PVALUE(((PUSB_INTERFACE_DESCRIPTOR)hdr), bInterfaceProtocol, "%02Xh\n");
+						DESC_PVALUE(((PUSB_INTERFACE_DESCRIPTOR)hdr), iInterface, "%u\n");
+						END_DESC();
+						break;
+					case USB_ENDPOINT_DESCRIPTOR_TYPE:
+						START_DESC("Endpoint Descriptor");
+						DESC_PVALUE(((PUSB_ENDPOINT_DESCRIPTOR)hdr), bLength, "%u\n");
+						DESC_PVALUE(((PUSB_ENDPOINT_DESCRIPTOR)hdr), bDescriptorType, "%02Xh\n");
+						DESC_PVALUE(((PUSB_ENDPOINT_DESCRIPTOR)hdr), bEndpointAddress, "%02Xh\n");
+						DESC_PVALUE(((PUSB_ENDPOINT_DESCRIPTOR)hdr), bmAttributes, "%02Xh (%s)\n", GetPipeTypeString(((PUSB_ENDPOINT_DESCRIPTOR)hdr)->bmAttributes));
+						DESC_PVALUE(((PUSB_ENDPOINT_DESCRIPTOR)hdr), wMaxPacketSize, "%u\n");
+						DESC_PVALUE(((PUSB_ENDPOINT_DESCRIPTOR)hdr), bInterval, "%02Xh\n");
+						END_DESC();
+						break;
+
+					}
+					uc += hdr->bLength;
+					size -= hdr->bLength;
+					hdr = (PUSB_COMMON_DESCRIPTOR)uc;
+				}
+
+				END_DESC();
+			}
+			success = TRUE;
+			goto Done;
+		}
+
 NextInterface:
 		memset(&interfaceDescriptor, 0, sizeof(interfaceDescriptor));
 		altSetting = 0;
@@ -216,14 +328,14 @@ NextInterface:
 			DESC_VALUE(interfaceDescriptor, iInterface, "%u\n");
 
 			memset(&pipeInfo, 0, sizeof(pipeInfo));
-			while(driverApi->QueryPipe(handle, altSetting, pipeIndex, &pipeInfo[pipeIndex]))
+			while(driverApi->QueryPipe(handle, altSetting, pipeIndex, &pipeInfo))
 			{
 				// TODO: show pipe information
 				START_DESC("Pipe Info");
-				DESC_VALUE(pipeInfo[pipeIndex], PipeType, "%u\n");
-				DESC_VALUE(pipeInfo[pipeIndex], PipeId, "%02Xh\n");
-				DESC_VALUE(pipeInfo[pipeIndex], MaximumPacketSize, "%u\n");
-				DESC_VALUE(pipeInfo[pipeIndex], Interval, "%u\n");
+				DESC_VALUE(pipeInfo, PipeType, "%02Xh (%s)\n", GetPipeTypeString(pipeInfo.PipeType));
+				DESC_VALUE(pipeInfo, PipeId, "%02Xh\n");
+				DESC_VALUE(pipeInfo, MaximumPacketSize, "%u\n");
+				DESC_VALUE(pipeInfo, Interval, "%u\n");
 				END_DESC();
 
 				pipeIndex++;
@@ -246,7 +358,7 @@ NextInterface:
 	}
 
 	END_DESC(); // Device
-
+Done:
 	success = TRUE;
 Error:
 	if (driverApi)

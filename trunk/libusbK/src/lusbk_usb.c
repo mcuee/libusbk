@@ -453,6 +453,7 @@ KUSB_EXP BOOL KUSB_API LUsbK_SetPipePolicy (
 
 	if (handle->Version.Major > 1)
 	{
+		// this is a libusbK driver; it has full support for policies
 		return Ioctl_Sync(handle->DeviceHandle, LIBUSB_IOCTL_SET_PIPE_POLICY,
 		                  request, sizeof(libusb_request) + ValueLength,
 		                  NULL, 0, NULL);
@@ -461,6 +462,7 @@ KUSB_EXP BOOL KUSB_API LUsbK_SetPipePolicy (
 	{
 		if (!(PipeID & 0x0F))
 		{
+			// libusb-win32 must do a little in the driver and a little in the dll.
 			// this pipe policy is for the default pipe; they are handled by the driver.
 			SetRequestData(request, Value, ValueLength);
 			return Ioctl_Sync(handle->DeviceHandle, LIBUSB_IOCTL_SET_PIPE_POLICY,
@@ -507,8 +509,11 @@ KUSB_EXP BOOL KUSB_API LUsbK_GetPipePolicy (
 	request.pipe_policy.interface_index = handle->InterfaceIndex;
 	request.pipe_policy.pipe_id = PipeID;
 	request.pipe_policy.policy_type = PolicyType;
+
 	if (handle->Version.Major > 1)
 	{
+
+		// this is a libusbK driver; it has full support for policies
 		return Ioctl_Sync(handle->DeviceHandle, LIBUSB_IOCTL_GET_PIPE_POLICY,
 		                  &request, sizeof(request),
 		                  Value, *ValueLength,

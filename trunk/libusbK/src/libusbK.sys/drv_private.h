@@ -41,8 +41,8 @@ extern ULONG DebugLevel;
 #define MAX_POLICY			(16)
 
 // These are pre-allocated to device context space.
-#define LIBUSB_MAX_INTERFACE_COUNT 128
-#define LIBUSB_MAX_ENDPOINT_COUNT 32
+#define LIBUSB_MAX_INTERFACE_COUNT 32
+#define LIBUSB_MAX_ENDPOINT_COUNT  32
 
 #define REMOTE_WAKEUP_MASK 0x20
 
@@ -203,6 +203,7 @@ typedef struct _DEVICE_CONTEXT
 	ULONG							InstanceNumber;			// Unique number; incremented when a device is created.
 	PUSB_CONFIGURATION_DESCRIPTOR   UsbConfigurationDescriptor;
 	ULONG							ConfigurationDescriptorSize;
+	UCHAR							ConfigDescriptorIndex;
 	WDFDEVICE                       WdfDevice;			// WDFDEVICE used to create the target device.
 	WDFUSBDEVICE                    WdfUsbTargetDevice;	// Target device created from WdfDevice.
 	USB_DEVICE_SPEED                DeviceSpeed;		// Low/Full/High

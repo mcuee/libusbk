@@ -274,14 +274,17 @@ typedef struct
 		} power_policy;
 
 		// WDF_USB_CONTROL_SETUP_PACKET control;
-		struct
+		union
 		{
-			UCHAR   RequestType;
-			UCHAR   Request;
-			USHORT  Value;
-			USHORT  Index;
-			USHORT  Length;
-		} control;
+			struct
+			{
+				UCHAR   RequestType;
+				UCHAR   Request;
+				USHORT  Value;
+				USHORT  Index;
+				USHORT  Length;
+			} control;
+		};
 	};
 } libusb_request;
 #pragma warning(default:4201)

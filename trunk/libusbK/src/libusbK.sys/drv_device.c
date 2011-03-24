@@ -660,6 +660,7 @@ Return Value:
 
 	deviceContext->ConfigurationDescriptorSize = size;
 	deviceContext->UsbConfigurationDescriptor = configurationDescriptor;
+	deviceContext->ConfigDescriptorIndex=0;
 
 	status = Device_ConfigureInterfaces(Device);
 

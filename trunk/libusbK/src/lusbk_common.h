@@ -2,17 +2,6 @@
 #ifndef __LUSBK_COMMON_H
 #define __LUSBK_COMMON_H
 
-#if defined(DYNAMIC_DLL)
-#define KUSB_EXP
-#else
-#define KUSB_EXP
-#endif
-
-#if !defined(KUSB_API)
-#define KUSB_API WINAPI
-#endif
-
-
 #ifndef __USB_H__
 #define __USB_H__
 
@@ -22,9 +11,40 @@
 #ifndef __USB100_H__
 #define __USB100_H__
 
-#include <PSHPACK1.H>
 #include <windows.h>
 #include <objbase.h>
+#include <PSHPACK1.H>
+
+#define KUSB_CONTEXT_SIZE 32
+
+#if defined(DYNAMIC_DLL)
+#define KUSB_EXP
+#else
+#define KUSB_EXP
+#endif
+
+#if !defined(KUSB_API)
+#define KUSB_API WINAPI
+#endif
+#pragma warning(disable:4201)
+typedef struct _KUSB_USER_CONTEXT
+{
+	union
+	{
+		UCHAR		Byte[KUSB_CONTEXT_SIZE];
+		CHAR		Char[KUSB_CONTEXT_SIZE];
+
+		USHORT		Word[KUSB_CONTEXT_SIZE / 2];
+		SHORT		Short[KUSB_CONTEXT_SIZE / 2];
+
+		ULONG		ULong[KUSB_CONTEXT_SIZE / 4];
+		LONG		Long[KUSB_CONTEXT_SIZE / 4];
+
+		ULONG_PTR	Ptr[KUSB_CONTEXT_SIZE / 8];
+	};
+} KUSB_USER_CONTEXT, *PKUSB_USER_CONTEXT;
+#pragma warning(default:4201)
+
 
 //bmRequest.Dir
 #define BMREQUEST_HOST_TO_DEVICE        0
