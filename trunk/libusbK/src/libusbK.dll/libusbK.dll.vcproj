@@ -20,8 +20,8 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
-			IntermediateDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
+			OutputDirectory="$(SolutionDir)output\$(ConfigurationName)\$(ProjectName)\$(PlatformName)"
+			IntermediateDirectory="$(SolutionDir)output\$(ConfigurationName)\$(ProjectName)\$(PlatformName)"
 			ConfigurationType="2"
 			CharacterSet="2"
 			>
@@ -93,8 +93,8 @@
 		</Configuration>
 		<Configuration
 			Name="Debug|x64"
-			OutputDirectory="$(SolutionDir)output\$(PlatformName)\$(ConfigurationName)"
-			IntermediateDirectory="$(SolutionDir)output\$(PlatformName)\$(ConfigurationName)"
+			OutputDirectory="$(SolutionDir)output\$(ConfigurationName)\$(ProjectName)\$(PlatformName)"
+			IntermediateDirectory="$(SolutionDir)output\$(ConfigurationName)\$(ProjectName)\$(PlatformName)"
 			ConfigurationType="2"
 			CharacterSet="2"
 			>
@@ -167,8 +167,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
-			IntermediateDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
+			OutputDirectory="$(SolutionDir)output\$(ConfigurationName)\$(ProjectName)\$(PlatformName)"
+			IntermediateDirectory="$(SolutionDir)output\$(ConfigurationName)\$(ProjectName)\$(PlatformName)"
 			ConfigurationType="2"
 			CharacterSet="2"
 			WholeProgramOptimization="1"

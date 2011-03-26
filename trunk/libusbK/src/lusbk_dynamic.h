@@ -1,5 +1,8 @@
 
 #ifndef __LUSBK_DYNAMIC_H_
+/*! \file lusbk_dynamic.h
+*/
+
 #define __LUSBK_DYNAMIC_H_
 
 #include <windows.h>
@@ -7,6 +10,43 @@
 #include "lusbk_common.h"
 
 typedef INT_PTR (FAR WINAPI* KPROC)();
+
+#define KUSB_CONTEXT_SIZE 32
+
+/*!
+  \def KUSB_EXP
+  Indicates that a function is an exported API call.
+*/
+#if defined(DYNAMIC_DLL)
+#define KUSB_EXP
+#else
+#define KUSB_EXP
+#endif
+
+/*! Indicates the calling convention. This is always WINAPI (stdcall) vy default.
+*/
+#if !defined(KUSB_API)
+#define KUSB_API WINAPI
+#endif
+
+#pragma warning(disable:4201)
+typedef struct _KUSB_USER_CONTEXT
+{
+	union
+	{
+		UCHAR		Byte[KUSB_CONTEXT_SIZE];
+		CHAR		Char[KUSB_CONTEXT_SIZE];
+
+		USHORT		Word[KUSB_CONTEXT_SIZE / 2];
+		SHORT		Short[KUSB_CONTEXT_SIZE / 2];
+
+		ULONG		ULong[KUSB_CONTEXT_SIZE / 4];
+		LONG		Long[KUSB_CONTEXT_SIZE / 4];
+
+		ULONG_PTR	Ptr[KUSB_CONTEXT_SIZE / 8];
+	};
+} KUSB_USER_CONTEXT, *PKUSB_USER_CONTEXT;
+#pragma warning(default:4201)
 
 typedef enum _KUSB_DRVID
 {

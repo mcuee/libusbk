@@ -1,17 +1,17 @@
-; libusbK (KMDF) USB Library - installer/upgrader script
+; @K_LIBUSBK_NAME@ (KMDF) USB Library - installer/upgrader script
 ; Copyright (c) 2011 Travis Robinson <libusbdotnet@gmail.com>
 ; ============================================================================
 
 [Setup]
-AppName				= libusbK
-AppVerName			= libusbK-Installer v@TARGET_VERSION@
-AppId				= libusbK-Installer
+AppName				= @K_LIBUSBK_NAME@
+AppVerName			= @K_LIBUSBK_NAME@-Installer v@TARGET_VERSION@
+AppId				= @K_LIBUSBK_NAME@-Installer
 AppPublisher		= Travis Robinson 
 AppPublisherURL		= http://libusb-win32.sourceforge.net
 AppVersion			= @TARGET_VERSION@
 VersionInfoVersion	= @TARGET_VERSION@
-DefaultDirName		= {cf}\libusbK-Installer
-UninstallFilesDir	= {cf}\libusbK-Installer
+DefaultDirName		= {cf}\@K_LIBUSBK_NAME@-Installer
+UninstallFilesDir	= {cf}\@K_LIBUSBK_NAME@-Installer
 DisableFinishedPage = no
 DisableDirPage		= yes
 DisableReadyPage	= yes
@@ -23,7 +23,7 @@ SolidCompression	= yes
 OutputDir			= @G_BUILD_OUTPUT_BASE_ABS_DIR@
 OutputBaseFilename	= @K_LIBUSBK_SETUP_NAME@
 PrivilegesRequired	= admin
-WizardSmallImageFile = libusbK.bmp
+WizardSmallImageFile = @K_LIBUSBK_NAME@.bmp
 
 ; requires Win2k, or higher (x86 or amd64 only)
 MinVersion						= 0, 5.0.2195 
@@ -120,48 +120,48 @@ end;
 [Tasks]
 Name: installer; Description: "Create and install a libusb-win32 device driver a package."; Flags: exclusive;
 Name: upgrader;  Description: "Upgrade libusb-win32 components"; Flags: exclusive;
-Name: upgrader\sys;  Description: "Driver (libusbK.sys)";
-Name: upgrader\libusb0sys;  Description: "Driver (libusb0.sys)";
-Name: upgrader\dll;  Description: "User libraries (libusbK, @K_LIBUSB10_NAME@, libusb0)";
-Name: filter; Description: "Install a libusb0 device filter. (advanced users)"; Flags: exclusive;
+Name: upgrader\sys;  Description: "Driver (@K_LIBUSBK_NAME@.sys)";
+Name: upgrader\libusb0sys;  Description: "Driver (@K_LIBUSB0_NAME@.sys)";
+Name: upgrader\dll;  Description: "User libraries (@K_LIBUSBK_NAME@, @K_LIBUSB10_NAME@, @K_LIBUSB0_NAME@)";
+Name: filter; Description: "Install a @K_LIBUSB0_NAME@ device filter. (advanced users)"; Flags: exclusive;
 
 [Files]
 ; ============================================================================
-; ** libusbK x86 (Windows 2000/XP and greater)
-Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\sys\x86\libusbK.sys"; DestDir: {sys}\drivers; Flags: uninsneveruninstall replacesameversion restartreplace promptifolder; Check: IsX86; Tasks: upgrader\sys;
-Source: "@K_LIBUSB_W32_DIR@\bin\x86\libusb0.sys"; DestDir: {sys}\drivers; Flags: uninsneveruninstall replacesameversion restartreplace promptifolder; Check: IsX86; Tasks: upgrader\libusb0sys;
+; ** @K_LIBUSBK_NAME@ x86 (Windows 2000/XP and greater)
+Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\sys\x86\@K_LIBUSBK_NAME@.sys"; DestDir: {sys}\drivers; Flags: uninsneveruninstall replacesameversion restartreplace promptifolder; Check: IsX86; Tasks: upgrader\sys;
+Source: "@K_LIBUSB0_DEP_DIR@\bin\x86\@K_LIBUSB0_NAME@.sys"; DestDir: {sys}\drivers; Flags: uninsneveruninstall replacesameversion restartreplace promptifolder; Check: IsX86; Tasks: upgrader\libusb0sys;
 
 ; 32 bit program support
-Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\dll\x86\libusbK.dll"; DestDir: {sys}; Flags: replacesameversion restartreplace promptifolder; Check: IsX86; Tasks: upgrader\dll;
-Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\dll\x86\libusb0.dll"; DestDir: {sys}; Flags: replacesameversion restartreplace promptifolder; Check: IsX86; Tasks: upgrader\dll;
+Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\dll\x86\@K_LIBUSBK_NAME@.dll"; DestDir: {sys}; Flags: replacesameversion restartreplace promptifolder; Check: IsX86; Tasks: upgrader\dll;
+Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\dll\x86\@K_LIBUSB0_NAME@.dll"; DestDir: {sys}; Flags: replacesameversion restartreplace promptifolder; Check: IsX86; Tasks: upgrader\dll;
 Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\dll\x86\@K_LIBUSB10_NAME@.dll"; DestDir: {sys}; Flags: replacesameversion restartreplace promptifolder; Check: IsX86; Tasks: upgrader\dll;
 
 ; ============================================================================
-; ** libusbK AMD 64bit
-Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\sys\amd64\libusbK.sys"; DestDir: {sys}\drivers; Flags: uninsneveruninstall replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\sys;
-Source: "@K_LIBUSB_W32_DIR@\bin\amd64\libusb0.sys"; DestDir: {sys}\drivers; Flags: uninsneveruninstall replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\libusb0sys;
+; ** @K_LIBUSBK_NAME@ AMD 64bit
+Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\sys\amd64\@K_LIBUSBK_NAME@.sys"; DestDir: {sys}\drivers; Flags: uninsneveruninstall replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\sys;
+Source: "@K_LIBUSB0_DEP_DIR@\bin\amd64\@K_LIBUSB0_NAME@.sys"; DestDir: {sys}\drivers; Flags: uninsneveruninstall replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\libusb0sys;
 
 ; 32 bit program support
-Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\dll\x86\libusbK.dll"; DestDir: {syswow64}; Flags: replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\dll;
-Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\dll\x86\libusb0.dll"; DestDir: {syswow64}; Flags: replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\dll;
+Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\dll\x86\@K_LIBUSBK_NAME@.dll"; DestDir: {syswow64}; Flags: replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\dll;
+Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\dll\x86\@K_LIBUSB0_NAME@.dll"; DestDir: {syswow64}; Flags: replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\dll;
 Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\dll\x86\@K_LIBUSB10_NAME@.dll"; DestDir: {syswow64}; Flags: replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\dll;
 
 ; 64bit bit program support
-Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\dll\amd64\libusbK.dll"; DestDir: {sys}; Flags: replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\dll;
-Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\dll\amd64\libusb0.dll"; DestDir: {sys}; Flags: replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\dll;
+Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\dll\amd64\@K_LIBUSBK_NAME@.dll"; DestDir: {sys}; Flags: replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\dll;
+Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\dll\amd64\@K_LIBUSB0_NAME@.dll"; DestDir: {sys}; Flags: replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\dll;
 Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\dll\amd64\@K_LIBUSB10_NAME@.dll"; DestDir: {sys}; Flags: replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\dll;
 
 ; ============================================================================
-; ** libusbK/libusb0 inf-wizard
-Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\libusbK-inf-wizard.exe"; DestDir: {tmp}; Flags: deleteafterinstall; Tasks: installer;
+; ** @K_LIBUSBK_NAME@/@K_LIBUSB0_NAME@ inf-wizard
+Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\@K_LIBUSBK_NAME@-inf-wizard.exe"; DestDir: {tmp}; Flags: deleteafterinstall; Tasks: installer;
 
 ; ============================================================================
-; ** libusb0 filter installer
-Source: "@K_LIBUSB_W32_DIR@\bin\x86\install-filter-win.exe"; DestDir: {tmp}; Flags: deleteafterinstall; Check: IsX86; Tasks: filter;
-Source: "@K_LIBUSB_W32_DIR@\bin\amd64\install-filter-win.exe"; DestDir: {tmp}; Flags: deleteafterinstall; Check: IsX64; Tasks: filter;
+; ** @K_LIBUSB0_NAME@ filter installer
+Source: "@K_LIBUSB0_DEP_DIR@\bin\x86\install-filter-win.exe"; DestDir: {tmp}; Flags: deleteafterinstall; Check: IsX86; Tasks: filter;
+Source: "@K_LIBUSB0_DEP_DIR@\bin\amd64\install-filter-win.exe"; DestDir: {tmp}; Flags: deleteafterinstall; Check: IsX64; Tasks: filter;
 
 [Run]
-Filename: "{tmp}\libusbK-inf-wizard.exe"; Parameters: "--no-welcome"; Description: "libusbK Driver Installer"; Flags: hidewizard runascurrentuser; Tasks: installer; AfterInstall: CheckInstallerResults;
-Filename: "{tmp}\install-filter-win.exe"; Description: "libusb0 Filter Installer"; Flags: hidewizard runascurrentuser; Tasks: filter;
+Filename: "{tmp}\@K_LIBUSBK_NAME@-inf-wizard.exe"; Parameters: "--no-welcome"; Description: "@K_LIBUSBK_NAME@ Driver Installer"; Flags: hidewizard runascurrentuser; Tasks: installer; AfterInstall: CheckInstallerResults;
+Filename: "{tmp}\install-filter-win.exe"; Description: "@K_LIBUSB0_NAME@ Filter Installer"; Flags: hidewizard runascurrentuser; Tasks: filter;
 
 
