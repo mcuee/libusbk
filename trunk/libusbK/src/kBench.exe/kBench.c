@@ -255,6 +255,9 @@ void SetTestDefaults(PBENCHMARK_TEST_PARAM test)
 	test->BufferSize	= 4096;
 	test->BufferCount   = 1;
 	test->Priority		= THREAD_PRIORITY_NORMAL;
+	test->Intf = -1;
+	test->Altf = -1;
+
 }
 
 BOOL Bench_Open(PBENCHMARK_TEST_PARAM test)
@@ -272,6 +275,9 @@ BOOL Bench_Open(PBENCHMARK_TEST_PARAM test)
 	{
 		list = next;			// the one we are using now
 		next = list->next;	// the one we may use next
+
+		if (!list->My.Byte[0])
+			continue;
 
 		memset(&K, 0, sizeof(K));
 		if (!LUsbK_LoadDriverApi(&K, list->DrvId))
@@ -330,10 +336,12 @@ NextInterface:
 				// found a pipe
 				pipeIndex++;
 			}
-			if (test->Intf == test->InterfaceDescriptor.bInterfaceNumber &&
-			        test->Altf == test->InterfaceDescriptor.bAlternateSetting)
+			if ( (( test->Intf == -1) || (test->Intf == test->InterfaceDescriptor.bInterfaceNumber)) &&
+			        (( test->Altf == -1) || (test->Altf == test->InterfaceDescriptor.bAlternateSetting)) )
 			{
 				// this is the one we are looking for.
+				test->Intf = test->InterfaceDescriptor.bInterfaceNumber;
+				test->Intf = test->InterfaceDescriptor.bAlternateSetting;
 				test->SelectedDeviceProfile = list;
 				return TRUE;
 			}
@@ -1215,9 +1223,11 @@ void ShowTestInfo(PBENCHMARK_TEST_PARAM test)
 
 	CONMSG("%s Test Information\n", TestDisplayString[test->TestType & 3]);
 	CONMSG("\tDriver          : %s\n", GetDrvIdString(test->SelectedDeviceProfile->DrvId));
-	CONMSG("\tVid / Pid       : %04Xh / %04Xh\n", test->Vid,  test->Pid);
-	CONMSG("\tInterface #     : %02Xh\n", test->Intf);
-	CONMSG("\tAlt Interface # : %02Xh\n", test->Altf);
+	CONMSG("\tVid / Pid       : %04Xh / %04Xh\n", test->DeviceDescriptor.idVendor,  test->DeviceDescriptor.idProduct);
+	CONMSG("\tDevicePath      : %s\n", test->SelectedDeviceProfile->DevicePath);
+	CONMSG("\tInterface #     : %02Xh\n", test->InterfaceDescriptor.bInterfaceNumber);
+	CONMSG("\tAlt Interface # : %02Xh\n", test->InterfaceDescriptor.bAlternateSetting);
+	CONMSG("\tNum Endpoints   : %u\n", test->InterfaceDescriptor.bNumEndpoints);
 	CONMSG("\tPriority        : %d\n", test->Priority);
 	CONMSG("\tBuffer Size     : %d\n", test->BufferSize);
 	CONMSG("\tBuffer Count    : %d\n", test->BufferCount);
@@ -1303,7 +1313,7 @@ int GetTestDeviceFromList(PBENCHMARK_TEST_PARAM test)
 	PKUSB_DEV_LIST list = test->DeviceList;
 	while (list && count < 9)
 	{
-		CONMSG("%u. %s (%s) [%s]\n", count, list->DeviceDesc, list->DeviceInstance, GetDrvIdString(list->DrvId));
+		CONMSG("%u. %s (%s) [%s]\n", count + 1, list->DeviceDesc, list->DeviceInstance, GetDrvIdString(list->DrvId));
 		list->My.Byte[0] = FALSE;
 		count++;
 		list = list->next;
@@ -1314,15 +1324,16 @@ int GetTestDeviceFromList(PBENCHMARK_TEST_PARAM test)
 		return -1;
 	}
 
-	CONMSG("Select device (0-%u) :", count);
+	CONMSG("Select device (1-%u) :", count);
 	while(_kbhit()) _getch();
 
-	selection = (CHAR)_getch();
+	selection = (CHAR)_getche();
 	selection -= (UCHAR)'0';
+	CONMSG0("\n\n");
 
-	if (selection < count)
+	if (selection > 0 && selection <= count)
 	{
-		count = UCHAR_MAX;
+		count = 0;
 		list = test->DeviceList;
 
 		while (list && ++count != selection)
@@ -1369,7 +1380,7 @@ int __cdecl main(int argc, char** argv)
 	// to update/modify the running statistics.
 	//
 	InitializeCriticalSection(&DisplayCriticalSection);
-	ec = LUsbK_GetDeviceList(NULL, &Test.DeviceList);
+	ec = LUsbK_GetDeviceList(&Test.DeviceList, NULL);
 	if (ec < 0)
 	{
 		CONERR("failed getting device list ec=\n", ec);
