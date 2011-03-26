@@ -23,4 +23,4 @@ TARGETLIBS=$(SDK_LIB_PATH)\kernel32.lib \
 		   
 INCLUDES=.\;..\;$(DDK_INC_PATH);
 
-SOURCES=kList_rc.rc kList.c
+SOURCES=kList_rc.rc kList.c UsbIds.c

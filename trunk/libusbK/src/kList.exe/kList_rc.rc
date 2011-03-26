@@ -15,6 +15,7 @@
 #define RT_MANIFEST 24
 #define ID_MANIFEST 1
 #define ID_HELP_TEXT  10020
+#define ID_USBIDS_TEXT  10021
 #define ID_DOS_TEXT   300
 
 VS_VERSION_INFO VERSIONINFO
@@ -48,5 +49,6 @@ BEGIN
 END
 
 ID_HELP_TEXT ID_DOS_TEXT "kList.txt"
+ID_USBIDS_TEXT ID_DOS_TEXT "usb-ids.txt"
 
 #endif
