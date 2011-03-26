@@ -50,3 +50,9 @@ Match:
 \6 = (
 \7 = [FUNCTION_PARAMETERS]
 \8 = );
+
+Generate .h from .c
+M:
+\n\{[^\n]*\n((\t[^\n]*\n)|([ \t]*\n))+\}
+R:
+;

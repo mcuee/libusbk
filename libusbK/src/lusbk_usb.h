@@ -1,4 +1,5 @@
-
+/*! \file lusbk_usb.h
+*/
 #ifndef __KUSB_USER_API_H__
 #define __KUSB_USER_API_H__
 
@@ -12,22 +13,43 @@
 extern "C" {
 #endif
 
+	//! Gets a usb device list.
+	/*!
+	  \param DeviceList Pointer reference that will receive a a populated device list.
+	  \param SearchParameters search/filtering options.
+	*/
 	KUSB_EXP LONG KUSB_API LUsbK_GetDeviceList(
-	    __in CONST PKUSB_DEV_LIST_SEARCH SearchParameters,
-	    __deref_out PKUSB_DEV_LIST* DeviceList);
+	    __deref_inout PKUSB_DEV_LIST* DeviceList,
+	    __in PKUSB_DEV_LIST_SEARCH SearchParameters);
 
+	//! Frees a usb device list.
+	/*!
+	  \param DeviceList The list to free.
+	*/
 	KUSB_EXP VOID KUSB_API LUsbK_FreeDeviceList(
 	    __deref_inout PKUSB_DEV_LIST* DeviceList);
 
+	//! Loads a dynamic driver api.
+	/*!
+	  \param DriverAPI A driver api structure to populate.
+	  \param DriverID The driver id of the api to retrieve.
+	*/
 	KUSB_EXP BOOL KUSB_API LUsbK_LoadDriverApi(
 	    __inout PKUSB_DRIVER_API DriverAPI,
 	    __in ULONG DriverID);
 
+	//! Loads a dynamic driver api.
+	/*!
+	  \param ProcAddress Pointer reference that will receive the API function.
+	  \param DriverID The driver id of the api to use.
+	  \param FunctionID The function id.
+	*/
 	KUSB_EXP BOOL KUSB_API LUsbK_GetProcAddress(
 	    __out KPROC* ProcAddress,
 	    __in ULONG DriverID,
 	    __in ULONG FunctionID);
 
+	/// <summary>Prepares the first interface of the device for use.</summary>
 	KUSB_EXP BOOL KUSB_API LUsbK_Initialize(
 	    __in  HANDLE DeviceHandle,
 	    __out PWINUSB_INTERFACE_HANDLE InterfaceHandle

@@ -1,0 +1,13 @@
+# distribution dependency file list
+#
+# NOTE: Source location is relative to the equivalent DEP env var.
+#       Destination location are relative to the base module dist. dir.
+# SYNTAX:
+# <source location>; <dir category name>
+# source location   = Dependeny file path relative to base source directory. 
+# dir category name = Output directory category name. 
+#
+\lusbk_usb.h; \include;
+\lusbk_common.h; \include;
+\lusbk_dynamic.h; \include;
+\lusbk_device_list.h; \include;

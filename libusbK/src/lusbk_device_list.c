@@ -270,8 +270,8 @@ PKUSB_DEV_LIST AddElementCopy(PKUSB_DEV_LIST* head, PKUSB_DEV_LIST elementToClon
 }
 
 KUSB_EXP LONG KUSB_API LUsbK_GetDeviceList(
-    __in CONST PKUSB_DEV_LIST_SEARCH SearchParameters,
-    __deref_out PKUSB_DEV_LIST* DeviceList)
+    __deref_inout PKUSB_DEV_LIST* DeviceList,
+    __in PKUSB_DEV_LIST_SEARCH SearchParameters)
 {
 	HKEY hDeviceClasses = NULL;
 	LONG status;
@@ -323,14 +323,14 @@ KUSB_EXP LONG KUSB_API LUsbK_GetDeviceList(
 				status = RegGetValueString(hDeviceInterfaceGuid, deviceInstanceKeyPath, "\\#", "SymbolicLink", devIntfElement.SymbolicLink);
 				if (status != ERROR_SUCCESS)
 					continue;
-				strcpy_s(devIntfElement.DevicePath,sizeof(devIntfElement.DevicePath)-1, devIntfElement.SymbolicLink);
+				strcpy_s(devIntfElement.DevicePath, sizeof(devIntfElement.DevicePath) - 1, devIntfElement.SymbolicLink);
 
 				// query reference count (connected device instance id count)
 				// e.g. HKLM\SYSTEM\CurrentControlSet\Control\DeviceClasses\{20343a29-6da1-4db8-8a3c-16e774057bf5}\##?#USB#VID_1234&PID_0001#BMD001#{20343a29-6da1-4db8-8a3c-16e774057bf5}\Control\ReferenceCount
 				status = RegGetValueDWord(hDeviceInterfaceGuid, deviceInstanceKeyPath, "\\Control", "ReferenceCount", &devIntfElement.ReferenceCount);
 				if (status != ERROR_SUCCESS)
 					continue;
-				
+
 				status = ERROR_SUCCESS;
 
 				if (devIntfElement.ReferenceCount)
@@ -352,8 +352,8 @@ KUSB_EXP LONG KUSB_API LUsbK_GetDeviceList(
 					status = RegGetValueDWord(hDeviceInterfaceGuid, deviceInstanceKeyPath, "\\#\\Device Parameters", "LUsb0", &lusb0SymbolicLinkIndex);
 					if (status == ERROR_SUCCESS)
 					{
-						sprintf_s(devIntfElement.DevicePath,sizeof(devIntfElement.DevicePath)-1,
-							"\\\\.\\libusb0-%04d",lusb0SymbolicLinkIndex);
+						sprintf_s(devIntfElement.DevicePath, sizeof(devIntfElement.DevicePath) - 1,
+						          "\\\\.\\libusb0-%04d", lusb0SymbolicLinkIndex);
 					}
 
 					// query Linked

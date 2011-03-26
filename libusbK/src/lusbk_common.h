@@ -15,37 +15,6 @@
 #include <objbase.h>
 #include <PSHPACK1.H>
 
-#define KUSB_CONTEXT_SIZE 32
-
-#if defined(DYNAMIC_DLL)
-#define KUSB_EXP
-#else
-#define KUSB_EXP
-#endif
-
-#if !defined(KUSB_API)
-#define KUSB_API WINAPI
-#endif
-#pragma warning(disable:4201)
-typedef struct _KUSB_USER_CONTEXT
-{
-	union
-	{
-		UCHAR		Byte[KUSB_CONTEXT_SIZE];
-		CHAR		Char[KUSB_CONTEXT_SIZE];
-
-		USHORT		Word[KUSB_CONTEXT_SIZE / 2];
-		SHORT		Short[KUSB_CONTEXT_SIZE / 2];
-
-		ULONG		ULong[KUSB_CONTEXT_SIZE / 4];
-		LONG		Long[KUSB_CONTEXT_SIZE / 4];
-
-		ULONG_PTR	Ptr[KUSB_CONTEXT_SIZE / 8];
-	};
-} KUSB_USER_CONTEXT, *PKUSB_USER_CONTEXT;
-#pragma warning(default:4201)
-
-
 //bmRequest.Dir
 #define BMREQUEST_HOST_TO_DEVICE        0
 #define BMREQUEST_DEVICE_TO_HOST        1
@@ -282,11 +251,11 @@ typedef struct _USB_DEFAULT_PIPE_SETUP_PACKET
 	USHORT wLength;
 } USB_DEFAULT_PIPE_SETUP_PACKET, *PUSB_DEFAULT_PIPE_SETUP_PACKET;
 
-#pragma warning(default:4214)
-#pragma warning(default:4201)
-
 // setup packet is eight bytes -- defined by spec
 C_ASSERT(sizeof(USB_DEFAULT_PIPE_SETUP_PACKET) == 8);
+
+#pragma warning(default:4214)
+#pragma warning(default:4201)
 
 #endif // __USB200_H__
 
@@ -417,6 +386,10 @@ typedef struct _WINUSB_SETUP_PACKET
 	USHORT  Index;
 	USHORT  Length;
 } WINUSB_SETUP_PACKET, *PWINUSB_SETUP_PACKET;
+
+// setup packet is eight bytes -- defined by spec
+C_ASSERT(sizeof(WINUSB_SETUP_PACKET) == 8);
+
 #include <POPPACK.H>
 
 #else // NDEF __WUSB_H__
