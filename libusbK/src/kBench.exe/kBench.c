@@ -56,11 +56,11 @@ KUSB_DRIVER_API K;
 // Custom vendor requests that must be implemented in the benchmark firmware.
 // Test selection can be bypassed with the "notestselect" argument.
 //
-typedef enum _BENCHMARK_DEVICE_COMMANDS
+typedef enum _BENCHMARK_DEVICE_COMMAND
 {
 	SET_TEST = 0x0E,
 	GET_TEST = 0x0F,
-} BENCHMARK_DEVICE_COMMANDS;
+} BENCHMARK_DEVICE_COMMAND, *PBENCHMARK_DEVICE_COMMAND;
 
 // Tests supported by the official benchmark firmware.
 //
@@ -70,7 +70,7 @@ typedef enum _BENCHMARK_DEVICE_TEST_TYPE
 	TestTypeRead	= 0x01,
 	TestTypeWrite	= 0x02,
 	TestTypeLoop	= TestTypeRead | TestTypeWrite,
-} BENCHMARK_DEVICE_TEST_TYPE;
+} BENCHMARK_DEVICE_TEST_TYPE, *PBENCHMARK_DEVICE_TEST_TYPE;
 
 // This software was mainly created for testing the libusb-win32 kernel & user driver.
 typedef enum _BENCHMARK_TRANSFER_MODE
@@ -173,9 +173,12 @@ typedef struct _BENCHMARK_TRANSFER_PARAM
 #pragma warning(default:4200)
 
 // Benchmark device api.
-BOOL Bench_Open(PBENCHMARK_TEST_PARAM test);
-BOOL Bench_SetTestType(WINUSB_INTERFACE_HANDLE handle, BENCHMARK_DEVICE_TEST_TYPE testType, int intf);
-BOOL Bench_GetTestType(WINUSB_INTERFACE_HANDLE handle, BENCHMARK_DEVICE_TEST_TYPE* testType, int intf);
+BOOL Bench_Open(__in PBENCHMARK_TEST_PARAM test);
+
+BOOL Bench_Configure(__in WINUSB_INTERFACE_HANDLE handle,
+                     __in BENCHMARK_DEVICE_COMMAND command,
+                     __in UCHAR intf,
+                     __deref_inout PBENCHMARK_DEVICE_TEST_TYPE testType);
 
 // Critical section for running status.
 CRITICAL_SECTION DisplayCriticalSection;
@@ -230,6 +233,7 @@ LONG WinError(__in_opt DWORD errorCode)
 	                   NULL, errorCode, 0, (LPSTR)&buffer, 0, NULL) > 0)
 	{
 		CONERR("%s\n", buffer);
+		SetLastError(0);
 	}
 	else
 	{
@@ -260,7 +264,7 @@ void SetTestDefaults(PBENCHMARK_TEST_PARAM test)
 
 }
 
-BOOL Bench_Open(PBENCHMARK_TEST_PARAM test)
+BOOL Bench_Open(__in PBENCHMARK_TEST_PARAM test)
 {
 	UCHAR altSetting;
 	UCHAR interfaceIndex = UCHAR_MAX;
@@ -276,15 +280,15 @@ BOOL Bench_Open(PBENCHMARK_TEST_PARAM test)
 		list = next;			// the one we are using now
 		next = list->next;	// the one we may use next
 
-		if (!list->My.Byte[0])
+		if (!list->UserContext.Byte[0])
 			continue;
 
 		memset(&K, 0, sizeof(K));
 		if (!LUsbK_LoadDriverApi(&K, list->DrvId))
 		{
 			WinError(0);
-			CONERR("failed loading driver api %s.\n", GetDrvIdString(list->DrvId));
-			return FALSE;
+			CONWRN("could not load driver api %s.\n", GetDrvIdString(list->DrvId));
+			continue;
 		}
 
 		test->DeviceHandle = CreateFileA(list->DevicePath,
@@ -297,14 +301,20 @@ BOOL Bench_Open(PBENCHMARK_TEST_PARAM test)
 
 		if (!test->DeviceHandle || test->DeviceHandle == INVALID_HANDLE_VALUE)
 		{
+			WinError(0);
 			test->DeviceHandle = NULL;
-			CONERR0("failed creating device handle.\n");
-			return FALSE;
+			CONWRN("could not create device handle.\n%s\n", list->DevicePath);
+			continue;
 		}
+
 		if (!K.Initialize(test->DeviceHandle, &test->InterfaceHandle))
 		{
 			WinError(0);
-			return FALSE;
+			CloseHandle(test->DeviceHandle);
+			test->DeviceHandle = NULL;
+			test->InterfaceHandle = NULL;
+			CONWRN("could not initialize device.\n%s\n", list->DevicePath);
+			continue;
 		}
 
 		if (!K.GetDescriptor(test->InterfaceHandle,
@@ -315,7 +325,15 @@ BOOL Bench_Open(PBENCHMARK_TEST_PARAM test)
 		                     &transferred))
 		{
 			WinError(0);
-			return FALSE;
+
+			K.Free(test->InterfaceHandle);
+			test->InterfaceHandle = NULL;
+
+			CloseHandle(test->DeviceHandle);
+			test->DeviceHandle = NULL;
+
+			CONWRN("could not get device descriptor.\n%s\n", list->DevicePath);
+			continue;
 		}
 		test->Vid = (INT)test->DeviceDescriptor.idVendor;
 		test->Pid = (INT)test->DeviceDescriptor.idProduct;
@@ -366,59 +384,34 @@ NextInterface:
 	return FALSE;
 }
 
-#define MAKE_REQUEST_TYPE(Direction, Type, Recipient)	\
-	(((Direction & 0x1)<<7) | ((Type & 0x3)<< 5) | (Recipient & 0x1F))
-
-BOOL Bench_SetTestType(WINUSB_INTERFACE_HANDLE handle, BENCHMARK_DEVICE_TEST_TYPE testType, int intf)
+BOOL Bench_Configure(__in WINUSB_INTERFACE_HANDLE handle,
+                     __in BENCHMARK_DEVICE_COMMAND command,
+                     __in UCHAR intf,
+                     __deref_inout PBENCHMARK_DEVICE_TEST_TYPE testType)
 {
 	UCHAR buffer[1];
 	DWORD transferred = 0;
-	WINUSB_SETUP_PACKET setupPacket =
-	{
-		(BMREQUEST_VENDOR << 5) | USB_ENDPOINT_DIRECTION_MASK,	// RequestType
-		SET_TEST,			// Request	(BmCommand)
-		0,					// Value	(TestType)
-		0,					// Index	(Interface#)
-		1					// Length	(1)
-	};
+	WINUSB_SETUP_PACKET Pkt;
+	PUSB_DEFAULT_PIPE_SETUP_PACKET defPkt = (PUSB_DEFAULT_PIPE_SETUP_PACKET)&Pkt;
+
+	memset(&Pkt, 0, sizeof(Pkt));
+	defPkt->bmRequestType.Dir = BMREQUEST_DEVICE_TO_HOST;
+	defPkt->bmRequestType.Type = BMREQUEST_VENDOR;
+	defPkt->bRequest = (UCHAR)command;
+	defPkt->wValue.W = (UCHAR) * testType;
+	defPkt->wIndex.W = intf;
+	defPkt->wLength = 1;
 
 	if (!handle || handle == INVALID_HANDLE_VALUE)
 		return WinError(ERROR_INVALID_HANDLE);
 
-	setupPacket.Request = (UCHAR)SET_TEST;
-	setupPacket.Value = (USHORT) testType;
-	setupPacket.Index = (USHORT)intf;
-
-	if (K.ControlTransfer(handle, setupPacket, buffer, 1, &transferred, NULL))
+	if (K.ControlTransfer(handle, Pkt, buffer, 1, &transferred, NULL))
 	{
 		if (transferred)
 			return TRUE;
 	}
 
-	return FALSE;
-}
-
-BOOL Bench_GetTestType(WINUSB_INTERFACE_HANDLE handle, BENCHMARK_DEVICE_TEST_TYPE* testType, int intf)
-{
-	UCHAR buffer[1];
-	DWORD transferred = 0;
-	WINUSB_SETUP_PACKET setup;
-	setup.RequestType = MAKE_REQUEST_TYPE(BMREQUEST_DEVICE_TO_HOST, BMREQUEST_VENDOR, BMREQUEST_TO_DEVICE);
-	setup.Request = SET_TEST;
-	setup.Index = (USHORT)intf;
-	setup.Value = 0;
-	setup.Length = 0;
-
-	if (K.ControlTransfer(handle, setup, buffer, 1, &transferred, NULL))
-	{
-		if (transferred)
-		{
-			*testType = (BENCHMARK_DEVICE_TEST_TYPE)buffer[0];
-			return TRUE;
-		}
-	}
-
-	return FALSE;
+	return WinError(0);
 }
 
 INT VerifyData(PBENCHMARK_TRANSFER_PARAM transferParam, BYTE* data, INT dataLength)
@@ -1287,18 +1280,22 @@ int GetTestDeviceFromArgs(PBENCHMARK_TEST_PARAM test)
 		int vid = -1;
 		int pid = -1;
 		int mi = -1;
+		PCHAR chID;
 		memset(id, 0, sizeof(id));
 		strcpy_s(id, MAX_PATH - 1, list->DeviceInstance);
 		_strlwr_s(id, MAX_PATH);
 
-		sscanf_s(id, "vid_%04x", vid);
-		sscanf_s(id, "pid_%04x", vid);
-		sscanf_s(id, "mi_%02x", mi);
+		if ( (chID = strstr(id, "vid_")) != NULL)
+			sscanf_s(chID, "vid_%04x", &vid);
+		if ( (chID = strstr(id, "pid_")) != NULL)
+			sscanf_s(chID, "pid_%04x", &pid);
+		if ( (chID = strstr(id, "mi_")) != NULL)
+			sscanf_s(chID, "mi_%02x", &mi);
 
 		if (test->Vid == vid && test->Pid == pid)
-			list->My.Byte[0] = TRUE;
+			list->UserContext.Byte[0] = TRUE;
 		else
-			list->My.Byte[0] = FALSE;
+			list->UserContext.Byte[0] = FALSE;
 
 		list = list->next;
 	}
@@ -1314,7 +1311,7 @@ int GetTestDeviceFromList(PBENCHMARK_TEST_PARAM test)
 	while (list && count < 9)
 	{
 		CONMSG("%u. %s (%s) [%s]\n", count + 1, list->DeviceDesc, list->DeviceInstance, GetDrvIdString(list->DrvId));
-		list->My.Byte[0] = FALSE;
+		list->UserContext.Byte[0] = FALSE;
 		count++;
 		list = list->next;
 	}
@@ -1344,7 +1341,7 @@ int GetTestDeviceFromList(PBENCHMARK_TEST_PARAM test)
 			CONERR("unknown selection\n");
 			return -1;
 		}
-		list->My.Byte[0] = TRUE;
+		list->UserContext.Byte[0] = TRUE;
 
 		return ERROR_SUCCESS;
 	}
@@ -1405,23 +1402,21 @@ int __cdecl main(int argc, char** argv)
 	}
 
 	if (!Bench_Open(&Test))
-	{
 		goto Done;
-	}
+
+	CONMSG("opened %s (%s)..\n", Test.DeviceList->DeviceDesc, Test.DeviceList->DeviceInstance);
 
 	// If "NoTestSelect" appears in the command line then don't send the control
 	// messages for selecting the test type.
 	//
 	if (!Test.NoTestSelect)
 	{
-		if (Bench_SetTestType(Test.InterfaceHandle, Test.TestType, Test.Intf) != 1)
+		if (Bench_Configure(Test.InterfaceHandle, SET_TEST, (UCHAR)Test.Intf, &Test.TestType) != TRUE)
 		{
 			CONERR("setting bechmark test type #%d!\n\n", Test.TestType);
 			goto Done;
 		}
 	}
-
-	CONMSG("opened %s (%s)..\n", Test.DeviceList->DeviceDesc, Test.DeviceList->DeviceInstance);
 
 	// If reading from the device create the read transfer param. This will also create
 	// a thread in a suspended state.

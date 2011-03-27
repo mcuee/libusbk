@@ -227,7 +227,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="kernel32.lib user32.lib $(NOINHERIT)"
+				AdditionalDependencies="kernel32.lib user32.lib advapi32.lib $(NOINHERIT)"
 				OutputFile="$(OutDir)\$(ProjectName)"
 				LinkIncremental="1"
 				IgnoreAllDefaultLibraries="false"

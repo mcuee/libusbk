@@ -22,7 +22,7 @@ typedef struct _KUSB_DEV_LIST_SEARCH
 
 typedef struct _KUSB_DEV_LIST
 {
-	KUSB_USER_CONTEXT My;
+	KUSB_USER_CONTEXT UserContext;
 
 	INT DrvId;
 	CHAR DeviceInterfaceGUID[MAX_PATH];
