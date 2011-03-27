@@ -1,5 +1,25 @@
 #include "UsbIds.h"
 
+LPCSTR WINAPI FindUsbClassLineCb(LPCSTR line,
+                                 PVOID matchValue,
+                                 PULONG lineLength);
+
+LPCSTR WINAPI FindUsbVendorLineCb(LPCSTR line,
+                                  PVOID matchValue,
+                                  PULONG lineLength);
+
+LPCSTR WINAPI FindUsbProductLineCb(LPCSTR line,
+                                   PVOID matchValue,
+                                   PULONG lineLength);
+
+LPCSTR WINAPI FindUsbSubClassLineCb(LPCSTR line,
+                                    PVOID matchValue,
+                                    PULONG lineLength);
+
+LPCSTR WINAPI FindUsbProtocolLineCb(LPCSTR line,
+                                    PVOID matchValue,
+                                    PULONG lineLength);
+
 BOOL WINAPI EnumLines(PFIND_USBIDS_CONTEXT context)
 {
 

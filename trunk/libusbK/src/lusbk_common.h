@@ -5,15 +5,16 @@
 #ifndef __USB_H__
 #define __USB_H__
 
+#include <windows.h>
+#include <stddef.h>
+#include <objbase.h>
+#include <PSHPACK1.H>
+
 #ifndef __USB200_H__
 #define __USB200_H__
 
 #ifndef __USB100_H__
 #define __USB100_H__
-
-#include <windows.h>
-#include <objbase.h>
-#include <PSHPACK1.H>
 
 //bmRequest.Dir
 #define BMREQUEST_HOST_TO_DEVICE        0
@@ -37,17 +38,24 @@
 #define USB_GETSTATUS_SELF_POWERED                0x01
 #define USB_GETSTATUS_REMOTE_WAKEUP_ENABLED       0x02
 
-
-#define USB_DEVICE_DESCRIPTOR_TYPE                0x01
-#define USB_CONFIGURATION_DESCRIPTOR_TYPE         0x02
-#define USB_STRING_DESCRIPTOR_TYPE                0x03
-#define USB_INTERFACE_DESCRIPTOR_TYPE             0x04
-#define USB_ENDPOINT_DESCRIPTOR_TYPE              0x05
-
-// descriptor types defined by DWG documents
-#define USB_RESERVED_DESCRIPTOR_TYPE              0x06
-#define USB_CONFIG_POWER_DESCRIPTOR_TYPE          0x07
-#define USB_INTERFACE_POWER_DESCRIPTOR_TYPE       0x08
+typedef enum _USB_DESCRIPTOR_TYPE
+{
+	USB_DEVICE_DESCRIPTOR_TYPE = 1,
+	USB_CONFIGURATION_DESCRIPTOR_TYPE = 2,
+	USB_STRING_DESCRIPTOR_TYPE = 3,
+	USB_INTERFACE_DESCRIPTOR_TYPE = 4,
+	USB_ENDPOINT_DESCRIPTOR_TYPE = 5,
+	USB_DEVICEQUALIFIER_DESCRIPTOR_TYPE = 6,
+	USB_OTHERSPEEDCONFIGURATION_DESCRIPTOR_TYPE = 7,
+	USB_INTERFACEPOWER_DESCRIPTOR_TYPE = 8,
+	USB_ONTHEGO_DESCRIPTOR_TYPE = 9,
+	USB_DEBUG_DESCRIPTOR_TYPE = 10,
+	USB_INTERFACEASSOCIATION_DESCRIPTOR_TYPE = 11,
+	USB_HID_DESCRIPTOR_TYPE = 0x21,
+	USB_REPORT_DESCRIPTOR_TYPE = 0x22,
+	USB_PHYSICAL_DESCRIPTOR_TYPE = 0x23,
+	USB_HUB_DESCRIPTOR_TYPE = 0x29
+} USB_DESCRIPTOR_TYPE;
 
 #define USB_DESCRIPTOR_MAKE_TYPE_AND_INDEX(d, i) ((USHORT)((USHORT)d<<8 | i))
 
@@ -55,7 +63,6 @@
 // Values for bmAttributes field of an
 // endpoint descriptor
 //
-
 #define USB_ENDPOINT_TYPE_MASK                    0x03
 
 #define USB_ENDPOINT_TYPE_CONTROL                 0x00
@@ -202,6 +209,18 @@ typedef struct _USB_STRING_DESCRIPTOR
 	WCHAR bString[1];
 } USB_STRING_DESCRIPTOR, *PUSB_STRING_DESCRIPTOR;
 
+typedef struct _USB_INTERFACEASSOCIATION_DESCRIPTOR
+{
+	UCHAR  bLength;
+	UCHAR  bDescriptorType;
+	UCHAR  bFirstInterface;
+	UCHAR  bInterfaceCount;
+	UCHAR  bFunctionClass;
+	UCHAR  bFunctionSubClass;
+	UCHAR  bFunctionProtocol;
+	UCHAR  iFunction;
+} USB_INTERFACEASSOCIATION_DESCRIPTOR, *PUSB_INTERFACEASSOCIATION_DESCRIPTOR;
+
 typedef struct _USB_COMMON_DESCRIPTOR
 {
 	UCHAR bLength;
@@ -250,8 +269,6 @@ typedef struct _USB_DEFAULT_PIPE_SETUP_PACKET
 	} wIndex;
 	USHORT wLength;
 } USB_DEFAULT_PIPE_SETUP_PACKET, *PUSB_DEFAULT_PIPE_SETUP_PACKET;
-
-// setup packet is eight bytes -- defined by spec
 C_ASSERT(sizeof(USB_DEFAULT_PIPE_SETUP_PACKET) == 8);
 
 #pragma warning(default:4214)
@@ -267,6 +284,7 @@ typedef enum _USBD_PIPE_TYPE
 	UsbdPipeTypeBulk,
 	UsbdPipeTypeInterrupt
 } USBD_PIPE_TYPE;
+C_ASSERT(sizeof(USBD_PIPE_TYPE) == 4);
 
 #include <POPPACK.H>
 
@@ -361,7 +379,6 @@ typedef enum _USBD_PIPE_TYPE
 #define FullSpeed               0x02
 #define HighSpeed               0x03
 
-
 typedef struct _WINUSB_PIPE_INFORMATION
 {
 	USBD_PIPE_TYPE  PipeType;
@@ -369,15 +386,18 @@ typedef struct _WINUSB_PIPE_INFORMATION
 	USHORT          MaximumPacketSize;
 	UCHAR           Interval;
 } WINUSB_PIPE_INFORMATION, *PWINUSB_PIPE_INFORMATION;
+C_ASSERT(sizeof(WINUSB_PIPE_INFORMATION) == 12);
 
 #endif // __WUSBIO_H__
 
 #endif // __WINUSB_COMPAT_IO_H__
 
 #ifndef __WUSB_H__
+
 typedef PVOID WINUSB_INTERFACE_HANDLE, *PWINUSB_INTERFACE_HANDLE;
 
 #include <PSHPACK1.H>
+
 typedef struct _WINUSB_SETUP_PACKET
 {
 	UCHAR   RequestType;
@@ -386,9 +406,30 @@ typedef struct _WINUSB_SETUP_PACKET
 	USHORT  Index;
 	USHORT  Length;
 } WINUSB_SETUP_PACKET, *PWINUSB_SETUP_PACKET;
-
-// setup packet is eight bytes -- defined by spec
 C_ASSERT(sizeof(WINUSB_SETUP_PACKET) == 8);
+
+#ifndef __HIDPORT_H__
+
+typedef struct _HID_DESCRIPTOR
+{
+	UCHAR   bLength;
+	UCHAR   bDescriptorType;
+	USHORT  bcdHID;
+	UCHAR   bCountry;
+	UCHAR   bNumDescriptors;
+
+	/*
+	 *  This is an array of one OR MORE descriptors.
+	 */
+	struct _HID_DESCRIPTOR_DESC_LIST
+	{
+		UCHAR   bReportType;
+		USHORT  wReportLength;
+	} DescriptorList [1];
+
+} HID_DESCRIPTOR, * PHID_DESCRIPTOR;
+
+#endif
 
 #include <POPPACK.H>
 
@@ -399,4 +440,5 @@ C_ASSERT(sizeof(WINUSB_SETUP_PACKET) == 8);
 #endif // EXCLUDE_WINUSB_WRAPPER
 
 #endif // __WUSB_H__
+
 #endif // __LUSBK_COMMON_H
