@@ -211,7 +211,7 @@ ROM BYTE configDescriptor1[]={
 #if defined(SINGLE_INTERFACE_WITH_ALTSETTINGS)
     1,								// Number of interfaces in this cfg
 #else
-    2,								// Number of interfaces in this cfg
+    1,								// Number of interfaces in this cfg
 #endif
     1,								// Index value of this configuration
     0,								// Configuration string index
