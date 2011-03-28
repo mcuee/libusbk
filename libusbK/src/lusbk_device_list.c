@@ -311,7 +311,6 @@ KUSB_EXP LONG KUSB_API LUsbK_GetDeviceList(
 
 			if (IsUsbRegKey(deviceInstanceKeyPath))
 			{
-				DWORD lusb0SymbolicLinkIndex;
 				// query device instance id
 				// e.g. HKLM\SYSTEM\CurrentControlSet\Control\DeviceClasses\{20343a29-6da1-4db8-8a3c-16e774057bf5}\##?#USB#VID_1234&PID_0001#BMD001#{20343a29-6da1-4db8-8a3c-16e774057bf5}\DeviceInstance
 				status = RegGetValueString(hDeviceInterfaceGuid, deviceInstanceKeyPath, NULL, "DeviceInstance", devIntfElement.DeviceInstance);
@@ -348,16 +347,13 @@ KUSB_EXP LONG KUSB_API LUsbK_GetDeviceList(
 					DWORD devRegEnumKeyIndex = (DWORD) - 1;
 
 					// query LUsb0
+					devIntfElement.LUsb0SymbolicLinkIndex=(ULONG)-1;
 					// e.g. HKLM\SYSTEM\CurrentControlSet\Control\DeviceClasses\{20343a29-6da1-4db8-8a3c-16e774057bf5}\##?#USB#VID_1234&PID_0001#BMD001#{20343a29-6da1-4db8-8a3c-16e774057bf5}\#\Device Parameters\LUsb0
-					status = RegGetValueDWord(hDeviceInterfaceGuid, deviceInstanceKeyPath, "\\#\\Device Parameters", "LUsb0", &lusb0SymbolicLinkIndex);
-					if (status == ERROR_SUCCESS)
-					{
-						sprintf_s(devIntfElement.DevicePath, sizeof(devIntfElement.DevicePath) - 1,
-						          "\\\\.\\libusb0-%04d", lusb0SymbolicLinkIndex);
-					}
+					status = RegGetValueDWord(hDeviceInterfaceGuid, deviceInstanceKeyPath, "\\#\\Device Parameters", "LUsb0", &devIntfElement.LUsb0SymbolicLinkIndex);
 
 					// query Linked
 					// e.g. HKLM\SYSTEM\CurrentControlSet\Control\DeviceClasses\{20343a29-6da1-4db8-8a3c-16e774057bf5}\##?#USB#VID_1234&PID_0001#BMD001#{20343a29-6da1-4db8-8a3c-16e774057bf5}\#\Control\Linked
+					devIntfElement.Linked=0;
 					RegGetValueDWord(hDeviceInterfaceGuid, deviceInstanceKeyPath, "\\#\\Control", "Linked", &devIntfElement.Linked);
 
 					memset(devRegEnumKey, 0, sizeof(devRegEnumKey));
@@ -434,8 +430,22 @@ KUSB_EXP LONG KUSB_API LUsbK_GetDeviceList(
 					RegCloseKey(hDevRegEnumKey);
 					if (devIntfElement.DrvId != KUSB_DRVID_INVALID)
 					{
-						AddElementCopy(&devIntfList, &devIntfElement);
-						deviceCount++;
+						if (devIntfElement.DrvId == KUSB_DRVID_LIBUSB0_FILTER)
+						{
+							if (devIntfElement.LUsb0SymbolicLinkIndex<=255)
+							{
+								sprintf_s(devIntfElement.DevicePath, sizeof(devIntfElement.DevicePath) - 1,
+										  "\\\\.\\libusb0-%04d", devIntfElement.LUsb0SymbolicLinkIndex);
+								AddElementCopy(&devIntfList, &devIntfElement);
+								deviceCount++;
+							}
+
+						}
+						else
+						{
+							AddElementCopy(&devIntfList, &devIntfElement);
+							deviceCount++;
+						}
 					}
 				}
 				hDeviceKeyPath = NULL;

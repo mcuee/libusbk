@@ -480,12 +480,15 @@ BOOL DumpDescriptorConfig(PPUNI_DESCRIPTOR desc, PLONG remainingLength)
 {
 	INT numInterfaces;
 	BOOL success = TRUE;
+	UCHAR interfaceNumberTrack[128];
 
 	if (!IsUniDescriptorValid(*desc, *remainingLength))
 		return FALSE;
 
 	if (!BeginDescriptor(USB_CONFIGURATION_DESCRIPTOR_TYPE, desc))
 		return FALSE;
+
+	memset(interfaceNumberTrack,0,sizeof(interfaceNumberTrack));
 
 	numInterfaces = (INT)((*desc)->Config.bNumInterfaces);
 
@@ -505,10 +508,14 @@ BOOL DumpDescriptorConfig(PPUNI_DESCRIPTOR desc, PLONG remainingLength)
 		switch ((*desc)->Common.bDescriptorType)
 		{
 		case USB_INTERFACE_DESCRIPTOR_TYPE:
-			if ((--numInterfaces) < 0)
+			interfaceNumberTrack[(*desc)->Interface.bInterfaceNumber]++;
+			if (interfaceNumberTrack[(*desc)->Interface.bInterfaceNumber] == 1)
 			{
-				printf("Config descriptor is mis-reporting bNumInterfaces.\n");
-				return FALSE;
+				if ((--numInterfaces) < 0)
+				{
+					printf("Config descriptor is mis-reporting bNumInterfaces.\n");
+					return FALSE;
+				}
 			}
 			success = DumpDescriptorInterface(desc, remainingLength);
 			break;
