@@ -20,7 +20,13 @@ FOR /F "eol=# tokens=1,2 delims=;" %%A IN (!__DepFileList!) DO (
 	CALL :TrimEx " " __DepSrcRel __DepDstRel
 	IF NOT "!__DepSrcRel!" EQU "" (
 		SET __DepSrc=!__DepBaseSrcDir!!__DepSrcRel!
-		SET __DepDst=!__DepBaseOutDir!!__DepDstRel!\!__DepBaseOutDirName!
+		IF "!__DepDstRel:~0,1!" EQU "@" (
+			SET __DepDstRel=!__DepDstRel:~1!
+			SET __DepDst=!__DepBaseOutDir!!__DepDstRel!
+		) ELSE (
+			SET __DepDst=!__DepBaseOutDir!!__DepDstRel!\!__DepBaseOutDirName!
+		)
+		
 		ECHO Deploying !__DepSrc! to !__DepDst!..
 		IF NOT EXIST "!__DepSrc!" (
 			ECHO [WARNING] Dependency !__DepSrc! not found.

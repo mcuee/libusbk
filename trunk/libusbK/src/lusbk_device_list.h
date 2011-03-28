@@ -35,6 +35,7 @@ typedef struct _KUSB_DEV_LIST
 	CHAR DevicePath[MAX_PATH];
 	DWORD ReferenceCount;
 	DWORD Linked;
+	DWORD LUsb0SymbolicLinkIndex;
 
 	struct _KUSB_DEV_LIST* next;
 	struct _KUSB_DEV_LIST* prev;

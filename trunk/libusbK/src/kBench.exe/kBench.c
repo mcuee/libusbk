@@ -348,20 +348,54 @@ NextInterface:
 		{
 			// found an interface
 			UCHAR pipeIndex = 0;
+			int hasIsoEndpoints = 0;
+			int hasZeroMaxPacketEndpoints = 0;
+
 			memset(&test->PipeInformation, 0, sizeof(test->PipeInformation));
 			while(K.QueryPipe(test->InterfaceHandle, altSetting, pipeIndex, &test->PipeInformation[pipeIndex]))
 			{
 				// found a pipe
+				if (test->PipeInformation[pipeIndex].PipeType==UsbdPipeTypeIsochronous)
+					hasIsoEndpoints++;
+
+				if (!test->PipeInformation[pipeIndex].MaximumPacketSize)
+					hasZeroMaxPacketEndpoints++;
+
 				pipeIndex++;
 			}
+
+			// -1 means the user din't specifiy so we find the most suitable device.
+			//
 			if ( (( test->Intf == -1) || (test->Intf == test->InterfaceDescriptor.bInterfaceNumber)) &&
 			        (( test->Altf == -1) || (test->Altf == test->InterfaceDescriptor.bAlternateSetting)) )
 			{
-				// this is the one we are looking for.
-				test->Intf = test->InterfaceDescriptor.bInterfaceNumber;
-				test->Intf = test->InterfaceDescriptor.bAlternateSetting;
-				test->SelectedDeviceProfile = list;
-				return TRUE;
+				// if the user actually specifies an alt iso setting with zero MaxPacketEndpoints
+				// we let let them.
+				if (test->Altf == -1 && hasIsoEndpoints && hasZeroMaxPacketEndpoints)
+				{
+					// user didn't specfiy and we know we can't tranfer with this alt setting so skip it.
+					CONMSG("skipping interface %02X:%02X. zero-length iso endpoints exist.\n",
+						test->InterfaceDescriptor.bInterfaceNumber,
+						test->InterfaceDescriptor.bAlternateSetting);
+				}
+				else
+				{
+					// this is the one we are looking for.
+					test->Intf = test->InterfaceDescriptor.bInterfaceNumber;
+					test->Altf = test->InterfaceDescriptor.bAlternateSetting;
+					test->SelectedDeviceProfile = list;
+
+					// some buffering is required for iso.
+					if (hasIsoEndpoints && test->BufferCount == 1)
+						test->BufferCount++;
+
+					if (!K.SetCurrentAlternateSetting(test->InterfaceHandle,test->InterfaceDescriptor.bAlternateSetting))
+					{
+						CONERR("failed selecting alternate setting %02Xh\n",test->Altf);
+						return FALSE;
+					}
+					return TRUE;
+				}
 			}
 			altSetting++;
 			memset(&test->InterfaceDescriptor, 0, sizeof(test->InterfaceDescriptor));
@@ -514,6 +548,7 @@ int TransferAsync(PBENCHMARK_TRANSFER_PARAM transferParam, PBENCHMARK_TRANSFER_H
 	int ret = 0;
 	BOOL success;
 	PBENCHMARK_TRANSFER_HANDLE handle;
+	DWORD transferErrorCode;
 
 	*handleRef = NULL;
 
@@ -560,12 +595,21 @@ int TransferAsync(PBENCHMARK_TRANSFER_PARAM transferParam, PBENCHMARK_TRANSFER_H
 			                      NULL,
 			                      &handle->Overlapped);
 		}
-		if (!success && GetLastError() == ERROR_IO_PENDING)
+		transferErrorCode = GetLastError();
+
+		if (!success && transferErrorCode == ERROR_IO_PENDING)
+		{
+			transferErrorCode=ERROR_SUCCESS;
 			success = TRUE;
+		}
 
 		// Submit this transfer now.
-		handle->ReturnCode = ret = ((success) ? ERROR_SUCCESS : -labs(GetLastError()));
-		if (ret < 0) goto Done;
+		handle->ReturnCode = ret = -labs(transferErrorCode);
+		if (ret < 0) 
+		{
+			handle->InUse=FALSE;
+			goto Done;
+		}
 
 		// Mark this handle has InUse.
 		handle->InUse = TRUE;
@@ -592,13 +636,21 @@ int TransferAsync(PBENCHMARK_TRANSFER_PARAM transferParam, PBENCHMARK_TRANSFER_H
 		// Only wait, cancelling & freeing is handled by the caller.
 		if (WaitForSingleObject(handle->Overlapped.hEvent,  transferParam->Test->Timeout) != WAIT_OBJECT_0)
 		{
-			ret = WinError(0);
+			if (!transferParam->Test->IsUserAborted)
+				ret = WinError(0);
+			else
+				ret = -labs(GetLastError());
+
 			handle->ReturnCode = ret;
 			goto Done;
 		}
 		if (!K.GetOverlappedResult(transferParam->Test->InterfaceHandle, &handle->Overlapped, &transferred, FALSE))
 		{
-			ret = WinError(0);
+			if (!transferParam->Test->IsUserAborted)
+				ret = WinError(0);
+			else
+				ret = -labs(GetLastError());
+
 			handle->ReturnCode = ret;
 			goto Done;
 		}
@@ -673,7 +725,7 @@ DWORD TransferThreadProc(PBENCHMARK_TRANSFER_PARAM transferParam)
 				// An error (other than a timeout) occured.
 				transferParam->TotalErrorCount++;
 				transferParam->RunningErrorCount++;
-				CONERR("failed %s! %d of %d ret=%dn",
+				CONERR("failed %s! %d of %d ret=%d\n",
 				       TRANSFER_DISPLAY(transferParam, "reading", "writing"),
 				       transferParam->RunningErrorCount,
 				       transferParam->Test->Retry + 1,
@@ -770,6 +822,12 @@ Done:
 					ret = WinError(0);
 					CONERR("failed cancelling transfer! ret=%d\n", ret);
 				}
+				else
+				{
+					CloseHandle(transferParam->TransferHandles[i].Overlapped.hEvent);
+					transferParam->TransferHandles[i].Overlapped.hEvent = NULL;
+					transferParam->TransferHandles[i].InUse = FALSE;
+				}
 			}
 			Sleep(0);
 		}
@@ -779,11 +837,18 @@ Done:
 	{
 		if (transferParam->TransferHandles[i].Overlapped.hEvent)
 		{
-			WaitForSingleObject(transferParam->TransferHandles[i].Overlapped.hEvent, INFINITE);
+			if (transferParam->TransferHandles[i].InUse)
+			{
+				WaitForSingleObject(transferParam->TransferHandles[i].Overlapped.hEvent, transferParam->Test->Timeout);
+			}
+			else
+			{
+				WaitForSingleObject(transferParam->TransferHandles[i].Overlapped.hEvent, 0);
+			}
 			CloseHandle(transferParam->TransferHandles[i].Overlapped.hEvent);
 			transferParam->TransferHandles[i].Overlapped.hEvent = NULL;
-			transferParam->TransferHandles[i].InUse = FALSE;
 		}
+		transferParam->TransferHandles[i].InUse = FALSE;
 	}
 
 	transferParam->IsRunning = FALSE;
