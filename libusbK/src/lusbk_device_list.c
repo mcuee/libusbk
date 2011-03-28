@@ -79,6 +79,32 @@ static const SERVICE_DRVID_MAP DevGuidDrvIdMap[] =
 	{KUSB_DRVID_INVALID,	NULL}
 };
 
+BOOL InitElement(__in PKUSB_DEV_LIST element, __in DWORD cbSize);
+
+PKUSB_DEV_LIST AddElementCopy(__deref_inout PKUSB_DEV_LIST* head, 
+							  __in PKUSB_DEV_LIST elementToClone);
+
+PCHAR CopyLast(__in CHAR sep, __out PCHAR dst, __in PCHAR src);
+
+VOID DumpIntfElements(__deref_inout PKUSB_DEV_LIST* head);
+
+VOID ApplySearchFilter(__in PKUSB_DEV_LIST_SEARCH SearchParameters, 
+					   __deref_inout PKUSB_DEV_LIST* DeviceList);
+
+BOOL IsUsbRegKey(__in LPCSTR keyName);
+
+LONG RegGetValueDWord(__in HKEY hKeyParent,
+                      __in LPCSTR keyBasePath,
+                      __in_opt LPCSTR keySubPath,
+                      __in LPCSTR valueName,
+                      __inout LPDWORD value);
+
+LONG RegGetValueString(__in HKEY hKeyParent,
+                       __in LPCSTR keyBasePath,
+                       __in_opt LPCSTR keySubPath,
+                       __in LPCSTR valueName,
+                       __inout LPSTR devInstElementStringData);
+
 #define DL_APPEND(head,add)                                                                    \
 do {                                                                                           \
   if (head) {                                                                                  \
@@ -200,7 +226,7 @@ BOOL IsUsbRegKey(__in LPCSTR keyName)
 	return FALSE;
 }
 
-PCHAR CopyLast(CHAR sep, PCHAR dst, PCHAR src)
+PCHAR CopyLast(__in CHAR sep, __out PCHAR dst, __in PCHAR src)
 {
 	PCHAR next = src;
 	while((next = strchr(src, sep)) != NULL)
@@ -211,7 +237,7 @@ PCHAR CopyLast(CHAR sep, PCHAR dst, PCHAR src)
 	return dst;
 }
 
-VOID DumpIntfElements(PKUSB_DEV_LIST* head)
+VOID DumpIntfElements(__deref_inout PKUSB_DEV_LIST* head)
 {
 	PKUSB_DEV_LIST check = NULL;
 	PKUSB_DEV_LIST tmp = NULL;
@@ -247,7 +273,8 @@ BOOL InitElement(__in PKUSB_DEV_LIST element, __in DWORD cbSize)
 	return TRUE;
 }
 
-PKUSB_DEV_LIST AddElementCopy(PKUSB_DEV_LIST* head, PKUSB_DEV_LIST elementToClone)
+PKUSB_DEV_LIST AddElementCopy(__deref_inout PKUSB_DEV_LIST* head, 
+							  __in PKUSB_DEV_LIST elementToClone)
 {
 	PKUSB_DEV_LIST tmp = NULL;
 	PKUSB_DEV_LIST newEntry = NULL;
@@ -269,6 +296,26 @@ PKUSB_DEV_LIST AddElementCopy(PKUSB_DEV_LIST* head, PKUSB_DEV_LIST elementToClon
 
 }
 
+VOID ApplySearchFilter(__in PKUSB_DEV_LIST_SEARCH SearchParameters, 
+					   __deref_inout PKUSB_DEV_LIST* DeviceList)
+{
+	PKUSB_DEV_LIST check = NULL;
+	PKUSB_DEV_LIST tmp = NULL;
+	PKUSB_DEV_LIST root = *DeviceList;
+	DL_FOREACH_SAFE(root, check, tmp)
+	{
+		if (!SearchParameters->EnableRawDeviceInterfaceGuid)
+		{
+			if (_stricmp(check->DeviceInterfaceGUID, DEFINE_TO_STR(USB_RAW_DEVICE_INTERFACE_GUID))==0)
+			{
+				DL_DELETE(root, check);
+				LocalFree(check);
+			}
+		}
+	}
+	*DeviceList = root;
+}
+
 KUSB_EXP LONG KUSB_API LUsbK_GetDeviceList(
     __deref_inout PKUSB_DEV_LIST* DeviceList,
     __in PKUSB_DEV_LIST_SEARCH SearchParameters)
@@ -280,9 +327,13 @@ KUSB_EXP LONG KUSB_API LUsbK_GetDeviceList(
 	KUSB_DEV_LIST devIntfElement;
 	LONG deviceCount = 0;
 	PSERVICE_DRVID_MAP map;
+	PKUSB_DEV_LIST_SEARCH searchParameters = SearchParameters;
+	KUSB_DEV_LIST_SEARCH defSearchParameters;
 
-	UNREFERENCED_PARAMETER(SearchParameters);
-	UNREFERENCED_PARAMETER(DeviceList);
+	memset(&defSearchParameters,0,sizeof(defSearchParameters));
+	if (!searchParameters)
+		searchParameters = &defSearchParameters;
+
 
 	status = RegOpenKeyExA(HKEY_LOCAL_MACHINE, KEY_DEVICECLASSES, 0, KEY_READ, &hDeviceClasses);
 	if (status != ERROR_SUCCESS)
@@ -464,6 +515,10 @@ KUSB_EXP LONG KUSB_API LUsbK_GetDeviceList(
 	if (hDeviceClasses)
 		RegCloseKey(hDeviceClasses);
 
+	if (searchParameters && devIntfList)
+	{
+		ApplySearchFilter(searchParameters,&devIntfList);
+	}
 	*DeviceList = devIntfList;
 	return deviceCount;
 
