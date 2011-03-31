@@ -1,0 +1,4 @@
+Travis Robinson, <libusbdotnet@gmail.com>
+
+Testing, Technical support:
+Xiaofan Chen, <xiaofanc@gmail.com>
