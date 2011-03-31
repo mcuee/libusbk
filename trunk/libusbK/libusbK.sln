@@ -11,8 +11,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "wdk", "wdk", "{11FAB3B1-0C9
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "inf", "inf", "{CE8F5C1F-2B0B-4A77-A40F-20FA5A5FB05C}"
 	ProjectSection(SolutionItems) = preProject
-		src\libusbK.sys\libusbK.inf.in = src\libusbK.sys\libusbK.inf.in
-		src\libusbK.sys\libusbK_simple.inf.in = src\libusbK.sys\libusbK_simple.inf.in
+		src\libusbK.sys\example.inf.in = src\libusbK.sys\example.inf.in
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "sources", "sources", "{623B14B1-DB3A-43F5-A4B6-2100510BFBD8}"

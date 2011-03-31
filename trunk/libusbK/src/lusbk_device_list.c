@@ -487,11 +487,11 @@ KUSB_EXP LONG KUSB_API LUsbK_GetDeviceList(
 						map++;
 					}
 					RegCloseKey(hDevRegEnumKey);
-					hDevRegEnumKey=NULL;
+					hDevRegEnumKey = NULL;
 					if (devIntfElement.DrvId != KUSB_DRVID_INVALID)
 					{
 						if (devIntfElement.DrvId == KUSB_DRVID_LIBUSB0_FILTER ||
-							devIntfElement.DrvId == KUSB_DRVID_LIBUSB0 )
+						        devIntfElement.DrvId == KUSB_DRVID_LIBUSB0 )
 						{
 							if (devIntfElement.LUsb0SymbolicLinkIndex <= 255)
 							{

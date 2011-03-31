@@ -7,7 +7,12 @@
 # source location   = Dependeny file path relative to base source directory. 
 # dir category name = Output directory category name. 
 #
-\lusbk_usb.h; \include;
-\lusbk_common.h; \include;
-\lusbk_dynamic.h; \include;
-\lusbk_device_list.h; \include;
+\lusbk_usb.h;                       \include;
+\lusbk_common.h;                    \include;
+\lusbk_dynamic.h;                   \include;
+\lusbk_device_list.h;               \include;
+\..\license\AUTHORS-libusbK.txt;     @\license
+\..\license\AUTHORS-libusb0.txt;     @\license
+\..\license\LICENSE-bsd.txt;         @\license
+\..\license\LICENSE-gpl3.txt;        @\license
+\..\license\LICENSE-lpl3.txt;        @\license
