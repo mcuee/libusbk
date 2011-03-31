@@ -1,3 +1,5 @@
+/*! \file drv_interface.h
+*/
 
 #ifndef __DRV_INTERFACE_H__
 #define __DRV_INTERFACE_H__

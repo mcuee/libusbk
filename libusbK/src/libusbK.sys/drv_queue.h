@@ -1,3 +1,5 @@
+/*! \file drv_queue.h
+*/
 
 #ifndef __DRV_QUEUE_H__
 #define __DRV_QUEUE_H__

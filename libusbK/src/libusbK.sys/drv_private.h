@@ -1,3 +1,5 @@
+/*! \file drv_private.h
+*/
 
 #ifndef __KUSB_PRIVATE_H__
 #define __KUSB_PRIVATE_H__
@@ -56,9 +58,6 @@ extern ULONG DebugLevel;
 // libusbK creates this same symbolic name for libusb0.dll compatibility.
 #define LIBUSB_SYMBOLIC_LINK_NAME L"\\DosDevices\\libusb0-"
 #define LIBUSB_SYMBOLIC_LINK_NAMEA "\\DosDevices\\libusb0-"
-
-// This is the default GUID used if LUsbK_DeviceInterfaceGUIDs_ValueName is not found.
-#define Regsitry_Default_DeviceInterfaceGUID {6C696275-7362-2D77-696E-33322D574446}
 
 #define CONTEXT_SECTION_START
 
@@ -159,7 +158,7 @@ typedef struct _DEVICE_REGSETTINGS
 
 } DEVICE_REGSETTINGS, *PDEVICE_REGSETTINGS;
 
-// This define in only here to this section and be folded in VStudio. //
+// This define in only here so this section and be folded in VStudio. //
 #ifdef CONTEXT_SECTION_START
 
 //////////////////////////////////////////////////////////////////////////////
@@ -335,6 +334,10 @@ NTSTATUS GetTransferMemory(__in WDFREQUEST Request,
 NTSTATUS GetTransferMdl(__in WDFREQUEST Request,
                         __in WDF_REQUEST_TYPE RequestType,
                         __out PMDL* wdmMdl);
+
+//////////////////////////////////////////////////////////////////////////////
+// lusbk_registry.c function prototypes.
+NTSTATUS AddDefaultDeviceInterfaceGUID(__in PDEVICE_CONTEXT deviceContext);
 
 //
 // GetPipeContextByID()	The pipe collections are indexed by endpoint address as well as the pipe index.

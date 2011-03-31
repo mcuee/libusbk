@@ -1,3 +1,21 @@
+/*!********************************************************************
+libusbK - kList descriptor diagnostic tool.
+Copyright (C) 2011 All Rights Reserved.
+libusb-win32.sourceforge.net
+
+Development : Travis Robinson  (libusbdotnet@gmail.com)
+Testing     : Xiaofan Chen     (xiaofanc@gmail.com)
+
+At the discretion of the user of this library, this software may be
+licensed under the terms of the GNU Public License v3 or a BSD-Style
+license as outlined in the following files:
+* LICENSE-gpl3.txt
+* LICENSE-bsd.txt
+
+License files are located in a license folder at the root of source and
+binary distributions.
+********************************************************************!*/
+
 #include "UsbIds.h"
 
 LPCSTR WINAPI FindUsbClassLineCb(LPCSTR line,
@@ -19,6 +37,14 @@ LPCSTR WINAPI FindUsbSubClassLineCb(LPCSTR line,
 LPCSTR WINAPI FindUsbProtocolLineCb(LPCSTR line,
                                     PVOID matchValue,
                                     PULONG lineLength);
+
+LPCSTR WINAPI FindHidItemTypeLineCb(LPCSTR line,
+                                    PVOID matchValue,
+                                    PULONG lineLength);
+
+LPCSTR WINAPI FindHidCountryCodeLineCb(LPCSTR line,
+                                       PVOID matchValue,
+                                       PULONG lineLength);
 
 BOOL WINAPI EnumLines(PFIND_USBIDS_CONTEXT context)
 {
@@ -82,6 +108,121 @@ LPCSTR WINAPI FindUsbClassLineCb(LPCSTR line, PVOID matchValue, PULONG lineLengt
 				}
 			}
 		}
+	}
+
+	return NULL;
+}
+
+LPCSTR WINAPI FindHidItemTypeLineCb(LPCSTR line, PVOID matchValue, PULONG lineLength)
+{
+	UCHAR matchOn = *((PUCHAR)matchValue);
+	ULONG length = *lineLength;
+	ULONG startPos = 0;
+	UCHAR fieldLength;
+
+	if (line[startPos++] == 'R' && line[startPos++] == ' ')
+	{
+		int usageID;
+		if (sscanf(&line[startPos], "%02x", &usageID) == 1)
+		{
+			fieldLength = matchOn & 0x3;
+			startPos += 2;
+			if (usageID == (matchOn & 0xFC))
+			{
+				if (line[startPos++] == ' ' && line[startPos++] == ' ')
+				{
+					*lineLength = length - startPos;
+					return &line[startPos];
+				}
+			}
+		}
+	}
+
+	return NULL;
+}
+
+LPCSTR WINAPI FindHidUsagePageLineCb(LPCSTR line, PVOID matchValue, PULONG lineLength)
+{
+	UCHAR matchOn = *((PUCHAR)matchValue);
+	ULONG length = *lineLength;
+	ULONG startPos = 0;
+
+	if (line[startPos++] == 'H' &&
+	        line[startPos++] == 'U'	&&
+	        line[startPos++] == 'T'	&&
+	        line[startPos++] == ' ')
+	{
+		int usageID;
+		if (sscanf(&line[startPos], "%02x", &usageID) == 1)
+		{
+			startPos += 2;
+			if (usageID == matchOn)
+			{
+				if (line[startPos++] == ' ' && line[startPos++] == ' ')
+				{
+					*lineLength = length - startPos;
+					return &line[startPos];
+				}
+			}
+		}
+	}
+
+	return NULL;
+}
+
+LPCSTR WINAPI FindHidCountryCodeLineCb(LPCSTR line, PVOID matchValue, PULONG lineLength)
+{
+	UCHAR matchOn = *((PUCHAR)matchValue);
+	ULONG length = *lineLength;
+	ULONG startPos = 0;
+
+	if (line[startPos++] == 'H' &&
+	        line[startPos++] == 'C'	&&
+	        line[startPos++] == 'C'	&&
+	        line[startPos++] == ' ')
+	{
+		int countryCode;
+		if (sscanf(&line[startPos], "%02x", &countryCode) == 1)
+		{
+			startPos += 2;
+			if (countryCode == matchOn)
+			{
+				if (line[startPos++] == ' ' && line[startPos++] == ' ')
+				{
+					*lineLength = length - startPos;
+					return &line[startPos];
+				}
+			}
+		}
+	}
+
+	return NULL;
+}
+
+LPCSTR WINAPI FindHidUsageLineCb(LPCSTR line, PVOID matchValue, PULONG lineLength)
+{
+	USHORT matchOn = *((PUSHORT)matchValue);
+	ULONG length = *lineLength;
+	ULONG startPos = 0;
+	if (line[startPos++] == '\t')
+	{
+		int ID;
+		if (sscanf(&line[startPos], "%03x", &ID) == 1)
+		{
+			startPos += 3;
+			if (ID == matchOn)
+			{
+				if (line[startPos++] == ' ' && line[startPos++] == ' ')
+				{
+					*lineLength = length - startPos;
+					return &line[startPos];
+				}
+			}
+		}
+	}
+	else
+	{
+		*lineLength = MATCH_END;
 	}
 
 	return NULL;
@@ -274,6 +415,96 @@ VOID WINAPI GetClassDisplayText(__in UCHAR ClassID,
 			}
 		}
 
+	}
+	return;
+}
+
+VOID WINAPI GetHidDescriptorItemDisplayText(__in UCHAR ItemType,
+        __out PCHAR ItemName)
+{
+	FIND_USBIDS_CONTEXT FindUsbIdsContext;
+	LPCSTR usbIds = UsbIdsText;
+
+	ItemName[0] = '\0';
+
+	if (!usbIds)
+		return;
+
+	memset(&FindUsbIdsContext, 0, sizeof(FindUsbIdsContext));
+	InitUsbIdsContext(FindUsbIdsContext, usbIds, FindHidItemTypeLineCb, &ItemType);
+
+	while(EnumLines(&FindUsbIdsContext));
+	if (FindUsbIdsContext.Found.MatchStart)
+	{
+		CopyUsbIdText(FindUsbIdsContext, ItemName);
+	}
+	return;
+}
+
+VOID WINAPI GetHidUsagePageText(__in UCHAR UsagePage,
+                                __out PCHAR UsagePageName,
+                                __out PFIND_USBIDS_CONTEXT context)
+{
+	LPCSTR usbIds = UsbIdsText;
+
+	UsagePageName[0] = '\0';
+
+	if (!usbIds)
+		return;
+
+	memset(context, 0, sizeof(*context));
+	InitUsbIdsContext((*context), usbIds, FindHidUsagePageLineCb, &UsagePage);
+
+	while(EnumLines(context));
+	if (context->Found.MatchStart)
+	{
+		CopyUsbIdText((*context), UsagePageName);
+	}
+	return;
+}
+
+VOID WINAPI GetHidCountryCodeText(__in UCHAR CountryCode,
+                                  __out PCHAR CountryName)
+{
+	LPCSTR usbIds = UsbIdsText;
+	FIND_USBIDS_CONTEXT FindUsbIdsContext;
+
+	CountryName[0] = '\0';
+
+	if (!usbIds)
+		return;
+
+	memset(&FindUsbIdsContext, 0, sizeof(FindUsbIdsContext));
+	InitUsbIdsContext(FindUsbIdsContext, usbIds, FindHidCountryCodeLineCb, &CountryCode);
+
+	while(EnumLines(&FindUsbIdsContext));
+	if (FindUsbIdsContext.Found.MatchStart)
+	{
+		CopyUsbIdText(FindUsbIdsContext, CountryName);
+	}
+	return;
+}
+
+VOID WINAPI GetHidUsageText(__in USHORT Usage,
+                            __out PCHAR UsageName,
+                            __in PFIND_USBIDS_CONTEXT startContext)
+{
+	LPCSTR usbIds = UsbIdsText;
+	FIND_USBIDS_CONTEXT FindUsbIdsContext;
+
+	memcpy(&FindUsbIdsContext, startContext, sizeof(FindUsbIdsContext));
+	UsageName[0] = '\0';
+
+	if (!usbIds)
+		return;
+
+	memset(&FindUsbIdsContext.Found, 0, sizeof(FindUsbIdsContext.Found));
+	InitUsbIdsContext(FindUsbIdsContext, FindUsbIdsContext.NextLine, FindHidUsageLineCb, &Usage);
+
+	while(EnumLines(&FindUsbIdsContext));
+	if (FindUsbIdsContext.Found.MatchStart)
+	{
+		CopyUsbIdText(FindUsbIdsContext, UsageName);
 	}
 	return;
 }

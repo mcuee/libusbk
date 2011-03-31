@@ -368,6 +368,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\lusb_defdi_guids.h"
+				>
+			</File>
+			<File
 				RelativePath="..\lusbk_bknd.h"
 				>
 			</File>

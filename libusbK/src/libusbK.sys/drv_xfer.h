@@ -1,3 +1,6 @@
+/*! \file drv_xfer.h
+*/
+
 #ifndef __KUSB_XFER_H__
 #define __KUSB_XFER_H__
 

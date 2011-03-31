@@ -1,3 +1,5 @@
+/*! \file drv_common.h
+*/
 
 #ifndef __DRV_COMMON_H__
 #define __DRV_COMMON_H__

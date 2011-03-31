@@ -1,6 +1,6 @@
-PACKAGE = 3.0.1.14; NUL; NUL;
+PACKAGE = 3.0.1.15; NUL; NUL;
 libusbK.sys = PACKAGE; .\common_version_h.in; .\src\libusbK.sys\lusbk_version.h;
 libusbK.lib = PACKAGE; .\common_version_h.in; .\src\libusbK.lib\lusbk_version.h;
 libusbK.dll = PACKAGE; .\common_version_h.in; .\src\libusbK.dll\lusbk_version.h;
-kBench.exe = 0.9.0.1; .\common_version_h.in; .\src\kBench.exe\lusbk_version.h;
-kList.exe = 0.9.0.1; .\common_version_h.in; .\src\kList.exe\lusbk_version.h;
+kBench.exe = PACKAGE; .\common_version_h.in; .\src\kBench.exe\lusbk_version.h;
+kList.exe = PACKAGE; .\common_version_h.in; .\src\kList.exe\lusbk_version.h;
