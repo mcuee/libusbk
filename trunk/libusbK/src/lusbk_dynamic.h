@@ -1,8 +1,7 @@
-
-#ifndef __LUSBK_DYNAMIC_H_
 /*! \file lusbk_dynamic.h
 */
 
+#ifndef __LUSBK_DYNAMIC_H_
 #define __LUSBK_DYNAMIC_H_
 
 #include <windows.h>

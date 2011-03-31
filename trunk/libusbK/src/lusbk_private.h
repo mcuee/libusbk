@@ -1,3 +1,5 @@
+/*! \file lusbk_private.h
+*/
 
 #ifndef __KUSB_USER_PRIVATE_API_H__
 #define __KUSB_USER_PRIVATE_API_H__

@@ -1,3 +1,20 @@
+/*!********************************************************************
+libusbK - WDF USB driver.
+Copyright (C) 2011 All Rights Reserved.
+libusb-win32.sourceforge.net
+
+Development : Travis Robinson  (libusbdotnet@gmail.com)
+Testing     : Xiaofan Chen     (xiaofanc@gmail.com)
+
+At the discretion of the user of this library, this software may be
+licensed under the terms of the GNU Public License v3 or a BSD-Style
+license as outlined in the following files:
+* LICENSE-gpl3.txt
+* LICENSE-bsd.txt
+
+License files are located in a license folder at the root of source and
+binary distributions.
+********************************************************************!*/
 
 #include "drv_common.h"
 
@@ -16,46 +33,6 @@ NTSTATUS GUIDFromWdfString(__in WDFSTRING guidString, __out PGUID guid)
 	WdfStringGetUnicodeString(guidString, &guidStringW);
 
 	return RtlGUIDFromString (&guidStringW, guid);
-}
-
-NTSTATUS AddDefaultDeviceInterfaceGUID(__in PDEVICE_CONTEXT deviceContext)
-{
-
-	WDF_OBJECT_ATTRIBUTES	stringAttributes;
-	UNICODE_STRING defaultDeviceInterfaceGUID_UnicodeString;
-	WDFSTRING defaultDeviceInterfaceGUID = NULL;
-	GUID guidTest = {0};
-	NTSTATUS status;
-
-	WDF_OBJECT_ATTRIBUTES_INIT(&stringAttributes);
-
-	stringAttributes.ParentObject = deviceContext->DeviceRegSettings.DeviceInterfaceGUIDs;
-
-	RtlInitUnicodeString(&defaultDeviceInterfaceGUID_UnicodeString, DEFINE_TO_STRW(Regsitry_Default_DeviceInterfaceGUID));
-
-	status = WdfStringCreate(&defaultDeviceInterfaceGUID_UnicodeString, &stringAttributes, &defaultDeviceInterfaceGUID);
-	if (!NT_SUCCESS(status))
-	{
-		USBERR("WdfStringCreate failed. status=%Xh\n", status);
-		return status;
-	}
-
-	status = GUIDFromWdfString(defaultDeviceInterfaceGUID, &guidTest);
-	if (!NT_SUCCESS(status))
-	{
-		USBERR("GUIDFromWdfString failed. status=%Xh\n", status);
-		return status;
-	}
-
-	USBWRN("using default GUID {%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X}\n",
-	       guidTest.Data1,
-	       guidTest.Data2,
-	       guidTest.Data3,
-	       guidTest.Data4[0], guidTest.Data4[1],
-	       guidTest.Data4[2], guidTest.Data4[3], guidTest.Data4[4], guidTest.Data4[5], guidTest.Data4[6], guidTest.Data4[7]);
-
-	return WdfCollectionAdd(deviceContext->DeviceRegSettings.DeviceInterfaceGUIDs, defaultDeviceInterfaceGUID);
-
 }
 
 NTSTATUS GetTransferMdl(__in WDFREQUEST Request,

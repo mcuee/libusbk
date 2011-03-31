@@ -1,21 +1,21 @@
-/* USB Benchmark for libusb-win32
+/*!********************************************************************
+libusbK - kList descriptor diagnostic tool.
+Copyright (C) 2011 All Rights Reserved.
+libusb-win32.sourceforge.net
 
- Copyright © 2010 Travis Robinson. <libusbdotnet@gmail.com>
- website: http://sourceforge.net/projects/libusb-win32
+Development : Travis Robinson  (libusbdotnet@gmail.com)
+Testing     : Xiaofan Chen     (xiaofanc@gmail.com)
 
- This program is free software; you can redistribute it and/or modify it
- under the terms of the GNU Lesser General Public License as published by
- the Free Software Foundation; either version 2 of the License, or
- (at your option) any later version.
+At the discretion of the user of this library, this software may be
+licensed under the terms of the GNU Public License v3 or a BSD-Style
+license as outlined in the following files:
+* LICENSE-gpl3.txt
+* LICENSE-bsd.txt
 
- This program is distributed in the hope that it will be useful, but
- WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
- License for more details.
+License files are located in a license folder at the root of source and
+binary distributions.
+********************************************************************!*/
 
- You should have received a copy of the GNU Lesser General Public License
- along with this program; if not, please visit www.gnu.org.
-*/
 #include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,7 +26,9 @@
 #include "lusbk_usb.h"
 #include "UsbIds.h"
 
+#pragma warning(disable:4296)
 #pragma warning(disable:4201)
+#include <PSHPACK1.h>
 typedef struct _UNI_DESCRIPTOR
 {
 	union
@@ -41,10 +43,11 @@ typedef struct _UNI_DESCRIPTOR
 		HID_DESCRIPTOR Hid;
 	};
 } UNI_DESCRIPTOR, *PUNI_DESCRIPTOR, ** PPUNI_DESCRIPTOR;
+#include <POPPACK.h>
 #pragma warning(default:4201)
 
 static KUSB_DRIVER_API K;
-WINUSB_INTERFACE_HANDLE InterfaceHandle;
+static WINUSB_INTERFACE_HANDLE InterfaceHandle;
 
 LONG WinError(__in_opt DWORD errorCode);
 
@@ -62,91 +65,170 @@ BOOL GetRealConfigDescriptor(__in UCHAR Index,
 LPCSTR LoadResourceUsbIds(void);
 
 LPCSTR GetBmAttributes(UCHAR bmAttributes);
+LPCSTR GetConfigBmAttributes(UCHAR bmAttributes);
 CONST PCHAR GetDescriptorString(USHORT stringIndex);
 
-VOID DumpDescriptorDevice(PUSB_DEVICE_DESCRIPTOR desc);
+VOID DumpDescriptorDevice(__in PUSB_DEVICE_DESCRIPTOR desc);
 
-BOOL BeginDescriptor(USB_DESCRIPTOR_TYPE type, PPUNI_DESCRIPTOR desc);
-BOOL DumpDescriptorConfig(PPUNI_DESCRIPTOR desc, PLONG remainingLength);
-BOOL DumpDescriptorInterface(PPUNI_DESCRIPTOR desc, PLONG remainingLength);
-BOOL DumpDescriptorInterfaceAssociation(PPUNI_DESCRIPTOR desc, PLONG remainingLength);
-BOOL DumpDescriptorHid(PPUNI_DESCRIPTOR desc, PLONG remainingLength);
-BOOL DumpDescriptorEndpoint(PPUNI_DESCRIPTOR desc, PLONG remainingLength);
-BOOL DumpDescriptorCommon(PPUNI_DESCRIPTOR desc, PLONG remainingLength);
+BOOL DumpDescriptorConfig(__inout PPUNI_DESCRIPTOR uniRef,
+                          __inout PLONG remainingLength);
 
-static LPCSTR gTabIndents[] = {" ", "  ", "    ", "      ", "        ", "          ", "            ",};
-static UCHAR gTab = 0;
+BOOL DumpDescriptorInterface(__inout PPUNI_DESCRIPTOR uniRef,
+                             __inout PLONG remainingLength);
+
+BOOL DumpDescriptorInterfaceAssociation(__inout PPUNI_DESCRIPTOR uniRef,
+                                        __inout PLONG remainingLength);
+
+BOOL DumpDescriptorEndpoint(__inout PPUNI_DESCRIPTOR uniRef,
+                            __inout PLONG remainingLength);
+
+BOOL DumpDescriptorCommon(__inout PPUNI_DESCRIPTOR uniRef,
+                          __inout PLONG remainingLength);
+
+BOOL DumpDescriptorHid(__inout PPUNI_DESCRIPTOR uniRef,
+                       __in PUSB_INTERFACE_DESCRIPTOR currentInterface,
+                       __inout PLONG remainingLength);
+
+BOOL DumpDescriptorHidPhysical(__in PHID_DESCRIPTOR desc,
+                               __in PUSB_INTERFACE_DESCRIPTOR currentInterface,
+                               __in UCHAR descriptorPos);
+BOOL DumpDescriptorHidReport(__in PHID_DESCRIPTOR desc,
+                             __in PUSB_INTERFACE_DESCRIPTOR currentInterface,
+                             __in UCHAR descriptorPos);
+
+#define MAX_TAB 9
+static LPCSTR gTabIndents[MAX_TAB] =
+{
+	"",
+	" ",
+	"   ",
+	"     ",
+	"       ",
+	"         ",
+	"           ",
+	"             ",
+	"               ",
+};
+
+static int gTab = 0;
 
 LPCSTR UsbIdsText = NULL;
 
-
-static LPCSTR DescriptorTypeString[33] =
+#define UNUSED_DESCRIPTOR_STRING "Unknown"
+static LPCSTR DescriptorTypeString[] =
 {
-	"-DEVICE:",
-	"-CONFIGURATION:",
-	"-STRING:",
-	"-INTERFACE:",
-	"-ENDPOINT:",
-	"-UNKNOWN:",
-	"-UNKNOWN:",
-	"-UNKNOWN:",
-	"-UNKNOWN:",
-	"-UNKNOWN:",
-	"-INTERFACE ASSOCIATION:",
-	"-UNKNOWN:",
-	"-UNKNOWN:",
-	"-UNKNOWN:",
-	"-UNKNOWN:",
-	"-UNKNOWN:",
-	"-UNKNOWN:",
-	"-UNKNOWN:",
-	"-UNKNOWN:",
-	"-UNKNOWN:",
-	"-UNKNOWN:",
-	"-UNKNOWN:",
-	"-UNKNOWN:",
-	"-UNKNOWN:",
-	"-UNKNOWN:",
-	"-UNKNOWN:",
-	"-UNKNOWN:",
-	"-UNKNOWN:",
-	"-UNKNOWN:",
-	"-UNKNOWN:",
-	"-UNKNOWN:",
-	"-UNKNOWN:",
-	"-HID:",
+	"Device",
+	"Configuration",
+	"String",
+	"Interface",
+	"Endpoint",
+	UNUSED_DESCRIPTOR_STRING,
+	UNUSED_DESCRIPTOR_STRING,
+	UNUSED_DESCRIPTOR_STRING,
+	UNUSED_DESCRIPTOR_STRING,
+	UNUSED_DESCRIPTOR_STRING,
+	"Interface Association",
+	UNUSED_DESCRIPTOR_STRING,
+	UNUSED_DESCRIPTOR_STRING,
+	UNUSED_DESCRIPTOR_STRING,
+	UNUSED_DESCRIPTOR_STRING,
+	UNUSED_DESCRIPTOR_STRING,
+	UNUSED_DESCRIPTOR_STRING,
+	UNUSED_DESCRIPTOR_STRING,
+	UNUSED_DESCRIPTOR_STRING,
+	UNUSED_DESCRIPTOR_STRING,
+	UNUSED_DESCRIPTOR_STRING,
+	UNUSED_DESCRIPTOR_STRING,
+	UNUSED_DESCRIPTOR_STRING,
+	UNUSED_DESCRIPTOR_STRING,
+	UNUSED_DESCRIPTOR_STRING,
+	UNUSED_DESCRIPTOR_STRING,
+	UNUSED_DESCRIPTOR_STRING,
+	UNUSED_DESCRIPTOR_STRING,
+	UNUSED_DESCRIPTOR_STRING,
+	UNUSED_DESCRIPTOR_STRING,
+	UNUSED_DESCRIPTOR_STRING,
+	UNUSED_DESCRIPTOR_STRING,
+	"Hid",
+	"Report",
+	"Physical",
+	UNUSED_DESCRIPTOR_STRING,
 };
-#define GetDescriptorTypeString(DescriptorId) (DescriptorTypeString[(DescriptorId)>((sizeof(DescriptorTypeString)/sizeof(LPCSTR)))?11:((DescriptorId)-1)])
+#define GetDescriptorTypeString(DescriptorId)							\
+	(DescriptorTypeString[												\
+	(DescriptorId)-1>((sizeof(DescriptorTypeString)/sizeof(LPCSTR))) ?	\
+	((sizeof(DescriptorTypeString)/sizeof(LPCSTR))-1) :					\
+	((DescriptorId)-1)													\
+	])
 
-static LPCSTR DrvIdNames[8] = {"libusbK", "libusb0", "libusb0 filter", "WinUSB", "Unknown", "Unknown", "Unknown", "Unknown"};
-#define GetDrvIdString(DrvId)	(DrvIdNames[((((LONG)(DrvId))<0) || ((LONG)(DrvId)) >= KUSB_DRVID_COUNT)?KUSB_DRVID_COUNT:(DrvId)])
+#define KF_X "0x%X"
+#define KF_X2 "0x%02X"
+#define KF_X3 "0x%03X"
+#define KF_X4 "0x%04X"
 
-CONST PCHAR PipeTypeStrings[4] = {"Control", "Isochronous", "Bulk", "Interrupt"};
-#define GetPipeTypeString(PipeType) PipeTypeStrings[(PipeType) & 0x3]
+#define KF_U "%u"
+#define KF_U2 "%02u"
 
-CONST PCHAR IsoSynchronizationStrings[4] = {"No Synchonization", "Asynchronous", "Adaptive", "Synchronous"};
-#define GetIsoSyncronizationString(BmAttributes) IsoSynchronizationStrings[((BmAttributes)>>2) & 0x3]
+#define KLIST_CATEGORY_SEP ":"
+#define KLIST_LN "\n"
+#define KLIST_HID_CAT_FORMAT "%-22s"
+#define KLIST_CATEGORY_FORMAT "%-20s"
+#define KLIST_CATEGORY_FORMAT_SEP KLIST_CATEGORY_FORMAT KLIST_CATEGORY_SEP
 
-CONST PCHAR IsoUsageTypeStrings[4] = {"Data Endpoint", "Feedback Endpoint", "Explicit Feedback Data Endpoint", "Reserved"};
-#define GetIsoUsageTypeString(BmAttributes) IsoUsageTypeStrings[((BmAttributes)>>4) & 0x3]
+#define _TAB_INC() gTab=(gTab < MAX_TAB)?gTab+1:gTab
+#define _TAB_DEC() gTab=(gTab > 0)?gTab-1:gTab
 
+#define WRITERAW(format,...) printf("%s"format,gTabIndents[gTab],__VA_ARGS__)
+#define WRITE(format,...)						WRITERAW(" "format,__VA_ARGS__)
+#define WRITE_LN(format,...)					WRITE(format KLIST_LN,__VA_ARGS__)
+
+#define WRITE_CAT(CategoryName,format,...)        WRITE(KLIST_CATEGORY_FORMAT format,CategoryName,__VA_ARGS__)
+#define WRITE_CAT_LN(CategoryName,format,...)     WRITE_LN(KLIST_CATEGORY_FORMAT format,CategoryName,__VA_ARGS__)
+
+#define WRITE_CAT_SEP(CategoryName,format,...)    WRITE(KLIST_CATEGORY_FORMAT_SEP format,CategoryName,__VA_ARGS__)
+#define WRITE_CAT_SEP_LN(CategoryName,format,...) WRITE_LN(KLIST_CATEGORY_FORMAT_SEP format,CategoryName,__VA_ARGS__)
+
+#define DESC_VALUE(Descriptor,FieldName,format,...) \
+	WRITE_LN(KLIST_CATEGORY_FORMAT_SEP format,DEFINE_TO_STR(FieldName), Descriptor->FieldName,__VA_ARGS__)
+
+#define DESC_HID_VALUE(Descriptor,DescriptorIndex,FieldName,format,...)	\
+	WRITE_LN(KLIST_CATEGORY_FORMAT_SEP format,DEFINE_TO_STR(FieldName), (Descriptor)->DescriptorList[DescriptorIndex].FieldName,__VA_ARGS__)
+
+#define DESC_iVALUE(Descriptor, StringIndex) \
+	DESC_VALUE(Descriptor, StringIndex, KF_U"%s", GetDescriptorString(Descriptor->StringIndex))
+
+#define DESC_MARK_DEVICE "-"
+#define DESC_MARK_CONFIG "-"
+#define DESC_MARK_HID "*"
+#define DESC_MARK_END "!"
+#define _DESC_BEGIN(DescId,DescMarkChar) \
+	WRITERAW("%s%s%s\n",DescMarkChar,GetDescriptorTypeString(DescId),KLIST_CATEGORY_SEP); \
+	_TAB_INC()
+
+#define _DESC_SUB_BEGIN(DescId,DescMarkChar) \
+	WRITERAW("%s%s%s\n",DescMarkChar,GetDescriptorTypeString(DescId),KLIST_CATEGORY_SEP); \
+	_TAB_INC()
+
+#define DESC_BEGIN_DEV(DescId) _DESC_BEGIN(DescId,DESC_MARK_DEVICE)
+#define DESC_BEGIN_CFG(DescId) _DESC_SUB_BEGIN(DescId,DESC_MARK_CONFIG)
+
+#define DESC_SUB_END(DescId) \
+	_TAB_DEC(); \
+	WRITERAW(DESC_MARK_END "End %s" KLIST_LN,GetDescriptorTypeString(DescId))
+
+
+#define HID_BEGIN(CategoryName,format,...)  \
+	WRITERAW("%s" KLIST_HID_CAT_FORMAT KLIST_CATEGORY_SEP format KLIST_LN,DESC_MARK_HID,CategoryName,__VA_ARGS__); \
+	_TAB_INC()
+
+#define HID_END(CategoryName,format,...)	\
+	_TAB_DEC();								\
+	WRITERAW(DESC_MARK_END KLIST_CATEGORY_FORMAT format KLIST_LN,CategoryName,__VA_ARGS__) \
+ 
 #define PrintfDeviceElement(DeviceListFieldName) printf("    %-21s: %s\n",DEFINE_TO_STR(DeviceListFieldName),deviceElement->DeviceListFieldName)
-
-#define DESC_LINE(format,...) printf("%s"format"\n",gTabIndents[gTab],__VA_ARGS__)
-#define DESC_SUB_BEGIN(DescId) printf("%s%s\n",gTabIndents[gTab++], GetDescriptorTypeString(DescId))
-#define DESC_BEGIN(DescId) printf("\n%s%s\n",gTabIndents[gTab++], GetDescriptorTypeString(DescId))
-#define DESC_END()(--gTab)
-
-#define DESC_UNI_VALUE(Descriptor,Section,FieldName,format,...) printf("%s%-18s:"format,gTabIndents[gTab],DEFINE_TO_STR(FieldName),(*(Descriptor))->Section.FieldName,__VA_ARGS__)
-#define DESC_UNI_STRID(Descriptor,Section,FieldName,format,...) DESC_UNI_VALUE(Descriptor,Section,FieldName,"%u%s\n"format,GetDescriptorString((*(Descriptor))->Section.FieldName),__VA_ARGS__)
-
-#define DESC_VALUE(Descriptor,FieldName,format,...) printf("%s%-18s:"format, gTabIndents[gTab], DEFINE_TO_STR(FieldName),Descriptor->FieldName,__VA_ARGS__)
-#define DESC_iVALUE(Descriptor, StringIndex) DESC_VALUE(Descriptor, StringIndex, "%u%s\n", GetDescriptorString(Descriptor->StringIndex))
 
 #define IsDescValid(DescriptorPtr, RemainingTotalSize)\
 	(((RemainingTotalSize) > sizeof(USB_COMMON_DESCRIPTOR)) && (RemainingTotalSize) >= (DescriptorPtr)->bLength)
-
-
 
 #define AdvanceDescriptor(DescriptorPtr, RemainingLength)										\
 {																								\
@@ -173,6 +255,9 @@ void ShowCopyright(void);
 
 int __cdecl main(int argc, char** argv)
 {
+	static LPCSTR DrvIdNames[8] = {"libusbK", "libusb0", "libusb0 filter", "WinUSB", "Unknown", "Unknown", "Unknown", "Unknown"};
+#define GetDrvIdString(DrvId)	(DrvIdNames[((((LONG)(DrvId))<0) || ((LONG)(DrvId)) >= KUSB_DRVID_COUNT)?KUSB_DRVID_COUNT:(DrvId)])
+
 	LONG ec;
 	PKUSB_DEV_LIST deviceList = NULL;
 	PKUSB_DEV_LIST deviceElement;
@@ -336,9 +421,11 @@ BOOL GetDescriptorReport(__in PKUSB_DEV_LIST deviceElement, __in BOOL detailed)
 			goto Error;
 		}
 
-		DESC_BEGIN(USB_DEVICE_DESCRIPTOR_TYPE);
+		WRITE_LN("");
+
+		DESC_BEGIN_DEV(USB_DEVICE_DESCRIPTOR_TYPE);
 		DumpDescriptorDevice(&deviceDescriptor);
-		DESC_END();
+		DESC_SUB_END(USB_DEVICE_DESCRIPTOR_TYPE);
 
 		configDescriptor = malloc(4096);
 		memset(configDescriptor, 0, 4096);
@@ -440,6 +527,22 @@ CONST PCHAR GetDescriptorString(USHORT stringIndex)
 
 	return rtn;
 }
+LPCSTR AddGroupEndings(LPCSTR src)
+{
+	static CHAR buffer[MAX_PATH];
+	memset(buffer, 0, sizeof(buffer));
+	if (src[0])
+	{
+		if (src[0] != '(')
+			strcat(buffer, "(");
+
+		strcat(buffer, src);
+
+		if (src[strlen(src) - 1] != ')')
+			strcat(buffer, ")");
+	}
+	return buffer;
+}
 
 VOID DumpDescriptorDevice(PUSB_DEVICE_DESCRIPTOR desc)
 {
@@ -454,62 +557,57 @@ VOID DumpDescriptorDevice(PUSB_DEVICE_DESCRIPTOR desc)
 	GetClassDisplayText(desc->bDeviceClass, desc->bDeviceSubClass, desc->bDeviceProtocol,
 	                    className, subClassName, protocolName);
 
-	DESC_VALUE(desc, bLength, "%u\n");
-	DESC_VALUE(desc, bDescriptorType, "%u\n");
-	DESC_VALUE(desc, bcdUSB, "%04Xh\n");
-	DESC_VALUE(desc, bDeviceClass, "%02Xh %s\n", className);
-	DESC_VALUE(desc, bDeviceSubClass, "%02Xh %s\n", subClassName);
-	DESC_VALUE(desc, bDeviceProtocol, "%02Xh %s\n", protocolName);
-	DESC_VALUE(desc, bMaxPacketSize0, "%u\n");
-	DESC_VALUE(desc, idVendor, "%04Xh %s\n", vendorName);
-	DESC_VALUE(desc, idProduct, "%04Xh %s\n", productName);
-	DESC_VALUE(desc, bcdDevice, "%04X\n");
+
+	DESC_VALUE(desc, bLength, KF_U);
+	DESC_VALUE(desc, bDescriptorType, KF_X2);
+	DESC_VALUE(desc, bcdUSB, KF_X4);
+	DESC_VALUE(desc, bDeviceClass, KF_X2" %s", AddGroupEndings(className));
+	DESC_VALUE(desc, bDeviceSubClass, KF_X2" %s", AddGroupEndings(subClassName));
+	DESC_VALUE(desc, bDeviceProtocol, KF_X2" %s", AddGroupEndings(protocolName));
+	DESC_VALUE(desc, bMaxPacketSize0, KF_U);
+	DESC_VALUE(desc, idVendor, KF_X4" %s", AddGroupEndings(vendorName));
+	DESC_VALUE(desc, idProduct, KF_X4" %s", AddGroupEndings(productName));
+	DESC_VALUE(desc, bcdDevice, KF_X4);
 	DESC_iVALUE(desc, iManufacturer);
 	DESC_iVALUE(desc, iProduct);
 	DESC_iVALUE(desc, iSerialNumber);
-	DESC_VALUE(desc, bNumConfigurations, "%u\n");
-}
-BOOL BeginDescriptor(USB_DESCRIPTOR_TYPE type, PPUNI_DESCRIPTOR desc)
-{
-	UNREFERENCED_PARAMETER(desc);
-	DESC_SUB_BEGIN(type);
-	return TRUE;
+	DESC_VALUE(desc, bNumConfigurations, KF_U);
 }
 
-BOOL DumpDescriptorConfig(PPUNI_DESCRIPTOR desc, PLONG remainingLength)
+BOOL DumpDescriptorConfig(PPUNI_DESCRIPTOR uniRef, PLONG remainingLength)
 {
 	INT numInterfaces;
 	BOOL success = TRUE;
 	UCHAR interfaceNumberTrack[128];
+	PUSB_CONFIGURATION_DESCRIPTOR desc = &((*uniRef)->Config);
 
-	if (!IsUniDescriptorValid(*desc, *remainingLength))
+	if (!IsUniDescriptorValid(*uniRef, *remainingLength))
 		return FALSE;
 
-	if (!BeginDescriptor(USB_CONFIGURATION_DESCRIPTOR_TYPE, desc))
-		return FALSE;
+	DESC_BEGIN_DEV(USB_CONFIGURATION_DESCRIPTOR_TYPE);
 
-	memset(interfaceNumberTrack,0,sizeof(interfaceNumberTrack));
+	memset(interfaceNumberTrack, 0, sizeof(interfaceNumberTrack));
 
-	numInterfaces = (INT)((*desc)->Config.bNumInterfaces);
+	numInterfaces = (INT)(desc->bNumInterfaces);
 
-	DESC_UNI_VALUE(desc, Config, bLength, "%u\n");
-	DESC_UNI_VALUE(desc, Config, bDescriptorType, "%02Xh\n");
-	DESC_UNI_VALUE(desc, Config, wTotalLength, "%u\n");
-	DESC_UNI_VALUE(desc, Config, bNumInterfaces, "%u\n");
-	DESC_UNI_VALUE(desc, Config, bConfigurationValue, "%02Xh\n");
-	DESC_UNI_STRID(desc, Config, iConfiguration, "");
-	DESC_UNI_VALUE(desc, Config, bmAttributes, "%02Xh\n");
-	DESC_UNI_VALUE(desc, Config, MaxPower, "%u (%u ma)\n", (*desc)->Config.MaxPower * 2);
+	DESC_VALUE(desc, bLength, KF_U);
+	DESC_VALUE(desc, bDescriptorType, KF_X2);
+	DESC_VALUE(desc, wTotalLength, KF_U);
+	DESC_VALUE(desc, bNumInterfaces, KF_U);
+	DESC_VALUE(desc, bConfigurationValue, KF_X2);
+	DESC_iVALUE(desc, iConfiguration);
+	DESC_VALUE(desc, bmAttributes, KF_X2" %s", AddGroupEndings(GetConfigBmAttributes(desc->bmAttributes)));
+	DESC_VALUE(desc, MaxPower, KF_U " (" KF_U "ma)", desc->MaxPower * 2);
 
-	AdvanceUniDescriptor(*desc, *remainingLength);
+	AdvanceUniDescriptor(*uniRef, *remainingLength);
 
-	while ((success = IsUniDescriptorValid(*desc, *remainingLength)) == TRUE)
+	while ((success = IsUniDescriptorValid(*uniRef, *remainingLength)) == TRUE)
 	{
-		switch ((*desc)->Common.bDescriptorType)
+		switch ((*uniRef)->Common.bDescriptorType)
 		{
 		case USB_INTERFACE_DESCRIPTOR_TYPE:
-			interfaceNumberTrack[(*desc)->Interface.bInterfaceNumber]++;
-			if (interfaceNumberTrack[(*desc)->Interface.bInterfaceNumber] == 1)
+			interfaceNumberTrack[(*uniRef)->Interface.bInterfaceNumber]++;
+			if (interfaceNumberTrack[(*uniRef)->Interface.bInterfaceNumber] == 1)
 			{
 				if ((--numInterfaces) < 0)
 				{
@@ -517,87 +615,92 @@ BOOL DumpDescriptorConfig(PPUNI_DESCRIPTOR desc, PLONG remainingLength)
 					return FALSE;
 				}
 			}
-			success = DumpDescriptorInterface(desc, remainingLength);
+			success = DumpDescriptorInterface(uniRef, remainingLength);
 			break;
 		case USB_INTERFACEASSOCIATION_DESCRIPTOR_TYPE:
-			success = DumpDescriptorInterfaceAssociation(desc, remainingLength);
+			success = DumpDescriptorInterfaceAssociation(uniRef, remainingLength);
 			break;
 		default:
-			success = DumpDescriptorCommon(desc, remainingLength);
+			success = DumpDescriptorCommon(uniRef, remainingLength);
 			break;
 		}
 		if (!success)
 			break;
 	}
 
-	DESC_END();
+	DESC_SUB_END(USB_CONFIGURATION_DESCRIPTOR_TYPE);
 
 	return success;
 }
 
-BOOL DumpDescriptorInterfaceAssociation(PPUNI_DESCRIPTOR desc, PLONG remainingLength)
+BOOL DumpDescriptorInterfaceAssociation(PPUNI_DESCRIPTOR uniRef, PLONG remainingLength)
 {
 	BOOL success = TRUE;
+	PUSB_INTERFACEASSOCIATION_DESCRIPTOR desc = &((*uniRef)->InterfaceAssociation);
 
-	if (!IsUniDescriptorValid(*desc, *remainingLength))
+
+	if (!IsUniDescriptorValid(*uniRef, *remainingLength))
 		return FALSE;
 
-	if (!BeginDescriptor(USB_INTERFACEASSOCIATION_DESCRIPTOR_TYPE, desc))
-		return FALSE;
+	DESC_BEGIN_CFG(USB_INTERFACEASSOCIATION_DESCRIPTOR_TYPE);
 
-	DESC_UNI_VALUE(desc, InterfaceAssociation, bLength, "%u\n");
-	DESC_UNI_VALUE(desc, InterfaceAssociation, bDescriptorType, "%02Xh\n");
-	DESC_UNI_VALUE(desc, InterfaceAssociation, bFirstInterface, "%02Xh\n");
-	DESC_UNI_VALUE(desc, InterfaceAssociation, bInterfaceCount, "%u\n");
-	DESC_UNI_VALUE(desc, InterfaceAssociation, bFunctionClass, "%02Xh\n");
-	DESC_UNI_VALUE(desc, InterfaceAssociation, bFunctionSubClass, "%02Xh\n");
-	DESC_UNI_VALUE(desc, InterfaceAssociation, bFunctionProtocol, "%02Xh\n");
-	DESC_UNI_STRID(desc, InterfaceAssociation, iFunction, "");
+	DESC_VALUE(desc, bLength, KF_U);
+	DESC_VALUE(desc, bDescriptorType, KF_X2);
+	DESC_VALUE(desc, bFirstInterface, KF_X2);
+	DESC_VALUE(desc, bInterfaceCount, KF_U);
+	DESC_VALUE(desc, bFunctionClass, KF_X2);
+	DESC_VALUE(desc, bFunctionSubClass, KF_X2);
+	DESC_VALUE(desc, bFunctionProtocol, KF_X2);
+	DESC_iVALUE(desc, iFunction);
 
-	AdvanceUniDescriptor(*desc, *remainingLength);
+	AdvanceUniDescriptor(*uniRef, *remainingLength);
 
-	DESC_END();
+	DESC_SUB_END(USB_INTERFACEASSOCIATION_DESCRIPTOR_TYPE);
 
 	return success;
 }
 
-BOOL DumpDescriptorInterface(PPUNI_DESCRIPTOR desc, PLONG remainingLength)
+BOOL DumpDescriptorInterface(PPUNI_DESCRIPTOR uniRef, PLONG remainingLength)
 {
 	BOOL success = TRUE;
 	CHAR className[MAX_PATH];
 	CHAR subClassName[MAX_PATH];
 	CHAR protocolName[MAX_PATH];
-	INT numEndpoints = (INT)((*desc)->Interface.bNumEndpoints);
+	PUSB_INTERFACE_DESCRIPTOR desc = &((*uniRef)->Interface);
 
-	if (!IsUniDescriptorValid(*desc, *remainingLength))
+	INT numEndpoints = (INT)(desc->bNumEndpoints);
+	USB_INTERFACE_DESCRIPTOR currentInterface;
+
+	if (!IsUniDescriptorValid(*uniRef, *remainingLength))
 		return FALSE;
 
-	if (!BeginDescriptor(USB_INTERFACE_DESCRIPTOR_TYPE, desc))
-		return FALSE;
+	DESC_BEGIN_CFG(USB_INTERFACE_DESCRIPTOR_TYPE);
 
 	GetClassDisplayText(
-	    (*desc)->Interface.bInterfaceClass,
-	    (*desc)->Interface.bInterfaceSubClass,
-	    (*desc)->Interface.bInterfaceProtocol,
+	    desc->bInterfaceClass,
+	    desc->bInterfaceSubClass,
+	    desc->bInterfaceProtocol,
 	    className,
 	    subClassName,
 	    protocolName);
 
-	DESC_UNI_VALUE(desc, Interface, bLength, "%u\n");
-	DESC_UNI_VALUE(desc, Interface, bDescriptorType, "%02Xh\n");
-	DESC_UNI_VALUE(desc, Interface, bInterfaceNumber, "%02u\n");
-	DESC_UNI_VALUE(desc, Interface, bAlternateSetting, "%02u\n");
-	DESC_UNI_VALUE(desc, Interface, bNumEndpoints, "%u\n");
-	DESC_UNI_VALUE(desc, Interface, bInterfaceClass, "%02Xh %s\n", className);
-	DESC_UNI_VALUE(desc, Interface, bInterfaceSubClass, "%02Xh %s\n", subClassName);
-	DESC_UNI_VALUE(desc, Interface, bInterfaceProtocol, "%02Xh %s\n", protocolName);
-	DESC_UNI_STRID(desc, Interface, iInterface, "");
+	DESC_VALUE(desc, bLength, KF_U);
+	DESC_VALUE(desc, bDescriptorType, KF_X2);
+	DESC_VALUE(desc, bInterfaceNumber, KF_X2);
+	DESC_VALUE(desc, bAlternateSetting, KF_X2);
+	DESC_VALUE(desc, bNumEndpoints, KF_U);
+	DESC_VALUE(desc, bInterfaceClass, KF_X2" %s", AddGroupEndings(className));
+	DESC_VALUE(desc, bInterfaceSubClass, KF_X2" %s", AddGroupEndings(subClassName));
+	DESC_VALUE(desc, bInterfaceProtocol, KF_X2" %s", AddGroupEndings(protocolName));
+	DESC_iVALUE(desc, iInterface);
 
-	AdvanceUniDescriptor(*desc, *remainingLength);
+	memcpy(&currentInterface, desc, sizeof(currentInterface));
 
-	while ((success = IsUniDescriptorValid(*desc, *remainingLength)) == TRUE)
+	AdvanceUniDescriptor(*uniRef, *remainingLength);
+
+	while ((success = IsUniDescriptorValid(*uniRef, *remainingLength)) == TRUE)
 	{
-		switch ((*desc)->Common.bDescriptorType)
+		switch ((*uniRef)->Common.bDescriptorType)
 		{
 
 		case USB_ENDPOINT_DESCRIPTOR_TYPE:
@@ -606,49 +709,245 @@ BOOL DumpDescriptorInterface(PPUNI_DESCRIPTOR desc, PLONG remainingLength)
 				printf("Interface descriptor is mis-reporting bNumEndpoints.\n");
 				return FALSE;
 			}
-			success = DumpDescriptorEndpoint(desc, remainingLength);
+			success = DumpDescriptorEndpoint(uniRef, remainingLength);
 			break;
 
 		case USB_HID_DESCRIPTOR_TYPE:
-			success = DumpDescriptorHid(desc, remainingLength);
+			success = DumpDescriptorHid(uniRef, &currentInterface, remainingLength);
 			break;
 
 		default:
-			DESC_END();
+			DESC_SUB_END(USB_INTERFACE_DESCRIPTOR_TYPE);
 			return TRUE;
 		}
 		if (!success)
 			break;
 	}
 
-	DESC_END();
+	DESC_SUB_END(USB_INTERFACE_DESCRIPTOR_TYPE);
 
 	return success;
 }
-BOOL DumpDescriptorHid(PPUNI_DESCRIPTOR desc, PLONG remainingLength)
+
+int GetHidDescriptorItemValue(UCHAR itemType, PUCHAR data)
 {
+	switch(itemType & 0x3)
+	{
+	case 1:	// byte
+		return (int)(((PUCHAR)data)[0]);
+	case 2:	// word
+		return (int)(((PUSHORT)data)[0]);
+	case 3:	// dword ?
+		return (int)(((PULONG)data)[0]);
+	}
+	return 0;
+}
+
+BOOL DumpDescriptorHidReport(__in PHID_DESCRIPTOR desc,
+                             __in PUSB_INTERFACE_DESCRIPTOR currentInterface,
+                             __in UCHAR descriptorPos)
+{
+	static CHAR usageName[MAX_PATH];
+	static CHAR usagePage[MAX_PATH];
+	static CHAR usageText[MAX_PATH];
+
+	static const LPCSTR collectionNames[] = {"Physical", "Application", "Logical", "Vendor Defined"};
 	BOOL success = TRUE;
+	LONG transferred;
+	FIND_USBIDS_CONTEXT idContext;
+	UCHAR reportType = desc->DescriptorList[descriptorPos].bReportType;
+	USHORT reportLength = desc->DescriptorList[descriptorPos].wReportLength;
+	PUCHAR reportBuffer = LocalAlloc(LPTR, reportLength);
 
-	if (!IsUniDescriptorValid(*desc, *remainingLength))
+	WINUSB_SETUP_PACKET Pkt;
+	PUSB_DEFAULT_PIPE_SETUP_PACKET defPkt = (PUSB_DEFAULT_PIPE_SETUP_PACKET)&Pkt;
+
+	memset(&idContext, 0, sizeof(idContext));
+	memset(&Pkt, 0, sizeof(Pkt));
+
+	defPkt->bmRequestType.Dir = BMREQUEST_DEVICE_TO_HOST;
+	defPkt->bmRequestType.Recipient = BMREQUEST_TO_INTERFACE;
+
+	defPkt->bRequest = USB_REQUEST_GET_DESCRIPTOR;
+
+	defPkt->wValue.HiByte = reportType;
+	defPkt->wValue.LowByte = descriptorPos;
+
+	defPkt->wIndex.LowByte = currentInterface->bInterfaceNumber;
+	defPkt->wLength = reportLength;
+
+	success = K.ControlTransfer(InterfaceHandle, Pkt, reportBuffer, reportLength, (PULONG)&transferred, NULL);
+	if (success)
+	{
+		PUCHAR data = reportBuffer;
+		UCHAR usageID;
+		BOOL WasHidValueHandled;
+		while(transferred > 0)
+		{
+			int hidItemValue;
+
+			WasHidValueHandled = FALSE;
+			usageID = data[0];
+			data++;
+			transferred--;
+
+			memset(usageName, 0, sizeof(usageName));
+			GetHidDescriptorItemDisplayText(usageID, usageName);
+
+			if ((transferred < (usageID & 0x3)) || ((usageID & 0x3) == 0x3))
+			{
+				printf("Hid report descriptor invalid near byte offset %d.\n", ((LONG)reportLength) - transferred);
+				break;
+			}
+
+			hidItemValue = GetHidDescriptorItemValue(usageID, data);
+			switch(usageID & 0xFC)
+			{
+			case 0x04: // Usage Page
+				GetHidUsagePageText((UCHAR)hidItemValue, usagePage, &idContext);
+				if (idContext.Found.MatchStart)
+				{
+					WasHidValueHandled = TRUE;
+					WRITE_CAT_SEP_LN(usageName, KF_X2" %s", hidItemValue, AddGroupEndings(usagePage));
+				}
+				break;
+			case 0x08: // Usage
+				if (idContext.Found.MatchStart)
+				{
+					GetHidUsageText((USHORT)hidItemValue, usageText, &idContext);
+					WRITE_CAT_SEP_LN(usageName, KF_X3" %s", hidItemValue, AddGroupEndings(AddGroupEndings(usageText)));
+					WasHidValueHandled = TRUE;
+				}
+				break;
+			case 0xA0: // Collection
+				WasHidValueHandled = TRUE;
+				HID_BEGIN(usageName, KF_X2" %s", hidItemValue, AddGroupEndings(collectionNames[hidItemValue & 0x3]));
+				break;
+			case 0xC0: // End Collection
+				HID_END(usageName, "");
+				WasHidValueHandled = TRUE;
+				break;
+			}
+
+			switch(usageID & 0x3)
+			{
+			case 0:	// zero length data
+				if (!WasHidValueHandled)
+					WRITE_CAT(usageName, "\n");
+				break;
+
+			case 1:	// byte
+				if (!WasHidValueHandled)
+					WRITE_CAT_SEP_LN(usageName, KF_X2, hidItemValue);
+
+				data++;
+				transferred--;
+				break;
+
+			case 2:	// word
+				if (!WasHidValueHandled)
+					WRITE_CAT_SEP_LN(usageName, KF_X4, hidItemValue);
+
+				data += 2;
+				transferred -= 2;
+				break;
+
+			case 3:	// dword ?
+				if (!WasHidValueHandled)
+					WRITE_CAT_SEP_LN(usageName, KF_X, hidItemValue);
+
+				data += 4;
+				transferred -= 4;
+				break;
+			}
+		}
+	}
+
+	LocalFree(reportBuffer);
+	return success;
+}
+
+BOOL DumpDescriptorHidPhysical(__in PHID_DESCRIPTOR desc,
+                               __in PUSB_INTERFACE_DESCRIPTOR currentInterface,
+                               __in UCHAR descriptorPos)
+{
+	UNREFERENCED_PARAMETER(desc);
+	UNREFERENCED_PARAMETER(currentInterface);
+	UNREFERENCED_PARAMETER(descriptorPos);
+	return TRUE;
+}
+
+BOOL DumpDescriptorHid(__inout PPUNI_DESCRIPTOR uniRef,
+                       __in PUSB_INTERFACE_DESCRIPTOR currentInterface,
+                       __inout PLONG remainingLength)
+{
+	UCHAR descriptorPos;
+	BOOL success = TRUE;
+	static CHAR countryName[MAX_PATH];
+
+	PHID_DESCRIPTOR desc = &((*uniRef)->Hid);
+
+	if (!IsUniDescriptorValid(*uniRef, *remainingLength))
 		return FALSE;
 
-	if (!BeginDescriptor(USB_HID_DESCRIPTOR_TYPE, desc))
-		return FALSE;
+	GetHidCountryCodeText(desc->bCountry, countryName);
 
-	DESC_UNI_VALUE(desc, Hid, bLength, "%u\n");
-	DESC_UNI_VALUE(desc, Hid, bDescriptorType, "%02Xh\n");
-	DESC_UNI_VALUE(desc, Hid, bcdHID, "%04X\n");
-	DESC_UNI_VALUE(desc, Hid, bCountry, "%02Xh\n");
-	DESC_UNI_VALUE(desc, Hid, bNumDescriptors, "%u\n");
+	DESC_BEGIN_CFG(USB_HID_DESCRIPTOR_TYPE);
 
-	AdvanceUniDescriptor(*desc, *remainingLength);
+	DESC_VALUE(desc, bLength, KF_U);
+	DESC_VALUE(desc, bDescriptorType, KF_X2);
+	DESC_VALUE(desc, bcdHID, KF_X4);
+	DESC_VALUE(desc, bCountry, KF_X2" %s", AddGroupEndings(countryName));
+	DESC_VALUE(desc, bNumDescriptors, KF_U);
 
-	DESC_END();
+	for (descriptorPos = 0; descriptorPos < desc->bNumDescriptors; descriptorPos++)
+	{
+		switch (desc->DescriptorList[descriptorPos].bReportType)
+		{
+		case USB_HID_REPORT_DESCRIPTOR_TYPE:
+			DESC_BEGIN_CFG(USB_HID_REPORT_DESCRIPTOR_TYPE);
+
+			DESC_HID_VALUE(desc, descriptorPos, bReportType, KF_X2);
+			DESC_HID_VALUE(desc, descriptorPos, wReportLength, KF_U);
+
+			DumpDescriptorHidReport(desc, currentInterface, descriptorPos);
+
+			DESC_SUB_END(USB_HID_REPORT_DESCRIPTOR_TYPE);
+			break;
+		case USB_HID_PHYSICAL_DESCRIPTOR_TYPE:
+			DESC_BEGIN_CFG(USB_HID_PHYSICAL_DESCRIPTOR_TYPE);
+
+			DESC_HID_VALUE(desc, descriptorPos, bReportType, KF_X2);
+			DESC_HID_VALUE(desc, descriptorPos, wReportLength, KF_U);
+
+			DumpDescriptorHidPhysical(desc, currentInterface, descriptorPos);
+
+			DESC_SUB_END(USB_HID_PHYSICAL_DESCRIPTOR_TYPE);
+			break;
+		default:
+			DESC_BEGIN_CFG(0xFF);
+
+			DESC_HID_VALUE(desc, descriptorPos, bReportType, KF_X2);
+			DESC_HID_VALUE(desc, descriptorPos, wReportLength, KF_U);
+
+			DESC_SUB_END(0xFF);
+			break;
+		}
+	}
+	AdvanceUniDescriptor(*uniRef, *remainingLength);
+
+	DESC_SUB_END(USB_HID_DESCRIPTOR_TYPE);
 
 	return success;
 }
 LPCSTR GetBmAttributes(UCHAR bmAttributes)
 {
+	CONST PCHAR PipeTypeStrings[4] = {"Control", "Isochronous", "Bulk", "Interrupt"};
+	CONST PCHAR IsoSynchronizationStrings[4] = {"No Synchonization", "Asynchronous", "Adaptive", "Synchronous"};
+	CONST PCHAR IsoUsageTypeStrings[4] = {"Data Endpoint", "Feedback Endpoint", "Explicit Feedback Data Endpoint", "Reserved"};
+#define GetPipeTypeString(PipeType) PipeTypeStrings[(PipeType) & 0x3]
+#define GetIsoSyncronizationString(BmAttributes) IsoSynchronizationStrings[((BmAttributes)>>2) & 0x3]
+#define GetIsoUsageTypeString(BmAttributes) IsoUsageTypeStrings[((BmAttributes)>>4) & 0x3]
 
 	static CHAR rtn[128];
 
@@ -667,43 +966,53 @@ LPCSTR GetBmAttributes(UCHAR bmAttributes)
 	return rtn;
 }
 
-BOOL DumpDescriptorEndpoint(PPUNI_DESCRIPTOR desc, PLONG remainingLength)
+LPCSTR GetConfigBmAttributes(UCHAR bmAttributes)
+{
+	LPCSTR BmStringsConfig[4] = {"", "Remote-Wakeup", "Self-Powered", "Remote-Wakeup, Self-Powered"};
+
+	return BmStringsConfig[(bmAttributes >> 4) & 0x3];
+}
+
+BOOL DumpDescriptorEndpoint(PPUNI_DESCRIPTOR uniRef, PLONG remainingLength)
 {
 	BOOL success = TRUE;
+	PUSB_ENDPOINT_DESCRIPTOR desc = &((*uniRef)->Endpoint);
 
-	if (!IsUniDescriptorValid(*desc, *remainingLength))
+	if (!IsUniDescriptorValid(*uniRef, *remainingLength))
 		return FALSE;
 
-	if (!BeginDescriptor(USB_ENDPOINT_DESCRIPTOR_TYPE, desc))
-		return FALSE;
+	DESC_BEGIN_CFG(USB_ENDPOINT_DESCRIPTOR_TYPE);
 
-	DESC_UNI_VALUE(desc, Endpoint, bLength, "%u\n");
-	DESC_UNI_VALUE(desc, Endpoint, bDescriptorType, "%02Xh\n");
-	DESC_UNI_VALUE(desc, Endpoint, bEndpointAddress, "%02Xh\n");
-	DESC_UNI_VALUE(desc, Endpoint, bmAttributes, "%02Xh (%s)\n", GetBmAttributes((*desc)->Endpoint.bmAttributes));
-	DESC_UNI_VALUE(desc, Endpoint, wMaxPacketSize, "%u\n");
-	DESC_UNI_VALUE(desc, Endpoint, bInterval, "%02Xh\n");
+	DESC_VALUE(desc, bLength, KF_U);
+	DESC_VALUE(desc, bDescriptorType, KF_X2);
+	DESC_VALUE(desc, bEndpointAddress, KF_X2);
+	DESC_VALUE(desc, bmAttributes, KF_X2" (%s)", GetBmAttributes(desc->bmAttributes));
+	DESC_VALUE(desc, wMaxPacketSize, KF_U);
+	DESC_VALUE(desc, bInterval, KF_X2);
 
-	AdvanceUniDescriptor(*desc, *remainingLength);
+	AdvanceUniDescriptor(*uniRef, *remainingLength);
 
-	DESC_END();
+	DESC_SUB_END(USB_ENDPOINT_DESCRIPTOR_TYPE);
+
 	return success;
 }
-BOOL DumpDescriptorCommon(PPUNI_DESCRIPTOR desc, PLONG remainingLength)
+BOOL DumpDescriptorCommon(PPUNI_DESCRIPTOR uniRef, PLONG remainingLength)
 {
 	BOOL success = TRUE;
+	PUSB_COMMON_DESCRIPTOR desc = &((*uniRef)->Common);
 
-	if (!IsUniDescriptorValid(*desc, *remainingLength))
+
+	if (!IsUniDescriptorValid(*uniRef, *remainingLength))
 		return FALSE;
 
-	DESC_SUB_BEGIN(0xff);
+	DESC_BEGIN_CFG(0xff);
 
-	DESC_UNI_VALUE(desc, Common, bLength, "%u\n");
-	DESC_UNI_VALUE(desc, Common, bDescriptorType, "%02Xh\n");
+	DESC_VALUE(desc, bLength, KF_U);
+	DESC_VALUE(desc, bDescriptorType, KF_X2);
 
-	AdvanceUniDescriptor(*desc, *remainingLength);
+	AdvanceUniDescriptor(*uniRef, *remainingLength);
 
-	DESC_END();
+	DESC_SUB_END(0xff);
 
 	return success;
 }

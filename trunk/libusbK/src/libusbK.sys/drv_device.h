@@ -1,3 +1,5 @@
+/*! \file drv_device.h
+*/
 
 #ifndef __DRV_DEVICE_H__
 #define __DRV_DEVICE_H__

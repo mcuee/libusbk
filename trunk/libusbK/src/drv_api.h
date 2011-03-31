@@ -1,3 +1,5 @@
+/*! \file drv_api.h
+*/
 
 #ifndef __LIBUSBK_KUSB_DRIVER_API_H__
 #define __LIBUSBK_KUSB_DRIVER_API_H__

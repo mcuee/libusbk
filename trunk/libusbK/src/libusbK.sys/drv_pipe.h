@@ -1,3 +1,5 @@
+/*! \file drv_pipe.h
+*/
 
 #ifndef __DRV_PIPE_H__
 #define __DRV_PIPE_H__

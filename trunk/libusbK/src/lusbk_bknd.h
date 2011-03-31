@@ -1,3 +1,6 @@
+/*! \file lusbk_bknd.h
+*/
+
 #ifndef __LUSBK_BKND_
 #define __LUSBK_BKND_
 

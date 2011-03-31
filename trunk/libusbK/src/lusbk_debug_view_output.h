@@ -1,3 +1,5 @@
+/*! \file lusbk_debug_view_output.h
+*/
 
 #ifndef __KUSB_DEBUG_VIEW_OUTPUT_H__
 #define __KUSB_DEBUG_VIEW_OUTPUT_H__

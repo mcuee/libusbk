@@ -1,11 +1,27 @@
+/*!********************************************************************
+libusbK - WDF USB driver.
+Copyright (C) 2011 All Rights Reserved.
+libusb-win32.sourceforge.net
+
+Development : Travis Robinson  (libusbdotnet@gmail.com)
+Testing     : Xiaofan Chen     (xiaofanc@gmail.com)
+
+At the discretion of the user of this library, this software may be
+licensed under the terms of the GNU Public License v3 or a BSD-Style
+license as outlined in the following files:
+* LICENSE-gpl3.txt
+* LICENSE-bsd.txt
+
+License files are located in a license folder at the root of source and
+binary distributions.
+********************************************************************!*/
 
 #include "drv_common.h"
+#include "lusb_defdi_guids.h"
 
 #if (defined(ALLOC_PRAGMA) && defined(PAGING_ENABLED))
 #pragma alloc_text(PAGE, Registry_ReadAllDeviceKeys)
 #endif
-
-NTSTATUS AddDefaultDeviceInterfaceGUID(__in PDEVICE_CONTEXT deviceContext);
 
 #define GetDeviceRegSettingKey(RegKeyValueName, DefaultValue)													\
 	RtlInitUnicodeString(&valueName, DEFINE_TO_STRW(RegKeyValueName));											\
@@ -81,16 +97,42 @@ NTSTATUS Registry_ReadAllDeviceKeys(__in PDEVICE_CONTEXT deviceContext)
 		ULONG guidCount = WdfCollectionGetCount(deviceContext->DeviceRegSettings.DeviceInterfaceGUIDs);
 		ULONG guidIndex;
 		WDFSTRING wdfGuidString;
+		BOOLEAN removeGuidFromCollection;
 
 		USBMSG("Found %u DeviceInterfaceGUIDs strings.", guidCount);
 
 		for (guidIndex = 0; guidIndex < guidCount; guidIndex++)
 		{
+			removeGuidFromCollection = TRUE;
+
 			wdfGuidString = (WDFSTRING)WdfCollectionGetItem(deviceContext->DeviceRegSettings.DeviceInterfaceGUIDs, guidIndex);
 			status = GUIDFromWdfString(wdfGuidString, &guidTest);
 			if (!NT_SUCCESS(status))
 			{
 				USBERR("removing invalid DeviceInterfaceGUID string at index %u\n", guidIndex);
+			}
+			else
+			{
+				if (IsEqualGUID(&guidTest, &Libusb0DeviceGuid))
+				{
+					USBWRN("libusb0 device DeviceInterfaceGUID found. skippng..\n");
+				}
+				else if (IsEqualGUID(&guidTest, &Libusb0FilterGuid))
+				{
+					USBWRN("libusb0 filter DeviceInterfaceGUID found. skippng..\n");
+				}
+				else if (IsEqualGUID(&guidTest, &LibusbKDeviceGuid))
+				{
+					USBWRN("libusbK default device DeviceInterfaceGUID found. skippng..\n");
+				}
+				else
+				{
+					removeGuidFromCollection = FALSE;
+				}
+			}
+
+			if (removeGuidFromCollection)
+			{
 				WdfCollectionRemoveItem(deviceContext->DeviceRegSettings.DeviceInterfaceGUIDs, guidIndex);
 				guidIndex--;
 				guidCount--;
@@ -131,4 +173,44 @@ Done:
 		hKey = NULL;
 	}
 	return status;
+}
+
+NTSTATUS AddDefaultDeviceInterfaceGUID(__in PDEVICE_CONTEXT deviceContext)
+{
+
+	WDF_OBJECT_ATTRIBUTES	stringAttributes;
+	UNICODE_STRING defaultDeviceInterfaceGUID_UnicodeString;
+	WDFSTRING defaultDeviceInterfaceGUID = NULL;
+	GUID guidTest = {0};
+	NTSTATUS status;
+
+	WDF_OBJECT_ATTRIBUTES_INIT(&stringAttributes);
+
+	stringAttributes.ParentObject = deviceContext->DeviceRegSettings.DeviceInterfaceGUIDs;
+
+	RtlInitUnicodeString(&defaultDeviceInterfaceGUID_UnicodeString, LibusbKDeviceGuidW);
+
+	status = WdfStringCreate(&defaultDeviceInterfaceGUID_UnicodeString, &stringAttributes, &defaultDeviceInterfaceGUID);
+	if (!NT_SUCCESS(status))
+	{
+		USBERR("WdfStringCreate failed. status=%Xh\n", status);
+		return status;
+	}
+
+	status = GUIDFromWdfString(defaultDeviceInterfaceGUID, &guidTest);
+	if (!NT_SUCCESS(status))
+	{
+		USBERR("GUIDFromWdfString failed. status=%Xh\n", status);
+		return status;
+	}
+
+	USBWRN("using default GUID {%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X}\n",
+	       guidTest.Data1,
+	       guidTest.Data2,
+	       guidTest.Data3,
+	       guidTest.Data4[0], guidTest.Data4[1],
+	       guidTest.Data4[2], guidTest.Data4[3], guidTest.Data4[4], guidTest.Data4[5], guidTest.Data4[6], guidTest.Data4[7]);
+
+	return WdfCollectionAdd(deviceContext->DeviceRegSettings.DeviceInterfaceGUIDs, defaultDeviceInterfaceGUID);
+
 }

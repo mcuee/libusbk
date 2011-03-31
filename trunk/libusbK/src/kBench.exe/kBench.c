@@ -1,21 +1,20 @@
-/* USB Benchmark for libusb-win32
+/*!********************************************************************
+libusbK - kBench USB benchmark/diagnostic tool.
+Copyright (C) 2011 All Rights Reserved.
+libusb-win32.sourceforge.net
 
- Copyright © 2010 Travis Robinson. <libusbdotnet@gmail.com>
- website: http://sourceforge.net/projects/libusb-win32
+Development : Travis Robinson  (libusbdotnet@gmail.com)
+Testing     : Xiaofan Chen     (xiaofanc@gmail.com)
 
- This program is free software; you can redistribute it and/or modify it
- under the terms of the GNU Lesser General Public License as published by
- the Free Software Foundation; either version 2 of the License, or
- (at your option) any later version.
+At the discretion of the user of this library, this software may be
+licensed under the terms of the GNU Public License v3 or a BSD-Style
+license as outlined in the following files:
+* LICENSE-gpl3.txt
+* LICENSE-bsd.txt
 
- This program is distributed in the hope that it will be useful, but
- WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
- License for more details.
-
- You should have received a copy of the GNU Lesser General Public License
- along with this program; if not, please visit www.gnu.org.
-*/
+License files are located in a license folder at the root of source and
+binary distributions.
+********************************************************************!*/
 
 #include <windows.h>
 #include <stdio.h>
@@ -355,7 +354,7 @@ NextInterface:
 			while(K.QueryPipe(test->InterfaceHandle, altSetting, pipeIndex, &test->PipeInformation[pipeIndex]))
 			{
 				// found a pipe
-				if (test->PipeInformation[pipeIndex].PipeType==UsbdPipeTypeIsochronous)
+				if (test->PipeInformation[pipeIndex].PipeType == UsbdPipeTypeIsochronous)
 					hasIsoEndpoints++;
 
 				if (!test->PipeInformation[pipeIndex].MaximumPacketSize)
@@ -375,8 +374,8 @@ NextInterface:
 				{
 					// user didn't specfiy and we know we can't tranfer with this alt setting so skip it.
 					CONMSG("skipping interface %02X:%02X. zero-length iso endpoints exist.\n",
-						test->InterfaceDescriptor.bInterfaceNumber,
-						test->InterfaceDescriptor.bAlternateSetting);
+					       test->InterfaceDescriptor.bInterfaceNumber,
+					       test->InterfaceDescriptor.bAlternateSetting);
 				}
 				else
 				{
@@ -389,9 +388,9 @@ NextInterface:
 					if (hasIsoEndpoints && test->BufferCount == 1)
 						test->BufferCount++;
 
-					if (!K.SetCurrentAlternateSetting(test->InterfaceHandle,test->InterfaceDescriptor.bAlternateSetting))
+					if (!K.SetCurrentAlternateSetting(test->InterfaceHandle, test->InterfaceDescriptor.bAlternateSetting))
 					{
-						CONERR("failed selecting alternate setting %02Xh\n",test->Altf);
+						CONERR("failed selecting alternate setting %02Xh\n", test->Altf);
 						return FALSE;
 					}
 					return TRUE;
@@ -599,15 +598,15 @@ int TransferAsync(PBENCHMARK_TRANSFER_PARAM transferParam, PBENCHMARK_TRANSFER_H
 
 		if (!success && transferErrorCode == ERROR_IO_PENDING)
 		{
-			transferErrorCode=ERROR_SUCCESS;
+			transferErrorCode = ERROR_SUCCESS;
 			success = TRUE;
 		}
 
 		// Submit this transfer now.
 		handle->ReturnCode = ret = -labs(transferErrorCode);
-		if (ret < 0) 
+		if (ret < 0)
 		{
-			handle->InUse=FALSE;
+			handle->InUse = FALSE;
 			goto Done;
 		}
 
@@ -1469,7 +1468,7 @@ int __cdecl main(int argc, char** argv)
 	if (!Bench_Open(&Test))
 		goto Done;
 
-	CONMSG("opened %s (%s)..\n", Test.DeviceList->DeviceDesc, Test.DeviceList->DeviceInstance);
+	CONMSG("opened %s (%s)..\n", Test.SelectedDeviceProfile->DeviceDesc, Test.SelectedDeviceProfile->DeviceInstance);
 
 	// If "NoTestSelect" appears in the command line then don't send the control
 	// messages for selecting the test type.

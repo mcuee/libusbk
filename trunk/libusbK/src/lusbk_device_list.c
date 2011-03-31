@@ -1,3 +1,21 @@
+/*!********************************************************************
+libusbK - Multi-driver USB library.
+Copyright (C) 2011 All Rights Reserved.
+libusb-win32.sourceforge.net
+
+Development : Travis Robinson  (libusbdotnet@gmail.com)
+Testing     : Xiaofan Chen     (xiaofanc@gmail.com)
+
+At the discretion of the user of this library, this software may be
+licensed under the terms of the GNU Public License v3 or a BSD-Style
+license as outlined in the following files:
+* LICENSE-gpl3.txt
+* LICENSE-bsd.txt
+
+License files are located in a license folder at the root of source and
+binary distributions.
+********************************************************************!*/
+
 #include <windows.h>
 #include <objbase.h>
 #include <stdlib.h>
@@ -7,17 +25,7 @@
 #include <ctype.h>
 #include <winioctl.h>
 #include "lusbk_device_list.h"
-
-
-#ifndef DEFINE_TO_STR
-#define _DEFINE_TO_STR(x) #x
-#define  DEFINE_TO_STR(x) _DEFINE_TO_STR(x)
-#endif
-
-#ifndef DEFINE_TO_STRW
-#define _DEFINE_TO_STRW(x) L#x
-#define  DEFINE_TO_STRW(x) _DEFINE_TO_STRW(x)
-#endif
+#include "lusb_defdi_guids.h"
 
 typedef struct _SERVICE_DRVID_MAP
 {
@@ -45,19 +53,19 @@ static LPCSTR wusb_Services[]  = {"WINUSB", NULL};
 
 static LPCSTR lusb0_FilterDevGuidNames[] =
 {
-	DEFINE_TO_STR(LUSB0_REG_DEFAULT_FILTER_GUID),
+	DEFINE_TO_STR(_DefLibusb0FilterGuid),
 	NULL
 };
 
 static LPCSTR lusb0_DevGuidNames[] =
 {
-	DEFINE_TO_STR(LUSB0_REG_DEFAULT_DEVICE_GUID),
+	DEFINE_TO_STR(_DefLibusb0DeviceGuid),
 	NULL
 };
 
 static LPCSTR lusbK_DevGuidNames[] =
 {
-	DEFINE_TO_STR(LUSBK_REG_DEFAULT_DEVICE_GUID),
+	DEFINE_TO_STR(_DefLibusbKDeviceGuid),
 	NULL
 };
 
@@ -81,15 +89,15 @@ static const SERVICE_DRVID_MAP DevGuidDrvIdMap[] =
 
 BOOL InitElement(__in PKUSB_DEV_LIST element, __in DWORD cbSize);
 
-PKUSB_DEV_LIST AddElementCopy(__deref_inout PKUSB_DEV_LIST* head, 
-							  __in PKUSB_DEV_LIST elementToClone);
+PKUSB_DEV_LIST AddElementCopy(__deref_inout PKUSB_DEV_LIST* head,
+                              __in PKUSB_DEV_LIST elementToClone);
 
 PCHAR CopyLast(__in CHAR sep, __out PCHAR dst, __in PCHAR src);
 
 VOID DumpIntfElements(__deref_inout PKUSB_DEV_LIST* head);
 
-VOID ApplySearchFilter(__in PKUSB_DEV_LIST_SEARCH SearchParameters, 
-					   __deref_inout PKUSB_DEV_LIST* DeviceList);
+VOID ApplySearchFilter(__in PKUSB_DEV_LIST_SEARCH SearchParameters,
+                       __deref_inout PKUSB_DEV_LIST* DeviceList);
 
 BOOL IsUsbRegKey(__in LPCSTR keyName);
 
@@ -273,8 +281,8 @@ BOOL InitElement(__in PKUSB_DEV_LIST element, __in DWORD cbSize)
 	return TRUE;
 }
 
-PKUSB_DEV_LIST AddElementCopy(__deref_inout PKUSB_DEV_LIST* head, 
-							  __in PKUSB_DEV_LIST elementToClone)
+PKUSB_DEV_LIST AddElementCopy(__deref_inout PKUSB_DEV_LIST* head,
+                              __in PKUSB_DEV_LIST elementToClone)
 {
 	PKUSB_DEV_LIST tmp = NULL;
 	PKUSB_DEV_LIST newEntry = NULL;
@@ -296,8 +304,8 @@ PKUSB_DEV_LIST AddElementCopy(__deref_inout PKUSB_DEV_LIST* head,
 
 }
 
-VOID ApplySearchFilter(__in PKUSB_DEV_LIST_SEARCH SearchParameters, 
-					   __deref_inout PKUSB_DEV_LIST* DeviceList)
+VOID ApplySearchFilter(__in PKUSB_DEV_LIST_SEARCH SearchParameters,
+                       __deref_inout PKUSB_DEV_LIST* DeviceList)
 {
 	PKUSB_DEV_LIST check = NULL;
 	PKUSB_DEV_LIST tmp = NULL;
@@ -306,7 +314,7 @@ VOID ApplySearchFilter(__in PKUSB_DEV_LIST_SEARCH SearchParameters,
 	{
 		if (!SearchParameters->EnableRawDeviceInterfaceGuid)
 		{
-			if (_stricmp(check->DeviceInterfaceGUID, DEFINE_TO_STR(USB_RAW_DEVICE_INTERFACE_GUID))==0)
+			if (_stricmp(check->DeviceInterfaceGUID, RawDeviceGuidA) == 0)
 			{
 				DL_DELETE(root, check);
 				LocalFree(check);
@@ -330,7 +338,7 @@ KUSB_EXP LONG KUSB_API LUsbK_GetDeviceList(
 	PKUSB_DEV_LIST_SEARCH searchParameters = SearchParameters;
 	KUSB_DEV_LIST_SEARCH defSearchParameters;
 
-	memset(&defSearchParameters,0,sizeof(defSearchParameters));
+	memset(&defSearchParameters, 0, sizeof(defSearchParameters));
 	if (!searchParameters)
 		searchParameters = &defSearchParameters;
 
@@ -398,13 +406,13 @@ KUSB_EXP LONG KUSB_API LUsbK_GetDeviceList(
 					DWORD devRegEnumKeyIndex = (DWORD) - 1;
 
 					// query LUsb0
-					devIntfElement.LUsb0SymbolicLinkIndex=(ULONG)-1;
+					devIntfElement.LUsb0SymbolicLinkIndex = (ULONG) - 1;
 					// e.g. HKLM\SYSTEM\CurrentControlSet\Control\DeviceClasses\{20343a29-6da1-4db8-8a3c-16e774057bf5}\##?#USB#VID_1234&PID_0001#BMD001#{20343a29-6da1-4db8-8a3c-16e774057bf5}\#\Device Parameters\LUsb0
 					status = RegGetValueDWord(hDeviceInterfaceGuid, deviceInstanceKeyPath, "\\#\\Device Parameters", "LUsb0", &devIntfElement.LUsb0SymbolicLinkIndex);
 
 					// query Linked
 					// e.g. HKLM\SYSTEM\CurrentControlSet\Control\DeviceClasses\{20343a29-6da1-4db8-8a3c-16e774057bf5}\##?#USB#VID_1234&PID_0001#BMD001#{20343a29-6da1-4db8-8a3c-16e774057bf5}\#\Control\Linked
-					devIntfElement.Linked=0;
+					devIntfElement.Linked = 0;
 					RegGetValueDWord(hDeviceInterfaceGuid, deviceInstanceKeyPath, "\\#\\Control", "Linked", &devIntfElement.Linked);
 
 					memset(devRegEnumKey, 0, sizeof(devRegEnumKey));
@@ -479,14 +487,16 @@ KUSB_EXP LONG KUSB_API LUsbK_GetDeviceList(
 						map++;
 					}
 					RegCloseKey(hDevRegEnumKey);
+					hDevRegEnumKey=NULL;
 					if (devIntfElement.DrvId != KUSB_DRVID_INVALID)
 					{
-						if (devIntfElement.DrvId == KUSB_DRVID_LIBUSB0_FILTER)
+						if (devIntfElement.DrvId == KUSB_DRVID_LIBUSB0_FILTER ||
+							devIntfElement.DrvId == KUSB_DRVID_LIBUSB0 )
 						{
-							if (devIntfElement.LUsb0SymbolicLinkIndex<=255)
+							if (devIntfElement.LUsb0SymbolicLinkIndex <= 255)
 							{
 								sprintf_s(devIntfElement.DevicePath, sizeof(devIntfElement.DevicePath) - 1,
-										  "\\\\.\\libusb0-%04d", devIntfElement.LUsb0SymbolicLinkIndex);
+								          "\\\\.\\libusb0-%04d", devIntfElement.LUsb0SymbolicLinkIndex);
 								AddElementCopy(&devIntfList, &devIntfElement);
 								deviceCount++;
 							}
@@ -517,7 +527,7 @@ KUSB_EXP LONG KUSB_API LUsbK_GetDeviceList(
 
 	if (searchParameters && devIntfList)
 	{
-		ApplySearchFilter(searchParameters,&devIntfList);
+		ApplySearchFilter(searchParameters, &devIntfList);
 	}
 	*DeviceList = devIntfList;
 	return deviceCount;

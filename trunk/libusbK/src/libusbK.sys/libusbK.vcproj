@@ -210,6 +210,10 @@
 				Name="lusbk_public"
 				>
 				<File
+					RelativePath="..\lusb_defdi_guids.h"
+					>
+				</File>
+				<File
 					RelativePath="..\lusbk_common.h"
 					>
 				</File>
