@@ -340,7 +340,7 @@ int __cdecl main(int argc, char** argv)
 		ec = WinError(0);
 		goto Done;
 	}
-	printf("Getting desciptor report..\n");
+	printf("Getting descriptors..\n");
 	if (!GetDescriptorReport(deviceElement, TRUE))
 	{
 		ec = WinError(0);
@@ -815,7 +815,7 @@ BOOL DumpDescriptorHidReport(__in PHID_DESCRIPTOR desc,
 				if (idContext.Found.MatchStart)
 				{
 					GetHidUsageText((USHORT)hidItemValue, usageText, &idContext);
-					WRITE_CAT_SEP_LN(usageName, KF_X3" %s", hidItemValue, AddGroupEndings(AddGroupEndings(usageText)));
+					WRITE_CAT_SEP_LN(usageName, KF_X3" %s", hidItemValue, AddGroupEndings(usageText));
 					WasHidValueHandled = TRUE;
 				}
 				break;
@@ -1026,7 +1026,6 @@ LPCSTR LoadResourceUsbIds(void)
 	DWORD src_count;
 	HGLOBAL res_data;
 	HRSRC hSrc;
-	LPCSTR usbIds = NULL;
 
 	hSrc = FindResourceA(NULL, MAKEINTRESOURCEA(ID_USBIDS_TEXT), MAKEINTRESOURCEA(ID_DOS_TEXT));
 	if (!hSrc)	return NULL;
@@ -1039,9 +1038,9 @@ LPCSTR LoadResourceUsbIds(void)
 	src = (char*) LockResource(res_data);
 	if (!src) return NULL;
 
-	usbIds = (CONST PCHAR)LocalAlloc(LPTR, src_count + 1);
-	memcpy((PVOID)usbIds, src, src_count);
-	return usbIds;
+	((char*)src)[src_count - 1] = '\0';
+
+	return src;
 }
 
 //////////////////////////////////////////////////////////////////////////////
