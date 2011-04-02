@@ -75,7 +75,19 @@ GOTO :EOF
 	CALL .\make_tasks\deploy_dep.cmd "!K_LIBUSBK_DEP_DIR!" "!G_BUILD_OUTPUT_BASE_ABS_DIR!" "!K_LIBUSBK_NAME!" ".\make_tasks\!K_LIBUSBK_NAME!.dep.lst"
 	
 	REM - Get rid of those i386 dirs.
-	CALL :RenameOutputSubDirs "\sys\i386" "\sys\x86" "\lib\i386" "\lib\x86" "\dll\i386" "\dll\x86"
+	CALL :RenameOutputSubDirs "\sys\i386" "\sys\x86" "\lib\i386" "\lib\x86" "\dll\i386" "\dll\x86" "\exe\i386" "\exe\x86"
+	
+	REM - The lib dir contains the static libs; move these into a static subdir.
+	CALL :MoveOutputFiles "\lib\x86\*.lib" "\lib\static\x86" "\lib\amd64\*.lib" "\lib\static\amd64" "\lib\ia64\*.lib" "\lib\static\ia64"
+	
+	REM - Move the dynamic .lib files to the lib dir.
+	CALL :MoveOutputFiles "\dll\x86\*.lib" "\lib\x86" "\dll\amd64\*.lib" "\lib\amd64" "\dll\ia64\*.lib" "\lib\ia64"
+	
+	REM - generate def files to the gcc lib dir.
+	CALL :MakeOutputDefFiles "\dll\x86\*.dll" "\lib\gcc"
+
+	REM - generate gcc libs from .def files.
+	CALL :MakeGccLibs "\lib\gcc\*.def" "\lib\gcc"
 	
 	REM - Move the customized libusbK inf-wizard files into the libwdi directory.
 	CALL :SwapFile "!K_LIBWDI_DIR!\msvc\config.h" libwdi ".\src\libwdi\config.h"
@@ -132,5 +144,53 @@ GOTO :EOF
 
 :RestoreFile
 	MOVE /Y "%~1.%~2" "%~1"
+GOTO :EOF
+
+:MoveOutputFiles
+	SET __MoveOutputFiles_SrcPattern=!G_BUILD_OUTPUT_BASE_ABS_DIR!\!DDKBUILDENV!%~1
+	SET __MoveOutputFiles_Dst=!G_BUILD_OUTPUT_BASE_ABS_DIR!\!DDKBUILDENV!%~2
+	FOR /F "usebackq eol=; tokens=* delims=" %%A IN (`DIR /A-D-H-R-S /S /B "!__MoveOutputFiles_SrcPattern!"`) DO (
+		SET __SrcDir=%%~dpA
+		SET __DstName=%%~nxA
+		SET __DstFile=!__MoveOutputFiles_Dst!\!__DstName!
+		IF NOT EXIST "!__MoveOutputFiles_Dst!" MKDIR "!__MoveOutputFiles_Dst!"
+		ECHO Moving %%~A to !__DstFile!
+		MOVE /Y "%%~A" "!__DstFile!" > NUL
+	)
+	SHIFT /1
+	SHIFT /1
+	IF "%~1" NEQ ""	GOTO MoveOutputFiles
+GOTO :EOF
+
+:MakeOutputDefFiles
+	SET __MakeOutputDefFiles_SrcPattern=!G_BUILD_OUTPUT_BASE_ABS_DIR!\!DDKBUILDENV!%~1
+	SET __MakeOutputDefFiles_Dst=!G_BUILD_OUTPUT_BASE_ABS_DIR!\!DDKBUILDENV!%~2
+	FOR /F "usebackq eol=; tokens=* delims=" %%A IN (`DIR /A-D-H-R-S /S /B "!__MakeOutputDefFiles_SrcPattern!"`) DO (
+		SET __SrcDir=%%~dpA
+		SET __DstName=%%~nA.def
+		SET __DstFile=!__MakeOutputDefFiles_Dst!\!__DstName!
+		IF NOT EXIST "!__MakeOutputDefFiles_Dst!" MKDIR "!__MakeOutputDefFiles_Dst!"
+		ECHO Generating .def file for %%~A..
+		CALL pexports -o "%%~A">"!__DstFile!"
+	)
+	SHIFT /1
+	SHIFT /1
+	IF "%~1" NEQ ""	GOTO MakeOutputDefFiles
+GOTO :EOF
+
+:MakeGccLibs
+	SET __MakeGccLibs_SrcPattern=!G_BUILD_OUTPUT_BASE_ABS_DIR!\!DDKBUILDENV!%~1
+	SET __MakeGccLibs_Dst=!G_BUILD_OUTPUT_BASE_ABS_DIR!\!DDKBUILDENV!%~2
+	FOR /F "usebackq eol=; tokens=* delims=" %%A IN (`DIR /A-D-H-R-S /S /B "!__MakeGccLibs_SrcPattern!"`) DO (
+		SET __SrcDir=%%~dpA
+		SET __DstName=%%~nA.a
+		SET __DstFile=!__MakeGccLibs_Dst!\!__DstName!
+		IF NOT EXIST "!__MakeGccLibs_Dst!" MKDIR "!__MakeGccLibs_Dst!"
+		ECHO Generating gcc libs for %%~A..
+		CALL "!G_MINGW_W32_DIR!\bin\dlltool.exe" --output-lib "!__DstFile!" --input-def "%%~A"
+	)
+	SHIFT /1
+	SHIFT /1
+	IF "%~1" NEQ ""	GOTO MakeGccLibs
 GOTO :EOF
 
