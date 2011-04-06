@@ -1,0 +1,15 @@
+#labels Featured,Phase-Deploy
+# How to use libusbk?
+
+= Introduction =
+
+This is a simple howto of using libusbk.
+
+
+= Details =
+
+  * Install of driver libusbk0.sys
+  * Using the libusbk API
+  * Compatibility with libusb-win32 API and libusb-0.1 API
+  * Compatibility with libusb-1.0 API
+  * Compatibility with WinUSB API
