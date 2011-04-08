@@ -86,8 +86,8 @@
 #endif
 
 // HARDWARE ID CONFIGURATION ////////////////////////////////////////
-#define VENDOR_ID			0x1234
-#define PRODUCT_ID			0x0001
+#define VENDOR_ID			0x04D8
+#define PRODUCT_ID			0xFA2E
 #define BCD_RELEASE_NUMBER	0x0001
 
 // DESCRIPTOR STRING CONFIGURATION //////////////////////////////////
@@ -96,13 +96,13 @@
 
 #if !defined(DUAL_INTERFACE)
 	#define SERIAL_NUMBER_LENGTH 6
-	#define SERIAL_NUMBER 'B','M','D','0','0','1'
+	#define SERIAL_NUMBER 'L','U','S','B','W','1'
 
 	#define PRODUCT_STRING_LENGTH 16
 	#define PRODUCT_STRING 'B','e','n','c','h','m','a','r','k',' ','D','e','v','i','c','e'
 #else
 	#define SERIAL_NUMBER_LENGTH 6
-	#define SERIAL_NUMBER 'B','M','D','0','0','2'
+	#define SERIAL_NUMBER 'L','U','S','B','W','2'
 
 	#define PRODUCT_STRING_LENGTH 21
 	#define PRODUCT_STRING 'D','u','a','l',' ','B','e','n','c','h','m','a','r','k',' ','D','e','v','i','c','e'
