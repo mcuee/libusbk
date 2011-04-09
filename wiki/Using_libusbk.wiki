@@ -1,15 +1,27 @@
 #labels Featured,Phase-Deploy
 # How to use libusbk?
 
-= Introduction =
+== Introduction ==
 
 This is a simple howto of using libusbk.
 
 
-= Details =
+== Details ==
 
   * Install of driver libusbk0.sys
+
+Please download the libusbK-xxxx-setup.exe to install and/or update the existing installation.
+
+To install the driver for a particular USB device, please use the above exe file or the libusbK-inf-wizard GUI program in the libusbK-xxxx-bin.7z archive.
+
   * Using the libusbk API
+
+Please take a look at the example projects in the libusbK-xxx-src.7z archive. Currently there are two examples, klist and kbench.
+
   * Compatibility with libusb-win32 API and libusb-0.1 API
+
+The existing libusb-win32 based program should work without any changes after switching to libusbk.sys driver. Take note libusbk.sys does not work in the filter mode.
+
   * Compatibility with libusb-1.0 API
-  * Compatibility with WinUSB API
+
+With the bundles libusb-1.0.dll file, your libusb-1.0 based program under Windows should work without any changes after switching from WinUSB.sys driver to libusbk.sys.
