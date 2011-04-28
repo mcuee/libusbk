@@ -1,32 +1,42 @@
 LIBRARY
 EXPORTS
-	LUsbK_GetProcAddress
-	LUsbK_LoadDriverApi
-	LUsbK_GetDeviceList
-	LUsbK_FreeDeviceList
+	DrvK_GetProcAddress
+	DrvK_LoadDriverApi
+	LstK_GetDeviceList
+	LstK_FreeDeviceList
 	
-	LUsbK_Initialize
-	LUsbK_Free
-	LUsbK_GetAssociatedInterface
-	LUsbK_GetDescriptor
-	LUsbK_QueryInterfaceSettings
-	LUsbK_QueryDeviceInformation
-	LUsbK_SetCurrentAlternateSetting
-	LUsbK_GetCurrentAlternateSetting
-	LUsbK_QueryPipe
-	LUsbK_SetPipePolicy
-	LUsbK_GetPipePolicy
-	LUsbK_ReadPipe
-	LUsbK_WritePipe
-	LUsbK_ControlTransfer
-	LUsbK_ResetPipe
-	LUsbK_AbortPipe
-	LUsbK_FlushPipe
-	LUsbK_SetPowerPolicy
-	LUsbK_GetPowerPolicy
-	LUsbK_GetOverlappedResult
-	LUsbK_ResetDevice
-	
+	UsbK_Initialize
+	UsbK_Free
+	UsbK_GetAssociatedInterface
+	UsbK_GetDescriptor
+	UsbK_QueryInterfaceSettings
+	UsbK_QueryDeviceInformation
+	UsbK_SetCurrentAlternateSetting
+	UsbK_GetCurrentAlternateSetting
+	UsbK_QueryPipe
+	UsbK_SetPipePolicy
+	UsbK_GetPipePolicy
+	UsbK_ReadPipe
+	UsbK_WritePipe
+	UsbK_ControlTransfer
+	UsbK_ResetPipe
+	UsbK_AbortPipe
+	UsbK_FlushPipe
+	UsbK_SetPowerPolicy
+	UsbK_GetPowerPolicy
+	UsbK_GetOverlappedResult
+	UsbK_ResetDevice
+	UsbK_Open
+	UsbK_Close
+	UsbK_SetConfiguration
+	UsbK_GetConfiguration
+	UsbK_ClaimInterface
+	UsbK_ReleaseInterface
+	UsbK_SetAltInterface
+	UsbK_GetAltInterface
+	UsbK_IsoReadPipe
+	UsbK_IsoWritePipe
+		
 	WinUsb_Initialize
 	WinUsb_Free
 	WinUsb_GetAssociatedInterface
@@ -47,3 +57,14 @@ EXPORTS
 	WinUsb_SetPowerPolicy
 	WinUsb_GetPowerPolicy
 	WinUsb_GetOverlappedResult
+	WinUsb_ResetDevice
+	WinUsb_Open
+	WinUsb_Close
+	WinUsb_SetConfiguration
+	WinUsb_GetConfiguration
+	WinUsb_ClaimInterface
+	WinUsb_ReleaseInterface
+	WinUsb_SetAltInterface
+	WinUsb_GetAltInterface
+	WinUsb_IsoReadPipe
+	WinUsb_IsoWritePipe

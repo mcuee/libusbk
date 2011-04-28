@@ -47,7 +47,7 @@ typedef struct _UNI_DESCRIPTOR
 #pragma warning(default:4201)
 
 static KUSB_DRIVER_API K;
-static WINUSB_INTERFACE_HANDLE InterfaceHandle;
+static LIBUSBK_INTERFACE_HANDLE InterfaceHandle;
 
 LONG WinError(__in_opt DWORD errorCode);
 
@@ -95,6 +95,9 @@ BOOL DumpDescriptorHidPhysical(__in PHID_DESCRIPTOR desc,
 BOOL DumpDescriptorHidReport(__in PHID_DESCRIPTOR desc,
                              __in PUSB_INTERFACE_DESCRIPTOR currentInterface,
                              __in UCHAR descriptorPos);
+
+static LPCSTR DrvIdNames[8] = {"libusbK", "libusb0", "WinUSB", "libusb0 filter", "Unknown", "Unknown", "Unknown"};
+#define GetDrvIdString(DrvId)	(DrvIdNames[((((LONG)(DrvId))<0) || ((LONG)(DrvId)) >= KUSB_DRVID_COUNT)?KUSB_DRVID_COUNT:(DrvId)])
 
 #define MAX_TAB 9
 static LPCSTR gTabIndents[MAX_TAB] =
@@ -255,9 +258,6 @@ void ShowCopyright(void);
 
 int __cdecl main(int argc, char** argv)
 {
-	static LPCSTR DrvIdNames[8] = {"libusbK", "libusb0", "libusb0 filter", "WinUSB", "Unknown", "Unknown", "Unknown", "Unknown"};
-#define GetDrvIdString(DrvId)	(DrvIdNames[((((LONG)(DrvId))<0) || ((LONG)(DrvId)) >= KUSB_DRVID_COUNT)?KUSB_DRVID_COUNT:(DrvId)])
-
 	LONG ec;
 	PKUSB_DEV_LIST deviceList = NULL;
 	PKUSB_DEV_LIST deviceElement;
@@ -269,7 +269,7 @@ int __cdecl main(int argc, char** argv)
 
 	UsbIdsText = LoadResourceUsbIds();
 
-	ec = LUsbK_GetDeviceList(&deviceList, NULL);
+	ec = LstK_GetDeviceList(&deviceList, NULL);
 	if (ec < 0)
 	{
 		printf("failed getting device list.\n");
@@ -335,7 +335,7 @@ int __cdecl main(int argc, char** argv)
 	}
 
 	printf("Loading driver api..\n");
-	if (!LUsbK_LoadDriverApi(&K, deviceElement->DrvId))
+	if (!DrvK_LoadDriverApi(&K, deviceElement->DrvId))
 	{
 		ec = WinError(0);
 		goto Done;
@@ -348,7 +348,7 @@ int __cdecl main(int argc, char** argv)
 	}
 
 Done:
-	LUsbK_FreeDeviceList(&deviceList);
+	LstK_FreeDeviceList(&deviceList);
 	return ec;
 }
 
@@ -1023,6 +1023,7 @@ LPCSTR LoadResourceUsbIds(void)
 #define ID_DOS_TEXT   300
 
 	LPCSTR src;
+	LPSTR dst;
 	DWORD src_count;
 	HGLOBAL res_data;
 	HRSRC hSrc;
@@ -1037,10 +1038,11 @@ LPCSTR LoadResourceUsbIds(void)
 
 	src = (char*) LockResource(res_data);
 	if (!src) return NULL;
+	dst = LocalAlloc(LPTR, src_count + 1);
 
-	((char*)src)[src_count - 1] = '\0';
+	memcpy(dst, src, src_count);
 
-	return src;
+	return dst;
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -169,31 +169,31 @@ NTSTATUS Interface_InitContext(__in PDEVICE_CONTEXT deviceContext,
 }
 
 NTSTATUS Interface_SetAltSetting(__in  PDEVICE_CONTEXT deviceContext,
-                                 __in  PREQUEST_CONTEXT requestContext)
+                                 __in  PREQUEST_CONTEXT requestContext,
+                                 __out PINTERFACE_CONTEXT* interfaceContext)
 {
 	NTSTATUS				status;
-	PINTERFACE_CONTEXT		interfaceContext;
 	WDF_OBJECT_ATTRIBUTES	pipesAttributes;
 	WDF_USB_INTERFACE_SELECT_SETTING_PARAMS  selectSettingParams;
 	USB_INTERFACE_DESCRIPTOR  interfaceDescriptor;
 	UCHAR altSettingCount;
-	UCHAR altSettingIndex = BYTE_MAX;
+	UCHAR altsetting_index = BYTE_MAX;
 
-	status = GetInterfaceContextFromRequest(deviceContext, requestContext, &interfaceContext);
+	status = GetInterfaceContextFromRequest(deviceContext, requestContext, interfaceContext);
 	if (!NT_SUCCESS(status))
 	{
 		USBERR("GetInterfaceContextFromRequest failed. status=%Xh\n", status);
 		goto Done;
 	}
 
-	status = GetInterfaceAltSettingIndexFromRequest(requestContext, interfaceContext, &altSettingIndex, &altSettingCount, &interfaceDescriptor);
+	status = GetInterfaceAltSettingIndexFromRequest(requestContext, (*interfaceContext), &altsetting_index, &altSettingCount, &interfaceDescriptor);
 	if (!NT_SUCCESS(status))
 	{
 		USBERR("GetInterfaceAltSettingIndexFromRequest failed. status=%Xh\n", status);
 		goto Done;
 	}
 
-	if (interfaceContext->SettingIndex == altSettingIndex)
+	if ((*interfaceContext)->SettingIndex == altsetting_index)
 	{
 		USBMSG("alternate interface index %u already selected\n",
 		       requestContext->IoControlRequest.intf.altsetting_number);
@@ -203,22 +203,22 @@ NTSTATUS Interface_SetAltSetting(__in  PDEVICE_CONTEXT deviceContext,
 	}
 
 	WDF_OBJECT_ATTRIBUTES_INIT(&pipesAttributes);
-	WDF_USB_INTERFACE_SELECT_SETTING_PARAMS_INIT_SETTING(&selectSettingParams, altSettingIndex);
+	WDF_USB_INTERFACE_SELECT_SETTING_PARAMS_INIT_SETTING(&selectSettingParams, altsetting_index);
 
-	status = WdfUsbInterfaceSelectSetting(interfaceContext->Interface, &pipesAttributes, &selectSettingParams);
+	status = WdfUsbInterfaceSelectSetting((*interfaceContext)->Interface, &pipesAttributes, &selectSettingParams);
 	if (!NT_SUCCESS(status))
 	{
-		USBERR("unable to set alt setting index %u on interface number %u\n", altSettingIndex,
-		       interfaceContext->InterfaceDescriptor.bInterfaceNumber);
+		USBERR("unable to set alt setting index %u on interface number %u\n", altsetting_index,
+		       (*interfaceContext)->InterfaceDescriptor.bInterfaceNumber);
 	}
 	else
 	{
-		USBMSG("selected alt setting index %u on interface number %u\n", altSettingIndex,
-		       interfaceContext->InterfaceDescriptor.bInterfaceNumber);
+		USBMSG("selected alt setting index %u on interface number %u\n", altsetting_index,
+		       (*interfaceContext)->InterfaceDescriptor.bInterfaceNumber);
 
-		interfaceContext->SettingIndex = WdfUsbInterfaceGetConfiguredSettingIndex(interfaceContext->Interface);
+		(*interfaceContext)->SettingIndex = WdfUsbInterfaceGetConfiguredSettingIndex((*interfaceContext)->Interface);
 
-		status = Interface_InitContext(deviceContext, interfaceContext);
+		status = Interface_InitContext(deviceContext, (*interfaceContext));
 	}
 
 Done:
@@ -228,22 +228,16 @@ Done:
 NTSTATUS Interface_GetAltSetting(
     __in PDEVICE_CONTEXT deviceContext,
     __in PREQUEST_CONTEXT requestContext,
-    __out PUCHAR altNumberOrIndex)
+    __out PINTERFACE_CONTEXT* interfaceContext)
 {
 	NTSTATUS				status = STATUS_SUCCESS;
-	PINTERFACE_CONTEXT		interfaceContext = NULL;
 
-	status = GetInterfaceContextFromRequest(deviceContext, requestContext, &interfaceContext);
+	status = GetInterfaceContextFromRequest(deviceContext, requestContext, interfaceContext);
 	if (!NT_SUCCESS(status))
 	{
 		USBERR("GetInterfaceContextFromRequest failed. status=%Xh%d\n", status);
 		goto Error;
 	}
-
-	if (requestContext->IoControlRequest.intf.useAltSettingIndex)
-		*altNumberOrIndex = interfaceContext->SettingIndex;
-	else
-		*altNumberOrIndex = interfaceContext->InterfaceDescriptor.bAlternateSetting;
 
 Error:
 	return status;
@@ -254,10 +248,10 @@ Error:
 // STATUS_INVALID_DEVICE_STATE = ERROR_BAD_COMMAND
 NTSTATUS Interface_Claim(__in  PDEVICE_CONTEXT deviceContext,
                          __in  PREQUEST_CONTEXT requestContext,
-                         __in  PFILE_OBJECT fileObject)
+                         __in  PFILE_OBJECT fileObject,
+                         __out PINTERFACE_CONTEXT* interfaceContext)
 {
-	PINTERFACE_CONTEXT interfaceContext;
-	NTSTATUS status = GetInterfaceContextFromRequest(deviceContext, requestContext, &interfaceContext);
+	NTSTATUS status = GetInterfaceContextFromRequest(deviceContext, requestContext, interfaceContext);
 	if (!NT_SUCCESS(status))
 	{
 		USBERR("GetInterfaceContextFromRequest failed. status=%Xh\n", status);
@@ -265,28 +259,28 @@ NTSTATUS Interface_Claim(__in  PDEVICE_CONTEXT deviceContext,
 	}
 
 	// interface already claimed by this fileObject.
-	if (interfaceContext->ClaimedByFileObject == fileObject)
+	if ((*interfaceContext)->ClaimedByFileObject == fileObject)
 		return STATUS_SUCCESS;
 
 	// interface already claimed but not by this fileObject.
-	if (interfaceContext->ClaimedByFileObject)
+	if ((*interfaceContext)->ClaimedByFileObject)
 	{
-		USBERR("interface number %u is already claimed\n", interfaceContext->InterfaceDescriptor.bInterfaceNumber);
+		USBERR("interface number %u is already claimed\n", (*interfaceContext)->InterfaceDescriptor.bInterfaceNumber);
 		return STATUS_OBJECT_NAME_COLLISION;
 	}
 
 	// Claim this interface with the specified fileObject.
-	interfaceContext->ClaimedByFileObject = fileObject;
+	(*interfaceContext)->ClaimedByFileObject = fileObject;
 	return STATUS_SUCCESS;
 }
 
 NTSTATUS Interface_Release(
     __in PDEVICE_CONTEXT deviceContext,
     __in PREQUEST_CONTEXT requestContext,
-    __in PFILE_OBJECT fileObject)
+    __in PFILE_OBJECT fileObject,
+    __out PINTERFACE_CONTEXT* interfaceContext)
 {
-	PINTERFACE_CONTEXT interfaceContext;
-	NTSTATUS status = GetInterfaceContextFromRequest(deviceContext, requestContext, &interfaceContext);
+	NTSTATUS status = GetInterfaceContextFromRequest(deviceContext, requestContext, interfaceContext);
 	if (!NT_SUCCESS(status))
 	{
 		USBERR("GetInterfaceContextFromRequest failed. status=%Xh\n", status);
@@ -294,21 +288,21 @@ NTSTATUS Interface_Release(
 	}
 
 	// nobody is claiming this interface.
-	if (!interfaceContext->ClaimedByFileObject)
+	if (!(*interfaceContext)->ClaimedByFileObject)
 	{
 		return STATUS_SUCCESS;
 	}
 
 	// cannot release because it doesn't belong to fileObject.
-	if (interfaceContext->ClaimedByFileObject != fileObject)
+	if ((*interfaceContext)->ClaimedByFileObject != fileObject)
 	{
 		USBERR("interface number %u is not bound to this file object\n",
-		       interfaceContext->InterfaceDescriptor.bInterfaceNumber);
+		       (*interfaceContext)->InterfaceDescriptor.bInterfaceNumber);
 		return STATUS_OBJECT_NAME_COLLISION;
 	}
 
 	// fileObject owns it; release.
-	interfaceContext->ClaimedByFileObject = NULL;
+	(*interfaceContext)->ClaimedByFileObject = NULL;
 
 	return STATUS_SUCCESS;
 }

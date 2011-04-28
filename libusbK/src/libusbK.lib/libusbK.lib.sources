@@ -22,10 +22,15 @@ TARGETLIBS=$(SDK_LIB_PATH)\kernel32.lib \
 INCLUDES=.\;..\;$(DDK_INC_PATH);
 
 SOURCES= \
-		..\lusbk_usb.c \
-		..\lusbk_ioctl.c \
-		..\lusbk_device_list.c \
-		..\lusbk_wrapper_winusb.c \
-		..\lusbk_bknd_winusb.c \
+		..\lusbk_bknd.c \
+		..\lusbk_bknd_hid.c \
 		..\lusbk_bknd_libusb0.c \
-		..\lusbk_debug_view_output.c
+		..\lusbk_bknd_libusbk.c \
+		..\lusbk_bknd_winusb.c \
+		..\lusbk_debug_view_output.c \
+		..\lusbk_device_list.c \
+		..\lusbk_ioctl.c \
+		..\lusbk_overlapped.c \
+		..\lusbk_stack_collection.c \
+		..\lusbk_usb.c \
+		..\lusbk_wrapper_winusb.c

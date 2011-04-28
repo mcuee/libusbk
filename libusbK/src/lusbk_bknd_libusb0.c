@@ -18,7 +18,7 @@ binary distributions.
 
 #include "lusbk_bknd.h"
 
-BOOL GetProcAddress_libusb0(__out KPROC* ProcAddress, __in ULONG FunctionID)
+BOOL GetProcAddress_LUsb0(__out KPROC* ProcAddress, __in ULONG FunctionID)
 {
-	return GetProcAddress_libusbk(ProcAddress, FunctionID);
+	return GetProcAddress_UsbK(ProcAddress, FunctionID);
 }

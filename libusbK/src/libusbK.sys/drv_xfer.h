@@ -197,7 +197,7 @@ FORCEINLINE NTSTATUS UrbFormatBulkRequestContext(
 		                                       urbFlags,
 		                                       NULL);
 	}
-	else // (stages) URB has allready been created; this is a continuation of a larger transfer.
+	else // (stages) URB has already been created; this is a continuation of a larger transfer.
 	{
 		if (requestContext->Length == 0)
 		{

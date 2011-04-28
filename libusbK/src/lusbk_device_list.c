@@ -25,7 +25,11 @@ binary distributions.
 #include <ctype.h>
 #include <winioctl.h>
 #include "lusbk_device_list.h"
+#include "lusbk_stack_collection.h"
 #include "lusb_defdi_guids.h"
+
+// warning C4127: conditional expression is constant.
+#pragma warning(disable: 4127)
 
 typedef struct _SERVICE_DRVID_MAP
 {
@@ -41,9 +45,7 @@ typedef struct _DEV_INTF_VALUENAME_MAP
 
 #define KEY_DEVICECLASSES "SYSTEM\\CurrentControlSet\\Control\\DeviceClasses"
 
-static BOOL False = FALSE;
-
-static LPCSTR DrvIdNames[8] = {"libusbK", "libusb0", "libusb0 filter", "WinUSB", "Unknown", "Unknown", "Unknown", "Unknown"};
+static LPCSTR DrvIdNames[8] = {"libusbK", "libusb0", "WinUSB", "libusb0 filter", "Unknown", "Unknown", "Unknown"};
 #define GetDrvIdString(DrvId)	(DrvIdNames[((((LONG)(DrvId))<0) || ((LONG)(DrvId)) >= KUSB_DRVID_COUNT)?KUSB_DRVID_COUNT:(DrvId)])
 
 static LPCSTR lusb0_Services[] = {"LIBUSB0", NULL};
@@ -99,6 +101,9 @@ VOID DumpIntfElements(__deref_inout PKUSB_DEV_LIST* head);
 VOID ApplySearchFilter(__in PKUSB_DEV_LIST_SEARCH SearchParameters,
                        __deref_inout PKUSB_DEV_LIST* DeviceList);
 
+VOID ApplyCompositeDeviceMode(__in PKUSB_DEV_LIST_SEARCH SearchParameters,
+                              __deref_inout PKUSB_DEV_LIST* DeviceList);
+
 BOOL IsUsbRegKey(__in LPCSTR keyName);
 
 LONG RegGetValueDWord(__in HKEY hKeyParent,
@@ -112,41 +117,6 @@ LONG RegGetValueString(__in HKEY hKeyParent,
                        __in_opt LPCSTR keySubPath,
                        __in LPCSTR valueName,
                        __inout LPSTR devInstElementStringData);
-
-#define DL_APPEND(head,add)                                                                    \
-do {                                                                                           \
-  if (head) {                                                                                  \
-      (add)->prev = (head)->prev;                                                              \
-      (head)->prev->next = (add);                                                              \
-      (head)->prev = (add);                                                                    \
-      (add)->next = NULL;                                                                      \
-  } else {                                                                                     \
-      (head)=(add);                                                                            \
-      (head)->prev = (head);                                                                   \
-      (head)->next = NULL;                                                                     \
-  }                                                                                            \
-} while (False);
-
-#define DL_DELETE(head,del)                                                                    \
-do {                                                                                           \
-  if ((del)->prev == (del)) {                                                                  \
-      (head)=NULL;                                                                             \
-  } else if ((del)==(head)) {                                                                  \
-      (del)->next->prev = (del)->prev;                                                         \
-      (head) = (del)->next;                                                                    \
-  } else {                                                                                     \
-      (del)->prev->next = (del)->next;                                                         \
-      if ((del)->next) {                                                                       \
-          (del)->next->prev = (del)->prev;                                                     \
-      } else {                                                                                 \
-          (head)->prev = (del)->prev;                                                          \
-      }                                                                                        \
-  }                                                                                            \
-} while (False);
-
-/* this version is safe for deleting the elements during iteration */
-#define DL_FOREACH_SAFE(head,el,tmp)                                                           \
-  for((el)=(head);(el) && (tmp = (el)->next, 1); (el) = tmp)
 
 #define GetRegDevNodeString(DeviceInterfaceElement,ValuenNameString,Key,ValueDataString)	\
 	(_stricmp(ValuenNameString,DEFINE_TO_STR(Key))==0 ? CopyLast(';',DeviceInterfaceElement.Key,ValueDataString):NULL)
@@ -250,7 +220,7 @@ VOID DumpIntfElements(__deref_inout PKUSB_DEV_LIST* head)
 	PKUSB_DEV_LIST check = NULL;
 	PKUSB_DEV_LIST tmp = NULL;
 	PKUSB_DEV_LIST root = *head;
-	DL_FOREACH_SAFE(root, check, tmp)
+	List_ForEachSafe(root, check, tmp)
 	{
 		printf("DeviceInterfaceGUID = %s\n", check->DeviceInterfaceGUID);
 		printf("DeviceInstance      = %s\n", check->DeviceInstance);
@@ -277,6 +247,9 @@ BOOL InitElement(__in PKUSB_DEV_LIST element, __in DWORD cbSize)
 		return FALSE;
 	}
 	element->refCount = 1;
+	element->next = NULL;
+	element->prev = NULL;
+	element->CompositeList = NULL;
 
 	return TRUE;
 }
@@ -288,20 +261,123 @@ PKUSB_DEV_LIST AddElementCopy(__deref_inout PKUSB_DEV_LIST* head,
 	PKUSB_DEV_LIST newEntry = NULL;
 	PKUSB_DEV_LIST root = *head;
 
-	DL_FOREACH_SAFE(root, newEntry, tmp)
+	List_ForEachSafe(root, newEntry, tmp)
 	{
 		if (strstr(newEntry->SymbolicLink, elementToClone->SymbolicLink) == newEntry->SymbolicLink)
 		{
 			return newEntry;
 		}
 	}
-	newEntry = (PKUSB_DEV_LIST)LocalAlloc(LPTR, sizeof(*newEntry));
+	newEntry = Mem_Alloc(sizeof(*newEntry));
 	memcpy(newEntry, elementToClone, sizeof(*newEntry));
 	InitElement(newEntry, sizeof(*newEntry));
-	DL_APPEND(root, newEntry);
+	List_AddTail(root, newEntry);
 	*head = root;
 	return newEntry;
 
+}
+
+BOOL GetCompositeDevice(__in PKUSB_DEV_LIST deviceInterface,
+                        __inout PKUSB_DEV_LIST* compositeDevice)
+{
+	PCHAR miStart;
+	PKUSB_DEV_LIST dev;
+	*compositeDevice = dev = Mem_Alloc(sizeof(KUSB_DEV_LIST));
+	if (!dev)
+		return LusbwError(ERROR_NOT_ENOUGH_MEMORY);
+
+	strcpy_s(dev->DeviceInstance, sizeof(dev->DeviceInstance) - 1, deviceInterface->DeviceInstance);
+	_strupr_s(dev->DeviceInstance, sizeof(dev->DeviceInstance) - 1);
+	if ((miStart = strstr(dev->DeviceInstance, "&MI_")) != NULL)
+	{
+		*miStart = '\0';
+		strcpy_s(dev->DeviceDesc, sizeof(dev->DeviceDesc) - 1, "USB Composite Device");
+		strcpy_s(dev->Service, sizeof(dev->Service) - 1, "usbccgp");
+		dev->DrvId = deviceInterface->DrvId;
+
+		return TRUE;
+	}
+	Mem_Free(compositeDevice);
+
+	return FALSE;
+}
+
+BOOL NewCompositeElement(__in LPCSTR DeviceInstance,
+                         __inout PKUSB_DEV_LIST* compositeDevice)
+{
+	PKUSB_DEV_LIST dev;
+	*compositeDevice = dev = Mem_Alloc(sizeof(KUSB_DEV_LIST));
+	if (!dev)
+		return LusbwError(ERROR_NOT_ENOUGH_MEMORY);
+
+	strcpy_s(dev->DeviceInstance, sizeof(dev->DeviceInstance) - 1, DeviceInstance);
+	_strupr_s(dev->DeviceInstance, sizeof(dev->DeviceInstance) - 1);
+
+	strcpy_s(dev->DeviceDesc, sizeof(dev->DeviceDesc) - 1, "USB Composite Device");
+	strcpy_s(dev->Service, sizeof(dev->Service) - 1, "usbccgp");
+
+	return TRUE;
+}
+
+VOID ApplyCompositeDeviceMode(__in PKUSB_DEV_LIST_SEARCH SearchParameters,
+                              __deref_inout PKUSB_DEV_LIST* DeviceList)
+{
+	PKUSB_DEV_LIST compositeDeviceElement;
+	PKUSB_DEV_LIST devEL, devEL_t0, devCompositeEL, devCompositeEL_t0;
+	PKUSB_DEV_LIST root = *DeviceList;
+	PKUSB_DEV_LIST compositeRoot = NULL;
+	CHAR deviceInstance[MAX_PATH];
+
+	if (!SearchParameters->EnableCompositeDeviceMode)
+		return;
+
+	List_ForEachSafe(root, devEL, devEL_t0)
+	{
+		PCHAR mi;
+		strcpy_s(deviceInstance, sizeof(deviceInstance) - 1, devEL->DeviceInstance);
+		_strupr_s(deviceInstance, sizeof(deviceInstance) - 1);
+		mi = strstr(deviceInstance, "&MI_");
+		if (mi)
+		{
+			mi[0] = '\0';
+			// this is a composite device
+			if (NewCompositeElement(deviceInstance, &compositeDeviceElement))
+			{
+				compositeDeviceElement->DrvId = devEL->DrvId;
+				List_ForEachSafe(compositeRoot, devCompositeEL, devCompositeEL_t0)
+				{
+					if (devCompositeEL->DrvId == compositeDeviceElement->DrvId &&
+					        strncmp(devCompositeEL->DeviceInstance, compositeDeviceElement->DeviceInstance, strlen(devCompositeEL->DeviceInstance)) == 0)
+					{
+						// We already have a composite parent for this one.
+						break;
+					}
+				}
+
+				if (!devCompositeEL)
+				{
+					// this is a new composite parent.
+					List_AddTail(compositeRoot, compositeDeviceElement);
+					devCompositeEL = compositeDeviceElement;
+				}
+				else
+				{
+					Mem_Free(&compositeDeviceElement);
+				}
+
+				List_Remove(root, devEL);
+				List_AddTail(devCompositeEL->CompositeList, devEL);
+			}
+		}
+	}
+
+	List_ForEachSafe(compositeRoot, devCompositeEL, devCompositeEL_t0)
+	{
+		List_Remove(compositeRoot, devCompositeEL);
+		List_AddTail(root, devCompositeEL);
+	}
+
+	*DeviceList = root;
 }
 
 VOID ApplySearchFilter(__in PKUSB_DEV_LIST_SEARCH SearchParameters,
@@ -310,21 +386,21 @@ VOID ApplySearchFilter(__in PKUSB_DEV_LIST_SEARCH SearchParameters,
 	PKUSB_DEV_LIST check = NULL;
 	PKUSB_DEV_LIST tmp = NULL;
 	PKUSB_DEV_LIST root = *DeviceList;
-	DL_FOREACH_SAFE(root, check, tmp)
+	List_ForEachSafe(root, check, tmp)
 	{
 		if (!SearchParameters->EnableRawDeviceInterfaceGuid)
 		{
 			if (_stricmp(check->DeviceInterfaceGUID, RawDeviceGuidA) == 0)
 			{
-				DL_DELETE(root, check);
-				LocalFree(check);
+				List_Remove(root, check);
+				Mem_Free(&check);
 			}
 		}
 	}
 	*DeviceList = root;
 }
 
-KUSB_EXP LONG KUSB_API LUsbK_GetDeviceList(
+KUSB_EXP LONG KUSB_API LstK_GetDeviceList(
     __deref_inout PKUSB_DEV_LIST* DeviceList,
     __in PKUSB_DEV_LIST_SEARCH SearchParameters)
 {
@@ -525,29 +601,30 @@ KUSB_EXP LONG KUSB_API LUsbK_GetDeviceList(
 	if (hDeviceClasses)
 		RegCloseKey(hDeviceClasses);
 
-	if (searchParameters && devIntfList)
+	if (devIntfList && searchParameters)
 	{
 		ApplySearchFilter(searchParameters, &devIntfList);
+		ApplyCompositeDeviceMode(searchParameters, &devIntfList);
 	}
 	*DeviceList = devIntfList;
 	return deviceCount;
 
 	//DumpIntfElements(&devIntfList);
-	//LUsbK_FreeDeviceList(&devIntfList);
+	//LstK_FreeDeviceList(&devIntfList);
 	//return -ERROR_NOT_SUPPORTED;
 }
 
-KUSB_EXP VOID KUSB_API LUsbK_FreeDeviceList(__deref_inout PKUSB_DEV_LIST* DeviceList)
+KUSB_EXP VOID KUSB_API LstK_FreeDeviceList(__deref_inout PKUSB_DEV_LIST* DeviceList)
 {
 	PKUSB_DEV_LIST check = NULL;
 	PKUSB_DEV_LIST tmp = NULL;
 	PKUSB_DEV_LIST root = *DeviceList;
-	DL_FOREACH_SAFE(root, check, tmp)
+	List_ForEachSafe(root, check, tmp)
 	{
-		DL_DELETE(root, check);
-		if (InterlockedDecrement(&check->refCount) <= 0)
+		List_Remove(root, check);
+		if (InterlockedDecrement(&check->refCount) < 1)
 		{
-			LocalFree(check);
+			Mem_Free(&check);
 		}
 	}
 	*DeviceList = root;

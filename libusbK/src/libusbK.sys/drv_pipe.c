@@ -273,7 +273,7 @@ NTSTATUS Pipe_InitContext(__in PDEVICE_CONTEXT deviceContext,
 	}
 	else
 	{
-		// Queue is allready created.
+		// Queue is already created.
 		status = STATUS_SUCCESS;
 	}
 	if (!pipeContext->Queue && NT_SUCCESS(status))
@@ -353,7 +353,7 @@ NTSTATUS Pipe_Start(__in PDEVICE_CONTEXT deviceContext,
 		}
 	}
 	else
-		USBE_PARAM("pipeContext allready valid!");
+		USBE_PARAM("pipeContext already valid!");
 
 	return status;
 }

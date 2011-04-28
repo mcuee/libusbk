@@ -95,8 +95,17 @@ VOID XferCtrl (
 				descriptorIn = &deviceContext->UsbDeviceDescriptor;
 				break;
 			case USB_CONFIGURATION_DESCRIPTOR_TYPE:
-				descriptorSize = deviceContext->ConfigurationDescriptorSize;
-				descriptorIn = deviceContext->UsbConfigurationDescriptor;
+				if (setupPacket->Packet.wValue.Bytes.LowByte == 0)
+				{
+					descriptorSize = deviceContext->ConfigurationDescriptorSize;
+					descriptorIn = deviceContext->UsbConfigurationDescriptor;
+				}
+				else
+				{
+					// we only support the one for now. ;)
+					WdfRequestCompleteWithInformation(Request, STATUS_NO_MORE_ENTRIES, 0);
+					return;
+				}
 				break;
 			}
 

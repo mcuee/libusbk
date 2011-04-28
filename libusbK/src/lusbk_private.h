@@ -28,15 +28,51 @@
 // always valid as long as the dll is loaded.
 #define KUSB_MAX_INTERFACE_HANDLES 128
 
-#define GetSetPipePolicy(InterfaceHandleInternal,pipeID)	\
-	(&InterfaceHandleInternal->PipePolicies[((((pipeID) & 0xF)|(((pipeID)>>3) & 0x10)) & 0x1F)])
+// The maximum number of simultaneous threads allowed per interface handle
+#define MAX_THREADS_PER_INTERFACE 32
+
+#define GetSetPipePolicy(BackendContextPtr,pipeID)	\
+	(BackendContextPtr->PipePolicies[((((pipeID) & 0xF)|(((pipeID)>>3) & 0x10)) & 0x1F)])
+
+#define CreateDeviceFile(DevicePathStrA) \
+	CreateFileA(DevicePathStrA, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL)
 
 //////////////////////////////////////////////////////////////////////////////
 
 //////////////////////////////////////////////////////////////////////////////
 // Structs
 //
-#include <PSHPACK1.H>
+
+typedef struct _KUSB_SHARED_INTERFACE
+{
+	volatile HANDLE InterfaceHandle;
+	INT Index;
+	INT Number;
+} KUSB_SHARED_INTERFACE, *PKUSB_SHARED_INTERFACE;
+
+typedef struct _KUSB_SHARED_DEVICE
+{
+	// This atomic lock must inc to '1' before reading/writing any information.
+	volatile long ActionPendingLock;
+
+	volatile long OpenedRefCount;
+	volatile long UsageCount;
+
+	volatile HANDLE MasterDeviceHandle;
+	volatile HANDLE MasterInterfaceHandle;
+
+	CHAR DevicePath[MAX_PATH];
+	PUSB_CONFIGURATION_DESCRIPTOR ConfigDescriptor;
+
+	KUSB_SHARED_INTERFACE SharedInterfaces[32];
+} KUSB_SHARED_DEVICE, *PKUSB_SHARED_DEVICE;
+
+// The semaphore lock structure use for KUSB_INTERFACE_HANDLE_INTERNAL.
+typedef struct _SYNC_LOCK
+{
+	HANDLE Handle;
+	LONG MaxCount;
+} SYNC_LOCK, *PSYNC_LOCK;
 
 typedef struct _USER_PIPE_POLICY
 {
@@ -47,28 +83,15 @@ typedef struct _USER_PIPE_POLICY
 // Internal libusbK interface handle
 typedef struct _KUSB_INTERFACE_HANDLE_INTERNAL
 {
-	KUSB_USER_CONTEXT UserContezt;
+	KUSB_USER_CONTEXT UserContext;
 	PVOID BackendContext;
-	HANDLE DeviceHandle;
-	INT InterfaceIndex;
-	USER_PIPE_POLICY PipePolicies[32];
-
 	struct
 	{
-		unsigned int Major;
-		unsigned int Minor;
-		unsigned int Micro;
-		unsigned int Nano;
-		unsigned int ModValue;
-	} Version;
-	struct
-	{
-		volatile LONG ValidCount;
-	} inst;
+		SYNC_LOCK Lock;
+		volatile LONG UsageCount;
+	} Instance;
 
 } KUSB_INTERFACE_HANDLE_INTERNAL, *PKUSB_INTERFACE_HANDLE_INTERNAL;
-
-#include <POPPACK.H>
 
 //////////////////////////////////////////////////////////////////////////////
 // lusbk_ioctl.c - FUNCTION PROTOTYPES
@@ -81,6 +104,15 @@ BOOL Ioctl_Sync(__in HANDLE dev,
                 __in DWORD out_size,
                 __out_opt PDWORD ret);
 
+BOOL Ioctl_SyncWithTimeout(__in HANDLE DeviceHandle,
+                           __in INT code,
+                           __in libusb_request* request,
+                           __inout_opt PVOID out,
+                           __in DWORD out_size,
+                           __in INT timeout,
+                           __in UCHAR PipeID,
+                           __out_opt PDWORD ret);
+
 BOOL Ioctl_Async(__in HANDLE dev,
                  __in INT code,
                  __in_opt PVOID in,
@@ -89,20 +121,6 @@ BOOL Ioctl_Async(__in HANDLE dev,
                  __in DWORD out_size,
                  __in LPOVERLAPPED overlapped);
 
-BOOL Ioctl_SyncTranfer(__in PKUSB_INTERFACE_HANDLE_INTERNAL interfaceHandle,
-                       __in INT code,
-                       __in libusb_request* request,
-                       __inout_opt PVOID out,
-                       __in DWORD out_size,
-                       __in INT timeout,
-                       __out_opt PDWORD ret);
-
-VOID InitInterfaceHandle(__in PKUSB_INTERFACE_HANDLE_INTERNAL InterfaceHandle,
-                         __in_opt HANDLE DeviceHandle,
-                         __in_opt UCHAR InterfaceIndex,
-                         __in_opt libusb_request* DriverVersionRequest,
-                         __in_opt PKUSB_INTERFACE_HANDLE_INTERNAL PreviousInterfaceHandle);
-
 VOID CheckLibInitialized();
 
 //////////////////////////////////////////////////////////////////////////////
@@ -110,19 +128,40 @@ VOID CheckLibInitialized();
 //////////////////////////////////////////////////////////////////////////////
 // Macros
 //
-#define InvalidateHandle(InterfaceHandleInternalPtr) \
-	if (InterfaceHandleInternalPtr) InterlockedDecrement(&InterfaceHandleInternalPtr->inst.ValidCount)
+#define IncUsageCount(PooledHandle) InterlockedIncrement(&((PooledHandle)->Instance.UsageCount))
+#define DecUsageCount(PooledHandle) InterlockedDecrement(&((PooledHandle)->Instance.UsageCount))
+
+#define IncDeviceUsageCount(PooledHandle) InterlockedIncrement(&((PooledHandle)->UsageCount))
+#define DecDeviceUsageCount(PooledHandle) InterlockedDecrement(&((PooledHandle)->UsageCount))
 
 // Sets 'RetErrorCode' and jumps to 'JumpStatement' if 'FailIfTrue' is non-zero.
 //
 #define FailIf(FailIfTrue, RetErrorCode, JumpStatement) \
 	if (FailIfTrue) { ret = RetErrorCode; goto JumpStatement; }
 
+#define ErrorSet(FailIfTrue, JumpStatement, ErrorCode, format, ...) \
+	if (FailIfTrue) { USBERR("ErrorCode=%08Xh "format"\n",ErrorCode,__VA_ARGS__); SetLastError(ErrorCode); goto JumpStatement; }
+
+#define ErrorNoSet(FailIfTrue, JumpStatement, format, ...) \
+	if (FailIfTrue) { USBERR("ErrorCode=%08Xh "format"\n",GetLastError(),__VA_ARGS__); goto JumpStatement; }
+
+#define ErrorHandle(FailIfTrue, JumpStatement, ParamName) \
+	if (FailIfTrue) { USBERR("Invalid handle/context/memory pointer '%s'.\n",ParamName); SetLastError(ERROR_INVALID_HANDLE); goto JumpStatement; }
+
+#define ErrorMemory(FailIfTrue, JumpStatement) \
+	if (FailIfTrue) { USBERR("Not enough memory.\n"); SetLastError(ERROR_NOT_ENOUGH_MEMORY); goto JumpStatement; }
+
+#define ErrorParam(FailIfTrue, JumpStatement, ParamName) \
+	if (FailIfTrue) { USBERR("invalid parameter '%s'.\n",ParamName); SetLastError(ERROR_INVALID_PARAMETER); goto JumpStatement; }
+
+#define ErrorStore(FailIfTrue, JumpStatement, Store, ErrorCode, format, ...) \
+	if (FailIfTrue) { USBERR("ErrorCode=%08Xh "format"\n",ErrorCode,__VA_ARGS__); Store = ErrorCode; goto JumpStatement; }
+
 // Checks for null and invalid handle value.
 #define IsHandleValid(MemoryPtrOrHandle) (((MemoryPtrOrHandle) && (MemoryPtrOrHandle) != INVALID_HANDLE_VALUE)?TRUE:FALSE)
 
 #define IsLusbkHandle(PublicInterfaceHandle)	\
-	((((PVOID)PublicInterfaceHandle) >= ((PVOID)&HandleList[0])) && (((PVOID)PublicInterfaceHandle) <= ((PVOID)&HandleList[KUSB_MAX_INTERFACE_HANDLES-1])))
+	((((PVOID)PublicInterfaceHandle) >= ((PVOID)&InternalHandlePool[0])) && (((PVOID)PublicInterfaceHandle) <= ((PVOID)&InternalHandlePool[KUSB_MAX_INTERFACE_HANDLES-1])))
 
 // Validatates the interface handle and cast it to a PKUSB_INTERFACE_HANDLE_INTERNAL.
 //
@@ -143,6 +182,7 @@ VOID CheckLibInitialized();
 
 //////////////////////////////////////////////////////////////////////////////
 
+
 FORCEINLINE BOOL LusbwError(__in LONG errorCode)
 {
 	if (errorCode != ERROR_SUCCESS)
@@ -153,8 +193,6 @@ FORCEINLINE BOOL LusbwError(__in LONG errorCode)
 	return TRUE;
 }
 
-PKUSB_INTERFACE_HANDLE_INTERNAL GetNextAvailableHandle();
-
 //////////////////////////////////////////////////////////////////////////////
 // Inline memory functions.
 //
@@ -164,6 +202,16 @@ FORCEINLINE PVOID Mem_Zero(__in_opt PVOID memory, __in size_t size)
 	if (IsHandleValid(memory))
 	{
 		memset(memory, 0, size);
+		return memory;
+	}
+	return NULL;
+}
+
+FORCEINLINE PVOID Mem_Max(__in_opt PVOID memory, __in size_t size)
+{
+	if (IsHandleValid(memory))
+	{
+		memset(memory, 0xFF, size);
 		return memory;
 	}
 	return NULL;
@@ -182,24 +230,73 @@ FORCEINLINE VOID Mem_Free(__deref_inout_opt PVOID* memoryRef)
 		if (IsHandleValid(*memoryRef))
 			free(*memoryRef);
 
-		*memoryRef = INVALID_HANDLE_VALUE;
+		*memoryRef = NULL;
 	}
+}
+
+FORCEINLINE BOOL Str_IsNullOrEmpty(__in_opt LPCSTR string)
+{
+	if (string)
+	{
+		if (strlen(string))
+		{
+			return FALSE;
+		}
+	}
+	return TRUE;
+}
+
+FORCEINLINE INT Str_Cmp(__in_opt LPCSTR str1, __in_opt LPCSTR str2)
+{
+	if (Str_IsNullOrEmpty(str1) ||
+	        Str_IsNullOrEmpty(str2))
+		return -1;
+
+	return strcmp(str1, str2);
+}
+
+FORCEINLINE LPSTR Str_Dupe(__in_opt LPCSTR string)
+{
+	if (!Str_IsNullOrEmpty(string))
+		return _strdup(string);
+
+	return NULL;
 }
 
 //
 // Interface context locking functions and macros.
-#ifdef UNUSED_LOCK_FUNCTIONS_AND_MACROS
+#ifndef UNUSED_LOCK_FUNCTIONS_AND_MACROS
 
-// The semaphore lock structure use for KUSB_INTERFACE_HANDLE_INTERNAL.
-typedef struct _SYNC_LOCK
-{
-	HANDLE Handle;
-	LONG MaxCount;
-} SYNC_LOCK, *PSYNC_LOCK;
+#define InitInterfaceLock(SynclockPtr) Lock_Init(SynclockPtr, MAX_THREADS_PER_INTERFACE)
 
-#define MAX_IO_PER_INTERFACE 256
+#define AcquireSyncLockWrite(SyncLock)																			\
+{																												\
+	if ((SyncLock))																								\
+	{																											\
+		if (!AcquireWriteLock((SyncLock), 0))																	\
+		{																										\
+			USBWRN("UsbStack: acquire write lock failed.\n");													\
+			SetLastError(ERROR_BUSY);																			\
+			return FALSE;																						\
+		}																										\
+	}																											\
+}
 
-#define InitLock(SynclockPtr) Lock_Init(SynclockPtr)
+#define AcquireSyncLockRead(SyncLock)																			\
+{																												\
+	if (SyncLock)																								\
+	{																											\
+		if (!AcquireReadLock(SyncLock, MAX_THREADS_PER_INTERFACE))																\
+		{																										\
+			USBWRN("UsbStack: acquire read lock failed.\n");													\
+			SetLastError(ERROR_BUSY);																			\
+			return FALSE;																						\
+		}																										\
+	}																											\
+}
+
+#define ReleaseSyncLockWrite(SyncLock) if (SyncLock) ReleaseWriteLock(SyncLock)
+#define ReleaseSyncLockRead(SyncLock) if (SyncLock) ReleaseReadLock(SyncLock)
 
 #define DestroyLock(SynclockPtr) Lock_Destroy(SynclockPtr)
 
@@ -214,10 +311,10 @@ typedef struct _SYNC_LOCK
 
 #define AcquireWriteLock(SynclockPtr, TimeoutInMs) Lock_AcquireWrite(SynclockPtr,TimeoutInMs)
 
-FORCEINLINE BOOL Lock_Init(__in PSYNC_LOCK syncLock)
+FORCEINLINE BOOL Lock_Init(__in PSYNC_LOCK syncLock, __in ULONG MaximumLockCount)
 {
 	Mem_Zero(syncLock, sizeof(*syncLock));
-	syncLock->MaxCount = MAX_IO_PER_INTERFACE;
+	syncLock->MaxCount = MaximumLockCount;
 	syncLock->Handle = CreateSemaphore(NULL, syncLock->MaxCount, syncLock->MaxCount, NULL);
 	if (!IsHandleValid(syncLock->Handle))
 		return FALSE;
@@ -226,12 +323,14 @@ FORCEINLINE BOOL Lock_Init(__in PSYNC_LOCK syncLock)
 
 FORCEINLINE BOOL Lock_AcquireWrite(__in PSYNC_LOCK syncLock, __in_opt DWORD timeoutMS)
 {
-	LONG lockCount = 0;
-	while (lockCount < syncLock->MaxCount)
+	LONG lockCount = -1;
+	while (++lockCount < syncLock->MaxCount)
 	{
 		if (!AcquireReadLock(syncLock, timeoutMS))
 		{
-			ReleaseSemaphore(syncLock->Handle, lockCount, NULL);
+			if (lockCount > 0)
+				ReleaseSemaphore(syncLock->Handle, lockCount, NULL);
+
 			return FALSE;
 		}
 	}
@@ -243,9 +342,6 @@ FORCEINLINE BOOL Lock_Destroy(__in PSYNC_LOCK syncLock)
 	if (syncLock->Handle)
 	{
 		SYNC_LOCK tempLock;
-		if (!AcquireWriteLock(syncLock, INFINITE))
-			return FALSE;
-
 		memcpy(&tempLock, syncLock, sizeof(tempLock));
 		Mem_Zero(syncLock, sizeof(*syncLock));
 		CloseHandle(tempLock.Handle);

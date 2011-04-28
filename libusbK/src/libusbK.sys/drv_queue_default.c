@@ -49,6 +49,15 @@ binary distributions.
 		break; \
 	}
 
+#define SetKInterfaceOutput(OutputBufferPtr, InterfaceContextPtr)															\
+if (OutputBufferPtr)																										\
+{																															\
+	((libusb_request*)OutputBufferPtr)->intf.interface_number=InterfaceContextPtr->InterfaceDescriptor.bInterfaceNumber;	\
+	((libusb_request*)OutputBufferPtr)->intf.interface_index=InterfaceContextPtr->InterfaceIndex;							\
+	((libusb_request*)OutputBufferPtr)->intf.altsetting_number=InterfaceContextPtr->InterfaceDescriptor.bAlternateSetting;	\
+	((libusb_request*)OutputBufferPtr)->intf.altsetting_index=InterfaceContextPtr->SettingIndex;								\
+}
+
 // DefaultQueue_OnIoControl
 // This event is called when the framework receives IRP_MJ_DEVICE_CONTROL requests from the system.
 //
@@ -74,6 +83,7 @@ VOID DefaultQueue_OnIoControl(__in WDFQUEUE Queue,
 	size_t					outputBufferLen, inputBufferLen;
 	PFILE_OBJECT			wdmFileObject;
 	PREQUEST_CONTEXT		requestContext;
+	PINTERFACE_CONTEXT		interfaceContext;
 
 	UNREFERENCED_PARAMETER(pFileContext);
 
@@ -218,7 +228,12 @@ VOID DefaultQueue_OnIoControl(__in WDFQUEUE Queue,
 	case LIBUSB_IOCTL_SET_CONFIGURATION:
 
 		if ((deviceContext->UsbConfigurationDescriptor) &&
-		        deviceContext->UsbConfigurationDescriptor->bConfigurationValue == libusbRequest->configuration.configuration)
+		        (INT)deviceContext->UsbConfigurationDescriptor->bConfigurationValue == (INT)libusbRequest->configuration.configuration)
+		{
+			status = STATUS_SUCCESS;
+		}
+		else if ((deviceContext->UsbConfigurationDescriptor) &&
+		         (INT)libusbRequest->configuration.configuration == -1)
 		{
 			status = STATUS_SUCCESS;
 		}
@@ -244,38 +259,86 @@ VOID DefaultQueue_OnIoControl(__in WDFQUEUE Queue,
 
 		break;
 
-	case LIBUSB_IOCTL_CLAIM_INTERFACE:
-		requestContext->IoControlRequest.intf.useInterfaceIndex = 0;
-		requestContext->IoControlRequest.intf.useAltSettingIndex = 0;
+		/////////////////////////////////////////////////////////////////////
+		// libusbK interface claim/release/set/get IOCTLs
+		/////////////////////////////////////////////////////////////////////
+	case LIBUSBK_IOCTL_RELEASE_ALL_INTERFACES:
+		status = Interface_ReleaseAll(deviceContext, wdmFileObject);
+		break;
+
 	case LIBUSBK_IOCTL_CLAIM_INTERFACE:
-		status = Interface_Claim(deviceContext, requestContext, wdmFileObject);
+		GET_OUT_BUFFER(sizeof(libusb_request), &outputBuffer, &outputBufferLen, "claim_interface");
+		interfaceContext = NULL;
+		status = Interface_Claim(deviceContext, requestContext, wdmFileObject, &interfaceContext);
+		if (NT_SUCCESS(status) && interfaceContext)
+		{
+			SetKInterfaceOutput(outputBuffer, interfaceContext);
+			length = sizeof(libusb_request);
+		}
+		break;
+
+	case LIBUSBK_IOCTL_RELEASE_INTERFACE:
+		GET_OUT_BUFFER(sizeof(libusb_request), &outputBuffer, &outputBufferLen, "release_interface");
+		interfaceContext = NULL;
+		status = Interface_Release(deviceContext, requestContext, wdmFileObject, &interfaceContext);
+		if (NT_SUCCESS(status) && interfaceContext)
+		{
+			SetKInterfaceOutput(outputBuffer, interfaceContext);
+			length = sizeof(libusb_request);
+		}
+		break;
+
+	case LIBUSBK_IOCTL_SET_INTERFACE:
+		GET_OUT_BUFFER(sizeof(libusb_request), &outputBuffer, &outputBufferLen, "set_interface");
+		interfaceContext = NULL;
+
+		status = Interface_SetAltSetting(deviceContext, requestContext, &interfaceContext);
+		if (NT_SUCCESS(status) && interfaceContext)
+		{
+			SetKInterfaceOutput(outputBuffer, interfaceContext);
+			length = sizeof(libusb_request);
+		}
+		break;
+
+	case LIBUSBK_IOCTL_GET_INTERFACE:
+		GET_OUT_BUFFER(sizeof(libusb_request), &outputBuffer, &outputBufferLen, "get_interface");
+		interfaceContext = NULL;
+
+		status = Interface_GetAltSetting(deviceContext, requestContext, &interfaceContext);
+		if (NT_SUCCESS(status) && interfaceContext)
+		{
+			SetKInterfaceOutput(outputBuffer, interfaceContext);
+			length = sizeof(libusb_request);
+		}
+		break;
+		/////////////////////////////////////////////////////////////////////
+
+	case LIBUSB_IOCTL_CLAIM_INTERFACE:
+		requestContext->IoControlRequest.intf.intf_use_index = 0;
+		requestContext->IoControlRequest.intf.altf_use_index = 0;
+		status = Interface_Claim(deviceContext, requestContext, wdmFileObject, &interfaceContext);
 		break;
 
 	case LIBUSB_IOCTL_RELEASE_INTERFACE:
-		requestContext->IoControlRequest.intf.useAltSettingIndex = 0;
-		requestContext->IoControlRequest.intf.useInterfaceIndex = 0;
-	case LIBUSBK_IOCTL_RELEASE_INTERFACE:
-		status = Interface_Release(deviceContext, requestContext, wdmFileObject);
+		requestContext->IoControlRequest.intf.altf_use_index = 0;
+		requestContext->IoControlRequest.intf.intf_use_index = 0;
+		status = Interface_Release(deviceContext, requestContext, wdmFileObject, &interfaceContext);
 		break;
 
 	case LIBUSB_IOCTL_SET_INTERFACE:
-		requestContext->IoControlRequest.intf.useAltSettingIndex = 0;
-		requestContext->IoControlRequest.intf.useInterfaceIndex = 0;
-	case LIBUSBK_IOCTL_SET_INTERFACE:
-
-		status = Interface_SetAltSetting(deviceContext, requestContext);
-
+		requestContext->IoControlRequest.intf.altf_use_index = 0;
+		requestContext->IoControlRequest.intf.intf_use_index = 0;
+		status = Interface_SetAltSetting(deviceContext, requestContext, &interfaceContext);
 		break;
 
 	case LIBUSB_IOCTL_GET_INTERFACE:
-		requestContext->IoControlRequest.intf.useAltSettingIndex = 0;
-		requestContext->IoControlRequest.intf.useInterfaceIndex = 0;
-	case LIBUSBK_IOCTL_GET_INTERFACE:
-
 		GET_OUT_BUFFER(1, &outputBuffer, &outputBufferLen, "get_interface");
-		status = Interface_GetAltSetting(deviceContext, requestContext, (UCHAR*)outputBuffer);
-		if (NT_SUCCESS(status))
+		requestContext->IoControlRequest.intf.altf_use_index = 0;
+		requestContext->IoControlRequest.intf.intf_use_index = 0;
+		status = Interface_GetAltSetting(deviceContext, requestContext, &interfaceContext);
+		if (NT_SUCCESS(status) && interfaceContext)
 		{
+			*outputBuffer = interfaceContext->InterfaceDescriptor.bAlternateSetting;
 			length = 1;
 		}
 		break;
@@ -286,8 +349,8 @@ VOID DefaultQueue_OnIoControl(__in WDFQUEUE Queue,
 
 		status = Interface_QuerySettings(
 		             deviceContext,
-		             requestContext->IoControlRequest.intf.interfaceIndex,
-		             requestContext->IoControlRequest.intf.altsettingIndex,
+		             (UCHAR)requestContext->IoControlRequest.intf.interface_index,
+		             (UCHAR)requestContext->IoControlRequest.intf.altsetting_index,
 		             (PUSB_INTERFACE_DESCRIPTOR)outputBuffer);
 
 		if (NT_SUCCESS(status))
