@@ -24,22 +24,25 @@ NTSTATUS Interface_InitContext(
 
 NTSTATUS Interface_SetAltSetting(
     __in  PDEVICE_CONTEXT deviceContext,
-    __in  PREQUEST_CONTEXT requestContext);
+    __in  PREQUEST_CONTEXT requestContext,
+    __out PINTERFACE_CONTEXT* interfaceContext);
 
 NTSTATUS Interface_GetAltSetting(
     __in PDEVICE_CONTEXT deviceContext,
     __in PREQUEST_CONTEXT requestContext,
-    __out PUCHAR altNumberOrIndex);
+    __out PINTERFACE_CONTEXT* interfaceContext);
 
 NTSTATUS Interface_Claim(
     __in PDEVICE_CONTEXT deviceContext,
     __in PREQUEST_CONTEXT requestContext,
-    __in PFILE_OBJECT fileObject);
+    __in PFILE_OBJECT fileObject,
+    __out PINTERFACE_CONTEXT* interfaceContext);
 
 NTSTATUS Interface_Release(
     __in PDEVICE_CONTEXT deviceContext,
     __in PREQUEST_CONTEXT requestContext,
-    __in PFILE_OBJECT fileObject);
+    __in PFILE_OBJECT fileObject,
+    __out PINTERFACE_CONTEXT* interfaceContext);
 
 NTSTATUS Interface_ReleaseAll(
     __in  PDEVICE_CONTEXT deviceContext,
@@ -53,7 +56,7 @@ NTSTATUS Interface_QuerySettings(__in  PDEVICE_CONTEXT deviceContext,
 FORCEINLINE NTSTATUS GetInterfaceAltSettingIndexFromRequest(
     __in PREQUEST_CONTEXT requestContext,
     __in PINTERFACE_CONTEXT interfaceContext,
-    __out_opt PUCHAR altSettingIndex,
+    __out_opt PUCHAR altsetting_index,
     __out_opt PUCHAR altSettingCount,
     __out_opt PUSB_INTERFACE_DESCRIPTOR altSettingInterfaceDescriptor)
 {
@@ -61,15 +64,15 @@ FORCEINLINE NTSTATUS GetInterfaceAltSettingIndexFromRequest(
 	UCHAR altIndex = BYTE_MAX;
 	USB_INTERFACE_DESCRIPTOR interfaceDescriptor = {0};
 
-	if (requestContext->IoControlRequest.intf.useAltSettingIndex)
+	if (requestContext->IoControlRequest.intf.altf_use_index)
 	{
-		if (requestContext->IoControlRequest.intf.altsettingIndex >= altCount)
+		if (requestContext->IoControlRequest.intf.altsetting_index >= altCount)
 		{
 			USBERR("alternate interface index %u does not exist\n",
-			       requestContext->IoControlRequest.intf.altsettingIndex);
+			       requestContext->IoControlRequest.intf.altsetting_index);
 			return STATUS_NO_MORE_ENTRIES;
 		}
-		altIndex = requestContext->IoControlRequest.intf.altsettingIndex;
+		altIndex = (UCHAR)requestContext->IoControlRequest.intf.altsetting_index;
 		WdfUsbInterfaceGetDescriptor(interfaceContext->Interface, altIndex, &interfaceDescriptor);
 
 	}
@@ -94,8 +97,8 @@ FORCEINLINE NTSTATUS GetInterfaceAltSettingIndexFromRequest(
 		return STATUS_NO_MORE_ENTRIES;
 	}
 
-	if (altSettingIndex)
-		*altSettingIndex = altIndex;
+	if (altsetting_index)
+		*altsetting_index = altIndex;
 
 	if (altSettingCount)
 		*altSettingCount = altCount;
@@ -117,9 +120,9 @@ FORCEINLINE NTSTATUS GetInterfaceContextFromRequest(
 		return STATUS_INVALID_DEVICE_STATE;
 	}
 
-	if (requestContext->IoControlRequest.intf.useInterfaceIndex)
+	if (requestContext->IoControlRequest.intf.intf_use_index)
 	{
-		UCHAR intfIndex = (UCHAR)requestContext->IoControlRequest.intf.interfaceIndex;
+		UCHAR intfIndex = (UCHAR)requestContext->IoControlRequest.intf.interface_index;
 		*interfaceContext = Interface_GetContextByIndex(deviceContext, intfIndex);
 		if (!(*interfaceContext))
 		{

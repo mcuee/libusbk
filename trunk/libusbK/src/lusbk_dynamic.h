@@ -7,45 +7,7 @@
 #include <windows.h>
 #include <objbase.h>
 #include "lusbk_common.h"
-
-typedef INT_PTR (FAR WINAPI* KPROC)();
-
-#define KUSB_CONTEXT_SIZE 32
-
-/*!
-  \def KUSB_EXP
-  Indicates that a function is an exported API call.
-*/
-#if defined(DYNAMIC_DLL)
-#define KUSB_EXP
-#else
-#define KUSB_EXP
-#endif
-
-/*! Indicates the calling convention. This is always WINAPI (stdcall) vy default.
-*/
-#if !defined(KUSB_API)
-#define KUSB_API WINAPI
-#endif
-
-#pragma warning(disable:4201)
-typedef struct _KUSB_USER_CONTEXT
-{
-	union
-	{
-		UCHAR		Byte[KUSB_CONTEXT_SIZE];
-		CHAR		Char[KUSB_CONTEXT_SIZE];
-
-		USHORT		Word[KUSB_CONTEXT_SIZE / 2];
-		SHORT		Short[KUSB_CONTEXT_SIZE / 2];
-
-		ULONG		ULong[KUSB_CONTEXT_SIZE / 4];
-		LONG		Long[KUSB_CONTEXT_SIZE / 4];
-
-		ULONG_PTR	Ptr[KUSB_CONTEXT_SIZE / 8];
-	};
-} KUSB_USER_CONTEXT, *PKUSB_USER_CONTEXT;
-#pragma warning(default:4201)
+#include "lusbk_device_list.h"
 
 typedef enum _KUSB_DRVID
 {
@@ -53,8 +15,8 @@ typedef enum _KUSB_DRVID
 
 	KUSB_DRVID_LIBUSBK,
 	KUSB_DRVID_LIBUSB0,
-	KUSB_DRVID_LIBUSB0_FILTER,
 	KUSB_DRVID_WINUSB,
+	KUSB_DRVID_LIBUSB0_FILTER,
 
 	KUSB_DRVID_COUNT
 
@@ -63,7 +25,6 @@ typedef enum _KUSB_DRVID
 typedef enum _KUSB_FNID
 {
 	KUSB_FNID_INVALID = -1L,
-
 	KUSB_FNID_Initialize,
 	KUSB_FNID_Free,
 	KUSB_FNID_GetAssociatedInterface,
@@ -85,171 +46,254 @@ typedef enum _KUSB_FNID
 	KUSB_FNID_GetPowerPolicy,
 	KUSB_FNID_GetOverlappedResult,
 	KUSB_FNID_ResetDevice,
+	KUSB_FNID_Open,
+	KUSB_FNID_Close,
+	KUSB_FNID_SetConfiguration,
+	KUSB_FNID_GetConfiguration,
+	KUSB_FNID_ClaimInterface,
+	KUSB_FNID_ReleaseInterface,
+	KUSB_FNID_SetAltInterface,
+	KUSB_FNID_GetAltInterface,
+	KUSB_FNID_IsoReadPipe,
+	KUSB_FNID_IsoWritePipe,
 
 	KUSB_FNID_COUNT
 } KUSB_FNID;
 
 typedef struct _KUSB_DRIVER_API
 {
-	BOOL (KUSB_API* Initialize)					(__in HANDLE DeviceHandle, __out PWINUSB_INTERFACE_HANDLE InterfaceHandle);
-	BOOL (KUSB_API* Free)						(__in WINUSB_INTERFACE_HANDLE InterfaceHandle);
-	BOOL (KUSB_API* GetAssociatedInterface)		(__in WINUSB_INTERFACE_HANDLE InterfaceHandle, __in UCHAR AssociatedInterfaceIndex, __out PWINUSB_INTERFACE_HANDLE AssociatedInterfaceHandle);
-	BOOL (KUSB_API* GetDescriptor)				(__in WINUSB_INTERFACE_HANDLE InterfaceHandle, __in UCHAR DescriptorType, __in UCHAR Index, __in USHORT LanguageID, __out_opt PUCHAR Buffer, __in ULONG BufferLength, __out PULONG LengthTransferred);
-	BOOL (KUSB_API* QueryInterfaceSettings)		(__in WINUSB_INTERFACE_HANDLE InterfaceHandle, __in UCHAR AlternateInterfaceNumber, __out PUSB_INTERFACE_DESCRIPTOR UsbAltInterfaceDescripto);
-	BOOL (KUSB_API* QueryDeviceInformation)		(__in WINUSB_INTERFACE_HANDLE InterfaceHandle, __in ULONG InformationType, __inout PULONG BufferLength, __out PVOID Buffe);
-	BOOL (KUSB_API* SetCurrentAlternateSetting)	(__in WINUSB_INTERFACE_HANDLE InterfaceHandle, __in UCHAR SettingNumbe);
-	BOOL (KUSB_API* GetCurrentAlternateSetting)	(__in WINUSB_INTERFACE_HANDLE InterfaceHandle, __out PUCHAR SettingNumbe);
-	BOOL (KUSB_API* QueryPipe)					(__in WINUSB_INTERFACE_HANDLE InterfaceHandle, __in UCHAR AlternateInterfaceNumber, __in UCHAR PipeIndex, __out PWINUSB_PIPE_INFORMATION PipeInformation);
-	BOOL (KUSB_API* SetPipePolicy)				(__in WINUSB_INTERFACE_HANDLE InterfaceHandle, __in UCHAR PipeID, __in ULONG PolicyType, __in ULONG ValueLength, __in PVOID Value);
-	BOOL (KUSB_API* GetPipePolicy)				(__in WINUSB_INTERFACE_HANDLE InterfaceHandle, __in UCHAR PipeID, __in ULONG PolicyType, __inout PULONG ValueLength, __out PVOID Value);
-	BOOL (KUSB_API* ReadPipe)					(__in WINUSB_INTERFACE_HANDLE InterfaceHandle, __in UCHAR PipeID, __out_opt PUCHAR Buffer, __in ULONG BufferLength, __out_opt PULONG LengthTransferred, __in_opt LPOVERLAPPED Overlapped);
-	BOOL (KUSB_API* WritePipe)					(__in WINUSB_INTERFACE_HANDLE InterfaceHandle, __in UCHAR PipeID, __in PUCHAR Buffer, __in ULONG BufferLength, __out_opt PULONG LengthTransferred, __in_opt LPOVERLAPPED Overlapped);
-	BOOL (KUSB_API* ControlTransfer)			(__in WINUSB_INTERFACE_HANDLE InterfaceHandle, __in WINUSB_SETUP_PACKET SetupPacket, __out_opt PUCHAR Buffer, __in ULONG BufferLength, __out_opt PULONG LengthTransferred, __in_opt LPOVERLAPPED Overlapped);
-	BOOL (KUSB_API* ResetPipe)					(__in WINUSB_INTERFACE_HANDLE InterfaceHandle, __in UCHAR PipeID);
-	BOOL (KUSB_API* AbortPipe)					(__in WINUSB_INTERFACE_HANDLE InterfaceHandle, __in UCHAR PipeID);
-	BOOL (KUSB_API* FlushPipe)					(__in WINUSB_INTERFACE_HANDLE InterfaceHandle, __in UCHAR PipeID);
-	BOOL (KUSB_API* SetPowerPolicy)				(__in WINUSB_INTERFACE_HANDLE InterfaceHandle, __in ULONG PolicyType, __in ULONG ValueLength, __in PVOID Value);
-	BOOL (KUSB_API* GetPowerPolicy)				(__in WINUSB_INTERFACE_HANDLE InterfaceHandle, __in ULONG PolicyType, __inout PULONG ValueLength, __out PVOID Value);
-	BOOL (KUSB_API* GetOverlappedResult)		(__in WINUSB_INTERFACE_HANDLE InterfaceHandle, __in LPOVERLAPPED lpOverlapped, __out LPDWORD lpNumberOfBytesTransferred, __in BOOL bWait);
-	BOOL (KUSB_API* ResetDevice)				(__in WINUSB_INTERFACE_HANDLE InterfaceHandle);
+	BOOL (KUSB_API* Initialize)				(__in HANDLE DeviceHandle, __out PLIBUSBK_INTERFACE_HANDLE InterfaceHandle);
+	BOOL (KUSB_API* Free)					(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle);
+	BOOL (KUSB_API* GetAssociatedInterface)	(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR AssociatedInterfaceIndex, __out PLIBUSBK_INTERFACE_HANDLE AssociatedInterfaceHandle);
+	BOOL (KUSB_API* GetDescriptor)			(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR DescriptorType, __in UCHAR Index, __in USHORT LanguageID, __out_opt PUCHAR Buffer, __in ULONG BufferLength, __out PULONG LengthTransferred);
+	BOOL (KUSB_API* QueryInterfaceSettings)	(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR AlternateSettingNumber, __out PUSB_INTERFACE_DESCRIPTOR UsbAltInterfaceDescriptor);
+	BOOL (KUSB_API* QueryDeviceInformation)	(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in ULONG InformationType, __inout PULONG BufferLength, __out PVOID Buffer);
+	BOOL (KUSB_API* SetCurrentAlternateSetting)	(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR SettingNumber);
+	BOOL (KUSB_API* GetCurrentAlternateSetting)	(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __out PUCHAR SettingNumber);
+	BOOL (KUSB_API* QueryPipe)				(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR AlternateSettingNumber, __in UCHAR PipeIndex, __out PWINUSB_PIPE_INFORMATION PipeInformation);
+	BOOL (KUSB_API* SetPipePolicy)			(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR PipeID, __in ULONG PolicyType, __in ULONG ValueLength, __in PVOID Value);
+	BOOL (KUSB_API* GetPipePolicy)			(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR PipeID, __in ULONG PolicyType, __inout PULONG ValueLength, __out PVOID Value);
+	BOOL (KUSB_API* ReadPipe)				(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR PipeID, __out_opt PUCHAR Buffer, __in ULONG BufferLength, __out_opt PULONG LengthTransferred, __in_opt LPOVERLAPPED Overlapped);
+	BOOL (KUSB_API* WritePipe)				(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR PipeID, __in PUCHAR Buffer, __in ULONG BufferLength, __out_opt PULONG LengthTransferred, __in_opt LPOVERLAPPED Overlapped);
+	BOOL (KUSB_API* ControlTransfer)		(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in WINUSB_SETUP_PACKET SetupPacket, __out_opt PUCHAR Buffer, __in ULONG BufferLength, __out_opt PULONG LengthTransferred, __in_opt LPOVERLAPPED Overlapped);
+	BOOL (KUSB_API* ResetPipe)				(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR PipeID);
+	BOOL (KUSB_API* AbortPipe)				(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR PipeID);
+	BOOL (KUSB_API* FlushPipe)				(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR PipeID);
+	BOOL (KUSB_API* SetPowerPolicy)			(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in ULONG PolicyType, __in ULONG ValueLength, __in PVOID Value);
+	BOOL (KUSB_API* GetPowerPolicy)			(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in ULONG PolicyType, __inout PULONG ValueLength, __out PVOID Value);
+	BOOL (KUSB_API* GetOverlappedResult)	(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in LPOVERLAPPED lpOverlapped, __out LPDWORD lpNumberOfBytesTransferred, __in BOOL bWait);
+	BOOL (KUSB_API* ResetDevice)			(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle);
+	BOOL (KUSB_API* Open)					(__in PKUSB_DEV_LIST DeviceListItem, __out PLIBUSBK_INTERFACE_HANDLE InterfaceHandle);
+	BOOL (KUSB_API* Close)					(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle);
+	BOOL (KUSB_API* SetConfiguration)		(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR ConfigurationNumber);
+	BOOL (KUSB_API* GetConfiguration)		(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __out PUCHAR ConfigurationNumber);
+	BOOL (KUSB_API* ClaimInterface)			(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR InterfaceNumberOrIndex, __in BOOL IsIndex);
+	BOOL (KUSB_API* ReleaseInterface)		(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR InterfaceNumberOrIndex, __in BOOL IsIndex);
+	BOOL (KUSB_API* SetAltInterface)		(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR InterfaceNumberOrIndex, __in BOOL IsIndex, __in UCHAR AltInterfaceNumber);
+	BOOL (KUSB_API* GetAltInterface)		(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR InterfaceNumberOrIndex, __in BOOL IsIndex, __out PUCHAR AltInterfaceNumber);
+	BOOL (KUSB_API* IsoReadPipe)			(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR PipeID, __out_opt PUCHAR Buffer, __in ULONG BufferLength, __in ULONG IsoPacketSize, __in LPOVERLAPPED Overlapped);
+	BOOL (KUSB_API* IsoWritePipe)			(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR PipeID, __in PUCHAR Buffer, __in ULONG BufferLength, __in ULONG IsoPacketSize, __in LPOVERLAPPED Overlapped);
+
 } KUSB_DRIVER_API, *PKUSB_DRIVER_API;
 
 typedef BOOL KUSB_API KUSB_Initialize (
-    __in  HANDLE DeviceHandle,
-    __out PWINUSB_INTERFACE_HANDLE InterfaceHandle
-);
+    __in HANDLE DeviceHandle,
+    __out PLIBUSBK_INTERFACE_HANDLE InterfaceHandle);
 
 typedef BOOL KUSB_API KUSB_Free (
-    __in  WINUSB_INTERFACE_HANDLE InterfaceHandle
-);
+    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle);
 
 typedef BOOL KUSB_API KUSB_GetAssociatedInterface (
-    __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
-    __in  UCHAR AssociatedInterfaceIndex,
-    __out PWINUSB_INTERFACE_HANDLE AssociatedInterfaceHandle
-);
+    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __in UCHAR AssociatedInterfaceIndex,
+    __out PLIBUSBK_INTERFACE_HANDLE AssociatedInterfaceHandle);
 
 typedef BOOL KUSB_API KUSB_GetDescriptor (
-    __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
-    __in  UCHAR DescriptorType,
-    __in  UCHAR Index,
-    __in  USHORT LanguageID,
+    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __in UCHAR DescriptorType,
+    __in UCHAR Index,
+    __in USHORT LanguageID,
     __out_opt PUCHAR Buffer,
-    __in  ULONG BufferLength,
-    __out PULONG LengthTransferred
-);
+    __in ULONG BufferLength,
+    __out PULONG LengthTransferred);
 
 typedef BOOL KUSB_API KUSB_QueryInterfaceSettings (
-    __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
-    __in  UCHAR AlternateInterfaceNumber,
-    __out PUSB_INTERFACE_DESCRIPTOR UsbAltInterfaceDescriptor
-);
+    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __in UCHAR AlternateSettingNumber,
+    __out PUSB_INTERFACE_DESCRIPTOR UsbAltInterfaceDescriptor);
 
 typedef BOOL KUSB_API KUSB_QueryDeviceInformation (
-    __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
-    __in  ULONG InformationType,
+    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __in ULONG InformationType,
     __inout PULONG BufferLength,
-    __out PVOID Buffer
-);
+    __out PVOID Buffer);
 
 typedef BOOL KUSB_API KUSB_SetCurrentAlternateSetting (
-    __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
-    __in  UCHAR SettingNumber
-);
+    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __in UCHAR SettingNumber);
 
 typedef BOOL KUSB_API KUSB_GetCurrentAlternateSetting (
-    __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
-    __out PUCHAR SettingNumber
-);
+    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __out PUCHAR SettingNumber);
 
 typedef BOOL KUSB_API KUSB_QueryPipe (
-    __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
-    __in  UCHAR AlternateInterfaceNumber,
-    __in  UCHAR PipeIndex,
-    __out PWINUSB_PIPE_INFORMATION PipeInformation
-);
+    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __in UCHAR AlternateSettingNumber,
+    __in UCHAR PipeIndex,
+    __out PWINUSB_PIPE_INFORMATION PipeInformation);
 
 typedef BOOL KUSB_API KUSB_SetPipePolicy (
-    __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
-    __in  UCHAR PipeID,
-    __in  ULONG PolicyType,
-    __in  ULONG ValueLength,
-    __in PVOID Value
-);
+    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __in UCHAR PipeID,
+    __in ULONG PolicyType,
+    __in ULONG ValueLength,
+    __in PVOID Value);
 
 typedef BOOL KUSB_API KUSB_GetPipePolicy (
-    __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
-    __in  UCHAR PipeID,
-    __in  ULONG PolicyType,
+    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __in UCHAR PipeID,
+    __in ULONG PolicyType,
     __inout PULONG ValueLength,
-    __out PVOID Value
-);
+    __out PVOID Value);
 
 typedef BOOL KUSB_API KUSB_ReadPipe (
-    __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
-    __in  UCHAR PipeID,
+    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __in UCHAR PipeID,
     __out_opt PUCHAR Buffer,
-    __in  ULONG BufferLength,
+    __in ULONG BufferLength,
     __out_opt PULONG LengthTransferred,
-    __in_opt LPOVERLAPPED Overlapped
-);
+    __in_opt LPOVERLAPPED Overlapped);
 
 typedef BOOL KUSB_API KUSB_WritePipe (
-    __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
-    __in  UCHAR PipeID,
+    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __in UCHAR PipeID,
     __in PUCHAR Buffer,
-    __in  ULONG BufferLength,
+    __in ULONG BufferLength,
     __out_opt PULONG LengthTransferred,
-    __in_opt LPOVERLAPPED Overlapped
-);
+    __in_opt LPOVERLAPPED Overlapped);
 
 typedef BOOL KUSB_API KUSB_ControlTransfer (
-    __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
-    __in  WINUSB_SETUP_PACKET SetupPacket,
+    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __in WINUSB_SETUP_PACKET SetupPacket,
     __out_opt PUCHAR Buffer,
-    __in  ULONG BufferLength,
+    __in ULONG BufferLength,
     __out_opt PULONG LengthTransferred,
-    __in_opt  LPOVERLAPPED Overlapped
-);
+    __in_opt LPOVERLAPPED Overlapped);
 
 typedef BOOL KUSB_API KUSB_ResetPipe (
-    __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
-    __in  UCHAR PipeID
-);
+    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __in UCHAR PipeID);
 
 typedef BOOL KUSB_API KUSB_AbortPipe (
-    __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
-    __in  UCHAR PipeID
-);
+    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __in UCHAR PipeID);
 
 typedef BOOL KUSB_API KUSB_FlushPipe (
-    __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
-    __in  UCHAR PipeID
-);
+    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __in UCHAR PipeID);
 
 typedef BOOL KUSB_API KUSB_SetPowerPolicy (
-    __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
-    __in  ULONG PolicyType,
-    __in  ULONG ValueLength,
-    __in PVOID Value
-);
+    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __in ULONG PolicyType,
+    __in ULONG ValueLength,
+    __in PVOID Value);
 
 typedef BOOL KUSB_API KUSB_GetPowerPolicy (
-    __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
-    __in  ULONG PolicyType,
+    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __in ULONG PolicyType,
     __inout PULONG ValueLength,
-    __out PVOID Value
-);
+    __out PVOID Value);
 
 typedef BOOL KUSB_API KUSB_GetOverlappedResult (
-    __in  WINUSB_INTERFACE_HANDLE InterfaceHandle,
-    __in  LPOVERLAPPED lpOverlapped,
+    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __in LPOVERLAPPED lpOverlapped,
     __out LPDWORD lpNumberOfBytesTransferred,
-    __in  BOOL bWait
-);
+    __in BOOL bWait);
 
 typedef BOOL KUSB_API KUSB_ResetDevice (
-    __in  WINUSB_INTERFACE_HANDLE InterfaceHandle);
+    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle);
 
+typedef BOOL KUSB_API KUSB_Open (
+    __in PKUSB_DEV_LIST DeviceListItem,
+    __out PLIBUSBK_INTERFACE_HANDLE InterfaceHandle);
+
+typedef BOOL KUSB_API KUSB_Close (
+    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle);
+
+typedef BOOL KUSB_API KUSB_SetConfiguration (
+    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __in UCHAR ConfigurationNumber);
+
+typedef BOOL KUSB_API KUSB_GetConfiguration (
+    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __out PUCHAR ConfigurationNumber);
+
+typedef BOOL KUSB_API KUSB_ClaimInterface (
+    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __in UCHAR InterfaceNumberOrIndex,
+    __in BOOL IsIndex);
+
+typedef BOOL KUSB_API KUSB_ReleaseInterface (
+    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __in UCHAR InterfaceNumberOrIndex,
+    __in BOOL IsIndex);
+
+typedef BOOL KUSB_API KUSB_SetAltInterface (
+    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __in UCHAR InterfaceNumberOrIndex,
+    __in BOOL IsIndex,
+    __in UCHAR AltInterfaceNumber);
+
+typedef BOOL KUSB_API KUSB_GetAltInterface (
+    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __in UCHAR InterfaceNumberOrIndex,
+    __in BOOL IsIndex,
+    __out PUCHAR AltInterfaceNumber);
+
+typedef BOOL KUSB_API KUSB_IsoReadPipe (
+    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __in UCHAR PipeID,
+    __out_opt PUCHAR Buffer,
+    __in ULONG BufferLength,
+    __in ULONG IsoPacketSize,
+    __in LPOVERLAPPED Overlapped);
+
+typedef BOOL KUSB_API KUSB_IsoWritePipe (
+    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __in UCHAR PipeID,
+    __in PUCHAR Buffer,
+    __in ULONG BufferLength,
+    __in ULONG IsoPacketSize,
+    __in LPOVERLAPPED Overlapped);
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+//! Initialize a driver api set.
+	/*!
+	  \ingroup driverapi
+	  \param DriverAPI A driver api structure to populate.
+	  \param DriverID The driver id of the api to retrieve.
+	*/
+	KUSB_EXP BOOL KUSB_API DrvK_LoadDriverApi(
+	    __inout PKUSB_DRIVER_API DriverAPI,
+	    __in ULONG DriverID);
+
+//! Initialize a driver api function.
+	/*!
+	  \ingroup driverapi
+	  \param ProcAddress Pointer reference that will receive the API function.
+	  \param DriverID The driver id of the api to use.
+	  \param FunctionID The function id.
+	*/
+	KUSB_EXP BOOL KUSB_API DrvK_GetProcAddress(
+	    __out KPROC* ProcAddress,
+	    __in ULONG DriverID,
+	    __in ULONG FunctionID);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

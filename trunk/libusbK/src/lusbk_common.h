@@ -12,6 +12,48 @@
 #include <objbase.h>
 #include <PSHPACK1.H>
 
+#define KUSB_CONTEXT_SIZE 32
+
+#ifdef WINAPI
+
+typedef INT_PTR (FAR WINAPI* KPROC)();
+
+/*!
+  \def KUSB_EXP
+  Indicates that a function is an exported API call.
+*/
+#if defined(DYNAMIC_DLL)
+#define KUSB_EXP
+#else
+#define KUSB_EXP
+#endif
+
+/*! Indicates the calling convention. This is always WINAPI (stdcall) by default.
+*/
+#if !defined(KUSB_API)
+#define KUSB_API WINAPI
+#endif
+
+#pragma warning(disable:4201)
+typedef struct _KUSB_USER_CONTEXT
+{
+	union
+	{
+		UCHAR		Byte[KUSB_CONTEXT_SIZE];
+		CHAR		Char[KUSB_CONTEXT_SIZE];
+		USHORT		Word[KUSB_CONTEXT_SIZE / sizeof(short)];
+		SHORT		Short[KUSB_CONTEXT_SIZE / sizeof(short)];
+
+		ULONG		ULong[KUSB_CONTEXT_SIZE / sizeof(int)];
+		LONG		Long[KUSB_CONTEXT_SIZE / sizeof(int)];
+
+		ULONG_PTR	Ptr[KUSB_CONTEXT_SIZE / sizeof(__int64)];
+	};
+} KUSB_USER_CONTEXT, *PKUSB_USER_CONTEXT;
+#pragma warning(default:4201)
+
+#endif // WINAPI
+
 #ifndef __USB200_H__
 #define __USB200_H__
 
@@ -396,7 +438,7 @@ C_ASSERT(sizeof(WINUSB_PIPE_INFORMATION) == 12);
 
 #ifndef __WUSB_H__
 
-typedef PVOID WINUSB_INTERFACE_HANDLE, *PWINUSB_INTERFACE_HANDLE;
+typedef PVOID LIBUSBK_INTERFACE_HANDLE, *PLIBUSBK_INTERFACE_HANDLE;
 
 #include <PSHPACK1.H>
 

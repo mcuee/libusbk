@@ -48,7 +48,7 @@
 				ExceptionHandling="0"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
-				WarningLevel="3"
+				WarningLevel="4"
 				CallingConvention="2"
 				CompileAs="1"
 				ForcedIncludeFiles=""
@@ -326,7 +326,15 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
+				RelativePath="..\lusbk_bknd_hid.c"
+				>
+			</File>
+			<File
 				RelativePath="..\lusbk_bknd_libusb0.c"
+				>
+			</File>
+			<File
+				RelativePath="..\lusbk_bknd_libusbk.c"
 				>
 			</File>
 			<File
@@ -347,6 +355,10 @@
 			</File>
 			<File
 				RelativePath="..\lusbk_ioctl.c"
+				>
+			</File>
+			<File
+				RelativePath="..\lusbk_stack_collection.c"
 				>
 			</File>
 			<File
@@ -397,6 +409,10 @@
 			</File>
 			<File
 				RelativePath="..\lusbk_private.h"
+				>
+			</File>
+			<File
+				RelativePath="..\lusbk_stack_collection.h"
 				>
 			</File>
 			<File

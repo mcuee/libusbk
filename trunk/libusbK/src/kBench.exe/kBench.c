@@ -24,6 +24,7 @@ binary distributions.
 #include "lusbk_usb.h"
 #include "lusbk_version.h"
 
+#define COMPOSITE_MERGE_MODE 1
 
 #define MAX_OUTSTANDING_TRANSFERS 10
 
@@ -47,7 +48,7 @@ binary distributions.
 #define CONWRN0(message) CONWRN("%s", message)
 #define CONDBG0(message) CONDBG("%s", message)
 
-static LPCSTR DrvIdNames[8] = {"libusbK", "libusb0", "libusb0 filter", "WinUSB", "Unknown", "Unknown", "Unknown", "Unknown"};
+static LPCSTR DrvIdNames[8] = {"libusbK", "libusb0", "WinUSB", "libusb0 filter", "Unknown", "Unknown", "Unknown"};
 #define GetDrvIdString(DrvId)	(DrvIdNames[((((LONG)(DrvId))<0) || ((LONG)(DrvId)) >= KUSB_DRVID_COUNT)?KUSB_DRVID_COUNT:(DrvId)])
 
 KUSB_DRIVER_API K;
@@ -110,7 +111,7 @@ typedef struct _BENCHMARK_TEST_PARAM
 	PKUSB_DEV_LIST DeviceList;
 	PKUSB_DEV_LIST SelectedDeviceProfile;
 	HANDLE DeviceHandle;
-	WINUSB_INTERFACE_HANDLE InterfaceHandle;
+	LIBUSBK_INTERFACE_HANDLE InterfaceHandle;
 	USB_DEVICE_DESCRIPTOR DeviceDescriptor;
 	USB_INTERFACE_DESCRIPTOR InterfaceDescriptor;
 	WINUSB_PIPE_INFORMATION PipeInformation[32];
@@ -174,7 +175,7 @@ typedef struct _BENCHMARK_TRANSFER_PARAM
 // Benchmark device api.
 BOOL Bench_Open(__in PBENCHMARK_TEST_PARAM test);
 
-BOOL Bench_Configure(__in WINUSB_INTERFACE_HANDLE handle,
+BOOL Bench_Configure(__in LIBUSBK_INTERFACE_HANDLE handle,
                      __in BENCHMARK_DEVICE_COMMAND command,
                      __in UCHAR intf,
                      __deref_inout PBENCHMARK_DEVICE_TEST_TYPE testType);
@@ -266,8 +267,7 @@ void SetTestDefaults(PBENCHMARK_TEST_PARAM test)
 BOOL Bench_Open(__in PBENCHMARK_TEST_PARAM test)
 {
 	UCHAR altSetting;
-	UCHAR interfaceIndex = UCHAR_MAX;
-	WINUSB_INTERFACE_HANDLE associatedHandle;
+	LIBUSBK_INTERFACE_HANDLE associatedHandle;
 	ULONG transferred;
 	PKUSB_DEV_LIST list, next;
 
@@ -283,13 +283,13 @@ BOOL Bench_Open(__in PBENCHMARK_TEST_PARAM test)
 			continue;
 
 		memset(&K, 0, sizeof(K));
-		if (!LUsbK_LoadDriverApi(&K, list->DrvId))
+		if (!DrvK_LoadDriverApi(&K, list->DrvId))
 		{
 			WinError(0);
 			CONWRN("could not load driver api %s.\n", GetDrvIdString(list->DrvId));
 			continue;
 		}
-
+#ifndef COMPOSITE_MERGE_MODE
 		test->DeviceHandle = CreateFileA(list->DevicePath,
 		                                 GENERIC_READ | GENERIC_WRITE,
 		                                 FILE_SHARE_READ | FILE_SHARE_WRITE,
@@ -315,6 +315,17 @@ BOOL Bench_Open(__in PBENCHMARK_TEST_PARAM test)
 			CONWRN("could not initialize device.\n%s\n", list->DevicePath);
 			continue;
 		}
+#else
+		if (!K.Open(list, &test->InterfaceHandle))
+		{
+			WinError(0);
+			test->DeviceHandle = NULL;
+			test->InterfaceHandle = NULL;
+			CONWRN("could not open device.\n%s\n", list->DevicePath);
+			continue;
+		}
+
+#endif
 
 		if (!K.GetDescriptor(test->InterfaceHandle,
 		                     USB_DEVICE_DESCRIPTOR_TYPE,
@@ -328,8 +339,10 @@ BOOL Bench_Open(__in PBENCHMARK_TEST_PARAM test)
 			K.Free(test->InterfaceHandle);
 			test->InterfaceHandle = NULL;
 
+#ifndef COMPOSITE_MERGE_MODE
 			CloseHandle(test->DeviceHandle);
 			test->DeviceHandle = NULL;
+#endif
 
 			CONWRN("could not get device descriptor.\n%s\n", list->DevicePath);
 			continue;
@@ -399,7 +412,7 @@ NextInterface:
 			altSetting++;
 			memset(&test->InterfaceDescriptor, 0, sizeof(test->InterfaceDescriptor));
 		}
-		if (K.GetAssociatedInterface(test->InterfaceHandle, ++interfaceIndex, &associatedHandle))
+		if (K.GetAssociatedInterface(test->InterfaceHandle, 0, &associatedHandle))
 		{
 			// this device has more interfaces to look at.
 			//
@@ -417,7 +430,7 @@ NextInterface:
 	return FALSE;
 }
 
-BOOL Bench_Configure(__in WINUSB_INTERFACE_HANDLE handle,
+BOOL Bench_Configure(__in LIBUSBK_INTERFACE_HANDLE handle,
                      __in BENCHMARK_DEVICE_COMMAND command,
                      __in UCHAR intf,
                      __deref_inout PBENCHMARK_DEVICE_TEST_TYPE testType)
@@ -1418,6 +1431,7 @@ int __cdecl main(int argc, char** argv)
 	BENCHMARK_TEST_PARAM Test;
 	PBENCHMARK_TRANSFER_PARAM ReadTest	= NULL;
 	PBENCHMARK_TRANSFER_PARAM WriteTest	= NULL;
+	KUSB_DEV_LIST_SEARCH searchParams = {0};
 	int key;
 	LONG ec;
 
@@ -1441,7 +1455,11 @@ int __cdecl main(int argc, char** argv)
 	// to update/modify the running statistics.
 	//
 	InitializeCriticalSection(&DisplayCriticalSection);
-	ec = LUsbK_GetDeviceList(&Test.DeviceList, NULL);
+#ifdef COMPOSITE_MERGE_MODE
+	searchParams.EnableCompositeDeviceMode = TRUE;
+#endif
+
+	ec = LstK_GetDeviceList(&Test.DeviceList, &searchParams);
 	if (ec < 0)
 	{
 		CONERR("failed getting device list ec=\n", ec);
@@ -1651,11 +1669,13 @@ Done:
 		K.Free(Test.InterfaceHandle);
 		Test.InterfaceHandle = NULL;
 	}
+#ifndef COMPOSITE_MERGE_MODE
 	if (Test.DeviceHandle)
 	{
 		CloseHandle(Test.DeviceHandle);
 		Test.DeviceHandle = NULL;
 	}
+#endif
 	if (Test.VerifyBuffer)
 	{
 		free(Test.VerifyBuffer);
@@ -1663,7 +1683,7 @@ Done:
 
 	}
 
-	LUsbK_FreeDeviceList(&Test.DeviceList);
+	LstK_FreeDeviceList(&Test.DeviceList);
 	FreeTransferParam(&ReadTest);
 	FreeTransferParam(&WriteTest);
 

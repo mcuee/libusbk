@@ -32,7 +32,7 @@ typedef struct _SUB_REQUEST_CONTEXT
 WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(SUB_REQUEST_CONTEXT, GetSubRequestContext)
 
 // iso queue events
-EVT_WDF_REQUEST_CANCEL LUsbK_EvtRequestCancel;
+EVT_WDF_REQUEST_CANCEL UsbK_EvtRequestCancel;
 EVT_WDF_REQUEST_COMPLETION_ROUTINE XferIsoComplete;
 EVT_WDF_REQUEST_COMPLETION_ROUTINE ReadWriteCompletion;
 
@@ -456,7 +456,7 @@ VOID XferIsoFS (
 	// Mark the main request cancelable so that we can cancel the subrequests
 	// if the main requests gets cancelled for any reason.
 	//
-	WdfRequestMarkCancelable(Request, LUsbK_EvtRequestCancel);
+	WdfRequestMarkCancelable(Request, UsbK_EvtRequestCancel);
 	cancelable = TRUE;
 
 	while(!IsListEmpty(&subRequestsList))
@@ -1135,7 +1135,7 @@ Return Value:
 	// Mark the main request cancelable so that we can cancel the subrequests
 	// if the main requests gets cancelled for any reason.
 	//
-	WdfRequestMarkCancelable(Request, LUsbK_EvtRequestCancel);
+	WdfRequestMarkCancelable(Request, UsbK_EvtRequestCancel);
 	cancelable = TRUE;
 
 	while(!IsListEmpty(&subRequestsList))
@@ -1428,7 +1428,7 @@ Return Value:
 }
 
 VOID
-LUsbK_EvtRequestCancel(
+UsbK_EvtRequestCancel(
     WDFREQUEST Request
 )
 /*++

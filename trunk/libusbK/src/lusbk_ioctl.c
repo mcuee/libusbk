@@ -58,7 +58,7 @@ BOOL Ioctl_Sync(__in HANDLE dev,
 	if (ret)
 		*ret = 0;
 
-	ol.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+	ol.hEvent = CreateEventA(NULL, TRUE, FALSE, NULL);
 
 	if (!ol.hEvent)
 		return FALSE;
@@ -91,28 +91,30 @@ BOOL Ioctl_Sync(__in HANDLE dev,
 //
 // Sends an IOCTL code and waits for it to complete.
 //
-BOOL Ioctl_SyncTranfer(__in PKUSB_INTERFACE_HANDLE_INTERNAL interfaceHandle,
-                       __in INT code,
-                       __in libusb_request* request,
-                       __inout_opt PVOID out,
-                       __in DWORD out_size,
-                       __in INT timeout,
-                       __out_opt PDWORD ret)
+BOOL Ioctl_SyncWithTimeout(__in HANDLE DeviceHandle,
+                           __in INT code,
+                           __in libusb_request* request,
+                           __inout_opt PVOID out,
+                           __in DWORD out_size,
+                           __in INT timeout,
+                           __in UCHAR PipeID,
+                           __out_opt PDWORD ret)
 {
 	OVERLAPPED ol;
 	DWORD _ret;
+	BOOL bWait = FALSE;
 
 	memset(&ol, 0, sizeof(ol));
 
 	if (ret)
 		*ret = 0;
 
-	ol.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+	ol.hEvent = CreateEventA(NULL, TRUE, FALSE, NULL);
 
 	if (!ol.hEvent)
 		return FALSE;
 
-	if (!DeviceIoControl(interfaceHandle->DeviceHandle, code, request, sizeof(*request), out, out_size, NULL, &ol))
+	if (!DeviceIoControl(DeviceHandle, code, request, sizeof(*request), out, out_size, NULL, &ol))
 	{
 		_ret = GetLastError();
 		if (_ret != ERROR_IO_PENDING)
@@ -121,16 +123,47 @@ BOOL Ioctl_SyncTranfer(__in PKUSB_INTERFACE_HANDLE_INTERNAL interfaceHandle,
 			SetLastError(_ret);
 			return FALSE;
 		}
+
 		if (timeout)
 		{
-			if (WaitForSingleObject(ol.hEvent, timeout) != WAIT_OBJECT_0)
+			if ((_ret = WaitForSingleObject(ol.hEvent, timeout)) != WAIT_OBJECT_0)
 			{
-				LUsbK_AbortPipe(interfaceHandle, (UCHAR)request->endpoint.endpoint);
+				libusb_request abort_request;
+				Mem_Zero(&abort_request, sizeof(abort_request));
+				abort_request.endpoint.endpoint = PipeID;
+
+				if (!Ioctl_Sync(DeviceHandle,
+				                LIBUSB_IOCTL_ABORT_ENDPOINT,
+				                &abort_request, sizeof(abort_request),
+				                NULL, 0,
+				                NULL))
+				{
+					_ret =  GetLastError();
+					USBERR("A transfer time out occurred and it could not be aborted. Timeout=%u PipeID=%02Xh ErrorCode=%08Xh\n",
+					       timeout, PipeID, _ret);
+				}
+				else
+				{
+					_ret = ERROR_SEM_TIMEOUT;
+					SetLastError(_ret);
+				}
+
+				WaitForSingleObject(ol.hEvent, 0);
+				CloseHandle(ol.hEvent);
+				return FALSE;
 			}
 		}
+		else
+		{
+			_ret = WaitForSingleObject(ol.hEvent, INFINITE);
+		}
+	}
+	else
+	{
+		bWait = TRUE;
 	}
 
-	if (!GetOverlappedResult(interfaceHandle->DeviceHandle, &ol, &_ret, TRUE))
+	if (!GetOverlappedResult(DeviceHandle, &ol, &_ret, bWait))
 	{
 		_ret =  GetLastError();
 		CloseHandle(ol.hEvent);
