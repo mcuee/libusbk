@@ -94,7 +94,7 @@ typedef struct _KUSB_DRIVER_API
 	BOOL (KUSB_API* IsoReadPipe)			(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR PipeID, __out_opt PUCHAR Buffer, __in ULONG BufferLength, __in ULONG IsoPacketSize, __in LPOVERLAPPED Overlapped);
 	BOOL (KUSB_API* IsoWritePipe)			(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR PipeID, __in PUCHAR Buffer, __in ULONG BufferLength, __in ULONG IsoPacketSize, __in LPOVERLAPPED Overlapped);
 
-} KUSB_DRIVER_API, *PKUSB_DRIVER_API;
+}* PKUSB_DRIVER_API, KUSB_DRIVER_API;
 
 typedef BOOL KUSB_API KUSB_Initialize (
     __in HANDLE DeviceHandle,

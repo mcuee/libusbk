@@ -48,7 +48,7 @@ typedef struct _KUSB_SHARED_INTERFACE
 	volatile HANDLE InterfaceHandle;
 	INT Index;
 	INT Number;
-} KUSB_SHARED_INTERFACE, *PKUSB_SHARED_INTERFACE;
+}* PKUSB_SHARED_INTERFACE, KUSB_SHARED_INTERFACE;
 
 typedef struct _KUSB_SHARED_DEVICE
 {
@@ -65,20 +65,20 @@ typedef struct _KUSB_SHARED_DEVICE
 	PUSB_CONFIGURATION_DESCRIPTOR ConfigDescriptor;
 
 	KUSB_SHARED_INTERFACE SharedInterfaces[32];
-} KUSB_SHARED_DEVICE, *PKUSB_SHARED_DEVICE;
+}* PKUSB_SHARED_DEVICE, KUSB_SHARED_DEVICE;
 
 // The semaphore lock structure use for KUSB_INTERFACE_HANDLE_INTERNAL.
 typedef struct _SYNC_LOCK
 {
 	HANDLE Handle;
 	LONG MaxCount;
-} SYNC_LOCK, *PSYNC_LOCK;
+}* PSYNC_LOCK, SYNC_LOCK;
 
 typedef struct _USER_PIPE_POLICY
 {
 	volatile ULONG timeout;
 
-} USER_PIPE_POLICY, *PUSER_PIPE_POLICY;
+}* PUSER_PIPE_POLICY, USER_PIPE_POLICY;
 
 // Internal libusbK interface handle
 typedef struct _KUSB_INTERFACE_HANDLE_INTERNAL
@@ -91,7 +91,7 @@ typedef struct _KUSB_INTERFACE_HANDLE_INTERNAL
 		volatile LONG UsageCount;
 	} Instance;
 
-} KUSB_INTERFACE_HANDLE_INTERNAL, *PKUSB_INTERFACE_HANDLE_INTERNAL;
+}* PKUSB_INTERFACE_HANDLE_INTERNAL, KUSB_INTERFACE_HANDLE_INTERNAL;
 
 //////////////////////////////////////////////////////////////////////////////
 // lusbk_ioctl.c - FUNCTION PROTOTYPES

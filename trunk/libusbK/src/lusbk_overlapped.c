@@ -254,7 +254,7 @@ Error:
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API OvlK_FreePool(
+KUSB_EXP BOOL KUSB_API OvlK_DestroyPool(
     __in POVERLAPPED_K_POOL Pool)
 {
 	POVERLAPPED_K_POOL_USER pool = (POVERLAPPED_K_POOL_USER)Pool;
@@ -296,9 +296,9 @@ Error:
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API OvlK_FreeDefaultPool()
+KUSB_EXP BOOL KUSB_API OvlK_DestroyDefaultPool()
 {
-	return OvlK_FreePool(&DefaultPool);
+	return OvlK_DestroyPool(&DefaultPool);
 }
 
 KUSB_EXP POVERLAPPED_K_POOL KUSB_API OvlK_CreatePool(
@@ -337,7 +337,7 @@ Error:
 }
 
 
-KUSB_EXP POVERLAPPED_K KUSB_API OvlK_CreateDefaultPool()
+KUSB_EXP POVERLAPPED_K_POOL KUSB_API OvlK_CreateDefaultPool()
 {
 	long lockCount;
 	while(!IsDefaultPoolInitialized)
@@ -357,7 +357,7 @@ KUSB_EXP POVERLAPPED_K KUSB_API OvlK_CreateDefaultPool()
 			USBDBG("lock collision; retrying..\n");
 		}
 	}
-	return (POVERLAPPED_K)&DefaultPool;
+	return &DefaultPool;
 }
 
 KUSB_EXP HANDLE KUSB_API OvlK_GetEventHandle(
@@ -441,7 +441,7 @@ KUSB_EXP BOOL KUSB_API OvlK_WaitComplete(
 		errorCode = ERROR_TIMEOUT;
 		if (WaitFlags & WAIT_FLAGS_ON_TIMEOUT_CANCEL)
 		{
-			if (!overlapped->Private.CancelOverlappedCB(OverlappedK))
+			if (!overlapped->Private.Cancel(OverlappedK))
 			{
 				errorCode = ERROR_CANCELLED;
 				USBERR("failed cancelling OverlappedK.\n");

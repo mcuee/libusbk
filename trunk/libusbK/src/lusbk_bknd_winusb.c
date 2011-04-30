@@ -32,7 +32,7 @@ extern KUSB_INTERFACE_HANDLE_INTERNAL InternalHandlePool[KUSB_MAX_INTERFACE_HAND
 typedef struct _WINUSB_BKND_CONTEXT
 {
 	KUSB_INTERFACE_STACK UsbStack;
-} WINUSB_BKND_CONTEXT, *PWINUSB_BKND_CONTEXT;
+}* PWINUSB_BKND_CONTEXT, WINUSB_BKND_CONTEXT;
 
 typedef struct _WINUSB_API
 {
@@ -53,7 +53,7 @@ typedef struct _WINUSB_API
 	BOOL (KUSB_API* FlushPipe)				(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR PipeID);
 	BOOL (KUSB_API* SetPowerPolicy)			(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in ULONG PolicyType, __in ULONG ValueLength, __in PVOID Value);
 	BOOL (KUSB_API* GetPowerPolicy)			(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in ULONG PolicyType, __inout PULONG ValueLength, __out PVOID Value);
-} WINUSB_API, *PWINUSB_API;
+}* PWINUSB_API, WINUSB_API;
 
 #define W_CTX(BackendContextPtr, InterfaceHandle) \
 	GET_BACKEND_CONTEXT((BackendContextPtr), ((PKUSB_INTERFACE_HANDLE_INTERNAL)(InterfaceHandle)), WINUSB_BKND_CONTEXT)

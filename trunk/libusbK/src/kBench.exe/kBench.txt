@@ -2,7 +2,7 @@
 USAGE: benchmark [list]
                  [pid=] [vid=] [ep=] [intf=] [altf=]
                  [read|write|loop] [notestselect]
-                 [verify|verifydetail]
+                 [verify|verifydetail] [composite]
                  [retry=] [timeout=] [refresh=] [priority=]
                  [mode=] [buffersize=] [buffercount=] [packetsize=]
                  
@@ -53,6 +53,7 @@ Switches:
          packetsize : For isochronous use only. Sets the iso packet size.
                       If not specified, the endpoints maximum packet size
                       is used.         
+         composite  : Merge composite devices.         
 WARNING:
           This program should only be used with USB devices which implement
           one more more "Benchmark" interface(s).  Using this application

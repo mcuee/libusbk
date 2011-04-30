@@ -13,7 +13,7 @@ typedef struct _KUSB_DEV_LIST_SEARCH
 {
 	BOOL EnableRawDeviceInterfaceGuid;
 	BOOL EnableCompositeDeviceMode;
-} KUSB_DEV_LIST_SEARCH, *PKUSB_DEV_LIST_SEARCH;
+}* PKUSB_DEV_LIST_SEARCH, KUSB_DEV_LIST_SEARCH;
 
 typedef struct _KUSB_DEV_LIST
 {
@@ -38,7 +38,7 @@ typedef struct _KUSB_DEV_LIST
 
 	volatile LONG refCount;
 	DWORD cbSize;
-} KUSB_DEV_LIST, *PKUSB_DEV_LIST;
+}* PKUSB_DEV_LIST, KUSB_DEV_LIST;
 #include <POPPACK.H>
 
 #ifdef __cplusplus
