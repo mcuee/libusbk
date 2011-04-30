@@ -24,13 +24,14 @@
 #include <wdfusb.h>
 #include <wchar.h>
 
+/////////////////////////////////////////////////////////////////////
+// Global/shared includes
 #include "lusbk_version.h"
-
-#define LOG_APPNAME "(lusbk)"
 #include "lusbk_debug.h"
-#include "lusbk_common.h"
+#include "lusbk_usbio.h"
+/////////////////////////////////////////////////////////////////////
 
-#define POOL_TAG (ULONG) 'BSUL'
+#define POOL_TAG (ULONG) 'KBSU'
 
 // declared in drv_driver.c; set the default there.
 extern ULONG DebugLevel;

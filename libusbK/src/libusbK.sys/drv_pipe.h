@@ -24,12 +24,6 @@ VOID Pipe_StopAll(__in PDEVICE_CONTEXT deviceContext);
 
 VOID Pipe_StartAll(__in PDEVICE_CONTEXT deviceContext);
 
-NTSTATUS Pipe_QueryInformation(__in PDEVICE_CONTEXT deviceContext,
-                               __in  UCHAR InterfaceIndex,
-                               __in  UCHAR AlternateInterfaceIndex,
-                               __in  UCHAR PipeIndex,
-                               __out PPIPE_INFORMATION PipeInformation);
-
 PPIPE_CONTEXT Pipe_GetContextFromName(__in PDEVICE_CONTEXT DeviceContext,
                                       IN PUNICODE_STRING FileName);
 

@@ -1,20 +1,25 @@
 /*! \file lusbk_common.h
+* The libusbK library provides a subset of general usb/descriptor types.
+* The general usb/descriptor types are also available as part of the WDK.
+* In order to maximum compatiblity with all \ref usbk_drivers, the
+* usb/descriptor types defined in libusbK are \b identical to those found
+* in Microsoft WDK distributions.
+*
+* \attention
+* If the libusbK usb/descriptor types are inadequate, include the Microsoft WDK
+* \c usb.h \b before including any libusbk header files.
+*
 */
 
 #ifndef __LUSBK_COMMON_H
 #define __LUSBK_COMMON_H
 
-#ifndef __USB_H__
-#define __USB_H__
-
 #include <windows.h>
 #include <stddef.h>
 #include <objbase.h>
-#include <PSHPACK1.H>
+
 
 #define KUSB_CONTEXT_SIZE 32
-
-#ifdef WINAPI
 
 typedef INT_PTR (FAR WINAPI* KPROC)();
 
@@ -35,6 +40,7 @@ typedef INT_PTR (FAR WINAPI* KPROC)();
 #endif
 
 #pragma warning(disable:4201)
+#include <pshpack1.h>
 typedef struct _KUSB_USER_CONTEXT
 {
 	union
@@ -50,15 +56,51 @@ typedef struct _KUSB_USER_CONTEXT
 		ULONG_PTR	Ptr[KUSB_CONTEXT_SIZE / sizeof(__int64)];
 	};
 }* PKUSB_USER_CONTEXT, KUSB_USER_CONTEXT;
+#include <poppack.h>
 #pragma warning(default:4201)
 
-#endif // WINAPI
+/*! \addtogroup core_general
+*  @{
+*/
+//! libusbK interfacing handle.
+/*!
+* This handle is required by other libusbK routines that perform
+* operations on a device. The handle is opaque. To release this handle,
+* call the \ref UsbK_Close or \ref UsbK_Free function.
+*
+* A \ref LIBUSBK_INTERFACE_HANDLE differs from a \c
+* WINUSB_INTERFACE_HANDLE in the following ways:
+* - libusbK handles have no "master" handle. All libusbK handles can operate
+*   as a master handles. This means all handles work with all API functions.
+*
+* - libusbK handles encompass then entire set of interfaces available to a
+*   usb device file handle. For most users there is no need to use the \ref
+*   UsbK_GetAssociatedInterface function. Instead, they can use the \ref
+*   UsbK_ClaimInterface and \ref UsbK_ReleaseInterface functions. libusbK
+*   will maintain all interface settings on one (1) handle.
+*
+* - Legacy WinUSB functions (all are supported by the libusbK api) do
+*   not provide an interface number/index parameter. (e.g. \ref
+*   UsbK_QueryInterfaceSettings, \ref UsbK_SetCurrentAlternateSetting, etc.)
+*   libusbK deals with these functions as follows:
+*   - The most recent interface claimed with \ref UsbK_ClaimInterface becomes
+*     the default interface.
+*   - When \ref UsbK_ReleaseInterface is called the previously claimed
+*     interface becomes the default interface.
+*   - \ref UsbK_GetAssociatedInterface clones the source libusbK handle and
+*     changes the default interface of the clones handle to the index
+*     specified by the user.
+*
+*/
+typedef PVOID LIBUSBK_INTERFACE_HANDLE, *PLIBUSBK_INTERFACE_HANDLE;
 
-#ifndef __USB200_H__
-#define __USB200_H__
+#ifndef   __USB_H__
 
-#ifndef __USB100_H__
-#define __USB100_H__
+#ifndef   __USB200_H__
+
+#ifndef   __USB100_H__
+
+#include <PSHPACK1.H>
 
 //bmRequest.Dir
 #define BMREQUEST_HOST_TO_DEVICE        0
@@ -82,24 +124,17 @@ typedef struct _KUSB_USER_CONTEXT
 #define USB_GETSTATUS_SELF_POWERED                0x01
 #define USB_GETSTATUS_REMOTE_WAKEUP_ENABLED       0x02
 
-typedef enum _USB_DESCRIPTOR_TYPE
-{
-	USB_DEVICE_DESCRIPTOR_TYPE = 1,
-	USB_CONFIGURATION_DESCRIPTOR_TYPE = 2,
-	USB_STRING_DESCRIPTOR_TYPE = 3,
-	USB_INTERFACE_DESCRIPTOR_TYPE = 4,
-	USB_ENDPOINT_DESCRIPTOR_TYPE = 5,
-	USB_DEVICEQUALIFIER_DESCRIPTOR_TYPE = 6,
-	USB_OTHERSPEEDCONFIGURATION_DESCRIPTOR_TYPE = 7,
-	USB_INTERFACEPOWER_DESCRIPTOR_TYPE = 8,
-	USB_ONTHEGO_DESCRIPTOR_TYPE = 9,
-	USB_DEBUG_DESCRIPTOR_TYPE = 10,
-	USB_INTERFACEASSOCIATION_DESCRIPTOR_TYPE = 11,
-	USB_HID_DESCRIPTOR_TYPE = 0x21,
-	USB_HID_REPORT_DESCRIPTOR_TYPE = 0x22,
-	USB_HID_PHYSICAL_DESCRIPTOR_TYPE = 0x23,
-	USB_HUB_DESCRIPTOR_TYPE = 0x29
-} USB_DESCRIPTOR_TYPE;
+
+#define USB_DEVICE_DESCRIPTOR_TYPE                0x01
+#define USB_CONFIGURATION_DESCRIPTOR_TYPE         0x02
+#define USB_STRING_DESCRIPTOR_TYPE                0x03
+#define USB_INTERFACE_DESCRIPTOR_TYPE             0x04
+#define USB_ENDPOINT_DESCRIPTOR_TYPE              0x05
+
+// descriptor types defined by DWG documents
+#define USB_RESERVED_DESCRIPTOR_TYPE              0x06
+#define USB_CONFIG_POWER_DESCRIPTOR_TYPE          0x07
+#define USB_INTERFACE_POWER_DESCRIPTOR_TYPE       0x08
 
 #define USB_DESCRIPTOR_MAKE_TYPE_AND_INDEX(d, i) ((USHORT)((USHORT)d<<8 | i))
 
@@ -107,6 +142,7 @@ typedef enum _USB_DESCRIPTOR_TYPE
 // Values for bmAttributes field of an
 // endpoint descriptor
 //
+
 #define USB_ENDPOINT_TYPE_MASK                    0x03
 
 #define USB_ENDPOINT_TYPE_CONTROL                 0x00
@@ -253,28 +289,83 @@ typedef struct _USB_STRING_DESCRIPTOR
 	WCHAR bString[1];
 }* PUSB_STRING_DESCRIPTOR, USB_STRING_DESCRIPTOR;
 
-typedef struct _USB_INTERFACEASSOCIATION_DESCRIPTOR
-{
-	UCHAR  bLength;
-	UCHAR  bDescriptorType;
-	UCHAR  bFirstInterface;
-	UCHAR  bInterfaceCount;
-	UCHAR  bFunctionClass;
-	UCHAR  bFunctionSubClass;
-	UCHAR  bFunctionProtocol;
-	UCHAR  iFunction;
-}* PUSB_INTERFACEASSOCIATION_DESCRIPTOR, USB_INTERFACEASSOCIATION_DESCRIPTOR;
-
 typedef struct _USB_COMMON_DESCRIPTOR
 {
 	UCHAR bLength;
 	UCHAR bDescriptorType;
 }* PUSB_COMMON_DESCRIPTOR, USB_COMMON_DESCRIPTOR;
 
-#endif // __USB100_H__
+typedef struct _USB_CONFIGURATION_POWER_DESCRIPTOR
+{
+	UCHAR bLength;
+	UCHAR bDescriptorType;
+	UCHAR SelfPowerConsumedD0[3];
+	UCHAR bPowerSummaryId;
+	UCHAR bBusPowerSavingD1;
+	UCHAR bSelfPowerSavingD1;
+	UCHAR bBusPowerSavingD2;
+	UCHAR bSelfPowerSavingD2;
+	UCHAR bBusPowerSavingD3;
+	UCHAR bSelfPowerSavingD3;
+	USHORT TransitionTimeFromD1;
+	USHORT TransitionTimeFromD2;
+	USHORT TransitionTimeFromD3;
+}* PUSB_CONFIGURATION_POWER_DESCRIPTOR, USB_CONFIGURATION_POWER_DESCRIPTOR;
 
-#pragma warning(disable:4214)
-#pragma warning(disable:4201)
+typedef struct _USB_INTERFACE_POWER_DESCRIPTOR
+{
+	UCHAR bLength;
+	UCHAR bDescriptorType;
+	UCHAR bmCapabilitiesFlags;
+	UCHAR bBusPowerSavingD1;
+	UCHAR bSelfPowerSavingD1;
+	UCHAR bBusPowerSavingD2;
+	UCHAR bSelfPowerSavingD2;
+	UCHAR bBusPowerSavingD3;
+	UCHAR bSelfPowerSavingD3;
+	USHORT TransitionTimeFromD1;
+	USHORT TransitionTimeFromD2;
+	USHORT TransitionTimeFromD3;
+}* PUSB_INTERFACE_POWER_DESCRIPTOR, USB_INTERFACE_POWER_DESCRIPTOR;
+
+#include <POPPACK.H>
+
+#endif   // __USB100_H__
+
+#include <PSHPACK1.H>
+
+#if _MSC_VER >= 1200
+#pragma warning(push)
+#endif
+#pragma warning (disable:4201)
+#pragma warning(disable:4214) // named type definition in parentheses
+
+typedef enum _USB_DEVICE_SPEED
+{
+	UsbLowSpeed = 0,
+	UsbFullSpeed,
+	UsbHighSpeed
+} USB_DEVICE_SPEED;
+
+typedef enum _USB_DEVICE_TYPE
+{
+	Usb11Device = 0,
+	Usb20Device
+} USB_DEVICE_TYPE;
+
+
+// standard definitions for the port status
+// word of the HUB port register
+
+#define USB_PORT_STATUS_CONNECT         0x0001
+#define USB_PORT_STATUS_ENABLE          0x0002
+#define USB_PORT_STATUS_SUSPEND         0x0004
+#define USB_PORT_STATUS_OVER_CURRENT    0x0008
+#define USB_PORT_STATUS_RESET           0x0010
+#define USB_PORT_STATUS_POWER           0x0100
+#define USB_PORT_STATUS_LOW_SPEED       0x0200
+#define USB_PORT_STATUS_HIGH_SPEED      0x0400
+
 typedef union _BM_REQUEST_TYPE
 {
 	struct _BM
@@ -313,13 +404,61 @@ typedef struct _USB_DEFAULT_PIPE_SETUP_PACKET
 	} wIndex;
 	USHORT wLength;
 }* PUSB_DEFAULT_PIPE_SETUP_PACKET, USB_DEFAULT_PIPE_SETUP_PACKET;
+
+// setup packet is eight bytes -- defined by spec
 C_ASSERT(sizeof(USB_DEFAULT_PIPE_SETUP_PACKET) == 8);
 
-#pragma warning(default:4214)
-#pragma warning(default:4201)
+#define USB_DEVICE_QUALIFIER_DESCRIPTOR_TYPE            0x06
+#define USB_OTHER_SPEED_CONFIGURATION_DESCRIPTOR_TYPE   0x07
+
+typedef struct _USB_DEVICE_QUALIFIER_DESCRIPTOR
+{
+	UCHAR bLength;
+	UCHAR bDescriptorType;
+	USHORT bcdUSB;
+	UCHAR bDeviceClass;
+	UCHAR bDeviceSubClass;
+	UCHAR bDeviceProtocol;
+	UCHAR bMaxPacketSize0;
+	UCHAR bNumConfigurations;
+	UCHAR bReserved;
+}* PUSB_DEVICE_QUALIFIER_DESCRIPTOR, USB_DEVICE_QUALIFIER_DESCRIPTOR;
+
+
+typedef union _USB_HIGH_SPEED_MAXPACKET
+{
+	struct _MP
+	{
+		USHORT   MaxPacket: 11; /* 0..10 */
+		USHORT   HSmux: 2;       /* 11..12 */
+		USHORT   Reserved: 3;   /* 13..15 */
+	};
+	USHORT us;
+}* PUSB_HIGH_SPEED_MAXPACKET, USB_HIGH_SPEED_MAXPACKET;
+
+#define USB_INTERFACE_ASSOCIATION_DESCRIPTOR_TYPE 0x0B
+
+typedef struct _USB_INTERFACE_ASSOCIATION_DESCRIPTOR
+{
+
+	UCHAR   bLength;
+	UCHAR   bDescriptorType;
+	UCHAR   bFirstInterface;
+	UCHAR   bInterfaceCount;
+	UCHAR   bFunctionClass;
+	UCHAR   bFunctionSubClass;
+	UCHAR   bFunctionProtocol;
+	UCHAR   iFunction;
+
+}* PUSB_INTERFACE_ASSOCIATION_DESCRIPTOR, USB_INTERFACE_ASSOCIATION_DESCRIPTOR;
+
+#if _MSC_VER >= 1200
+#pragma warning(pop)
+#endif
+
+#include <POPPACK.H>
 
 #endif // __USB200_H__
-
 
 typedef enum _USBD_PIPE_TYPE
 {
@@ -328,201 +467,48 @@ typedef enum _USBD_PIPE_TYPE
 	UsbdPipeTypeBulk,
 	UsbdPipeTypeInterrupt
 } USBD_PIPE_TYPE;
-C_ASSERT(sizeof(USBD_PIPE_TYPE) == 4);
 
-#include <POPPACK.H>
+#if (_WIN32_WINNT >= 0x0501)
+
+#if _MSC_VER >= 1200
+#pragma warning(push)
+#pragma warning(disable:4201)
+#endif
+
+// Microsoft OS Descriptor APIs
+// supported in windows XP and later
+
+#define OS_STRING_DESCRIPTOR_INDEX                  0xEE
+
+#define MS_GENRE_DESCRIPTOR_INDEX                   0x0001
+#define MS_POWER_DESCRIPTOR_INDEX                   0x0002
+
+#define MS_OS_STRING_SIGNATURE                      L"MSFT100"
+
+#define MS_OS_FLAGS_CONTAINERID                     0x02
+
+typedef struct _OS_STRING
+{
+	UCHAR bLength;
+	UCHAR bDescriptorType;
+	WCHAR MicrosoftString[7];
+	UCHAR bVendorCode;
+	union
+	{
+		UCHAR bPad;
+		UCHAR bFlags;
+	};
+}* POS_STRING, OS_STRING;
+
+#if _MSC_VER >= 1200
+#pragma warning(pop)
+#endif
+
+#endif // _WIN32_WINNT
 
 #endif // __USB_H__
 
-#ifndef __WINUSB_COMPAT_IO_H__
-#define __WINUSB_COMPAT_IO_H__
-
-#ifndef __WUSBIO_H__
-
-//#include <usb.h>
-// Pipe policy types
-
-// The default value is FALSE. To enable SHORT_PACKET_TERMINATE, in Value pass the address of a caller-allocated UCHAR variable set to TRUE (nonzero).
-// Enabling SHORT_PACKET_TERMINATE causes the driver to send a zero-length packet at the end of every write request to the host controller.
-#define SHORT_PACKET_TERMINATE  0x01
-
-// The default value is FALSE. To enable AUTO_CLEAR_STALL, in Value pass the address of a caller-allocated UCHAR variable set to TRUE (nonzero).
-// Enabling AUTO_CLEAR_STALL causes WinUSB to reset the pipe in order to automatically clear the stall condition. Data continues to flow on the bulk and interrupt IN endpoints again as soon as a new or a queued transfer arrives on the endpoint. This policy parameter does not affect control pipes.
-// Disabling AUTO_CLEAR_STALL causes all transfers (that arrive to the endpoint after the stalled transfer) to fail until the caller manually resets the endpoint's pipe by calling WinUsb_ResetPipe.
-#define AUTO_CLEAR_STALL        0x02
-
-// The default value is zero. To set a time-out value, in Value pass the address of a caller-allocated ULONG variable that contains the time-out interval.
-// The PIPE_TRANSFER_TIMEOUT value specifies the time-out interval, in milliseconds. The host controller cancels transfers that do not complete within the specified time-out interval.
-// A value of zero (default) indicates that transfers do not time out because the host controller never cancels the transfer.
-#define PIPE_TRANSFER_TIMEOUT   0x03
-
-// The default value is FALSE. To enable IGNORE_SHORT_PACKETS, in Value pass the address of a caller-allocated UCHAR variable set to TRUE (nonzero).
-// Enabling IGNORE_SHORT_PACKETS causes the host controller to not complete a read operation after it receives a short packet. Instead, the host controller completes the operation only after the host has read the specified number of bytes.
-// Disabling IGNORE_SHORT_PACKETS causes the host controller to complete a read operation when either the host has read the specified number of bytes or the host has received a short packet.
-#define IGNORE_SHORT_PACKETS    0x04
-
-// The default value is TRUE (nonzero). To disable ALLOW_PARTIAL_READS, in Value pass the address of a caller-allocated UCHAR variable set to FALSE (zero).
-// Disabling ALLOW_PARTIAL_READS causes the read requests to fail whenever the device returns more data (on bulk and interrupt IN endpoints) than the caller requested.
-// Enabling ALLOW_PARTIAL_READS causes WinUSB to save or discard the extra data when the device returns more data (on bulk and interrupt IN endpoints) than the caller requested. This behavior is defined by setting the AUTO_FLUSH value.
-#define ALLOW_PARTIAL_READS     0x05
-
-// The default value is FALSE (zero). To enable AUTO_FLUSH, in Value pass the address of a caller-allocated UCHAR variable set to TRUE (nonzero).
-// AUTO_FLUSH must be used with ALLOW_PARTIAL_READS enabled. If ALLOW_PARTIAL_READS is TRUE, the value of AUTO_FLUSH determines the action taken by WinUSB when the device returns more data than the caller requested.
-// Disabling ALLOW_PARTIAL_READS causes WinUSB to ignore the AUTO_FLUSH value.
-// Disabling AUTO_FLUSH with ALLOW_PARTIAL_READS enabled causes WinUSB to save the extra data, add the data to the beginning of the caller's next read request, and send it to the caller in the next read operation.
-// Enabling AUTO_FLUSH with ALLOW_PARTIAL_READS enabled causes WinUSB to discard the extra data remaining from the read request.
-#define AUTO_FLUSH              0x06
-
-// The default value is FALSE (zero). To enable RAW_IO, in Value pass the address of a caller-allocated UCHAR variable set to TRUE (nonzero).
-// Enabling RAW_IO causes WinUSB to send data directly to the USB driver stack, bypassing WinUSB's queuing and error handling mechanism.
-// The buffers that are passed to WinUsb_ReadPipe must be configured by the caller as follows:
-//   * The buffer length must be a multiple of the maximum endpoint packet size.
-//   * The length must be less than or equal to the value of MAXIMUM_TRANSFER_SIZE retrieved by WinUsb_GetPipePolicy.
-// Disabling RAW_IO (FALSE) does not impose any restriction on the buffers that are passed to WinUsb_ReadPipe.
-#define RAW_IO                  0x07
-
-
-// To get the value of the MAXIMUM_TRANSFER_SIZE policy, receive the value in a caller-allocated ULONG variable pointed to by Value.
-// The retrieved value indicates the maximum size of a USB transfer supported by WinUSB.
-// GET ONLY
-#define MAXIMUM_TRANSFER_SIZE   0x08
-
-// The default value is FALSE (zero). To enable RESET_PIPE_ON_RESUME, in Value pass the address of a caller-allocated UCHAR variable set to TRUE (nonzero).
-// TRUE (or a nonzero value) indicates that on resume from suspend, WinUSB resets the endpoint before it allows the caller to send new requests to the endpoint.
-#define RESET_PIPE_ON_RESUME    0x09
-
-// TODO:	This cannot go in this file if we keep it.
-//			This file must remain identical to the original winusb_io.h file.
-// [tr] !NEW! (mainly for testing)
-#define MAX_TRANSFER_STAGE_SIZE    0x0F
-
-// Power policy types
-//
-// Add 0x80 for Power policy types in order to prevent overlap with
-// Pipe policy types to prevent "accidentally" setting the wrong value for the
-// wrong type.
-//
-
-// Specifies the auto-suspend policy type; the power policy parameter must be specified by the caller in the Value parameter.
-// For auto-suspend, the Value parameter must point to a UCHAR variable.
-// If Value is TRUE (nonzero), the USB stack suspends the device if the device is idle. A device is idle if there are no transfers pending, or if the only pending transfers are IN transfers to interrupt or bulk endpoints.
-// The default value is determined by the value set in the DefaultIdleState registry setting. By default, this value is TRUE.
-#define AUTO_SUSPEND            0x81
-
-// Specifies the suspend-delay policy type; the power policy parameter must be specified by the caller in the Value parameter.
-// For suspend-delay, Value must point to a ULONG variable.
-// Value specifies the minimum amount of time, in milliseconds, that the WinUSB driver must wait post transfer before it can suspend the device.
-// The default value is determined by the value set in the DefaultIdleTimeout registry setting. By default, this value is five seconds.
-#define SUSPEND_DELAY           0x83
-
-// Device Information types
-#define DEVICE_SPEED            0x01
-
-// Device Speeds
-#define LowSpeed                0x01
-#define FullSpeed               0x02
-#define HighSpeed               0x03
-
-typedef struct _WINUSB_PIPE_INFORMATION
-{
-	USBD_PIPE_TYPE  PipeType;
-	UCHAR           PipeId;
-	USHORT          MaximumPacketSize;
-	UCHAR           Interval;
-}* PWINUSB_PIPE_INFORMATION, WINUSB_PIPE_INFORMATION;
-C_ASSERT(sizeof(WINUSB_PIPE_INFORMATION) == 12);
-
-#endif // __WUSBIO_H__
-
-#endif // __WINUSB_COMPAT_IO_H__
-
-#ifndef __WUSB_H__
-
-/*! \addtogroup core UsbK Core API
-*  @{
-*/
-/*! \addtogroup core_general
-*  @{
-*/
-//! libusbK interfacing handle.
-/*!
-* This handle is required by other libusbK routines that perform
-* operations on a device. The handle is opaque. To release this handle,
-* call the \ref UsbK_Close or \ref UsbK_Free function.
-*
-* A \ref LIBUSBK_INTERFACE_HANDLE differs from a \c
-* WINUSB_INTERFACE_HANDLE in the following ways:
-* - libusbK handles have no "master" handle. All libusbK handles can operate
-*   as a master handles. This means all handles work with all API functions.
-*
-* - libusbK handles encompass then entire set of interfaces available to a
-*   usb device file handle. For most users there is no need to use the \ref
-*   UsbK_GetAssociatedInterface function. Instead, they can use the \ref
-*   UsbK_ClaimInterface and \ref UsbK_ReleaseInterface functions. libusbK
-*   will maintain all interface settings on one (1) handle.
-*
-* - Legacy WinUSB functions (all are supported by the libusbK api) do
-*   not provide an interface number/index parameter. (e.g. \ref
-*   UsbK_QueryInterfaceSettings, \ref UsbK_SetCurrentAlternateSetting, etc.)
-*   libusbK deals with these functions as follows:
-*   - The most recent interface claimed with \ref UsbK_ClaimInterface becomes
-*     the default interface.
-*   - When \ref UsbK_ReleaseInterface is called the previously claimed
-*     interface becomes the default interface.
-*   - \ref UsbK_GetAssociatedInterface clones the source libusbK handle and
-*     changes the default interface of the clones handle to the index
-*     specified by the user.
-*
-*/
-typedef PVOID LIBUSBK_INTERFACE_HANDLE, *PLIBUSBK_INTERFACE_HANDLE;
-
 /*! @} */
-
-/*! @} */
-
-#include <PSHPACK1.H>
-
-typedef struct _WINUSB_SETUP_PACKET
-{
-	UCHAR   RequestType;
-	UCHAR   Request;
-	USHORT  Value;
-	USHORT  Index;
-	USHORT  Length;
-}* PWINUSB_SETUP_PACKET, WINUSB_SETUP_PACKET;
-C_ASSERT(sizeof(WINUSB_SETUP_PACKET) == 8);
-
-#ifndef __HIDPORT_H__
-
-typedef struct _HID_DESCRIPTOR
-{
-	UCHAR   bLength;
-	UCHAR   bDescriptorType;
-	USHORT  bcdHID;
-	UCHAR   bCountry;
-	UCHAR   bNumDescriptors;
-
-	/*
-	 *  This is an array of one OR MORE descriptors.
-	 */
-	struct _HID_DESCRIPTOR_DESC_LIST
-	{
-		UCHAR   bReportType;
-		USHORT  wReportLength;
-	} DescriptorList [1];
-
-}* PHID_DESCRIPTOR, HID_DESCRIPTOR;
-
-#endif
-
-#include <POPPACK.H>
-
-#else // NDEF __WUSB_H__
-
-#ifndef EXCLUDE_WINUSB_WRAPPER
-#define EXCLUDE_WINUSB_WRAPPER 1
-#endif // EXCLUDE_WINUSB_WRAPPER
-
-#endif // __WUSB_H__
 
 #endif // __LUSBK_COMMON_H
+

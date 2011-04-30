@@ -8,6 +8,7 @@
 #include <windows.h>
 #include <objbase.h>
 #include "lusbk_common.h"
+#include "lusbk_usbio.h"
 #include "lusbk_dynamic.h"
 #include "lusbk_linked_list.h"
 #include "lusbk_device_list.h"
@@ -533,7 +534,7 @@ extern "C" {
 	* PolicyType parameter.
 	*
 	* \remarks
-	* The following list describes symbolic constants that are defined in \ref lusbk_usb_io.h
+	* The following list describes symbolic constants that are defined in \ref lusbk_usbio.h
 	*
 	* - \c SHORT_PACKET_TERMINATE (0x01)
 	*   - The default value is \c FALSE.

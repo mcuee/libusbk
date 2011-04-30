@@ -379,40 +379,6 @@ VOID Pipe_StartAll(__in PDEVICE_CONTEXT deviceContext)
 	}
 }
 
-NTSTATUS Pipe_QueryInformation(
-    __in PDEVICE_CONTEXT deviceContext,
-    __in UCHAR InterfaceIndex,
-    __in UCHAR AlternateInterfaceIndex,
-    __in UCHAR PipeIndex,
-    __out PPIPE_INFORMATION PipeInformation)
-{
-	NTSTATUS status;
-	USB_INTERFACE_DESCRIPTOR usbInterfaceDescriptor;
-	WDF_USB_PIPE_INFORMATION wdfPipeInfo;
-	PINTERFACE_CONTEXT interfaceContext;
-
-	RtlZeroMemory(PipeInformation, sizeof(*PipeInformation));
-
-	if ((interfaceContext = Interface_GetContextByIndex(deviceContext, InterfaceIndex)) == NULL)
-		return STATUS_INVALID_PARAMETER;
-
-	status = Interface_QuerySettings(deviceContext, InterfaceIndex, AlternateInterfaceIndex, &usbInterfaceDescriptor);
-	if (!NT_SUCCESS(status))
-		return status;
-
-	if (PipeIndex >= usbInterfaceDescriptor.bNumEndpoints)
-		return STATUS_NO_MORE_ENTRIES;
-
-	WDF_USB_PIPE_INFORMATION_INIT(&wdfPipeInfo);
-	WdfUsbInterfaceGetEndpointInformation(interfaceContext->Interface, AlternateInterfaceIndex, PipeIndex, &wdfPipeInfo);
-
-	PipeInformation->PipeType = (wdfPipeInfo.PipeType != WdfUsbPipeTypeInvalid) ? wdfPipeInfo.PipeType - 1 : 255;
-	PipeInformation->PipeId = wdfPipeInfo.EndpointAddress;
-	PipeInformation->MaximumPacketSize = (USHORT)wdfPipeInfo.MaximumPacketSize;
-	PipeInformation->Interval = wdfPipeInfo.Interval;
-
-	return STATUS_SUCCESS;
-}
 
 // This routine will pass the string pipe name and fetch the pipe handle.
 PPIPE_CONTEXT Pipe_GetContextFromName(

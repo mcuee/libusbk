@@ -48,11 +48,6 @@ NTSTATUS Interface_ReleaseAll(
     __in  PDEVICE_CONTEXT deviceContext,
     __in  PFILE_OBJECT fileObject);
 
-NTSTATUS Interface_QuerySettings(__in  PDEVICE_CONTEXT deviceContext,
-                                 __in UCHAR intfIndex,
-                                 __in UCHAR altIndex,
-                                 __out PUSB_INTERFACE_DESCRIPTOR descriptor);
-
 FORCEINLINE NTSTATUS GetInterfaceAltSettingIndexFromRequest(
     __in PREQUEST_CONTEXT requestContext,
     __in PINTERFACE_CONTEXT interfaceContext,

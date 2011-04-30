@@ -110,14 +110,8 @@ enum
 /////////////////////////////////////////////////////////////////////////////
 // supported in libusbK (3.0.0.0 and up)
 /////////////////////////////////////////////////////////////////////////////
-#define LIBUSB_IOCTL_QUERY_INTERFACE_SETTINGS CTL_CODE(FILE_DEVICE_UNKNOWN,\
-        0x903, METHOD_BUFFERED, FILE_ANY_ACCESS)
-
 #define LIBUSB_IOCTL_QUERY_DEVICE_INFORMATION CTL_CODE(FILE_DEVICE_UNKNOWN,\
         0x904, METHOD_BUFFERED, FILE_ANY_ACCESS)
-
-#define LIBUSB_IOCTL_QUERY_PIPE CTL_CODE(FILE_DEVICE_UNKNOWN,\
-        0x905, METHOD_BUFFERED, FILE_ANY_ACCESS)
 
 #define LIBUSB_IOCTL_SET_PIPE_POLICY CTL_CODE(FILE_DEVICE_UNKNOWN,\
         0x906, METHOD_BUFFERED, FILE_ANY_ACCESS)
@@ -159,14 +153,6 @@ enum
 /////////////////////////////////////////////////////////////////////////////
 
 #include <pshpack1.h>
-
-typedef struct _PIPE_INFORMATION
-{
-	USBD_PIPE_TYPE  PipeType;
-	UCHAR           PipeId;
-	USHORT          MaximumPacketSize;
-	UCHAR           Interval;
-}* PPIPE_INFORMATION, PIPE_INFORMATION;
 
 enum LIBUSB0_TRANSFER_FLAGS
 {
@@ -272,12 +258,6 @@ typedef struct
 		{
 			ULONG information_type;
 		} query_device;
-		struct
-		{
-			unsigned int interface_index;
-			unsigned int altsetting_index;
-			unsigned int pipe_index;
-		} query_pipe;
 		struct
 		{
 			unsigned int interface_index;

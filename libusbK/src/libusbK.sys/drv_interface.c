@@ -325,25 +325,3 @@ NTSTATUS Interface_ReleaseAll(__in  PDEVICE_CONTEXT deviceContext,
 	return STATUS_SUCCESS;
 }
 
-NTSTATUS Interface_QuerySettings(__in  PDEVICE_CONTEXT deviceContext,
-                                 __in UCHAR intfIndex,
-                                 __in UCHAR altIndex,
-                                 __out PUSB_INTERFACE_DESCRIPTOR descriptor)
-{
-	UCHAR altCount;
-
-	if (intfIndex >= deviceContext->InterfaceCount ||
-	        deviceContext->InterfaceContext[intfIndex].Interface == WDF_NO_HANDLE)
-	{
-		return STATUS_NO_MORE_ENTRIES;
-	}
-
-	altCount = WdfUsbInterfaceGetNumSettings(deviceContext->InterfaceContext[intfIndex].Interface);
-	if (altIndex >= altCount)
-		return STATUS_NO_MORE_ENTRIES;
-
-	RtlZeroMemory(descriptor, sizeof(*descriptor));
-	WdfUsbInterfaceGetDescriptor(deviceContext->InterfaceContext[intfIndex].Interface, altIndex, descriptor);
-
-	return STATUS_SUCCESS;
-}
