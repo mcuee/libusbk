@@ -120,6 +120,7 @@ typedef struct _BENCHMARK_TEST_PARAM
 
 	BYTE* VerifyBuffer;		// Stores the verify test pattern for 1 packet.
 	WORD VerifyBufferSize;	// Size of VerifyBuffer
+	BOOL UseCompositeDeviceList;
 } BENCHMARK_TEST_PARAM, *PBENCHMARK_TEST_PARAM;
 
 // The benchmark transfer context used for asynchronous transfers.  see TransferAsync().
@@ -289,43 +290,46 @@ BOOL Bench_Open(__in PBENCHMARK_TEST_PARAM test)
 			CONWRN("could not load driver api %s.\n", GetDrvIdString(list->DrvId));
 			continue;
 		}
-#ifndef COMPOSITE_MERGE_MODE
-		test->DeviceHandle = CreateFileA(list->DevicePath,
-		                                 GENERIC_READ | GENERIC_WRITE,
-		                                 FILE_SHARE_READ | FILE_SHARE_WRITE,
-		                                 NULL,
-		                                 OPEN_EXISTING,
-		                                 FILE_FLAG_OVERLAPPED,
-		                                 NULL);
-
-		if (!test->DeviceHandle || test->DeviceHandle == INVALID_HANDLE_VALUE)
+		if (!test->UseCompositeDeviceList)
 		{
-			WinError(0);
-			test->DeviceHandle = NULL;
-			CONWRN("could not create device handle.\n%s\n", list->DevicePath);
-			continue;
-		}
+			test->DeviceHandle = CreateFileA(list->DevicePath,
+			                                 GENERIC_READ | GENERIC_WRITE,
+			                                 FILE_SHARE_READ | FILE_SHARE_WRITE,
+			                                 NULL,
+			                                 OPEN_EXISTING,
+			                                 FILE_FLAG_OVERLAPPED,
+			                                 NULL);
 
-		if (!K.Initialize(test->DeviceHandle, &test->InterfaceHandle))
-		{
-			WinError(0);
-			CloseHandle(test->DeviceHandle);
-			test->DeviceHandle = NULL;
-			test->InterfaceHandle = NULL;
-			CONWRN("could not initialize device.\n%s\n", list->DevicePath);
-			continue;
-		}
-#else
-		if (!K.Open(list, &test->InterfaceHandle))
-		{
-			WinError(0);
-			test->DeviceHandle = NULL;
-			test->InterfaceHandle = NULL;
-			CONWRN("could not open device.\n%s\n", list->DevicePath);
-			continue;
-		}
+			if (!test->DeviceHandle || test->DeviceHandle == INVALID_HANDLE_VALUE)
+			{
+				WinError(0);
+				test->DeviceHandle = NULL;
+				CONWRN("could not create device handle.\n%s\n", list->DevicePath);
+				continue;
+			}
 
-#endif
+			if (!K.Initialize(test->DeviceHandle, &test->InterfaceHandle))
+			{
+				WinError(0);
+				CloseHandle(test->DeviceHandle);
+				test->DeviceHandle = NULL;
+				test->InterfaceHandle = NULL;
+				CONWRN("could not initialize device.\n%s\n", list->DevicePath);
+				continue;
+			}
+		}
+		else
+		{
+			if (!K.Open(list, &test->InterfaceHandle))
+			{
+				WinError(0);
+				test->DeviceHandle = NULL;
+				test->InterfaceHandle = NULL;
+				CONWRN("could not open device.\n%s\n", list->DevicePath);
+				continue;
+			}
+
+		}
 
 		if (!K.GetDescriptor(test->InterfaceHandle,
 		                     USB_DEVICE_DESCRIPTOR_TYPE,
@@ -339,10 +343,11 @@ BOOL Bench_Open(__in PBENCHMARK_TEST_PARAM test)
 			K.Free(test->InterfaceHandle);
 			test->InterfaceHandle = NULL;
 
-#ifndef COMPOSITE_MERGE_MODE
-			CloseHandle(test->DeviceHandle);
-			test->DeviceHandle = NULL;
-#endif
+			if (!test->UseCompositeDeviceList)
+			{
+				CloseHandle(test->DeviceHandle);
+				test->DeviceHandle = NULL;
+			}
 
 			CONWRN("could not get device descriptor.\n%s\n", list->DevicePath);
 			continue;
@@ -1003,6 +1008,10 @@ int ParseBenchmarkArgs(PBENCHMARK_TEST_PARAM testParams, int argc, char** argv)
 		{
 			testParams->Verify = TRUE;
 		}
+		else if (!_stricmp(arg, "composite"))
+		{
+			testParams->UseCompositeDeviceList = TRUE;
+		}
 		else
 		{
 			CONERR("invalid argument! %s\n", argv[iarg]);
@@ -1455,9 +1464,10 @@ int __cdecl main(int argc, char** argv)
 	// to update/modify the running statistics.
 	//
 	InitializeCriticalSection(&DisplayCriticalSection);
-#ifdef COMPOSITE_MERGE_MODE
-	searchParams.EnableCompositeDeviceMode = TRUE;
-#endif
+	if (Test.UseCompositeDeviceList)
+	{
+		searchParams.EnableCompositeDeviceMode = TRUE;
+	}
 
 	ec = LstK_GetDeviceList(&Test.DeviceList, &searchParams);
 	if (ec < 0)
@@ -1669,13 +1679,14 @@ Done:
 		K.Free(Test.InterfaceHandle);
 		Test.InterfaceHandle = NULL;
 	}
-#ifndef COMPOSITE_MERGE_MODE
-	if (Test.DeviceHandle)
+	if (!Test.UseCompositeDeviceList)
 	{
-		CloseHandle(Test.DeviceHandle);
-		Test.DeviceHandle = NULL;
+		if (Test.DeviceHandle)
+		{
+			CloseHandle(Test.DeviceHandle);
+			Test.DeviceHandle = NULL;
+		}
 	}
-#endif
 	if (Test.VerifyBuffer)
 	{
 		free(Test.VerifyBuffer);

@@ -166,7 +166,7 @@ typedef struct _PIPE_INFORMATION
 	UCHAR           PipeId;
 	USHORT          MaximumPacketSize;
 	UCHAR           Interval;
-} PIPE_INFORMATION, *PPIPE_INFORMATION;
+}* PPIPE_INFORMATION, PIPE_INFORMATION;
 
 enum LIBUSB0_TRANSFER_FLAGS
 {

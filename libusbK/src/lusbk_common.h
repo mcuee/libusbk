@@ -49,7 +49,7 @@ typedef struct _KUSB_USER_CONTEXT
 
 		ULONG_PTR	Ptr[KUSB_CONTEXT_SIZE / sizeof(__int64)];
 	};
-} KUSB_USER_CONTEXT, *PKUSB_USER_CONTEXT;
+}* PKUSB_USER_CONTEXT, KUSB_USER_CONTEXT;
 #pragma warning(default:4201)
 
 #endif // WINAPI
@@ -209,7 +209,7 @@ typedef struct _USB_DEVICE_DESCRIPTOR
 	UCHAR iProduct;
 	UCHAR iSerialNumber;
 	UCHAR bNumConfigurations;
-} USB_DEVICE_DESCRIPTOR, *PUSB_DEVICE_DESCRIPTOR;
+}* PUSB_DEVICE_DESCRIPTOR, USB_DEVICE_DESCRIPTOR;
 
 typedef struct _USB_ENDPOINT_DESCRIPTOR
 {
@@ -219,7 +219,7 @@ typedef struct _USB_ENDPOINT_DESCRIPTOR
 	UCHAR bmAttributes;
 	USHORT wMaxPacketSize;
 	UCHAR bInterval;
-} USB_ENDPOINT_DESCRIPTOR, *PUSB_ENDPOINT_DESCRIPTOR;
+}* PUSB_ENDPOINT_DESCRIPTOR, USB_ENDPOINT_DESCRIPTOR;
 
 typedef struct _USB_CONFIGURATION_DESCRIPTOR
 {
@@ -231,7 +231,7 @@ typedef struct _USB_CONFIGURATION_DESCRIPTOR
 	UCHAR iConfiguration;
 	UCHAR bmAttributes;
 	UCHAR MaxPower;
-} USB_CONFIGURATION_DESCRIPTOR, *PUSB_CONFIGURATION_DESCRIPTOR;
+}* PUSB_CONFIGURATION_DESCRIPTOR, USB_CONFIGURATION_DESCRIPTOR;
 
 typedef struct _USB_INTERFACE_DESCRIPTOR
 {
@@ -244,14 +244,14 @@ typedef struct _USB_INTERFACE_DESCRIPTOR
 	UCHAR bInterfaceSubClass;
 	UCHAR bInterfaceProtocol;
 	UCHAR iInterface;
-} USB_INTERFACE_DESCRIPTOR, *PUSB_INTERFACE_DESCRIPTOR;
+}* PUSB_INTERFACE_DESCRIPTOR, USB_INTERFACE_DESCRIPTOR;
 
 typedef struct _USB_STRING_DESCRIPTOR
 {
 	UCHAR bLength;
 	UCHAR bDescriptorType;
 	WCHAR bString[1];
-} USB_STRING_DESCRIPTOR, *PUSB_STRING_DESCRIPTOR;
+}* PUSB_STRING_DESCRIPTOR, USB_STRING_DESCRIPTOR;
 
 typedef struct _USB_INTERFACEASSOCIATION_DESCRIPTOR
 {
@@ -263,13 +263,13 @@ typedef struct _USB_INTERFACEASSOCIATION_DESCRIPTOR
 	UCHAR  bFunctionSubClass;
 	UCHAR  bFunctionProtocol;
 	UCHAR  iFunction;
-} USB_INTERFACEASSOCIATION_DESCRIPTOR, *PUSB_INTERFACEASSOCIATION_DESCRIPTOR;
+}* PUSB_INTERFACEASSOCIATION_DESCRIPTOR, USB_INTERFACEASSOCIATION_DESCRIPTOR;
 
 typedef struct _USB_COMMON_DESCRIPTOR
 {
 	UCHAR bLength;
 	UCHAR bDescriptorType;
-} USB_COMMON_DESCRIPTOR, *PUSB_COMMON_DESCRIPTOR;
+}* PUSB_COMMON_DESCRIPTOR, USB_COMMON_DESCRIPTOR;
 
 #endif // __USB100_H__
 
@@ -285,7 +285,7 @@ typedef union _BM_REQUEST_TYPE
 		UCHAR   Dir: 1;
 	};
 	UCHAR B;
-} BM_REQUEST_TYPE, *PBM_REQUEST_TYPE;
+}* PBM_REQUEST_TYPE, BM_REQUEST_TYPE;
 
 typedef struct _USB_DEFAULT_PIPE_SETUP_PACKET
 {
@@ -312,7 +312,7 @@ typedef struct _USB_DEFAULT_PIPE_SETUP_PACKET
 		USHORT W;
 	} wIndex;
 	USHORT wLength;
-} USB_DEFAULT_PIPE_SETUP_PACKET, *PUSB_DEFAULT_PIPE_SETUP_PACKET;
+}* PUSB_DEFAULT_PIPE_SETUP_PACKET, USB_DEFAULT_PIPE_SETUP_PACKET;
 C_ASSERT(sizeof(USB_DEFAULT_PIPE_SETUP_PACKET) == 8);
 
 #pragma warning(default:4214)
@@ -429,7 +429,7 @@ typedef struct _WINUSB_PIPE_INFORMATION
 	UCHAR           PipeId;
 	USHORT          MaximumPacketSize;
 	UCHAR           Interval;
-} WINUSB_PIPE_INFORMATION, *PWINUSB_PIPE_INFORMATION;
+}* PWINUSB_PIPE_INFORMATION, WINUSB_PIPE_INFORMATION;
 C_ASSERT(sizeof(WINUSB_PIPE_INFORMATION) == 12);
 
 #endif // __WUSBIO_H__
@@ -438,7 +438,47 @@ C_ASSERT(sizeof(WINUSB_PIPE_INFORMATION) == 12);
 
 #ifndef __WUSB_H__
 
+/*! \addtogroup core UsbK Core API
+*  @{
+*/
+/*! \addtogroup core_general
+*  @{
+*/
+//! libusbK interfacing handle.
+/*!
+* This handle is required by other libusbK routines that perform
+* operations on a device. The handle is opaque. To release this handle,
+* call the \ref UsbK_Close or \ref UsbK_Free function.
+*
+* A \ref LIBUSBK_INTERFACE_HANDLE differs from a \c
+* WINUSB_INTERFACE_HANDLE in the following ways:
+* - libusbK handles have no "master" handle. All libusbK handles can operate
+*   as a master handles. This means all handles work with all API functions.
+*
+* - libusbK handles encompass then entire set of interfaces available to a
+*   usb device file handle. For most users there is no need to use the \ref
+*   UsbK_GetAssociatedInterface function. Instead, they can use the \ref
+*   UsbK_ClaimInterface and \ref UsbK_ReleaseInterface functions. libusbK
+*   will maintain all interface settings on one (1) handle.
+*
+* - Legacy WinUSB functions (all are supported by the libusbK api) do
+*   not provide an interface number/index parameter. (e.g. \ref
+*   UsbK_QueryInterfaceSettings, \ref UsbK_SetCurrentAlternateSetting, etc.)
+*   libusbK deals with these functions as follows:
+*   - The most recent interface claimed with \ref UsbK_ClaimInterface becomes
+*     the default interface.
+*   - When \ref UsbK_ReleaseInterface is called the previously claimed
+*     interface becomes the default interface.
+*   - \ref UsbK_GetAssociatedInterface clones the source libusbK handle and
+*     changes the default interface of the clones handle to the index
+*     specified by the user.
+*
+*/
 typedef PVOID LIBUSBK_INTERFACE_HANDLE, *PLIBUSBK_INTERFACE_HANDLE;
+
+/*! @} */
+
+/*! @} */
 
 #include <PSHPACK1.H>
 
@@ -449,7 +489,7 @@ typedef struct _WINUSB_SETUP_PACKET
 	USHORT  Value;
 	USHORT  Index;
 	USHORT  Length;
-} WINUSB_SETUP_PACKET, *PWINUSB_SETUP_PACKET;
+}* PWINUSB_SETUP_PACKET, WINUSB_SETUP_PACKET;
 C_ASSERT(sizeof(WINUSB_SETUP_PACKET) == 8);
 
 #ifndef __HIDPORT_H__
@@ -471,7 +511,7 @@ typedef struct _HID_DESCRIPTOR
 		USHORT  wReportLength;
 	} DescriptorList [1];
 
-} HID_DESCRIPTOR, * PHID_DESCRIPTOR;
+}* PHID_DESCRIPTOR, HID_DESCRIPTOR;
 
 #endif
 
