@@ -29,6 +29,30 @@ binary distributions.
 #pragma warning(disable:4296)
 #pragma warning(disable:4201)
 #include <PSHPACK1.h>
+
+#define USB_HID_DESCRIPTOR_TYPE				0x21
+#define USB_HID_REPORT_DESCRIPTOR_TYPE		0x22
+#define USB_HID_PHYSICAL_DESCRIPTOR_TYPE	0x23
+
+typedef struct _HID_DESCRIPTOR
+{
+	UCHAR   bLength;
+	UCHAR   bDescriptorType;
+	USHORT  bcdHID;
+	UCHAR   bCountry;
+	UCHAR   bNumDescriptors;
+
+	/*
+	 *  This is an array of one OR MORE descriptors.
+	 */
+	struct _HID_DESCRIPTOR_DESC_LIST
+	{
+		UCHAR   bReportType;
+		USHORT  wReportLength;
+	} DescriptorList [1];
+
+}* PHID_DESCRIPTOR, HID_DESCRIPTOR;
+
 typedef struct _UNI_DESCRIPTOR
 {
 	union
@@ -39,7 +63,7 @@ typedef struct _UNI_DESCRIPTOR
 		USB_STRING_DESCRIPTOR String;
 		USB_INTERFACE_DESCRIPTOR Interface;
 		USB_ENDPOINT_DESCRIPTOR Endpoint;
-		USB_INTERFACEASSOCIATION_DESCRIPTOR InterfaceAssociation;
+		USB_INTERFACE_ASSOCIATION_DESCRIPTOR InterfaceAssociation;
 		HID_DESCRIPTOR Hid;
 	};
 } UNI_DESCRIPTOR, *PUNI_DESCRIPTOR, ** PPUNI_DESCRIPTOR;
@@ -617,7 +641,7 @@ BOOL DumpDescriptorConfig(PPUNI_DESCRIPTOR uniRef, PLONG remainingLength)
 			}
 			success = DumpDescriptorInterface(uniRef, remainingLength);
 			break;
-		case USB_INTERFACEASSOCIATION_DESCRIPTOR_TYPE:
+		case USB_INTERFACE_ASSOCIATION_DESCRIPTOR_TYPE:
 			success = DumpDescriptorInterfaceAssociation(uniRef, remainingLength);
 			break;
 		default:
@@ -636,13 +660,13 @@ BOOL DumpDescriptorConfig(PPUNI_DESCRIPTOR uniRef, PLONG remainingLength)
 BOOL DumpDescriptorInterfaceAssociation(PPUNI_DESCRIPTOR uniRef, PLONG remainingLength)
 {
 	BOOL success = TRUE;
-	PUSB_INTERFACEASSOCIATION_DESCRIPTOR desc = &((*uniRef)->InterfaceAssociation);
+	PUSB_INTERFACE_ASSOCIATION_DESCRIPTOR desc = &((*uniRef)->InterfaceAssociation);
 
 
 	if (!IsUniDescriptorValid(*uniRef, *remainingLength))
 		return FALSE;
 
-	DESC_BEGIN_CFG(USB_INTERFACEASSOCIATION_DESCRIPTOR_TYPE);
+	DESC_BEGIN_CFG(USB_INTERFACE_ASSOCIATION_DESCRIPTOR_TYPE);
 
 	DESC_VALUE(desc, bLength, KF_U);
 	DESC_VALUE(desc, bDescriptorType, KF_X2);
@@ -655,7 +679,7 @@ BOOL DumpDescriptorInterfaceAssociation(PPUNI_DESCRIPTOR uniRef, PLONG remaining
 
 	AdvanceUniDescriptor(*uniRef, *remainingLength);
 
-	DESC_SUB_END(USB_INTERFACEASSOCIATION_DESCRIPTOR_TYPE);
+	DESC_SUB_END(USB_INTERFACE_ASSOCIATION_DESCRIPTOR_TYPE);
 
 	return success;
 }

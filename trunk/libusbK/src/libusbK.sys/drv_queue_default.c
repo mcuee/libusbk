@@ -343,37 +343,6 @@ VOID DefaultQueue_OnIoControl(__in WDFQUEUE Queue,
 		}
 		break;
 
-	case LIBUSB_IOCTL_QUERY_INTERFACE_SETTINGS:
-
-		GET_OUT_BUFFER(sizeof(USB_INTERFACE_DESCRIPTOR), &outputBuffer, &outputBufferLen, "query_interface_settings");
-
-		status = Interface_QuerySettings(
-		             deviceContext,
-		             (UCHAR)requestContext->IoControlRequest.intf.interface_index,
-		             (UCHAR)requestContext->IoControlRequest.intf.altsetting_index,
-		             (PUSB_INTERFACE_DESCRIPTOR)outputBuffer);
-
-		if (NT_SUCCESS(status))
-			length = sizeof(USB_INTERFACE_DESCRIPTOR);
-
-		break;
-
-	case LIBUSB_IOCTL_QUERY_PIPE:
-
-		GET_OUT_BUFFER(sizeof(PIPE_INFORMATION), &outputBuffer, &outputBufferLen, "query_pipe");
-
-		status = Pipe_QueryInformation(deviceContext,
-		                               (UCHAR)libusbRequest->query_pipe.interface_index,
-		                               (UCHAR)libusbRequest->query_pipe.altsetting_index,
-		                               (UCHAR)libusbRequest->query_pipe.pipe_index,
-		                               (PPIPE_INFORMATION)outputBuffer);
-		if (NT_SUCCESS(status))
-		{
-			length = sizeof(PIPE_INFORMATION);
-		}
-
-		break;
-
 	case LIBUSB_IOCTL_SET_FEATURE:
 
 		requestContext->PipeContext = GetPipeContextByID(deviceContext, 0);

@@ -402,6 +402,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\lusbk_usbio.h"
+				>
+			</File>
+			<File
 				RelativePath=".\lusbk_version.h"
 				>
 			</File>
