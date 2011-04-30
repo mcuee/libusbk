@@ -6,7 +6,6 @@
 * \author Travis Lee Robinson
 * \version 3.0
 * \date 2011
-*
 */
 
 /*! \addtogroup core UsbK Core API
