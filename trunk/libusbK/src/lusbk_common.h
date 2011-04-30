@@ -1,5 +1,6 @@
 /*! \file lusbk_common.h
-* The libusbK library provides a subset of general usb/descriptor types.
+* \brief The libusbK library provides a subset of general usb/descriptor types.
+* 
 * The general usb/descriptor types are also available as part of the WDK.
 * In order to maximum compatiblity with all \ref usbk_drivers, the
 * usb/descriptor types defined in libusbK are \b identical to those found
