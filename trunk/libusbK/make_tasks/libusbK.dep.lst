@@ -10,7 +10,10 @@
 \lusbk_usb.h;                       \include;
 \lusbk_common.h;                    \include;
 \lusbk_dynamic.h;                   \include;
+\lusbk_linked_list.h;               \include;
 \lusbk_device_list.h;               \include;
+\lusbk_overlapped.h;                \include;
+\lusbk_usbio.h;                     \include;
 \..\license\AUTHORS-libusbK.txt;     @\license
 \..\license\AUTHORS-libusb0.txt;     @\license
 \..\license\LICENSE-bsd.txt;         @\license
