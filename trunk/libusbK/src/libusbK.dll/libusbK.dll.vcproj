@@ -326,6 +326,10 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
+				RelativePath="..\lusbk_bknd.c"
+				>
+			</File>
+			<File
 				RelativePath="..\lusbk_bknd_hid.c"
 				>
 			</File>
@@ -408,6 +412,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\lusbk_linked_list.h"
+				>
+			</File>
+			<File
 				RelativePath="..\lusbk_private.h"
 				>
 			</File>
@@ -417,6 +425,10 @@
 			</File>
 			<File
 				RelativePath="..\lusbk_usb.h"
+				>
+			</File>
+			<File
+				RelativePath="..\lusbk_usbio.h"
 				>
 			</File>
 			<File
