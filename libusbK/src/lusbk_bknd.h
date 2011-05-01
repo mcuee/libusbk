@@ -6,9 +6,6 @@
 
 #include "lusbk_private.h"
 
-long AquireDeviceActionPendingLock(__in PKUSB_SHARED_DEVICE SharedDevice);
-long ReleaseDeviceActionPendingLock(__in PKUSB_SHARED_DEVICE SharedDevice);
-
 #define GET_INTERNAL_HANDLE_EX(HandlePtrRtn, OnFailureReturnTrue)						\
 {																						\
 	HandlePtrRtn = PublicToPrivateHandle(InterfaceHandle);								\
@@ -42,6 +39,9 @@ long ReleaseDeviceActionPendingLock(__in PKUSB_SHARED_DEVICE SharedDevice);
 		goto ErrorJump;																		\
 	}																						\
 }
+
+long AquireDeviceActionPendingLock(__in PKUSB_SHARED_DEVICE SharedDevice);
+long ReleaseDeviceActionPendingLock(__in PKUSB_SHARED_DEVICE SharedDevice);
 
 PKUSB_INTERFACE_HANDLE_INTERNAL GetInternalPoolHandle();
 PKUSB_SHARED_DEVICE GetSharedDevicePoolHandle(LPCSTR DevicePath);
