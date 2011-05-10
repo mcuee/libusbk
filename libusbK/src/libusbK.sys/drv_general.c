@@ -19,7 +19,7 @@ binary distributions.
 #include "drv_common.h"
 
 CONST PCHAR PipeTypeStrings[8] = {"Invalid", "Control", "Isochronous", "Bulk", "Interrupt", "invalid", "invalid", "invalid"};
-CONST PCHAR DeviceSpeedStrings[8] = {"Low", "Full", "High", "Super", "invalid", "invalid", "invalid", "invalid"};
+CONST PCHAR DeviceSpeedStrings[8] = {"Low/Full", "invalid", "High", "invalid", "invalid", "invalid", "invalid", "invalid"};
 CONST PCHAR BoolStrings[2] = {"False", "True"};
 CONST PCHAR EndpointDirStrings[2] = {"Write", "Read"};
 CONST PCHAR BmRequestDirStrings[2] = {"HostToDevice(0)", "DeviceToHost(1)"};

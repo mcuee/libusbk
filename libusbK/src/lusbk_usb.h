@@ -24,6 +24,21 @@ extern "C" {
 //! Creates/opens a libusbK interface handle from the device list. This is a perferred method.
 	/*!
 	*
+	* \ref UsbK_Open performs the same tasks as \ref UsbK_Initialize with the following exceptions:
+	* - Uses a \ref KUSB_DEV_LIST instead of a file handle created with the Windows CreateFile() API function.
+	* - File handles are managed internally and are closed when the last \ref LIBUSBK_INTERFACE_HANDLE is 
+	*   closed with \ref UsbK_Close.
+	* - If \c DeviceListItem is a composite device, multiple device file handles are managed as one.
+	*
+	* \param DeviceListItem
+	* The device list element to open.
+	*
+	* \param InterfaceHandle
+	* Receives a handle configured to the first (default) interface on the device.
+	* This handle is required by other libusbK routines that perform operations
+	* on the default interface. The handle is opaque. To release this handle,
+	* call the \ref UsbK_Close function.
+	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_Open (
@@ -33,6 +48,20 @@ extern "C" {
 //! Closes a libusbK interface handle opened by \ref UsbK_Open or \ref UsbK_Initialize. This is a perferred method.
 	/*!
 	*
+	* The \ref UsbK_Close function releases all of the resources that
+	* \ref UsbK_Initialize, \ref UsbK_Open, or \ref UsbK_GetAssociatedInterface allocated. This is a synchronous
+	* operation.
+	*
+	* \note \ref UsbK_Close and \ref UsbK_Free perform the same tasks.  The difference is in the return code only.
+	* - \ref UsbK_Free always returns TRUE.
+	* - \ref UsbK_Close will return FALSE in the hande is already closed/free.
+	*
+	* \param InterfaceHandle
+	* Handle to an interface on the device. This handle must be created by a previous call to:
+	* - \ref UsbK_Open
+	* - \ref UsbK_Initialize
+	* - \ref UsbK_GetAssociatedInterface
+	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_Close (
@@ -40,12 +69,36 @@ extern "C" {
 
 //! Claims the specified interface by number or index.
 	/*!
+	* Claiming an interface allows applications a way to prevent other applications
+	* or multiple instances of the same application from using an interface at the same time.
+	*
+	* When an interface is claimed with \ref UsbK_ClaimInterface it performs the following actions:
+	* - Checks if the inteface exists. If it does not, returns FALSE and sets last error to ERROR_NO_MORE_ITEMS.
+	* - The default (or current) interface for the device is changed to \c InterfaceNumberOrIndex.
+	* - libusb0.sys and libusbK.sys:
+	*   - A request to claim the interface is sent to the driver.
+	*     If the interface is not claimed or already claimed by the application the request succeeds.
+	*     If the interface is claimed by another application, \ref UsbK_ClaimInterface returns FALSE
+	*     and sets last error to \c ERROR_BUSY.  In this case the
+	*     The default (or current) interface for the device is \b still changed to \c InterfaceNumberOrIndex.
+	* - WinUSB.sys:
+	*   All WinUSB device interfaces are claimed when the device is opened.
 	*
 	* \param InterfaceHandle
 	* A libusbK interface handle which is returned by:
 	* - \ref UsbK_Open
 	* - \ref UsbK_Initialize
 	* - \ref UsbK_GetAssociatedInterface
+	*
+	* \param InterfaceNumberOrIndex
+	* Interfaces can be claimed or released by a interface index or \c bInterfaceNumber.
+	* - Interface indexes always start from 0 and continue sequentially for all interfaces of the device.
+	* - An interface number always represents the actual \ref USB_INTERFACE_DESCRIPTOR::bInterfaceNumber.
+	*   Interface numbers are not guaranteed to be zero based or sequential.
+	* 
+	* \param IsIndex
+	* If TRUE, \c InterfaceNumberOrIndex represents an interface index.\n
+	* if FALSE \c InterfaceNumberOrIndex represents a \c bInterfaceNumber.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*/
@@ -63,6 +116,34 @@ extern "C" {
 	* - \ref UsbK_Initialize
 	* - \ref UsbK_GetAssociatedInterface
 	*
+	* When an interface is release with \ref UsbK_ReleaseInterface it performs the following actions:
+	* - Checks if the inteface exists. If it does not, returns FALSE and sets last error to ERROR_NO_MORE_ITEMS.
+	* - The default (or current) interface for the device is changed to the previously claimed interface.
+	* - libusb0.sys and libusbK.sys:
+	*   - A request to release the interface is sent to the driver.
+	*     If the interface is not claimed by a different application the request succeeds.
+	*     If the interface is claimed by another application, \ref UsbK_ReleaseInterface returns FALSE
+	*     and sets last error to \c ERROR_BUSY.  In this case, the default/current interface for the device
+	*     is \b still changed to the previously claimed interface.
+	* - WinUSB.sys:
+	*   No other action needed, returns TRUE.
+	*
+	* \note
+	* When an interface is released, it is moved to the bottom if an interface stack making a previously
+	* claimed interface the current.  This will continue to occur regardless of whether the interface is claimed.
+	* For this reason, \ref UsbK_ReleasInterface can be used as a means to change the current/default interface
+	* of an \c InterfaceHandle without claiming the interface.
+	*
+	* \param InterfaceNumberOrIndex
+	* Interfaces can be claimed or released by a interface index or \c bInterfaceNumber.
+	* - Interface indexes always start from 0 and continue sequentially for all interfaces of the device.
+	* - An interface number always represents the actual \ref USB_INTERFACE_DESCRIPTOR::bInterfaceNumber.
+	*   Interface numbers are not guaranteed to be zero based or sequential.
+	* 
+	* \param IsIndex
+	* If TRUE, \c InterfaceNumberOrIndex represents an interface index.\n
+	* if FALSE \c InterfaceNumberOrIndex represents a \c bInterfaceNumber.
+	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_ReleaseInterface (
@@ -72,12 +153,27 @@ extern "C" {
 
 //! Sets the alternate setting of the specified interface.
 	/*!
+	* \ref UsbK_SetAltInterface performs the same task as \ref UsbK_SetCurrentAlternateSetting except it provides
+	* the option of specifying which interfaces alternate setting to activate.
 	*
 	* \param InterfaceHandle
 	* A libusbK interface handle which is returned by:
 	* - \ref UsbK_Open
 	* - \ref UsbK_Initialize
 	* - \ref UsbK_GetAssociatedInterface
+	*
+	* \param InterfaceNumberOrIndex
+	* Interfaces can be specified by a interface index or \c bInterfaceNumber.
+	* - Interface indexes always start from 0 and continue sequentially for all interfaces of the device.
+	* - An interface number always represents the actual \ref USB_INTERFACE_DESCRIPTOR::bInterfaceNumber.
+	*   Interface numbers are not guaranteed to be zero based or sequential.
+	* 
+	* \param IsIndex
+	* If TRUE, \c InterfaceNumberOrIndex represents an interface index.\n
+	* if FALSE \c InterfaceNumberOrIndex represents a \c bInterfaceNumber.
+	*
+	* \param AltInterfaceNumber
+	* The bAlternateSetting to activate.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*/
@@ -89,12 +185,27 @@ extern "C" {
 
 //! Gets the alternate setting for the specified interface.
 	/*!
+	* \ref UsbK_GetAltInterface performs the same task as \ref UsbK_GetCurrentAlternateSetting except it provides
+	* the option of specifying which interfaces alternate setting is to be retrieved.
 	*
 	* \param InterfaceHandle
 	* A libusbK interface handle which is returned by:
 	* - \ref UsbK_Open
 	* - \ref UsbK_Initialize
 	* - \ref UsbK_GetAssociatedInterface
+	*
+	* \param InterfaceNumberOrIndex
+	* Interfaces can be specified by a interface index or \c bInterfaceNumber.
+	* - Interface indexes always start from 0 and continue sequentially for all interfaces of the device.
+	* - An interface number always represents the actual \ref USB_INTERFACE_DESCRIPTOR::bInterfaceNumber.
+	*   Interface numbers are not guaranteed to be zero based or sequential.
+	* 
+	* \param IsIndex
+	* If TRUE, \c InterfaceNumberOrIndex represents an interface index.\n
+	* if FALSE \c InterfaceNumberOrIndex represents a \c bInterfaceNumber.
+	*
+	* \param AltInterfaceNumber
+	* On success, returns the active bAlternateSetting.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*/
@@ -106,6 +217,9 @@ extern "C" {
 
 //! Gets the requested descriptor. This is a synchronous operation.
 	/*!
+	*
+	* If the device descriptor or active config descriptor is requested,
+	* \ref UsbK_GetDescriptor retrieves cached data and this becomes a non-blocking, non I/O request.
 	*
 	* \param InterfaceHandle
 	* A libusbK interface handle which is returned by:
@@ -151,13 +265,45 @@ extern "C" {
 //! Transmits control data over a default control endpoint.
 	/*!
 	*
+	* A \ref UsbK_ControlTransfer is never cached.  These requests always go directly to the usb device.
+	*
+	* \important
+	* This function should not be used for operations supported by the library.\n
+	* e.g. \ref UsbK_SetConfiguration, \ref UsbK_SetAltInterface, etc..
+	*
 	* \param InterfaceHandle
-	* A libusbK interface handle which is returned by:
+	* A valid libusbK interface handle returned by:
 	* - \ref UsbK_Open
 	* - \ref UsbK_Initialize
 	* - \ref UsbK_GetAssociatedInterface
 	*
+	* \param SetupPacket
+	*  The 8-byte setup packet of type WINUSB_SETUP_PACKET.
+	* 
+	* \param Buffer
+	* A caller-allocated buffer that contains the data to transfer.
+	* 
+	* \param BufferLength
+	* The number of bytes to transfer, not including the setup packet. This 
+	* number must be less than or equal to the size, in bytes, of Buffer. 
+	* 
+	* \param LengthTransferred
+	* A pointer to a ULONG variable that receives the actual number of 
+	* transferred bytes. If the application does not expect any data to be 
+	* transferred during the data phase (BufferLength is zero), 
+	* LengthTransferred can be NULL. 
+	* 
+	* \param Overlapped
+	* An optional pointer to an OVERLAPPED structure, which is used for 
+	* asynchronous operations. If this parameter is specified, \ref 
+	* UsbK_ControlTransfer immediately returns, and the event is signaled when 
+	* the operation is complete. If Overlapped is not supplied, the \ref 
+	* UsbK_ControlTransfer function transfers data synchronously. 
+	* 
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	* If an \c Overlapped member is supplied and the operation succeeds this function returns FALSE 
+	* and sets last error to ERROR_IO_PENDING.
+	*
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_ControlTransfer (
 	    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
@@ -176,6 +322,53 @@ extern "C" {
 	* - \ref UsbK_Initialize
 	* - \ref UsbK_GetAssociatedInterface
 	*
+	* \param PolicyType
+	* A value that specifies the power policy to set. The following table 
+	* describes symbolic constants that are defined in \ref lusbk_usbio.h. 
+	*
+	* - AUTO_SUSPEND (0x81)
+	*   - Specifies the auto-suspend policy type; the power policy parameter must 
+	*     be specified by the caller in the Value parameter. 
+	*   - For auto-suspend, the Value parameter must point to a UCHAR variable.
+	*   - If Value is TRUE (nonzero), the USB stack suspends the device if the 
+	*     device is idle. A device is idle if there are no transfers pending, or 
+	*     if the only pending transfers are IN transfers to interrupt or bulk 
+	*     endpoints. 
+	*   - The default value is determined by the value set in the DefaultIdleState 
+	*     registry setting. By default, this value is TRUE. 
+	*
+	* - SUSPEND_DELAY (0x83)
+	*   - Specifies the suspend-delay policy type; the power policy parameter must 
+	*     be specified by the caller in the Value parameter. 
+	*   - For suspend-delay, Value must point to a ULONG variable.
+	*   - Value specifies the minimum amount of time, in milliseconds, that the 
+	*     driver must wait post transfer before it can suspend the device. 
+	*   - The default value is determined by the value set in the 
+	*     DefaultIdleTimeout registry setting. By default, this value is five 
+	*     seconds. 
+	*
+	* \param ValueLength
+	* The size, in bytes, of the buffer at Value.
+	* 
+	* \param Value
+	* The new value for the power policy parameter. Datatype and value for 
+	* Value depends on the type of power policy passed in PolicyType. For more 
+	* information, see PolicyType. 
+	* 
+	* The following list summarizes the effects of changes to power management 
+	* states: 
+	* - All pipe handles, interface handles, locks, and alternate settings are 
+	*   preserved across power management events. 
+	* - Any transfers that are in progress are suspended when a device transfers 
+	*   to a low power state, and they are resumed when the device is restored 
+	*   to a working state. 
+	* - The device and system must be in a working state before the client can 
+	*   restore a device-specific configuration. Clients can determine whether 
+	*   the device and system are in a working state from the WM_POWERBROADCAST 
+	*   message. 
+	* - The client can indicate that an interface is idle by calling \ref 
+	*   UsbK_SetPowerPolicy. 
+	* 
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_SetPowerPolicy (
@@ -193,6 +386,39 @@ extern "C" {
 	* - \ref UsbK_Initialize
 	* - \ref UsbK_GetAssociatedInterface
 	*
+	* \param PolicyType
+	* A value that specifies the power policy parameter to retrieve in Value. 
+	* The following table describes symbolic constants that are defined in 
+	* \ref lusbk_usbio.h. 
+	*
+	* - AUTO_SUSPEND (0x81)
+	*   - If the caller specifies a power policy of AUTO_SUSPEND, \ref 
+	*     UsbK_GetPowerPolicy returns the value of the auto suspend policy 
+	*     parameter in the Value parameter. 
+	*   - If Value is TRUE (that is, nonzero), the USB stack suspends the device 
+	*     when no transfers are pending or the only transfers pending are IN 
+	*     transfers on an interrupt or bulk endpoint. 
+	*   - The value of the DefaultIdleState registry value determines the default 
+	*     value of the auto suspend policy parameter. 
+	*   - The Value parameter must point to a UCHAR variable.
+	*
+	* - SUSPEND_DELAY (0x83)
+	*   - If the caller specifies a power policy of SUSPEND_DELAY, \ref 
+	*     UsbK_GetPowerPolicy returns the value of the suspend delay policy 
+	*     parameter in Value. 
+	*   - The suspend delay policy parameter specifies the minimum amount of time, 
+	*     in milliseconds, that the driver must wait after any transfer before it 
+	*     can suspend the device. 
+	*   - Value must point to a ULONG variable.
+	* 
+	* \param ValueLength
+	* A pointer to the size of the buffer that Value. On output, ValueLength 
+	* receives the size of the data that was copied into the Value buffer.
+	* 
+	* \param Value
+	* A buffer that receives the specified power policy parameter. For more 
+	* information, see PolicyType. 
+	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_GetPowerPolicy (
@@ -203,12 +429,24 @@ extern "C" {
 
 //! Sets the device configuration number.
 	/*!
+	* \ref UsbK_SetConfiguration is only supported with libusb0.sys.
+	* If the driver in not libusb0.sys, this function performs the following emulation actions:
+	* - If the requested configuration number is the current configuration number, returns TRUE.
+	* - If the requested configuration number is one other than the current configuration number,
+	*   returns FALSE and set last error to \c ERROR_NO_MORE_ITEMS.
+	*
+	* This function will fail if there are pending I/O operations or there are other libusbK interface
+	* handles referencing the device.
+	* \sa UsbK_Free
 	*
 	* \param InterfaceHandle
 	* A libusbK interface handle which is returned by:
 	* - \ref UsbK_Open
 	* - \ref UsbK_Initialize
 	* - \ref UsbK_GetAssociatedInterface
+	*
+	* \param ConfigurationNumber
+	* The configuration number to activate.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*/
@@ -224,6 +462,9 @@ extern "C" {
 	* - \ref UsbK_Open
 	* - \ref UsbK_Initialize
 	* - \ref UsbK_GetAssociatedInterface
+	*
+	* \param ConfigurationNumber
+	* On success, receives the active configuration number.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*/
@@ -264,13 +505,11 @@ extern "C" {
 	* interface, and so on. \ref UsbK_Initialize parses the default interface
 	* descriptor for the endpoint descriptors and caches information such as
 	* the associated pipes or state specific data. The handle received in the
-	* InterfaceHandle parameter is a pointer to the memory block allocated for
+	* InterfaceHandle parameter will have its default interface configured to
 	* the first interface in the array.
 	*
-	* If an application wants to use another interface on the device, it must
-	* call \ref UsbK_GetAssociatedInterface, specify the index of the interface,
-	* and retrieve a handle to the memory block allocated for the specified
-	* interface.
+	* If an application wants to use another interface on the device, it can
+	* call \ref UsbK_GetAssociatedInterface, or \ref UsbK_ClaimInterface.
 	*
 	* \param DeviceHandle
 	* The handle to the device that CreateFile returned.
@@ -279,7 +518,7 @@ extern "C" {
 	* characteristics necessary for this to function properly.
 	*
 	* \param InterfaceHandle
-	* Receives a handle to the first (default) interface on the device.
+	* Receives a handle configured to the first (default) interface on the device.
 	* This handle is required by other libusbK routines that perform operations
 	* on the default interface. The handle is opaque. To release this handle,
 	* call the \ref UsbK_Free function.
@@ -296,6 +535,10 @@ extern "C" {
 	* The \ref UsbK_Free function releases all of the resources that
 	* \ref UsbK_Initialize or \ref UsbK_Open allocated. This is a synchronous
 	* operation.
+	*
+	* \note \ref UsbK_Close and \ref UsbK_Free perform the same tasks.  The difference is in the return code only.
+	* - \ref UsbK_Free always returns TRUE.
+	* - \ref UsbK_Close will return FALSE in the hande is already closed/free.
 	*
 	* \param InterfaceHandle
 	* Handle to an interface on the device. This handle must be created by a previous call to:
@@ -332,15 +575,11 @@ extern "C" {
 	* The \ref UsbK_GetAssociatedInterface routine retrieves an opaque handle.
 	*
 	* The first associated interface is the interface that immediately follows
-	* the interface whose handle the \ref UsbK_Initialize or \ref UsbK_Open routine retrieves.
+	* the current (or default) interface of the specified /c InterfaceHandle.
 	*
 	* The handle that \ref UsbK_GetAssociatedInterface returns must be released
 	* by calling \ref UsbK_Free.
 	*
-	* Callers of \ref UsbK_GetAssociatedInterface can retrieve only one handle for
-	* each interface. If a caller attempts to retrieve more than one handle
-	* for the same interface, the routine will fail with an error of
-	* ERROR_ALREADY_EXISTS.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*/
@@ -368,16 +607,13 @@ extern "C" {
 	* contains information about the interface that AlternateSettingNumber
 	* specified.
 	*
-	* \ref UsbK_QueryInterfaceSettings parses the configuration descriptor
-	* previously retrieved by \ref UsbK_Initialize or \ref UsbK_Open. For more information, see
-	* the Remarks section for \ref UsbK_Initialize or \ref UsbK_Open.
-	*
-	* The \ref UsbK_QueryInterfaceSettings call searches the interface array
-	* for the alternate interface specified by the interface index passed by
-	* the caller in the AlternateSettingNumber. If the specified interface is
-	* found, the function populates the caller-allocated
-	* USB_INTERFACE_DESCRIPTOR structure. If the specified interface is not
+	* The \ref UsbK_QueryInterfaceSettings call searches the current/default interface array
+	* for the alternate interface specified by the caller in the AlternateSettingNumber.
+	* If the specified alternate interface is found, the function populates the caller-allocated
+	* USB_INTERFACE_DESCRIPTOR structure. If the specified alternate interface is not
 	* found, then the call fails with the ERROR_NO_MORE_ITEMS code.
+	*
+	* To change the current/default interface, see \ref UsbK_ClaimInterface and \ref UsbK_ReleaseInterface
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*/
@@ -407,7 +643,7 @@ extern "C" {
 	* \param Buffer
 	* A caller-allocated buffer that receives the requested value.
 	* On output, Buffer indicates the device speed. The function returns
-	* \ref LowSpeed (0x01) or \ref HighSpeed (0x03).
+	* \ref USB_DEVICE_SPEED::UsbLowSpeed (0x01) or \ref USB_DEVICE_SPEED::UsbHighSpeed (0x03).
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*/
@@ -419,6 +655,10 @@ extern "C" {
 
 //! Sets the alternate setting of an interface.
 	/*!
+	* Sets the active bAlternateSetting for the current/default interface.
+	*
+	* To change the default/current interface see \ref UsbK_ClaimInterface and \ref UsbK_ReleaseInterface
+	* \sa UsbK_SetAltInterface
 	*
 	* \param InterfaceHandle
 	* A libusbK interface handle which is returned by:
@@ -426,7 +666,7 @@ extern "C" {
 	* - \ref UsbK_Open
 	* - \ref UsbK_GetAssociatedInterface
 	*
-	* \param AlternateSetting
+	* \param AlternateSettingNumber
 	* The value that is contained in the bAlternateSetting member of the
 	* \ref USB_INTERFACE_DESCRIPTOR structure. This structure can be populated by the
 	* \ref UsbK_QueryInterfaceSettings routine.
@@ -435,10 +675,14 @@ extern "C" {
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_SetCurrentAlternateSetting (
 	    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-	    __in UCHAR SettingNumber);
+	    __in UCHAR AlternateSettingNumber);
 
 //! Gets the current alternate interface setting for an interface.
 	/*!
+	* Gets the active bAlternateSetting for the current/default interface.
+	*
+	* To change the default/current interface see \ref UsbK_ClaimInterface and \ref UsbK_ReleaseInterface
+	* \sa UsbK_GetAltInterface
 	*
 	* \param InterfaceHandle
 	* A libusbK interface handle which is returned by:
@@ -446,14 +690,14 @@ extern "C" {
 	* - \ref UsbK_Initialize
 	* - \ref UsbK_GetAssociatedInterface
 	*
-	* \param AlternateSetting
+	* \param AlternateSettingNumber
 	* A pointer to an unsigned character that receives an integer that indicates the current alternate setting.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_GetCurrentAlternateSetting (
 	    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-	    __out PUCHAR SettingNumber);
+	    __out PUCHAR AlternateSettingNumber);
 
 //! Retrieves information about a pipe that is associated with an interface.
 	/*!
@@ -510,7 +754,6 @@ extern "C" {
 	* - \ref UsbK_Open
 	* - \ref UsbK_Initialize
 	* - \ref UsbK_GetAssociatedInterface
-	*
 	*
 	* \param PipeID
 	* An 8-bit value that consists of a 7-bit address and a direction bit.
@@ -643,6 +886,11 @@ extern "C" {
 	* - \ref UsbK_Initialize
 	* - \ref UsbK_GetAssociatedInterface
 	*
+	* \param PipeID
+	* An 8-bit value that consists of a 7-bit address and a direction bit.
+	* This parameter corresponds to the bEndpointAddress field in the endpoint
+	* descriptor.
+	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_GetPipePolicy (
@@ -660,6 +908,11 @@ extern "C" {
 	* - \ref UsbK_Open
 	* - \ref UsbK_Initialize
 	* - \ref UsbK_GetAssociatedInterface
+	*
+	* \param PipeID
+	* An 8-bit value that consists of a 7-bit address and a direction bit.
+	* This parameter corresponds to the bEndpointAddress field in the endpoint
+	* descriptor.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*/
@@ -680,6 +933,11 @@ extern "C" {
 	* - \ref UsbK_Initialize
 	* - \ref UsbK_GetAssociatedInterface
 	*
+	* \param PipeID
+	* An 8-bit value that consists of a 7-bit address and a direction bit.
+	* This parameter corresponds to the bEndpointAddress field in the endpoint
+	* descriptor.
+	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_WritePipe (
@@ -699,6 +957,11 @@ extern "C" {
 	* - \ref UsbK_Initialize
 	* - \ref UsbK_GetAssociatedInterface
 	*
+	* \param PipeID
+	* An 8-bit value that consists of a 7-bit address and a direction bit.
+	* This parameter corresponds to the bEndpointAddress field in the endpoint
+	* descriptor.
+	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_ResetPipe (
@@ -713,6 +976,11 @@ extern "C" {
 	* - \ref UsbK_Open
 	* - \ref UsbK_Initialize
 	* - \ref UsbK_GetAssociatedInterface
+	*
+	* \param PipeID
+	* An 8-bit value that consists of a 7-bit address and a direction bit.
+	* This parameter corresponds to the bEndpointAddress field in the endpoint
+	* descriptor.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*/
@@ -729,6 +997,12 @@ extern "C" {
 	* - \ref UsbK_Initialize
 	* - \ref UsbK_GetAssociatedInterface
 	*
+	*
+	* \param PipeID
+	* An 8-bit value that consists of a 7-bit address and a direction bit.
+	* This parameter corresponds to the bEndpointAddress field in the endpoint
+	* descriptor.
+	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_FlushPipe (
@@ -743,6 +1017,11 @@ extern "C" {
 	* - \ref UsbK_Open
 	* - \ref UsbK_Initialize
 	* - \ref UsbK_GetAssociatedInterface
+	*
+	* \param PipeID
+	* An 8-bit value that consists of a 7-bit address and a direction bit.
+	* This parameter corresponds to the bEndpointAddress field in the endpoint
+	* descriptor.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*/
@@ -762,6 +1041,11 @@ extern "C" {
 	* - \ref UsbK_Open
 	* - \ref UsbK_Initialize
 	* - \ref UsbK_GetAssociatedInterface
+	*
+	* \param PipeID
+	* An 8-bit value that consists of a 7-bit address and a direction bit.
+	* This parameter corresponds to the bEndpointAddress field in the endpoint
+	* descriptor.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*/

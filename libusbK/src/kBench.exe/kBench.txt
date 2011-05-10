@@ -7,11 +7,12 @@ USAGE: benchmark [list]
                  [mode=] [buffersize=] [buffercount=] [packetsize=]
                  
 Commands:
-         list  : Display a list of connected devices before starting. 
-                 Select the device to use for the test from the list.
-         read  : Read from the device.
-         write : Write to the device.
-         loop  : [Default] Read and write to the device at the same time.
+         list    : Display a list of connected devices before starting. 
+                   Select the device to use for the test from the list.
+         listonly: list all devices and exit.  Do not perform any device I/O.
+         read    : Read from the device.
+         write   : Write to the device.
+         loop    : [Default] Read and write to the device at the same time.
 
          notestselect : Skips submitting the control transfers to get/set the
                         test type.  This makes the application compatible
@@ -23,8 +24,8 @@ Commands:
                         each byte that fails validation.
                         
 Switches:
-         vid        : Vendor id of device. (hex)  (Default=0x0666)
-         pid        : Product id of device. (hex) (Default=0x0001)
+         vid        : Vendor id of device. (hex)  (Default=0x04D8)
+         pid        : Product id of device. (hex) (Default=0xFA2E)
          retry      : Number of times to retry a transfer that timeout.
                       (Default = 0)
          timeout    : Transfer timeout value. (milliseconds) (Default=5000)

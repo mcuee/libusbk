@@ -41,8 +41,8 @@ typedef struct _WINUSB_API
 	BOOL (KUSB_API* GetAssociatedInterface)	(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR AssociatedInterfaceIndex, __out PLIBUSBK_INTERFACE_HANDLE AssociatedInterfaceHandle);
 	BOOL (KUSB_API* GetDescriptor)			(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR DescriptorType, __in UCHAR Index, __in USHORT LanguageID, __out_opt PUCHAR Buffer, __in ULONG BufferLength, __out PULONG LengthTransferred);
 	BOOL (KUSB_API* QueryDeviceInformation)	(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in ULONG InformationType, __inout PULONG BufferLength, __out PVOID Buffer);
-	BOOL (KUSB_API* SetCurrentAlternateSetting)	(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR SettingNumber);
-	BOOL (KUSB_API* GetCurrentAlternateSetting)	(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __out PUCHAR SettingNumber);
+	BOOL (KUSB_API* SetCurrentAlternateSetting)	(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR AlternateSettingNumber);
+	BOOL (KUSB_API* GetCurrentAlternateSetting)	(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __out PUCHAR AlternateSettingNumber);
 	BOOL (KUSB_API* SetPipePolicy)			(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR PipeID, __in ULONG PolicyType, __in ULONG ValueLength, __in PVOID Value);
 	BOOL (KUSB_API* GetPipePolicy)			(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR PipeID, __in ULONG PolicyType, __inout PULONG ValueLength, __out PVOID Value);
 	BOOL (KUSB_API* ReadPipe)				(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR PipeID, __out_opt PUCHAR Buffer, __in ULONG BufferLength, __out_opt PULONG LengthTransferred, __in_opt LPOVERLAPPED Overlapped);
@@ -611,7 +611,7 @@ Error:
 
 KUSB_EXP BOOL KUSB_API WUsb_SetCurrentAlternateSetting (
     __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in UCHAR SettingNumber)
+    __in UCHAR AlternateSettingNumber)
 {
 
 
@@ -622,14 +622,14 @@ KUSB_EXP BOOL KUSB_API WUsb_SetCurrentAlternateSetting (
 	GetStackInterfaceCache();
 	ErrorStackInterfaceCache();
 
-	success = WinUsb.SetCurrentAlternateSetting(InterfaceHandleByPipeID(0), SettingNumber);
+	success = WinUsb.SetCurrentAlternateSetting(InterfaceHandleByPipeID(0), AlternateSettingNumber);
 	if (success)
 	{
 
 		success = (BOOL)UsbStackHandler_SetAltInterface(
 		              &backendContext->UsbStack,
 		              interfaceEL.Number, FALSE,
-		              SettingNumber, FALSE);
+		              AlternateSettingNumber, FALSE);
 	}
 
 
@@ -641,7 +641,7 @@ Error:
 
 KUSB_EXP BOOL KUSB_API WUsb_GetCurrentAlternateSetting (
     __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __out PUCHAR SettingNumber)
+    __out PUCHAR AlternateSettingNumber)
 {
 	WUSBFN_CTX_INTERFACE_PREFIX();
 
@@ -651,14 +651,14 @@ KUSB_EXP BOOL KUSB_API WUsb_GetCurrentAlternateSetting (
 	GetStackInterfaceCache();
 	ErrorStackInterfaceCache();
 
-	success = WinUsb.GetCurrentAlternateSetting(InterfaceHandleByPipeID(0), SettingNumber);
+	success = WinUsb.GetCurrentAlternateSetting(InterfaceHandleByPipeID(0), AlternateSettingNumber);
 
 	if (success)
 	{
 		success = (BOOL)UsbStackHandler_SetAltInterface(
 		              &backendContext->UsbStack,
 		              interfaceEL.Number, FALSE,
-		              *SettingNumber, FALSE);
+		              *AlternateSettingNumber, FALSE);
 
 	}
 

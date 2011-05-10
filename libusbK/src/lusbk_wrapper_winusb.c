@@ -89,16 +89,16 @@ KUSB_EXP BOOL KUSB_API WinUsb_QueryDeviceInformation (
 
 KUSB_EXP BOOL KUSB_API WinUsb_SetCurrentAlternateSetting (
     __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in UCHAR SettingNumber)
+    __in UCHAR AlternateSettingNumber)
 {
-	return UsbK_SetCurrentAlternateSetting (InterfaceHandle, SettingNumber);
+	return UsbK_SetCurrentAlternateSetting (InterfaceHandle, AlternateSettingNumber);
 }
 
 KUSB_EXP BOOL KUSB_API WinUsb_GetCurrentAlternateSetting (
     __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __out PUCHAR SettingNumber)
+    __out PUCHAR AlternateSettingNumber)
 {
-	return UsbK_GetCurrentAlternateSetting (InterfaceHandle, SettingNumber);
+	return UsbK_GetCurrentAlternateSetting (InterfaceHandle, AlternateSettingNumber);
 }
 
 KUSB_EXP BOOL KUSB_API WinUsb_QueryPipe (

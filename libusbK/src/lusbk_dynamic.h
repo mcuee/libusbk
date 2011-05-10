@@ -68,8 +68,8 @@ typedef struct _KUSB_DRIVER_API
 	BOOL (KUSB_API* GetDescriptor)			(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR DescriptorType, __in UCHAR Index, __in USHORT LanguageID, __out_opt PUCHAR Buffer, __in ULONG BufferLength, __out PULONG LengthTransferred);
 	BOOL (KUSB_API* QueryInterfaceSettings)	(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR AlternateSettingNumber, __out PUSB_INTERFACE_DESCRIPTOR UsbAltInterfaceDescriptor);
 	BOOL (KUSB_API* QueryDeviceInformation)	(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in ULONG InformationType, __inout PULONG BufferLength, __out PVOID Buffer);
-	BOOL (KUSB_API* SetCurrentAlternateSetting)	(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR SettingNumber);
-	BOOL (KUSB_API* GetCurrentAlternateSetting)	(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __out PUCHAR SettingNumber);
+	BOOL (KUSB_API* SetCurrentAlternateSetting)	(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR AlternateSettingNumber);
+	BOOL (KUSB_API* GetCurrentAlternateSetting)	(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __out PUCHAR AlternateSettingNumber);
 	BOOL (KUSB_API* QueryPipe)				(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR AlternateSettingNumber, __in UCHAR PipeIndex, __out PWINUSB_PIPE_INFORMATION PipeInformation);
 	BOOL (KUSB_API* SetPipePolicy)			(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR PipeID, __in ULONG PolicyType, __in ULONG ValueLength, __in PVOID Value);
 	BOOL (KUSB_API* GetPipePolicy)			(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR PipeID, __in ULONG PolicyType, __inout PULONG ValueLength, __out PVOID Value);
@@ -130,11 +130,11 @@ typedef BOOL KUSB_API KUSB_QueryDeviceInformation (
 
 typedef BOOL KUSB_API KUSB_SetCurrentAlternateSetting (
     __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in UCHAR SettingNumber);
+    __in UCHAR AlternateSettingNumber);
 
 typedef BOOL KUSB_API KUSB_GetCurrentAlternateSetting (
     __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __out PUCHAR SettingNumber);
+    __out PUCHAR AlternateSettingNumber);
 
 typedef BOOL KUSB_API KUSB_QueryPipe (
     __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,

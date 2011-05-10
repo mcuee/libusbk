@@ -102,10 +102,10 @@ KUSB_EXP BOOL KUSB_API Hid_QueryDeviceInformation (
 
 KUSB_EXP BOOL KUSB_API Hid_SetCurrentAlternateSetting (
     __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in UCHAR SettingNumber)
+    __in UCHAR AlternateSettingNumber)
 {
 	UNREFERENCED_PARAMETER(InterfaceHandle);
-	UNREFERENCED_PARAMETER(SettingNumber);
+	UNREFERENCED_PARAMETER(AlternateSettingNumber);
 
 	SetLastError(ERROR_NOT_SUPPORTED);
 	return FALSE;
@@ -113,10 +113,10 @@ KUSB_EXP BOOL KUSB_API Hid_SetCurrentAlternateSetting (
 
 KUSB_EXP BOOL KUSB_API Hid_GetCurrentAlternateSetting (
     __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __out PUCHAR SettingNumber)
+    __out PUCHAR AlternateSettingNumber)
 {
 	UNREFERENCED_PARAMETER(InterfaceHandle);
-	UNREFERENCED_PARAMETER(SettingNumber);
+	UNREFERENCED_PARAMETER(AlternateSettingNumber);
 
 	SetLastError(ERROR_NOT_SUPPORTED);
 	return FALSE;
