@@ -121,6 +121,7 @@ typedef struct _BENCHMARK_TEST_PARAM
 	BYTE* VerifyBuffer;		// Stores the verify test pattern for 1 packet.
 	WORD VerifyBufferSize;	// Size of VerifyBuffer
 	BOOL UseCompositeDeviceList;
+	BOOL ListDevicesOnly;
 } BENCHMARK_TEST_PARAM, *PBENCHMARK_TEST_PARAM;
 
 // The benchmark transfer context used for asynchronous transfers.  see TransferAsync().
@@ -252,8 +253,8 @@ void SetTestDefaults(PBENCHMARK_TEST_PARAM test)
 	memset(test, 0, sizeof(*test));
 
 	test->Ep			= 0x00;
-	test->Vid			= 0x0666;
-	test->Pid			= 0x0001;
+	test->Vid			= 0x04D8;
+	test->Pid			= 0xFA2E;
 	test->Refresh		= 1000;
 	test->Timeout		= 5000;
 	test->TestType		= TestTypeLoop;
@@ -995,6 +996,11 @@ int ParseBenchmarkArgs(PBENCHMARK_TEST_PARAM testParams, int argc, char** argv)
 		{
 			testParams->TestType = TestTypeLoop;
 		}
+		else if (!_stricmp(arg, "listonly"))
+		{
+			testParams->UseList = TRUE;
+			testParams->ListDevicesOnly = TRUE;
+		}
 		else if (!_stricmp(arg, "list"))
 		{
 			testParams->UseList = TRUE;
@@ -1394,42 +1400,57 @@ int GetTestDeviceFromList(PBENCHMARK_TEST_PARAM test)
 	UCHAR selection;
 	UCHAR count = 0;
 	PKUSB_DEV_LIST list = test->DeviceList;
-	while (list && count < 9)
+
+	if (test->ListDevicesOnly)
 	{
-		CONMSG("%u. %s (%s) [%s]\n", count + 1, list->DeviceDesc, list->DeviceInstance, GetDrvIdString(list->DrvId));
-		list->UserContext.Byte[0] = FALSE;
-		count++;
-		list = list->next;
-	}
-	if (!count)
-	{
-		CONERR("%04Xh:%04Xh device not found\n", test->Vid, test->Pid);
-		return -1;
-	}
-
-	CONMSG("Select device (1-%u) :", count);
-	while(_kbhit()) _getch();
-
-	selection = (CHAR)_getche();
-	selection -= (UCHAR)'0';
-	CONMSG0("\n\n");
-
-	if (selection > 0 && selection <= count)
-	{
-		count = 0;
-		list = test->DeviceList;
-
-		while (list && ++count != selection)
-			list = list->next;
-
-		if (!list)
+		while (list)
 		{
-			CONERR("unknown selection\n");
-			return -1;
+			count++;
+			CONMSG("%02u. %s (%s) [%s]\n", count, list->DeviceDesc, list->DeviceInstance, GetDrvIdString(list->DrvId));
+			list = list->next;
 		}
-		list->UserContext.Byte[0] = TRUE;
 
 		return ERROR_SUCCESS;
+	}
+	else
+	{
+		while (list && count < 9)
+		{
+			CONMSG("%u. %s (%s) [%s]\n", count + 1, list->DeviceDesc, list->DeviceInstance, GetDrvIdString(list->DrvId));
+			list->UserContext.Byte[0] = FALSE;
+			count++;
+			list = list->next;
+		}
+		if (!count)
+		{
+			CONERR("%04Xh:%04Xh device not found\n", test->Vid, test->Pid);
+			return -1;
+		}
+
+		CONMSG("Select device (1-%u) :", count);
+		while(_kbhit()) _getch();
+
+		selection = (CHAR)_getche();
+		selection -= (UCHAR)'0';
+		CONMSG0("\n\n");
+
+		if (selection > 0 && selection <= count)
+		{
+			count = 0;
+			list = test->DeviceList;
+
+			while (list && ++count != selection)
+				list = list->next;
+
+			if (!list)
+			{
+				CONERR("unknown selection\n");
+				return -1;
+			}
+			list->UserContext.Byte[0] = TRUE;
+
+			return ERROR_SUCCESS;
+		}
 	}
 
 	return -1;
@@ -1450,8 +1471,6 @@ int __cdecl main(int argc, char** argv)
 		ShowHelp();
 		return -1;
 	}
-
-	ShowCopyright();
 
 	SetTestDefaults(&Test);
 
@@ -1482,6 +1501,12 @@ int __cdecl main(int argc, char** argv)
 	}
 
 
+
+	if (Test.ListDevicesOnly)
+	{
+		CONMSG("CurrentProcessId=%u Count=%d\n",GetCurrentProcessId(), ec);
+	}
+
 	if (Test.UseList)
 	{
 		if (GetTestDeviceFromList(&Test) < 0)
@@ -1492,6 +1517,9 @@ int __cdecl main(int argc, char** argv)
 		if (GetTestDeviceFromArgs(&Test) < 0)
 			goto Done;
 	}
+
+	if (Test.ListDevicesOnly)
+		goto Done;
 
 	if (!Bench_Open(&Test))
 		goto Done;
@@ -1700,10 +1728,12 @@ Done:
 
 	DeleteCriticalSection(&DisplayCriticalSection);
 
-	CONMSG0("Press any key to exit..");
-	_getch();
-	CONMSG0("\n");
-
+	if (!Test.ListDevicesOnly)
+	{
+		CONMSG0("Press any key to exit..");
+		_getch();
+		CONMSG0("\n");
+	}
 	return 0;
 }
 

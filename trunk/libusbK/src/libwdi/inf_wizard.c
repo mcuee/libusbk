@@ -1290,7 +1290,7 @@ int infwizard_prepare_driver(HWND dialog, device_context_t* device)
 	memset(&options, 0, sizeof(options));
 	options.driver_type = device->selected_driver;
 	options.vendor_name = device->manufacturer;
-	options.disable_signing = 1;
+	// options.disable_signing = 1;
 
 	if (device->wdi->desc)
 		free(device->wdi->desc);

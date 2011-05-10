@@ -43,6 +43,16 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "kList.exe", "src\kList.exe\
 		{F2114C97-2F90-44B2-86AF-E5AE662458BF} = {F2114C97-2F90-44B2-86AF-E5AE662458BF}
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "doc", "doc", "{C1227A3C-7AF9-46F7-BFE7-3CE1C3DB7672}"
+	ProjectSection(SolutionItems) = preProject
+		doc\Doxyfile = doc\Doxyfile
+		doc\usbk_conceptual_documentation.h = doc\usbk_conceptual_documentation.h
+		doc\usbk_doxygen.css = doc\usbk_doxygen.css
+		doc\usbk_footer.html = doc\usbk_footer.html
+		doc\usbk_header.html = doc\usbk_header.html
+		doc\usbk_layout.xml = doc\usbk_layout.xml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32

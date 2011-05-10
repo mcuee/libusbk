@@ -701,7 +701,7 @@ Error:
 
 KUSB_EXP BOOL KUSB_API UsbK_SetCurrentAlternateSetting (
     __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in UCHAR SettingNumber)
+    __in UCHAR AlternateSettingNumber)
 {
 
 
@@ -715,7 +715,7 @@ KUSB_EXP BOOL KUSB_API UsbK_SetCurrentAlternateSetting (
 
 	Mem_Zero(&request, sizeof(request));
 	request.intf.interface_number = interfaceEL.Number;
-	request.intf.altsetting_number = SettingNumber;
+	request.intf.altsetting_number = AlternateSettingNumber;
 	request.intf.intf_use_index = FALSE;
 	request.intf.altf_use_index = FALSE;
 
@@ -736,7 +736,7 @@ Error:
 
 KUSB_EXP BOOL KUSB_API UsbK_GetCurrentAlternateSetting (
     __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __out PUCHAR SettingNumber)
+    __out PUCHAR AlternateSettingNumber)
 {
 	libusb_request request;
 	LUSBKFN_CTX_INTERFACE_PREFIX();
@@ -755,7 +755,7 @@ KUSB_EXP BOOL KUSB_API UsbK_GetCurrentAlternateSetting (
 
 	if (success)
 	{
-		*SettingNumber = (UCHAR)request.intf.altsetting_number;
+		*AlternateSettingNumber = (UCHAR)request.intf.altsetting_number;
 
 		success = (BOOL)UsbStackHandler_SetAltInterface(
 		              &backendContext->UsbStack,

@@ -364,20 +364,8 @@ Return Value:
 	{
 		USBWRN("WdfUsbTargetDeviceRetrieveInformation failed, status=%Xh. Cannot properly determine device speed.\n", status);
 	}
-	if (!deviceContext->DeviceSpeed)
-	{
-		if (deviceContext->UsbDeviceDescriptor.bcdUSB != 0x0110)
-		{
-			// This is a full speed device or atleast 2.0 compliant.
-			deviceContext->DeviceSpeed = UsbFullSpeed;
-		}
-		else
-		{
-			// Older 1.1 devices are *considered* low speed.
-			deviceContext->DeviceSpeed = UsbLowSpeed;
-		}
-	}
 
+	// The winusb device speed policy is offet by speed+1.
 	GetPolicyValue(DEVICE_SPEED, deviceContext->DevicePolicy) = deviceContext->DeviceSpeed + 1;
 
 	USBMSG("DeviceSpeed=%s RemoteWakeCapable=%s SelfPowered=%s\n",
