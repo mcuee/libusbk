@@ -298,10 +298,12 @@ VOID XferIsoFS (
 #if 0
 		if (!requestContext->PipeContext->NextFrameNumber)
 		{
-			if (!NT_SUCCESS((status = WdfUsbTargetDeviceRetrieveCurrentFrameNumber(deviceContext->WdfUsbTargetDevice, &requestContext->PipeContext->NextFrameNumber)))
-		{
-			// ..use ASAP until the user takes action..
-			requestContext->PipeContext->NextFrameNumber = ULONG_MAX;
+			status = WdfUsbTargetDeviceRetrieveCurrentFrameNumber(deviceContext->WdfUsbTargetDevice, &requestContext->PipeContext->NextFrameNumber);
+			if (!NT_SUCCESS(status))
+			{
+				// ..use ASAP until the user takes action..
+				requestContext->PipeContext->NextFrameNumber = ULONG_MAX;
+			}
 		}
 		else
 		{
@@ -310,34 +312,31 @@ VOID XferIsoFS (
 			// FrameNumbers are 1:1 with iso packets.
 			// keep using NextFrameNumber as new transfers come in unless an error occurs or the user takes action.
 		}
-	}
 
-	//
-	// This is a way to set the start frame and NOT specify ASAP flag.
-	//
-	subUrb->UrbIsochronousTransfer.StartFrame = frameNumber  + SOME_LATENCY;
+		//
+		// This is a way to set the start frame and NOT specify ASAP flag.
+		//
+		subUrb->UrbIsochronousTransfer.StartFrame = requestContext->PipeContext->NextFrameNumber  + SOME_LATENCY;
 #endif
 
-	//
-	// when the client driver sets the ASAP flag, it basically
-	// guarantees that it will make data available to the HC
-	// and that the HC should transfer it in the next transfer frame
-	// for the endpoint.(The HC maintains a next transfer frame
-	// state variable for each endpoint). If the data does not get to the HC
-	// fast enough, the USBD_ISO_PACKET_DESCRIPTOR - Status is
-	// USBD_STATUS_BAD_START_FRAME on uhci. On ohci it is 0xC000000E.
-	//
+		//
+		// when the client driver sets the ASAP flag, it basically
+		// guarantees that it will make data available to the HC
+		// and that the HC should transfer it in the next transfer frame
+		// for the endpoint.(The HC maintains a next transfer frame
+		// state variable for each endpoint). If the data does not get to the HC
+		// fast enough, the USBD_ISO_PACKET_DESCRIPTOR - Status is
+		// USBD_STATUS_BAD_START_FRAME on uhci. On ohci it is 0xC000000E.
+		//
 
-	subUrb->UrbIsochronousTransfer.TransferFlags |=
-	    USBD_START_ISO_TRANSFER_ASAP;
+		subUrb->UrbIsochronousTransfer.TransferFlags |= USBD_START_ISO_TRANSFER_ASAP;
+		subUrb->UrbIsochronousTransfer.NumberOfPackets = nPackets;
+		subUrb->UrbIsochronousTransfer.UrbLink = NULL;
 
-	subUrb->UrbIsochronousTransfer.NumberOfPackets = nPackets;
-	subUrb->UrbIsochronousTransfer.UrbLink = NULL;
-
-	//
-	// set the offsets for every packet for reads/writes
-	//
-	if(requestContext->RequestType == WdfRequestTypeRead)
+		//
+		// set the offsets for every packet for reads/writes
+		//
+		if(requestContext->RequestType == WdfRequestTypeRead)
 		{
 
 			offset = 0;

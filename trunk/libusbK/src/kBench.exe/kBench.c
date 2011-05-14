@@ -1504,7 +1504,7 @@ int __cdecl main(int argc, char** argv)
 
 	if (Test.ListDevicesOnly)
 	{
-		CONMSG("CurrentProcessId=%u Count=%d\n",GetCurrentProcessId(), ec);
+		CONMSG("CurrentProcessId=%u Count=%d\n", GetCurrentProcessId(), ec);
 	}
 
 	if (Test.UseList)
