@@ -607,7 +607,7 @@ KUSB_EXP LONG KUSB_API LstK_GetDeviceList(
 		ApplyCompositeDeviceMode(searchParameters, &devIntfList);
 	}
 
-	deviceCount=0;
+	deviceCount = 0;
 	*DeviceList = devIntfList;
 	while(*DeviceList)
 	{

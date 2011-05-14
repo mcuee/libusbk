@@ -26,7 +26,7 @@ extern "C" {
 	*
 	* \ref UsbK_Open performs the same tasks as \ref UsbK_Initialize with the following exceptions:
 	* - Uses a \ref KUSB_DEV_LIST instead of a file handle created with the Windows CreateFile() API function.
-	* - File handles are managed internally and are closed when the last \ref LIBUSBK_INTERFACE_HANDLE is 
+	* - File handles are managed internally and are closed when the last \ref LIBUSBK_INTERFACE_HANDLE is
 	*   closed with \ref UsbK_Close.
 	* - If \c DeviceListItem is a composite device, multiple device file handles are managed as one.
 	*
@@ -95,7 +95,7 @@ extern "C" {
 	* - Interface indexes always start from 0 and continue sequentially for all interfaces of the device.
 	* - An interface number always represents the actual \ref USB_INTERFACE_DESCRIPTOR::bInterfaceNumber.
 	*   Interface numbers are not guaranteed to be zero based or sequential.
-	* 
+	*
 	* \param IsIndex
 	* If TRUE, \c InterfaceNumberOrIndex represents an interface index.\n
 	* if FALSE \c InterfaceNumberOrIndex represents a \c bInterfaceNumber.
@@ -139,7 +139,7 @@ extern "C" {
 	* - Interface indexes always start from 0 and continue sequentially for all interfaces of the device.
 	* - An interface number always represents the actual \ref USB_INTERFACE_DESCRIPTOR::bInterfaceNumber.
 	*   Interface numbers are not guaranteed to be zero based or sequential.
-	* 
+	*
 	* \param IsIndex
 	* If TRUE, \c InterfaceNumberOrIndex represents an interface index.\n
 	* if FALSE \c InterfaceNumberOrIndex represents a \c bInterfaceNumber.
@@ -167,7 +167,7 @@ extern "C" {
 	* - Interface indexes always start from 0 and continue sequentially for all interfaces of the device.
 	* - An interface number always represents the actual \ref USB_INTERFACE_DESCRIPTOR::bInterfaceNumber.
 	*   Interface numbers are not guaranteed to be zero based or sequential.
-	* 
+	*
 	* \param IsIndex
 	* If TRUE, \c InterfaceNumberOrIndex represents an interface index.\n
 	* if FALSE \c InterfaceNumberOrIndex represents a \c bInterfaceNumber.
@@ -199,7 +199,7 @@ extern "C" {
 	* - Interface indexes always start from 0 and continue sequentially for all interfaces of the device.
 	* - An interface number always represents the actual \ref USB_INTERFACE_DESCRIPTOR::bInterfaceNumber.
 	*   Interface numbers are not guaranteed to be zero based or sequential.
-	* 
+	*
 	* \param IsIndex
 	* If TRUE, \c InterfaceNumberOrIndex represents an interface index.\n
 	* if FALSE \c InterfaceNumberOrIndex represents a \c bInterfaceNumber.
@@ -279,29 +279,29 @@ extern "C" {
 	*
 	* \param SetupPacket
 	*  The 8-byte setup packet of type WINUSB_SETUP_PACKET.
-	* 
+	*
 	* \param Buffer
 	* A caller-allocated buffer that contains the data to transfer.
-	* 
+	*
 	* \param BufferLength
-	* The number of bytes to transfer, not including the setup packet. This 
-	* number must be less than or equal to the size, in bytes, of Buffer. 
-	* 
+	* The number of bytes to transfer, not including the setup packet. This
+	* number must be less than or equal to the size, in bytes, of Buffer.
+	*
 	* \param LengthTransferred
-	* A pointer to a ULONG variable that receives the actual number of 
-	* transferred bytes. If the application does not expect any data to be 
-	* transferred during the data phase (BufferLength is zero), 
-	* LengthTransferred can be NULL. 
-	* 
+	* A pointer to a ULONG variable that receives the actual number of
+	* transferred bytes. If the application does not expect any data to be
+	* transferred during the data phase (BufferLength is zero),
+	* LengthTransferred can be NULL.
+	*
 	* \param Overlapped
-	* An optional pointer to an OVERLAPPED structure, which is used for 
-	* asynchronous operations. If this parameter is specified, \ref 
-	* UsbK_ControlTransfer immediately returns, and the event is signaled when 
-	* the operation is complete. If Overlapped is not supplied, the \ref 
-	* UsbK_ControlTransfer function transfers data synchronously. 
-	* 
+	* An optional pointer to an OVERLAPPED structure, which is used for
+	* asynchronous operations. If this parameter is specified, \ref
+	* UsbK_ControlTransfer immediately returns, and the event is signaled when
+	* the operation is complete. If Overlapped is not supplied, the \ref
+	* UsbK_ControlTransfer function transfers data synchronously.
+	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
-	* If an \c Overlapped member is supplied and the operation succeeds this function returns FALSE 
+	* If an \c Overlapped member is supplied and the operation succeeds this function returns FALSE
 	* and sets last error to ERROR_IO_PENDING.
 	*
 	*/
@@ -323,52 +323,52 @@ extern "C" {
 	* - \ref UsbK_GetAssociatedInterface
 	*
 	* \param PolicyType
-	* A value that specifies the power policy to set. The following table 
-	* describes symbolic constants that are defined in \ref lusbk_usbio.h. 
+	* A value that specifies the power policy to set. The following table
+	* describes symbolic constants that are defined in \ref lusbk_usbio.h.
 	*
 	* - AUTO_SUSPEND (0x81)
-	*   - Specifies the auto-suspend policy type; the power policy parameter must 
-	*     be specified by the caller in the Value parameter. 
+	*   - Specifies the auto-suspend policy type; the power policy parameter must
+	*     be specified by the caller in the Value parameter.
 	*   - For auto-suspend, the Value parameter must point to a UCHAR variable.
-	*   - If Value is TRUE (nonzero), the USB stack suspends the device if the 
-	*     device is idle. A device is idle if there are no transfers pending, or 
-	*     if the only pending transfers are IN transfers to interrupt or bulk 
-	*     endpoints. 
-	*   - The default value is determined by the value set in the DefaultIdleState 
-	*     registry setting. By default, this value is TRUE. 
+	*   - If Value is TRUE (nonzero), the USB stack suspends the device if the
+	*     device is idle. A device is idle if there are no transfers pending, or
+	*     if the only pending transfers are IN transfers to interrupt or bulk
+	*     endpoints.
+	*   - The default value is determined by the value set in the DefaultIdleState
+	*     registry setting. By default, this value is TRUE.
 	*
 	* - SUSPEND_DELAY (0x83)
-	*   - Specifies the suspend-delay policy type; the power policy parameter must 
-	*     be specified by the caller in the Value parameter. 
+	*   - Specifies the suspend-delay policy type; the power policy parameter must
+	*     be specified by the caller in the Value parameter.
 	*   - For suspend-delay, Value must point to a ULONG variable.
-	*   - Value specifies the minimum amount of time, in milliseconds, that the 
-	*     driver must wait post transfer before it can suspend the device. 
-	*   - The default value is determined by the value set in the 
-	*     DefaultIdleTimeout registry setting. By default, this value is five 
-	*     seconds. 
+	*   - Value specifies the minimum amount of time, in milliseconds, that the
+	*     driver must wait post transfer before it can suspend the device.
+	*   - The default value is determined by the value set in the
+	*     DefaultIdleTimeout registry setting. By default, this value is five
+	*     seconds.
 	*
 	* \param ValueLength
 	* The size, in bytes, of the buffer at Value.
-	* 
+	*
 	* \param Value
-	* The new value for the power policy parameter. Datatype and value for 
-	* Value depends on the type of power policy passed in PolicyType. For more 
-	* information, see PolicyType. 
-	* 
-	* The following list summarizes the effects of changes to power management 
-	* states: 
-	* - All pipe handles, interface handles, locks, and alternate settings are 
-	*   preserved across power management events. 
-	* - Any transfers that are in progress are suspended when a device transfers 
-	*   to a low power state, and they are resumed when the device is restored 
-	*   to a working state. 
-	* - The device and system must be in a working state before the client can 
-	*   restore a device-specific configuration. Clients can determine whether 
-	*   the device and system are in a working state from the WM_POWERBROADCAST 
-	*   message. 
-	* - The client can indicate that an interface is idle by calling \ref 
-	*   UsbK_SetPowerPolicy. 
-	* 
+	* The new value for the power policy parameter. Datatype and value for
+	* Value depends on the type of power policy passed in PolicyType. For more
+	* information, see PolicyType.
+	*
+	* The following list summarizes the effects of changes to power management
+	* states:
+	* - All pipe handles, interface handles, locks, and alternate settings are
+	*   preserved across power management events.
+	* - Any transfers that are in progress are suspended when a device transfers
+	*   to a low power state, and they are resumed when the device is restored
+	*   to a working state.
+	* - The device and system must be in a working state before the client can
+	*   restore a device-specific configuration. Clients can determine whether
+	*   the device and system are in a working state from the WM_POWERBROADCAST
+	*   message.
+	* - The client can indicate that an interface is idle by calling \ref
+	*   UsbK_SetPowerPolicy.
+	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_SetPowerPolicy (
@@ -387,37 +387,37 @@ extern "C" {
 	* - \ref UsbK_GetAssociatedInterface
 	*
 	* \param PolicyType
-	* A value that specifies the power policy parameter to retrieve in Value. 
-	* The following table describes symbolic constants that are defined in 
-	* \ref lusbk_usbio.h. 
+	* A value that specifies the power policy parameter to retrieve in Value.
+	* The following table describes symbolic constants that are defined in
+	* \ref lusbk_usbio.h.
 	*
 	* - AUTO_SUSPEND (0x81)
-	*   - If the caller specifies a power policy of AUTO_SUSPEND, \ref 
-	*     UsbK_GetPowerPolicy returns the value of the auto suspend policy 
-	*     parameter in the Value parameter. 
-	*   - If Value is TRUE (that is, nonzero), the USB stack suspends the device 
-	*     when no transfers are pending or the only transfers pending are IN 
-	*     transfers on an interrupt or bulk endpoint. 
-	*   - The value of the DefaultIdleState registry value determines the default 
-	*     value of the auto suspend policy parameter. 
+	*   - If the caller specifies a power policy of AUTO_SUSPEND, \ref
+	*     UsbK_GetPowerPolicy returns the value of the auto suspend policy
+	*     parameter in the Value parameter.
+	*   - If Value is TRUE (that is, nonzero), the USB stack suspends the device
+	*     when no transfers are pending or the only transfers pending are IN
+	*     transfers on an interrupt or bulk endpoint.
+	*   - The value of the DefaultIdleState registry value determines the default
+	*     value of the auto suspend policy parameter.
 	*   - The Value parameter must point to a UCHAR variable.
 	*
 	* - SUSPEND_DELAY (0x83)
-	*   - If the caller specifies a power policy of SUSPEND_DELAY, \ref 
-	*     UsbK_GetPowerPolicy returns the value of the suspend delay policy 
-	*     parameter in Value. 
-	*   - The suspend delay policy parameter specifies the minimum amount of time, 
-	*     in milliseconds, that the driver must wait after any transfer before it 
-	*     can suspend the device. 
+	*   - If the caller specifies a power policy of SUSPEND_DELAY, \ref
+	*     UsbK_GetPowerPolicy returns the value of the suspend delay policy
+	*     parameter in Value.
+	*   - The suspend delay policy parameter specifies the minimum amount of time,
+	*     in milliseconds, that the driver must wait after any transfer before it
+	*     can suspend the device.
 	*   - Value must point to a ULONG variable.
-	* 
+	*
 	* \param ValueLength
-	* A pointer to the size of the buffer that Value. On output, ValueLength 
+	* A pointer to the size of the buffer that Value. On output, ValueLength
 	* receives the size of the data that was copied into the Value buffer.
-	* 
+	*
 	* \param Value
-	* A buffer that receives the specified power policy parameter. For more 
-	* information, see PolicyType. 
+	* A buffer that receives the specified power policy parameter. For more
+	* information, see PolicyType.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*/
