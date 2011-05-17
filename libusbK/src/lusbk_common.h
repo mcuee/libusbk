@@ -57,7 +57,10 @@ typedef struct _KUSB_USER_CONTEXT
 		ULONG_PTR	Ptr[KUSB_CONTEXT_SIZE / sizeof(__int64)];
 	};
 } KUSB_USER_CONTEXT;
+
+//! pointer to a \c KUSB_USER_CONTEXT
 typedef KUSB_USER_CONTEXT* PKUSB_USER_CONTEXT;
+
 #include <poppack.h>
 #pragma warning(default:4201)
 
@@ -98,7 +101,7 @@ typedef KUSB_USER_CONTEXT* PKUSB_USER_CONTEXT;
 typedef PVOID LIBUSBK_INTERFACE_HANDLE;
 
 //! Refrence to a \ref LIBUSBK_INTERFACE_HANDLE
-typedef LIBUSBK_INTERFACE_HANDLE *PLIBUSBK_INTERFACE_HANDLE;
+typedef LIBUSBK_INTERFACE_HANDLE* PLIBUSBK_INTERFACE_HANDLE;
 
 #ifndef   __USB_H__
 
@@ -309,6 +312,7 @@ typedef struct _USB_DEVICE_DESCRIPTOR
 	UCHAR bNumConfigurations;
 
 } USB_DEVICE_DESCRIPTOR;
+//! pointer to a \c USB_DEVICE_DESCRIPTOR
 typedef USB_DEVICE_DESCRIPTOR* PUSB_DEVICE_DESCRIPTOR;
 
 //! A structure representing the standard USB endpoint descriptor.
@@ -348,6 +352,7 @@ typedef struct _USB_ENDPOINT_DESCRIPTOR
 	UCHAR bInterval;
 
 } USB_ENDPOINT_DESCRIPTOR;
+//! pointer to a \c USB_ENDPOINT_DESCRIPTOR
 typedef USB_ENDPOINT_DESCRIPTOR* PUSB_ENDPOINT_DESCRIPTOR;
 
 /** A structure representing the standard USB configuration descriptor.
@@ -383,6 +388,7 @@ typedef struct _USB_CONFIGURATION_DESCRIPTOR
 	 */
 	UCHAR MaxPower;
 } USB_CONFIGURATION_DESCRIPTOR;
+//! pointer to a \c USB_CONFIGURATION_DESCRIPTOR
 typedef USB_CONFIGURATION_DESCRIPTOR* PUSB_CONFIGURATION_DESCRIPTOR;
 
 //! A structure representing the standard USB interface descriptor.
@@ -420,6 +426,7 @@ typedef struct _USB_INTERFACE_DESCRIPTOR
 	UCHAR iInterface;
 
 } USB_INTERFACE_DESCRIPTOR;
+//! pointer to a \c USB_INTERFACE_DESCRIPTOR
 typedef USB_INTERFACE_DESCRIPTOR* PUSB_INTERFACE_DESCRIPTOR;
 
 //! A structure representing the standard USB string descriptor.
@@ -439,6 +446,7 @@ typedef struct _USB_STRING_DESCRIPTOR
 	WCHAR bString[1];
 
 } USB_STRING_DESCRIPTOR;
+//! pointer to a \c USB_STRING_DESCRIPTOR
 typedef USB_STRING_DESCRIPTOR* PUSB_STRING_DESCRIPTOR;
 
 //! A structure representing the common USB descriptor.
@@ -451,6 +459,7 @@ typedef struct _USB_COMMON_DESCRIPTOR
 	UCHAR bDescriptorType;
 
 } USB_COMMON_DESCRIPTOR;
+//! pointer to a \c USB_COMMON_DESCRIPTOR
 typedef USB_COMMON_DESCRIPTOR* PUSB_COMMON_DESCRIPTOR;
 
 #include <POPPACK.H>
@@ -482,6 +491,7 @@ typedef union _BM_REQUEST_TYPE
 	};
 	UCHAR B;
 } BM_REQUEST_TYPE;
+//! pointer to a \c BM_REQUEST_TYPE
 typedef BM_REQUEST_TYPE* PBM_REQUEST_TYPE;
 
 typedef struct _USB_DEFAULT_PIPE_SETUP_PACKET
@@ -510,6 +520,7 @@ typedef struct _USB_DEFAULT_PIPE_SETUP_PACKET
 	} wIndex;
 	USHORT wLength;
 } USB_DEFAULT_PIPE_SETUP_PACKET;
+//! pointer to a \c USB_DEFAULT_PIPE_SETUP_PACKET
 typedef USB_DEFAULT_PIPE_SETUP_PACKET* PUSB_DEFAULT_PIPE_SETUP_PACKET;
 
 // setup packet is eight bytes -- defined by spec
@@ -532,6 +543,7 @@ typedef struct _USB_INTERFACE_ASSOCIATION_DESCRIPTOR
 	UCHAR   iFunction;
 
 } USB_INTERFACE_ASSOCIATION_DESCRIPTOR;
+//! pointer to a \c USB_INTERFACE_ASSOCIATION_DESCRIPTOR
 typedef USB_INTERFACE_ASSOCIATION_DESCRIPTOR* PUSB_INTERFACE_ASSOCIATION_DESCRIPTOR;
 
 #if _MSC_VER >= 1200
@@ -581,6 +593,7 @@ typedef struct _OS_STRING
 		UCHAR bFlags;
 	};
 } OS_STRING;
+//! pointer to a \c OS_STRING
 typedef OS_STRING* POS_STRING;
 
 #if _MSC_VER >= 1200
