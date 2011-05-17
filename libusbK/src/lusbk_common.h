@@ -105,26 +105,31 @@ typedef LIBUSBK_INTERFACE_HANDLE* PLIBUSBK_INTERFACE_HANDLE;
 
 #ifndef   __USB_H__
 
-#ifndef   __USB200_H__
-
-#ifndef   __USB100_H__
-
 #include <PSHPACK1.H>
 
-//bmRequest.Dir
-#define BMREQUEST_HOST_TO_DEVICE        0
-#define BMREQUEST_DEVICE_TO_HOST        1
+//! bmRequest.Dir
+enum BMREQUEST_DIR_ENUM
+{
+	BMREQUEST_HOST_TO_DEVICE = 0,
+	BMREQUEST_DEVICE_TO_HOST= 1,
+};
 
-//bmRequest.Type
-#define BMREQUEST_STANDARD              0
-#define BMREQUEST_CLASS                 1
-#define BMREQUEST_VENDOR                2
+//! bmRequest.Type
+enum BMREQUEST_TYPE_ENUM
+{
+	BMREQUEST_STANDARD = 0,
+	BMREQUEST_CLASS= 1,
+	BMREQUEST_VENDOR= 2,
+};
 
-//bmRequest.Recipient
-#define BMREQUEST_TO_DEVICE             0
-#define BMREQUEST_TO_INTERFACE          1
-#define BMREQUEST_TO_ENDPOINT           2
-#define BMREQUEST_TO_OTHER              3
+//! bmRequest.Recipient
+enum BMREQUEST_RECIPIENT_ENUM
+{
+	BMREQUEST_TO_DEVICE = 0,
+	BMREQUEST_TO_INTERFACE= 1,
+	BMREQUEST_TO_ENDPOINT= 2,
+	BMREQUEST_TO_OTHER= 3,
+};
 
 
 #define MAXIMUM_USB_STRING_LENGTH 255
@@ -133,131 +138,158 @@ typedef LIBUSBK_INTERFACE_HANDLE* PLIBUSBK_INTERFACE_HANDLE;
 #define USB_GETSTATUS_SELF_POWERED                0x01
 #define USB_GETSTATUS_REMOTE_WAKEUP_ENABLED       0x02
 
+enum USB_DESCRIPTOR_TYPE_ENUM
+{
+	USB_DEVICE_DESCRIPTOR_TYPE = 0x01,
 
-#define USB_DEVICE_DESCRIPTOR_TYPE                0x01
-#define USB_CONFIGURATION_DESCRIPTOR_TYPE         0x02
-#define USB_STRING_DESCRIPTOR_TYPE                0x03
-#define USB_INTERFACE_DESCRIPTOR_TYPE             0x04
-#define USB_ENDPOINT_DESCRIPTOR_TYPE              0x05
+	USB_CONFIGURATION_DESCRIPTOR_TYPE = 0x02,
 
-// descriptor types defined by DWG documents
-#define USB_RESERVED_DESCRIPTOR_TYPE              0x06
-#define USB_CONFIG_POWER_DESCRIPTOR_TYPE          0x07
-#define USB_INTERFACE_POWER_DESCRIPTOR_TYPE       0x08
+	USB_STRING_DESCRIPTOR_TYPE = 0x03,
+
+	USB_INTERFACE_DESCRIPTOR_TYPE = 0x04,
+
+	USB_ENDPOINT_DESCRIPTOR_TYPE = 0x05,
+
+	USB_DEVICE_QUALIFIER_DESCRIPTOR_TYPE=0x06,
+
+	USB_CONFIG_POWER_DESCRIPTOR_TYPE = 0x07,
+
+	USB_INTERFACE_POWER_DESCRIPTOR_TYPE = 0x08,
+
+	USB_INTERFACE_ASSOCIATION_DESCRIPTOR_TYPE=0x0B,
+};
 
 #define USB_DESCRIPTOR_MAKE_TYPE_AND_INDEX(d, i) ((USHORT)((USHORT)d<<8 | i))
 
-//
-// Values for bmAttributes field of an
-// endpoint descriptor
-//
 
+//! Endpoint type mask for the \c bmAttributes field of a \ref USB_ENDPOINT_DESCRIPTOR
 #define USB_ENDPOINT_TYPE_MASK                    0x03
 
-#define USB_ENDPOINT_TYPE_CONTROL                 0x00
-#define USB_ENDPOINT_TYPE_ISOCHRONOUS             0x01
-#define USB_ENDPOINT_TYPE_BULK                    0x02
-#define USB_ENDPOINT_TYPE_INTERRUPT               0x03
+//! Values used in the \c bmAttributes field of a \ref USB_ENDPOINT_DESCRIPTOR
+typedef enum USB_ENDPOINT_TYPE_ENUM
+{
+	//! Indicates a control endpoint
+	USB_ENDPOINT_TYPE_CONTROL = 0x00,
 
+	//! Indicates an isochronous endpoint
+	USB_ENDPOINT_TYPE_ISOCHRONOUS = 0x01,
 
-//
-// definitions for bits in the bmAttributes field of a
-// configuration descriptor.
-//
+	//! Indicates a bulk endpoint
+	USB_ENDPOINT_TYPE_BULK = 0x02,
+
+	//! Indicates an interrupt endpoint
+	USB_ENDPOINT_TYPE_INTERRUPT = 0x03,
+}USB_ENDPOINT_TYPE;
+
+//! Config power mask for the \c bmAttributes field of a \ref USB_CONFIGURATION_DESCRIPTOR
 #define USB_CONFIG_POWERED_MASK                   0xc0
 
-#define USB_CONFIG_BUS_POWERED                    0x80
-#define USB_CONFIG_SELF_POWERED                   0x40
-#define USB_CONFIG_REMOTE_WAKEUP                  0x20
+//! Values used in the \c bmAttributes field of a \ref USB_CONFIGURATION_DESCRIPTOR
+enum USB_CONFIG_BM_ATTRIBUTE_ENUM
+{
+	//! The device is powered by it's host.
+	USB_CONFIG_BUS_POWERED = 0x80,
 
-//
-// Endpoint direction bit, stored in address
-//
+	//! The device has an external power source.
+	USB_CONFIG_SELF_POWERED = 0x40,
 
+	//! The device is capable of waking the the host from a low power/sleeping state.
+	USB_CONFIG_REMOTE_WAKEUP = 0x20,
+};
+
+//! Endpoint direction mask for the \c bEndpointAddress field of a \ref USB_ENDPOINT_DESCRIPTOR
 #define USB_ENDPOINT_DIRECTION_MASK               0x80
 
-// test direction bit in the bEndpointAddress field of
-// an endpoint descriptor.
+
+//! Tests the \c bEndpointAddress direction bit. TRUE if the endpoint address is an OUT endpoint. (HostToDevice, PC Write)
+/*!
+* \param addr \c bEndpointAddress field of a \ref USB_ENDPOINT_DESCRIPTOR
+*/
 #define USB_ENDPOINT_DIRECTION_OUT(addr)          (!((addr) & USB_ENDPOINT_DIRECTION_MASK))
+
+//!  Tests the \c bEndpointAddress direction bit. TRUE if the endpoint address is an IN endpoint. (DeviceToHost, PC Read)
+/*!
+* \param addr \c bEndpointAddress field of a \ref USB_ENDPOINT_DESCRIPTOR
+*/
 #define USB_ENDPOINT_DIRECTION_IN(addr)           ((addr) & USB_ENDPOINT_DIRECTION_MASK)
 
-//
-// USB defined request codes
-// see Chapter 9 of the USB 2.0 specifcation for
-// more information.
-//
+//! USB defined request codes
+/*
+* see Chapter 9 of the USB 2.0 specifcation for
+* more information.
+* 
+* These are the correct values based on the USB 2.0 specification.
+*/
+enum USB_REQUEST_ENUM
+{
+	//! Request status of the specific recipient
+	USB_REQUEST_GET_STATUS = 0x00,
 
-// These are the correct values based on the USB 2.0
-// specification.
+	//! Clear or disable a specific feature
+	USB_REQUEST_CLEAR_FEATURE = 0x01,
 
-//! Request status of the specific recipient
-#define USB_REQUEST_GET_STATUS                    0x00
+	//! Set or enable a specific feature
+	USB_REQUEST_SET_FEATURE = 0x03,
 
-//! Clear or disable a specific feature
-#define USB_REQUEST_CLEAR_FEATURE                 0x01
+	//! Set device address for all future accesses
+	USB_REQUEST_SET_ADDRESS = 0x05,
 
-/* 0x02 is reserved */
+	//! Get the specified descriptor
+	USB_REQUEST_GET_DESCRIPTOR = 0x06,
 
-//! Set or enable a specific feature
-#define USB_REQUEST_SET_FEATURE                   0x03
+	//! Update existing descriptors or add new descriptors
+	USB_REQUEST_SET_DESCRIPTOR = 0x07,
 
-/* 0x04 is reserved */
+	//! Get the current device configuration value
+	USB_REQUEST_GET_CONFIGURATION = 0x08,
 
-//! Set device address for all future accesses
-#define USB_REQUEST_SET_ADDRESS                   0x05
+	//! Set device configuration
+	USB_REQUEST_SET_CONFIGURATION = 0x09,
 
-//! Get the specified descriptor
-#define USB_REQUEST_GET_DESCRIPTOR                0x06
+	//! Return the selected alternate setting for the specified interface
+	USB_REQUEST_GET_INTERFACE = 0x0A,
 
-//! Update existing descriptors or add new descriptors
-#define USB_REQUEST_SET_DESCRIPTOR                0x07
+	//! Select an alternate interface for the specified interface
+	USB_REQUEST_SET_INTERFACE = 0x0B,
 
-//! Get the current device configuration value
-#define USB_REQUEST_GET_CONFIGURATION             0x08
+	//! Set then report an endpoint's synchronization frame
+	USB_REQUEST_SYNC_FRAME = 0x0C,
+};
 
-//! Set device configuration
-#define USB_REQUEST_SET_CONFIGURATION             0x09
+//! USB defined class codes
+/*!
+* see http://www.usb.org/developers/defined_class for more information.
+* 
+*/
+enum USB_DEVICE_CLASS_ENUM
+{
+	//! Reserved class
+	USB_DEVICE_CLASS_RESERVED = 0x00,
 
-//! Return the selected alternate setting for the specified interface
-#define USB_REQUEST_GET_INTERFACE                 0x0A
+	//! Audio class
+	USB_DEVICE_CLASS_AUDIO = 0x01,
 
-//! Select an alternate interface for the specified interface
-#define USB_REQUEST_SET_INTERFACE                 0x0B
+	//! Communications class
+	USB_DEVICE_CLASS_COMMUNICATIONS = 0x02,
 
-//! Set then report an endpoint's synchronization frame
-#define USB_REQUEST_SYNC_FRAME                    0x0C
+	//! Human Interface Device class
+	USB_DEVICE_CLASS_HUMAN_INTERFACE = 0x03,
 
+	//! Imaging class
+	USB_DEVICE_CLASS_IMAGING = 0x06,
 
-//
-// defined USB device classes
-//
+	//! Printer class
+	USB_DEVICE_CLASS_PRINTER = 0x07,
 
-//! Reserved class
-#define USB_DEVICE_CLASS_RESERVED           0x00
+	//! Mass storage class
+	USB_DEVICE_CLASS_STORAGE = 0x08,
 
-//! Audio class
-#define USB_DEVICE_CLASS_AUDIO              0x01
+	//! Hub class
+	USB_DEVICE_CLASS_HUB = 0x09,
 
-//! Communications class
-#define USB_DEVICE_CLASS_COMMUNICATIONS     0x02
-
-//! Human Interface Device class
-#define USB_DEVICE_CLASS_HUMAN_INTERFACE    0x03
-
-//! Imaging class
-#define USB_DEVICE_CLASS_IMAGING            0x06
-
-//! Printer class
-#define USB_DEVICE_CLASS_PRINTER            0x07
-
-//! Mass storage class
-#define USB_DEVICE_CLASS_STORAGE            0x08
-
-//! Hub class
-#define USB_DEVICE_CLASS_HUB                0x09
-
-//! vendor-specific class
-#define USB_DEVICE_CLASS_VENDOR_SPECIFIC    0xFF
+	//! vendor-specific class
+	USB_DEVICE_CLASS_VENDOR_SPECIFIC = 0xFF,
+};
 
 //! A structure representing the standard USB device descriptor.
 /*!
@@ -442,7 +474,7 @@ typedef struct _USB_STRING_DESCRIPTOR
 	//! Descriptor type
 	UCHAR bDescriptorType;
 
-	/* Content of the string */
+	//! Content of the string
 	WCHAR bString[1];
 
 } USB_STRING_DESCRIPTOR;
@@ -462,23 +494,11 @@ typedef struct _USB_COMMON_DESCRIPTOR
 //! pointer to a \c USB_COMMON_DESCRIPTOR
 typedef USB_COMMON_DESCRIPTOR* PUSB_COMMON_DESCRIPTOR;
 
-#include <POPPACK.H>
-
-#endif   // __USB100_H__
-
-#include <PSHPACK1.H>
-
 #if _MSC_VER >= 1200
 #pragma warning(push)
 #endif
 #pragma warning (disable:4201)
 #pragma warning(disable:4214) // named type definition in parentheses
-
-typedef enum _USB_DEVICE_TYPE
-{
-	Usb11Device = 0,
-	Usb20Device
-} USB_DEVICE_TYPE;
 
 typedef union _BM_REQUEST_TYPE
 {
@@ -494,52 +514,96 @@ typedef union _BM_REQUEST_TYPE
 //! pointer to a \c BM_REQUEST_TYPE
 typedef BM_REQUEST_TYPE* PBM_REQUEST_TYPE;
 
+//! USB control setup packet
+/*!
+* This structure is identical to a \ref WINUSB_SETUP_PACKET,
+* but provides additional user friendly members.
+*/
 typedef struct _USB_DEFAULT_PIPE_SETUP_PACKET
 {
+	//! Request value
 	BM_REQUEST_TYPE bmRequestType;
+
+
+	//! Request type value
 	UCHAR bRequest;
 
+	//! Unionized wValue
 	union _wValue
 	{
+		//! wValue structure
 		struct
 		{
+			//! Low byte of \c wValue
 			UCHAR LowByte;
+			//! High byte of \c wValue
 			UCHAR HiByte;
 		};
+
+		//! wValue ushort value
 		USHORT W;
 	} wValue;
 
+	//! Unionized wIndex
 	union _wIndex
 	{
+		//! wIndex structure
 		struct
 		{
+			//! Low byte of \c wIndex
 			UCHAR LowByte;
+			//! High byte of \c wIndex
 			UCHAR HiByte;
 		};
+
+		//! wIndex ushort value
 		USHORT W;
 	} wIndex;
+
+	//! wLength ushort value
 	USHORT wLength;
+
 } USB_DEFAULT_PIPE_SETUP_PACKET;
 //! pointer to a \c USB_DEFAULT_PIPE_SETUP_PACKET
 typedef USB_DEFAULT_PIPE_SETUP_PACKET* PUSB_DEFAULT_PIPE_SETUP_PACKET;
-
 // setup packet is eight bytes -- defined by spec
 C_ASSERT(sizeof(USB_DEFAULT_PIPE_SETUP_PACKET) == 8);
 
-#define USB_DEVICE_QUALIFIER_DESCRIPTOR_TYPE            0x06
-#define USB_OTHER_SPEED_CONFIGURATION_DESCRIPTOR_TYPE   0x07
-#define USB_INTERFACE_ASSOCIATION_DESCRIPTOR_TYPE 0x0B
-
+//! The ECN specifies a USB descriptor, called the Interface Association 
+//! Descriptor (IAD), that allows hardware manufacturers to define groupings 
+//! of interfaces.
+/*!
+* The Universal Serial Bus Specification, revision 2.0, does not support 
+* grouping more than one interface of a composite device within a single 
+* function. However, the USB Device Working Group (DWG) created USB device 
+* classes that allow for functions with multiple interfaces, and the USB 
+* Implementor's Forum issued an Engineering Change Notification (ECN) that 
+* defines a mechanism for grouping interfaces. 
+*/
 typedef struct _USB_INTERFACE_ASSOCIATION_DESCRIPTOR
 {
-
+	//! Size of this descriptor (in bytes)
 	UCHAR   bLength;
+
+	//! Descriptor type
 	UCHAR   bDescriptorType;
+
+	//! First interface number of the set of interfaces that follow this descriptor
 	UCHAR   bFirstInterface;
+
+	//! The Number of interfaces follow this descriptor that are considered "associated"
 	UCHAR   bInterfaceCount;
+
+	//! \c bInterfaceClass used for this associated interfaces
 	UCHAR   bFunctionClass;
+
+	//! \c bInterfaceSubClass used for the associated interfaces
 	UCHAR   bFunctionSubClass;
+
+	//! \c bInterfaceProtocol used for the associated interfaces
 	UCHAR   bFunctionProtocol;
+
+	//! Index of string descriptor describing the associated interfaces
 	UCHAR   iFunction;
 
 } USB_INTERFACE_ASSOCIATION_DESCRIPTOR;
@@ -551,18 +615,6 @@ typedef USB_INTERFACE_ASSOCIATION_DESCRIPTOR* PUSB_INTERFACE_ASSOCIATION_DESCRIP
 #endif
 
 #include <POPPACK.H>
-
-#endif // __USB200_H__
-
-typedef enum _USBD_PIPE_TYPE
-{
-	UsbdPipeTypeControl,
-	UsbdPipeTypeIsochronous,
-	UsbdPipeTypeBulk,
-	UsbdPipeTypeInterrupt
-} USBD_PIPE_TYPE;
-
-#if (_WIN32_WINNT >= 0x0501)
 
 #if _MSC_VER >= 1200
 #pragma warning(push)
@@ -599,8 +651,6 @@ typedef OS_STRING* POS_STRING;
 #if _MSC_VER >= 1200
 #pragma warning(pop)
 #endif
-
-#endif // _WIN32_WINNT
 
 #endif // __USB_H__
 

@@ -35,10 +35,10 @@
 
 typedef struct _WINUSB_PIPE_INFORMATION
 {
-	USBD_PIPE_TYPE  PipeType;
-	UCHAR           PipeId;
-	USHORT          MaximumPacketSize;
-	UCHAR           Interval;
+	USB_ENDPOINT_TYPE	PipeType;
+	UCHAR				PipeId;
+	USHORT				MaximumPacketSize;
+	UCHAR				Interval;
 }* PWINUSB_PIPE_INFORMATION, WINUSB_PIPE_INFORMATION;
 C_ASSERT(sizeof(WINUSB_PIPE_INFORMATION) == 12);
 
