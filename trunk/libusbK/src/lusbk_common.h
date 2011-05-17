@@ -64,6 +64,7 @@ typedef KUSB_USER_CONTEXT* PKUSB_USER_CONTEXT;
 /*! \addtogroup core_general
 *  @{
 */
+
 //! libusbK interfacing handle.
 /*!
 * This handle is required by other libusbK routines that perform
@@ -94,7 +95,10 @@ typedef KUSB_USER_CONTEXT* PKUSB_USER_CONTEXT;
 *     specified by the user.
 *
 */
-typedef PVOID LIBUSBK_INTERFACE_HANDLE, *PLIBUSBK_INTERFACE_HANDLE;
+typedef PVOID LIBUSBK_INTERFACE_HANDLE;
+
+//! Refrence to a \ref LIBUSBK_INTERFACE_HANDLE
+typedef LIBUSBK_INTERFACE_HANDLE *PLIBUSBK_INTERFACE_HANDLE;
 
 #ifndef   __USB_H__
 
