@@ -270,27 +270,37 @@ typedef BOOL KUSB_API KUSB_IsoWritePipe (
 extern "C" {
 #endif
 
-//! Initialize a driver api set.
-	/*!
-	  \ingroup driverapi
-	  \param DriverAPI A driver api structure to populate.
-	  \param DriverID The driver id of the api to retrieve.
+
+	/*! \addtogroup drvk DrvK_LoadDriverApi
+	* @{
+	*/
+	/*! Initialize a driver api set.
+	*
+	* \ingroup driverapi
+	* \param DriverAPI A driver api structure to populate.
+	* \param DriverID The driver id of the api to retrieve.
 	*/
 	KUSB_EXP BOOL KUSB_API DrvK_LoadDriverApi(
 	    __inout PKUSB_DRIVER_API DriverAPI,
 	    __in ULONG DriverID);
 
-//! Initialize a driver api function.
-	/*!
-	  \ingroup driverapi
-	  \param ProcAddress Pointer reference that will receive the API function.
-	  \param DriverID The driver id of the api to use.
-	  \param FunctionID The function id.
+	/**@}*/
+
+	/*! \addtogroup drvk DrvK_GetProcAddress
+	* @{
+	*/
+	/*! Initialize a driver api function.
+	* \ingroup driverapi
+	* \param ProcAddress Pointer reference that will receive the API function.
+	* \param DriverID The driver id of the api to use.
+	* \param FunctionID The function id.
 	*/
 	KUSB_EXP BOOL KUSB_API DrvK_GetProcAddress(
 	    __out KPROC* ProcAddress,
 	    __in ULONG DriverID,
 	    __in ULONG FunctionID);
+
+	/**@}*/
 
 #ifdef __cplusplus
 }

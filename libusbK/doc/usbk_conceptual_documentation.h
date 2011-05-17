@@ -17,7 +17,14 @@
 * <img src="ftv2blank.png" style="display: none" />
 */
 
-/*! \addtogroup core UsbK Core API
+/*! \addtogroup lstk Device List API
+* \brief Device list/enumeration and hot plug notification
+*  @{
+*/
+
+/*! @} */
+
+/*! \addtogroup core UsbK Core Device API
 * The \ref core encompasses the libary functions/members for usb device communication
 * using any of three (3) drivers:
 * - libusbK.sys
@@ -33,39 +40,19 @@
 *
 *  @{
 */
-/*! \addtogroup core_general General
-*  \brief TODO:
+
+
+/*! @} */
+
+/*! \addtogroup ovlk OverlappedK API
 *  @{
 */
 
 /*! @} */
 
-/*! \addtogroup core_functions Functions
-*  \brief TODO:
+/*! \addtogroup drvk Dynamic Driver API
 *  @{
 */
-
-/*! @} */
-
-/*! @} */
-
-/*! \addtogroup ovlk Asynchronous I/O (OverlappedK)
-*  \brief TODO:
-*  @{
-*/
-/*! \addtogroup ovlk_general General
-*  \brief TODO:
-*  @{
-*/
-
-/*! @} */
-
-/*! \addtogroup ovlk_functions Functions
-*  \brief TODO:
-*  @{
-*/
-
-/*! @} */
 
 /*! @} */
 

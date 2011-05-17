@@ -72,12 +72,7 @@ typedef struct _OVERLAPPED_K_INTERNAL
 	OVERLAPPED_K_EL ReUseLink;
 
 	volatile long UsageCount;
-
-	struct
-	{
-		unsigned int IsReUsable: 1;
-		unsigned int IsNotEventOwner: 1;
-	} Flags;
+	volatile long IsReUsableLock;
 
 	POVERLAPPED_K_POOL Pool;
 
@@ -122,12 +117,16 @@ BOOL k_InitPool(
 	Pool->Private.PoolSize = PoolSize;
 	Pool->Private.MaxCount = MaxOverlappedCount;
 	Pool->Private.NextPosition = -1;
+	Pool->Private.ReUseList = NULL;
 
 	for (overlappedPos = 0; overlappedPos < MaxOverlappedCount; overlappedPos++)
 	{
 		Pool->OverlappedKs[overlappedPos].Pool = Pool;
 		Pool->OverlappedKs[overlappedPos].ReUseLink.Overlapped = (POVERLAPPED_K)&Pool->OverlappedKs[overlappedPos];
+		Pool->OverlappedKs[overlappedPos].IsReUsableLock = 0;
 	}
+
+	SpinLock_Release(&Pool->Private.BusyCount);
 	return TRUE;
 }
 
@@ -143,33 +142,36 @@ KUSB_EXP POVERLAPPED_K KUSB_API OvlK_Acquire(
 
 	if (!pool)
 		pool = (POVERLAPPED_K_POOL_USER)&DefaultPool;
+
 Retry:
 	if (pool->Private.ReUseList)
 	{
-		// first try and get a refurbished overlapped
-		if (IncLock(pool->Private.BusyCount) == 1)
+		SpinLock_Acquire(&pool->Private.BusyCount, TRUE);
+		if (pool->Private.ReUseList)
 		{
 			// We can use a refurbished one.
 			next = (POVERLAPPED_K_INTERNAL)pool->Private.ReUseList->Overlapped;
-			next->Flags.IsReUsable = FALSE;
-			List_Remove(pool->Private.ReUseList, pool->Private.ReUseList);
-			DecLock(pool->Private.BusyCount);
-
-			// the usage count is already at (1) for Overlapped
-			goto Success;
+			if (next)
+			{
+				SpinLock_Release(&next->IsReUsableLock);
+				List_Remove(pool->Private.ReUseList, pool->Private.ReUseList);
+				SpinLock_Release(&pool->Private.BusyCount);
+				goto Success;
+			}
 		}
-		reUseListAvailable = pool->Private.ReUseList != NULL ? TRUE : FALSE;
-		DecLock(pool->Private.BusyCount);
+
+		SpinLock_Release(&pool->Private.BusyCount);
 	}
 
-	// No refurbished overlappedKs or the list is busy; we will not wait for it; just get a new one.
+	// No refurbished overlappedKs; get a new one.
 	while(count++ < pool->Private.MaxCount)
 	{
 		// NextPosition rolls around OVERLAPPED_POOLEDHANDLE_MAX
-		next = &pool->OverlappedKs[IncLock(pool->Private.NextPosition) & (pool->Private.MaxCount - 1)];
+		long nextpos = IncLock(pool->Private.NextPosition) % pool->Private.MaxCount;
+		next = &pool->OverlappedKs[nextpos];
 
 		// this one is refurbishing; we will have to continue on.
-		if (next->Flags.IsReUsable) continue;
+		if (next->IsReUsableLock) continue;
 
 		// make sure it's not already in-use.
 		if (IncUsageLock(next) == 1)
@@ -178,22 +180,15 @@ Retry:
 		DecUsageLock(next);
 	}
 
-	if (reUseListAvailable)
-	{
-		// a last ditch effort to get an overlapped.
-		// this will never happen with a moderately sized pool.
+	// a last ditch effort to get an overlapped.
+	// this will never happen with a moderately sized pool.
+	SwitchToThread();
+	Sleep(0);
 
-		Sleep(0); // this is the only "wait" in the api.
+	USBWRN("no more overlappedKs (max=%d) but reUseListAvailable=TRUE; retrying..\n",
+	       pool->Private.MaxCount);
 
-		USBWRN("no more overlappedKs (max=%d) but reUseListAvailable=TRUE; retrying..\n",
-		       pool->Private.MaxCount);
-		goto Retry;
-	}
-
-	// this should never happen; though we will want to now if it does.
-	USBERR("no more OverlappedKs! (max=%d)\n", pool->Private.MaxCount);
-	LusbwError(ERROR_OUT_OF_STRUCTURES);
-	return NULL;
+	goto Retry;
 
 Success:
 	OvlK_ReUse((POVERLAPPED_K)next);
@@ -210,43 +205,21 @@ KUSB_EXP BOOL KUSB_API OvlK_Release(
 
 	pool = (POVERLAPPED_K_POOL_USER)overlapped->Pool;
 
+
 	LockOnInUseOverlapped(overlapped, FALSE);
 
-	if (IncLock(pool->Private.BusyCount) == 1)
+	SpinLock_Acquire(&pool->Private.BusyCount, TRUE);
+
+	if (SpinLock_Acquire(&overlapped->IsReUsableLock, FALSE))
 	{
-		if (!overlapped->Flags.IsReUsable)
-		{
-			// we can return to the refurbished queue.
-			overlapped->ReUseLink.Overlapped = OverlappedK;
-			overlapped->Flags.IsReUsable = TRUE;
-			List_AddTail(pool->Private.ReUseList, &overlapped->ReUseLink);
-
-			// release this functions ref (is ref count is now 1; it will stay this way while in the refurbished list.
-			DecUsageLock(overlapped);
-
-			// release the BusyCount ref
-			DecLock(pool->Private.BusyCount);
-			return TRUE;
-		}
-		else
-		{
-			// release this functions ref (is ref count is now 1; it will stay this way while in the refurbished list.
-			DecUsageLock(overlapped);
-
-			// release the BusyCount ref
-			DecLock(pool->Private.BusyCount);
-			USBERR("IsReUsable=True\n");
-			return LusbwError(ERROR_INVALID_PARAMETER);
-		}
+		overlapped->ReUseLink.Overlapped = OverlappedK;
+		List_AddTail(pool->Private.ReUseList, &overlapped->ReUseLink);
 	}
 
-	// we didn't get a (1) so we must put BusyCount back to it's previous state.
-	DecLock(pool->Private.BusyCount);
+	SpinLock_Release(&pool->Private.BusyCount);
 
-	// release this functions ref
-	DecUsageLock(overlapped);
-
-	// return this one to the main pool. (no refurbishing because another thread is busy with the list)
+	// release this functions reference.
+	// if ref count is now 1; it will stay this way while in the refurbished list.
 	DecUsageLock(overlapped);
 
 	return TRUE;
@@ -264,11 +237,7 @@ KUSB_EXP BOOL KUSB_API OvlK_DestroyPool(
 	if (pool == (POVERLAPPED_K_POOL_USER)&DefaultPool)
 		IsDefaultPoolInitialized = FALSE;
 
-	while(IncLock(pool->Private.BusyCount) > 1)
-	{
-		DecLock(pool->Private.BusyCount);
-		Sleep(0);
-	}
+	SpinLock_Acquire(&pool->Private.BusyCount, TRUE);
 
 	for (pos = 0; pos < pool->Private.MaxCount; pos++)
 	{
@@ -308,15 +277,7 @@ KUSB_EXP POVERLAPPED_K_POOL KUSB_API OvlK_CreatePool(
 	ULONG poolSize;
 	BOOL success = TRUE;
 
-	if (MaxOverlappedCount != 2 &&
-	        MaxOverlappedCount != 4 &&
-	        MaxOverlappedCount != 8 &&
-	        MaxOverlappedCount != 16 &&
-	        MaxOverlappedCount != 32 &&
-	        MaxOverlappedCount != 64 &&
-	        MaxOverlappedCount != 128 &&
-	        MaxOverlappedCount != 256 &&
-	        MaxOverlappedCount != 512)
+	if (MaxOverlappedCount > 512)
 	{
 		LusbwError(ERROR_RANGE_NOT_FOUND);
 		return FALSE;
