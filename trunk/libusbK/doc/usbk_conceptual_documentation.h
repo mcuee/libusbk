@@ -17,14 +17,13 @@
 * <img src="ftv2blank.png" style="display: none" />
 */
 
-/*! \addtogroup lstk Device List API
-* \brief Device list/enumeration and hot plug notification
+/*! \addtogroup core_general UsbK General
 *  @{
 */
 
 /*! @} */
 
-/*! \addtogroup core UsbK Core Device API
+/*! \addtogroup core UsbK Core API
 * The \ref core encompasses the libary functions/members for usb device communication
 * using any of three (3) drivers:
 * - libusbK.sys
@@ -41,6 +40,12 @@
 *  @{
 */
 
+/*! @} */
+
+/*! \addtogroup lstk Device List API
+* \brief Device list/enumeration and hot plug notification
+*  @{
+*/
 
 /*! @} */
 
