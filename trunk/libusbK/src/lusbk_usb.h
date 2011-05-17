@@ -881,6 +881,7 @@ extern "C" {
 //! Gets the policy for a specific pipe (endpoint).
 	/*!
 	*
+	*
 	* \param InterfaceHandle
 	* A libusbK interface handle which is returned by:
 	* - \ref UsbK_Open
@@ -891,6 +892,18 @@ extern "C" {
 	* An 8-bit value that consists of a 7-bit address and a direction bit.
 	* This parameter corresponds to the bEndpointAddress field in the endpoint
 	* descriptor.
+	*
+	* \param PolicyType
+	* A ULONG variable that specifies the policy parameter to retrieve. The
+	* current value for the policy parameter is retrieved the Value parameter.
+	*
+	* \param ValueLength
+	* A pointer to the size, in bytes, of the buffer that Value points to. On
+	* output, ValueLength receives the size, in bytes, of the data that was
+	* copied into the Value buffer.
+	*
+	* \param Value
+	* A pointer to a buffer that receives the specified pipe policy value.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*/
@@ -915,6 +928,25 @@ extern "C" {
 	* This parameter corresponds to the bEndpointAddress field in the endpoint
 	* descriptor.
 	*
+	* \param Buffer
+	* A caller-allocated buffer that receives the data that is read.
+	*
+	* \param BufferLength
+	* The maximum number of bytes to read. This number must be less than or
+	* equal to the size, in bytes, of Buffer.
+	*
+	* \param LengthTransferred
+	* A pointer to a ULONG variable that receives the actual number of bytes
+	* that were copied into Buffer. For more information, see Remarks.
+	*
+	* \param Overlapped
+	* An optional pointer to an overlapped structure for asynchronous
+	* operations. This can be a \ref POVERLAPPED_K or a pointer to a standard
+	* windows OVERLAPPED structure. If this parameter is specified, \c
+	* UsbK_ReadPipe returns immediately rather than waiting synchronously for
+	* the operation to complete before returning. An event is signaled when
+	* the operation is complete.
+	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_ReadPipe (
@@ -938,6 +970,25 @@ extern "C" {
 	* An 8-bit value that consists of a 7-bit address and a direction bit.
 	* This parameter corresponds to the bEndpointAddress field in the endpoint
 	* descriptor.
+	*
+	* \param Buffer
+	* A caller-allocated buffer that receives the data that is read.
+	*
+	* \param BufferLength
+	* The maximum number of bytes to write. This number must be less than or
+	* equal to the size, in bytes, of Buffer.
+	*
+	* \param LengthTransferred
+	* A pointer to a ULONG variable that receives the actual number of bytes
+	* that were transferred from Buffer. For more information, see Remarks.
+	*
+	* \param Overlapped
+	* An optional pointer to an overlapped structure for asynchronous
+	* operations. This can be a \ref POVERLAPPED_K or a pointer to a standard
+	* windows OVERLAPPED structure. If this parameter is specified, \c
+	* UsbK_WritePipe returns immediately rather than waiting synchronously for
+	* the operation to complete before returning. An event is signaled when
+	* the operation is complete.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*/
@@ -1013,6 +1064,7 @@ extern "C" {
 //! Reads from an isochronous pipe.
 	/*!
 	*
+	*
 	* \param InterfaceHandle
 	* A libusbK interface handle which is returned by:
 	* - \ref UsbK_Open
@@ -1023,6 +1075,24 @@ extern "C" {
 	* An 8-bit value that consists of a 7-bit address and a direction bit.
 	* This parameter corresponds to the bEndpointAddress field in the endpoint
 	* descriptor.
+	*
+	* \param Buffer
+	* A caller-allocated buffer that receives the data that is read.
+	*
+	* \param BufferLength
+	* The maximum number of bytes to read. This number must be less than or
+	* equal to the size, in bytes, of Buffer.
+	*
+	* \param IsoPacketSize
+	* Data size in bytes for each iso packet.
+	*
+	* \param Overlapped
+	* A \b required pointer to an overlapped structure for asynchronous
+	* operations. This can be a \ref POVERLAPPED_K or a pointer to a standard
+	* windows OVERLAPPED structure. If this parameter is specified, \c
+	* UsbK_IsoReadPipe returns immediately rather than waiting synchronously for
+	* the operation to complete before returning. An event is signaled when
+	* the operation is complete.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*/
@@ -1048,6 +1118,24 @@ extern "C" {
 	* This parameter corresponds to the bEndpointAddress field in the endpoint
 	* descriptor.
 	*
+	* \param Buffer
+	* A caller-allocated buffer that receives the data that is read.
+	*
+	* \param BufferLength
+	* The maximum number of bytes to write. This number must be less than or
+	* equal to the size, in bytes, of Buffer.
+	*
+	* \param IsoPacketSize
+	* Data size in bytes for each iso packet.
+	*
+	* \param Overlapped
+	* An optional pointer to an overlapped structure for asynchronous
+	* operations. This can be a \ref POVERLAPPED_K or a pointer to a standard
+	* windows OVERLAPPED structure. If this parameter is specified, \c
+	* UsbK_IsoWritePipe returns immediately rather than waiting synchronously for
+	* the operation to complete before returning. An event is signaled when
+	* the operation is complete.
+	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_IsoWritePipe (
@@ -1067,7 +1155,71 @@ extern "C" {
 	* - \ref UsbK_Initialize
 	* - \ref UsbK_GetAssociatedInterface
 	*
+	* \param lpOverlapped
+	* A pointer to a standard windows OVERLAPPED structure that was specified
+	* when the overlapped operation was started.
+	*
+	* \param lpNumberOfBytesTransferred
+	* A pointer to a variable that receives the number of bytes that were
+	* actually transferred by a read or write operation.
+	*
+	* \param bWait
+	* If this parameter is TRUE, the function does not return until the
+	* operation has been completed. If this parameter is FALSE and the
+	* operation is still pending, the function returns FALSE and the
+	* GetLastError function returns ERROR_IO_INCOMPLETE.
+	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
+	* \remarks
+	* This function is like the Win32 API routine, GetOverlappedResult, with
+	* one difference; instead of passing a file handle that is returned from
+	* CreateFile, the caller passes an interface handle that is returned from
+	* \ref UsbK_Initialize, \ref UsbK_Open, or \ref UsbK_GetAssociatedInterface.
+	* The caller can use either API routine, if the
+	* appropriate handle is passed. The \ref UsbK_GetOverlappedResult function
+	* extracts the file handle from the interface handle and then calls
+	* GetOverlappedResult. \n
+	*
+	* \remarks
+	* \par
+	* The results that are reported by the \ref UsbK_GetOverlappedResult
+	* function are those from the specified handle's last overlapped operation
+	* to which the specified standard windows OVERLAPPED structure was
+	* provided, and for which the operation's results were pending. A pending
+	* operation is indicated when the function that started the operation
+	* returns FALSE, and the GetLastError routine returns ERROR_IO_PENDING.
+	* When an I/O operation is pending, the function that started the
+	* operation resets the hEvent member of the standard windows OVERLAPPED
+	* structure to the nonsignaled state. Then when the pending operation has
+	* been completed, the system sets the event object to the signaled state. \n
+	*
+	* \par
+	* The caller can specify that an event object is manually reset in the
+	* standard windows OVERLAPPED structure. If an automatic reset event
+	* object is used, the event handle must not be specified in any other wait
+	* operation in the interval between starting the overlapped operation and
+	* the call to \ref UsbK_GetOverlappedResult. For example, the event object
+	* is sometimes specified in one of the wait routines to wait for the
+	* operation to be completed. When the wait routine returns, the system
+	* sets an auto-reset event's state to nonsignaled, and a successive call
+	* to \ref UsbK_GetOverlappedResult with the bWait parameter set to TRUE
+	* causes the function to be blocked indefinitely.
+	*
+	* \par
+	* If the bWait parameter is TRUE, \ref UsbK_GetOverlappedResult determines
+	* whether the pending operation has been completed by waiting for the
+	* event object to be in the signaled state.
+	*
+	* \par
+	* If the hEvent member of the standard windows OVERLAPPED structure is
+	* NULL, the system uses the state of the file handle to signal when the
+	* operation has been completed. Do not use file handles for this purpose.
+	* It is better to use an event object because of the confusion that can
+	* occur when multiple concurrent overlapped operations are performed on
+	* the same file. In this situation, you cannot know which operation caused
+	* the state of the object to be signaled.
+	*
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_GetOverlappedResult (
 	    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,

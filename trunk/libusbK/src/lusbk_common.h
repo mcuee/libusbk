@@ -111,24 +111,24 @@ typedef LIBUSBK_INTERFACE_HANDLE* PLIBUSBK_INTERFACE_HANDLE;
 enum BMREQUEST_DIR_ENUM
 {
 	BMREQUEST_HOST_TO_DEVICE = 0,
-	BMREQUEST_DEVICE_TO_HOST= 1,
+	BMREQUEST_DEVICE_TO_HOST = 1,
 };
 
 //! bmRequest.Type
 enum BMREQUEST_TYPE_ENUM
 {
 	BMREQUEST_STANDARD = 0,
-	BMREQUEST_CLASS= 1,
-	BMREQUEST_VENDOR= 2,
+	BMREQUEST_CLASS = 1,
+	BMREQUEST_VENDOR = 2,
 };
 
 //! bmRequest.Recipient
 enum BMREQUEST_RECIPIENT_ENUM
 {
 	BMREQUEST_TO_DEVICE = 0,
-	BMREQUEST_TO_INTERFACE= 1,
-	BMREQUEST_TO_ENDPOINT= 2,
-	BMREQUEST_TO_OTHER= 3,
+	BMREQUEST_TO_INTERFACE = 1,
+	BMREQUEST_TO_ENDPOINT = 2,
+	BMREQUEST_TO_OTHER = 3,
 };
 
 
@@ -150,13 +150,13 @@ enum USB_DESCRIPTOR_TYPE_ENUM
 
 	USB_ENDPOINT_DESCRIPTOR_TYPE = 0x05,
 
-	USB_DEVICE_QUALIFIER_DESCRIPTOR_TYPE=0x06,
+	USB_DEVICE_QUALIFIER_DESCRIPTOR_TYPE = 0x06,
 
 	USB_CONFIG_POWER_DESCRIPTOR_TYPE = 0x07,
 
 	USB_INTERFACE_POWER_DESCRIPTOR_TYPE = 0x08,
 
-	USB_INTERFACE_ASSOCIATION_DESCRIPTOR_TYPE=0x0B,
+	USB_INTERFACE_ASSOCIATION_DESCRIPTOR_TYPE = 0x0B,
 };
 
 #define USB_DESCRIPTOR_MAKE_TYPE_AND_INDEX(d, i) ((USHORT)((USHORT)d<<8 | i))
@@ -179,7 +179,7 @@ typedef enum USB_ENDPOINT_TYPE_ENUM
 
 	//! Indicates an interrupt endpoint
 	USB_ENDPOINT_TYPE_INTERRUPT = 0x03,
-}USB_ENDPOINT_TYPE;
+} USB_ENDPOINT_TYPE;
 
 //! Config power mask for the \c bmAttributes field of a \ref USB_CONFIGURATION_DESCRIPTOR
 #define USB_CONFIG_POWERED_MASK                   0xc0
@@ -217,7 +217,7 @@ enum USB_CONFIG_BM_ATTRIBUTE_ENUM
 /*
 * see Chapter 9 of the USB 2.0 specifcation for
 * more information.
-* 
+*
 * These are the correct values based on the USB 2.0 specification.
 */
 enum USB_REQUEST_ENUM
@@ -259,7 +259,7 @@ enum USB_REQUEST_ENUM
 //! USB defined class codes
 /*!
 * see http://www.usb.org/developers/defined_class for more information.
-* 
+*
 */
 enum USB_DEVICE_CLASS_ENUM
 {
@@ -569,16 +569,16 @@ typedef USB_DEFAULT_PIPE_SETUP_PACKET* PUSB_DEFAULT_PIPE_SETUP_PACKET;
 // setup packet is eight bytes -- defined by spec
 C_ASSERT(sizeof(USB_DEFAULT_PIPE_SETUP_PACKET) == 8);
 
-//! The ECN specifies a USB descriptor, called the Interface Association 
-//! Descriptor (IAD), that allows hardware manufacturers to define groupings 
+//! The ECN specifies a USB descriptor, called the Interface Association
+//! Descriptor (IAD), that allows hardware manufacturers to define groupings
 //! of interfaces.
 /*!
-* The Universal Serial Bus Specification, revision 2.0, does not support 
-* grouping more than one interface of a composite device within a single 
-* function. However, the USB Device Working Group (DWG) created USB device 
-* classes that allow for functions with multiple interfaces, and the USB 
-* Implementor's Forum issued an Engineering Change Notification (ECN) that 
-* defines a mechanism for grouping interfaces. 
+* The Universal Serial Bus Specification, revision 2.0, does not support
+* grouping more than one interface of a composite device within a single
+* function. However, the USB Device Working Group (DWG) created USB device
+* classes that allow for functions with multiple interfaces, and the USB
+* Implementor's Forum issued an Engineering Change Notification (ECN) that
+* defines a mechanism for grouping interfaces.
 */
 typedef struct _USB_INTERFACE_ASSOCIATION_DESCRIPTOR
 {
