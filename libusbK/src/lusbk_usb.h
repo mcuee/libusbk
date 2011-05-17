@@ -642,8 +642,9 @@ extern "C" {
 	*
 	* \param Buffer
 	* A caller-allocated buffer that receives the requested value.
-	* On output, Buffer indicates the device speed. The function returns
-	* \ref USB_DEVICE_SPEED::UsbLowSpeed (0x01) or \ref USB_DEVICE_SPEED::UsbHighSpeed (0x03).
+	* On output, Buffer indicates the device speed:
+	* - (0x01) low/full speed device.
+	* - (0x03) high speed device.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*/
