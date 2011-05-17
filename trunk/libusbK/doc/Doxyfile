@@ -202,7 +202,15 @@ TAB_SIZE               = 4
 # will result in a user-defined paragraph with heading "Side Effects:". 
 # You can put \n's in the value part of an alias to insert newlines.
 
-ALIASES                = 
+ALIASES                = "table=\htmlonly <table class=\"doxtable\"> \endhtmlonly" \
+                         "tr=\htmlonly <tr> \endhtmlonly" \
+                         "th=\htmlonly <th> \endhtmlonly" \
+                         "td=\htmlonly <td> \endhtmlonly" \
+                         "endtable=\htmlonly </table> \endhtmlonly" \
+                         "endtr=\htmlonly </tr> \endhtmlonly" \
+                         "endth=\htmlonly </th> \endhtmlonly" \
+                         "endtd=\htmlonly </td> \endhtmlonly" \
+                         "br=\htmlonly <br/> \endhtmlonly"
 
 # Set the OPTIMIZE_OUTPUT_FOR_C tag to YES if your project consists of C 
 # sources only. Doxygen will then generate output that is more tailored for C. 
@@ -940,7 +948,7 @@ DOCSET_PUBLISHER_NAME  = Publisher
 # Microsoft HTML help workshop to generate a compiled HTML help file (.chm) 
 # of the generated HTML documentation.
 
-GENERATE_HTMLHELP      = YES
+GENERATE_HTMLHELP      = NO
 
 # If the GENERATE_HTMLHELP tag is set to YES, the CHM_FILE tag can 
 # be used to specify the file name of the resulting .chm file. You 
@@ -1070,7 +1078,7 @@ ENUM_VALUES_PER_LINE   = 1
 # JavaScript, DHTML, CSS and frames is required (i.e. any modern browser). 
 # Windows users are probably better off using the HTML help feature.
 
-GENERATE_TREEVIEW      = NO
+GENERATE_TREEVIEW      = YES
 
 # By enabling USE_INLINE_TREES, doxygen will generate the Groups, Directories, 
 # and Class Hierarchy pages using a tree view instead of an ordered list.
@@ -1132,7 +1140,7 @@ MATHJAX_RELPATH        = http://www.mathjax.org/mathjax
 # typically be disabled. For large projects the javascript based search engine 
 # can be slow, then enabling SERVER_BASED_SEARCH may provide a better solution.
 
-SEARCHENGINE           = NO
+SEARCHENGINE           = YES
 
 # When the SERVER_BASED_SEARCH tag is enabled the search engine will be 
 # implemented using a PHP enabled web server instead of at the web client 

@@ -17,7 +17,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-	/*! \addtogroup core_functions
+	/*! \addtogroup core
 	*  @{
 	*/
 

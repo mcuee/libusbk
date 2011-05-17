@@ -11,7 +11,7 @@
 
 #define DEFAULT_POOL_MAX_COUNT (0x100)
 
-/*! \addtogroup ovlk_general
+/*! \addtogroup ovlk
  *  @{
  */
 
@@ -109,14 +109,9 @@ typedef struct _OVERLAPPED_K_INFO
 
 }* POVERLAPPED_K_INFO, OVERLAPPED_K_INFO;
 
-/*! @} */
-
 #ifdef __cplusplus
 extern "C" {
 #endif
-	/*! \addtogroup ovlk_functions
-	*  @{
-	*/
 
 //! Gets a pre-allocated K overlapped structure from the specified/default pool.
 	/*!
@@ -179,8 +174,9 @@ extern "C" {
 	/*!
 	*
 	* \param MaxOverlappedCount
-	* Number of overkappedK structures to allocate.
-	* This value must be 2, 4, 8, 16, 32, 64, 128, 256 or 512.
+	* Number of overkappedK structures to allocate. If \c MaxOverlappedCount
+	* exceeds 512, \c OvlK_CreatePool sets last error to ERROR_RANGE_NOT_FOUND
+	* and returns NULL.
 	*
 	* \note
 	* Additional pools may increase performance for multithreaded applications.

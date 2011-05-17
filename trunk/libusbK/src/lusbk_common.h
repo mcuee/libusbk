@@ -1,6 +1,6 @@
 /*! \file lusbk_common.h
 * \brief The libusbK library provides a subset of general usb/descriptor types.
-* 
+*
 * The general usb/descriptor types are also available as part of the WDK.
 * In order to maximum compatiblity with all \ref usbk_drivers, the
 * usb/descriptor types defined in libusbK are \b identical to those found
@@ -175,25 +175,36 @@ typedef PVOID LIBUSBK_INTERFACE_HANDLE, *PLIBUSBK_INTERFACE_HANDLE;
 
 //
 // USB defined request codes
-// see chapter 9 of the USB 1.0 specifcation for
+// see Chapter 9 of the USB 2.0 specifcation for
 // more information.
 //
 
-// These are the correct values based on the USB 1.0
-// specification
+// These are the correct values based on the USB 2.0
+// specification.
 
+/** Request status of the specific recipient */
 #define USB_REQUEST_GET_STATUS                    0x00
+/** Clear or disable a specific feature */
 #define USB_REQUEST_CLEAR_FEATURE                 0x01
-
+/* 0x02 is reserved */
+/** Set or enable a specific feature */
 #define USB_REQUEST_SET_FEATURE                   0x03
-
+/* 0x04 is reserved */
+/** Set device address for all future accesses */
 #define USB_REQUEST_SET_ADDRESS                   0x05
+/** Get the specified descriptor */
 #define USB_REQUEST_GET_DESCRIPTOR                0x06
+/** Update existing descriptors or add new descriptors */
 #define USB_REQUEST_SET_DESCRIPTOR                0x07
+/** Get the current device configuration value */
 #define USB_REQUEST_GET_CONFIGURATION             0x08
+/** Set device configuration */
 #define USB_REQUEST_SET_CONFIGURATION             0x09
+/** Return the selected alternate setting for the specified interface */
 #define USB_REQUEST_GET_INTERFACE                 0x0A
+/** Select an alternate interface for the specified interface */
 #define USB_REQUEST_SET_INTERFACE                 0x0B
+/** Set then report an endpoint's synchronization frame */
 #define USB_REQUEST_SYNC_FRAME                    0x0C
 
 
@@ -203,15 +214,21 @@ typedef PVOID LIBUSBK_INTERFACE_HANDLE, *PLIBUSBK_INTERFACE_HANDLE;
 
 
 #define USB_DEVICE_CLASS_RESERVED           0x00
+/** Audio class */
 #define USB_DEVICE_CLASS_AUDIO              0x01
+/** Communications class */
 #define USB_DEVICE_CLASS_COMMUNICATIONS     0x02
+/** Human Interface Device class */
 #define USB_DEVICE_CLASS_HUMAN_INTERFACE    0x03
-#define USB_DEVICE_CLASS_MONITOR            0x04
-#define USB_DEVICE_CLASS_PHYSICAL_INTERFACE 0x05
-#define USB_DEVICE_CLASS_POWER              0x06
+/** Imaging class */
+#define USB_DEVICE_CLASS_IMAGING            0x06
+/** Printer class */
 #define USB_DEVICE_CLASS_PRINTER            0x07
+/** Mass storage class */
 #define USB_DEVICE_CLASS_STORAGE            0x08
+/** Hub class */
 #define USB_DEVICE_CLASS_HUB                0x09
+/** vendor-specific class */
 #define USB_DEVICE_CLASS_VENDOR_SPECIFIC    0xFF
 
 //
@@ -230,71 +247,180 @@ typedef PVOID LIBUSBK_INTERFACE_HANDLE, *PLIBUSBK_INTERFACE_HANDLE;
 #define USB_FEATURE_INTERFACE_POWER_D2      0x0004
 #define USB_FEATURE_INTERFACE_POWER_D3      0x0005
 
+/**
+ * A structure representing the standard USB device descriptor. This
+ * descriptor is documented in section 9.6.1 of the USB 2.0 specification.
+ * All multiple-byte fields are represented in host-endian format.
+ */
+
 typedef struct _USB_DEVICE_DESCRIPTOR
 {
+	/** Size of this descriptor (in bytes) */
 	UCHAR bLength;
+	/** Descriptor type */
 	UCHAR bDescriptorType;
+	/** USB specification release number in binary-coded decimal. A value of
+	 * 0x0200 indicates USB 2.0, 0x0110 indicates USB 1.1, etc. */
 	USHORT bcdUSB;
+	/** USB-IF class code for the device */
 	UCHAR bDeviceClass;
+	/** USB-IF subclass code for the device */
 	UCHAR bDeviceSubClass;
+	/** USB-IF protocol code for the device */
 	UCHAR bDeviceProtocol;
+	/** Maximum packet size for control endpoint 0 */
 	UCHAR bMaxPacketSize0;
+	/** USB-IF vendor ID */
 	USHORT idVendor;
+	/** USB-IF product ID */
 	USHORT idProduct;
+	/** Device release number in binary-coded decimal */
 	USHORT bcdDevice;
+	/** Index of string descriptor describing manufacturer */
 	UCHAR iManufacturer;
+	/** Index of string descriptor describing product */
 	UCHAR iProduct;
+	/** Index of string descriptor containing device serial number */
 	UCHAR iSerialNumber;
+	/** Number of possible configurations */
 	UCHAR bNumConfigurations;
 }* PUSB_DEVICE_DESCRIPTOR, USB_DEVICE_DESCRIPTOR;
 
+/**
+ * A structure representing the standard USB endpoint descriptor. This
+ * descriptor is documented in section 9.6.3 of the USB 2.0 specification.
+ * All multiple-byte fields are represented in host-endian format.
+ */
+
 typedef struct _USB_ENDPOINT_DESCRIPTOR
 {
+	/** Size of this descriptor (in bytes) */
 	UCHAR bLength;
+	/** Descriptor type */
 	UCHAR bDescriptorType;
+	/** The address of the endpoint described by this descriptor. Bits 0:3 are
+	 * the endpoint number. Bits 4:6 are reserved. Bit 7 indicates direction.
+	 */
 	UCHAR bEndpointAddress;
+	/** Attributes which apply to the endpoint when it is configured using
+	 * the bConfigurationValue.
+	 * Bits 0:1 determine the transfer type.
+	 * Bits 2:3 are only used for isochronous endpoints and refer to sync type.
+	 * Bits 4:5 are also only used for isochronous endpoints and refer to usage type.
+	 * Bits 6:7 are reserved.
+	 */
 	UCHAR bmAttributes;
+	/** Maximum packet size this endpoint is capable of sending/receiving. */
 	USHORT wMaxPacketSize;
+	/** Interval for polling endpoint for data transfers. */
 	UCHAR bInterval;
+	/** For audio devices only: the rate at which synchronization feedback
+	 * is provided. */
+	UCHAR  bRefresh;
+	/** For audio devices only: the address if the synch endpoint */
+	UCHAR  bSynchAddress;
 }* PUSB_ENDPOINT_DESCRIPTOR, USB_ENDPOINT_DESCRIPTOR;
+
+/**
+ * A structure representing the standard USB configuration descriptor. This
+ * descriptor is documented in section 9.6.3 of the USB 2.0 specification.
+ * All multiple-byte fields are represented in host-endian format.
+ */
 
 typedef struct _USB_CONFIGURATION_DESCRIPTOR
 {
+	/** Size of this descriptor (in bytes) */
 	UCHAR bLength;
+	/** Descriptor type */
 	UCHAR bDescriptorType;
+	/** Total length of data returned for this configuration */
 	USHORT wTotalLength;
+	/** Number of interfaces supported by this configuration */
 	UCHAR bNumInterfaces;
+	/** Identifier value for this configuration */
 	UCHAR bConfigurationValue;
+	/** Index of string descriptor describing this configuration */
 	UCHAR iConfiguration;
+	/** Configuration characteristics */
 	UCHAR bmAttributes;
+	/** Maximum power consumption of the USB device from this bus in this
+	 * configuration when the device is fully opreation. Expressed in units
+	 * of 2 mA. */
 	UCHAR MaxPower;
 }* PUSB_CONFIGURATION_DESCRIPTOR, USB_CONFIGURATION_DESCRIPTOR;
 
+/**
+ * A structure representing the standard USB interface descriptor. This
+ * descriptor is documented in section 9.6.5 of the USB 2.0 specification.
+ * All multiple-byte fields are represented in host-endian format.
+ */
+
 typedef struct _USB_INTERFACE_DESCRIPTOR
 {
+	/** Size of this descriptor (in bytes) */
 	UCHAR bLength;
+	/** Descriptor type */
 	UCHAR bDescriptorType;
+	/** Number of this interface */
 	UCHAR bInterfaceNumber;
+	/** Value used to select this alternate setting for this interface */
 	UCHAR bAlternateSetting;
+	/** Number of endpoints used by this interface (excluding the control
+	 * endpoint). */
 	UCHAR bNumEndpoints;
+	/** USB-IF class code for this interface */
 	UCHAR bInterfaceClass;
+	/** USB-IF subclass code for this interface */
 	UCHAR bInterfaceSubClass;
+	/** USB-IF protocol code for this interface */
 	UCHAR bInterfaceProtocol;
+	/** Index of string descriptor describing this interface */
 	UCHAR iInterface;
 }* PUSB_INTERFACE_DESCRIPTOR, USB_INTERFACE_DESCRIPTOR;
 
+/**
+ * A structure representing the standard USB string descriptor. This
+ * descriptor is documented in section 9.6.5 of the USB 2.0 specification.
+ * All multiple-byte fields are represented in host-endian format.
+ */
+
 typedef struct _USB_STRING_DESCRIPTOR
 {
+	/** Size of this descriptor (in bytes) */
 	UCHAR bLength;
+	/** Descriptor type */
 	UCHAR bDescriptorType;
+	/* Content of the string */
 	WCHAR bString[1];
 }* PUSB_STRING_DESCRIPTOR, USB_STRING_DESCRIPTOR;
 
+/**
+ * A structure representing the common USB descriptor.
+ */
+
 typedef struct _USB_COMMON_DESCRIPTOR
 {
+	/** Size of this descriptor (in bytes) */
 	UCHAR bLength;
+	/** Descriptor type */
 	UCHAR bDescriptorType;
 }* PUSB_COMMON_DESCRIPTOR, USB_COMMON_DESCRIPTOR;
+
+//
+// See DWG USB Feature Specification: Interface Power Management
+//
+
+#define USB_SUPPORT_D0_COMMAND      0x01
+#define USB_SUPPORT_D1_COMMAND      0x02
+#define USB_SUPPORT_D2_COMMAND      0x04
+#define USB_SUPPORT_D3_COMMAND      0x08
+
+#define USB_SUPPORT_D1_WAKEUP       0x10
+#define USB_SUPPORT_D2_WAKEUP       0x20
+
+/**
+ * A structure representing the USB Configuration power related features.
+ */
 
 typedef struct _USB_CONFIGURATION_POWER_DESCRIPTOR
 {
@@ -312,6 +438,10 @@ typedef struct _USB_CONFIGURATION_POWER_DESCRIPTOR
 	USHORT TransitionTimeFromD2;
 	USHORT TransitionTimeFromD3;
 }* PUSB_CONFIGURATION_POWER_DESCRIPTOR, USB_CONFIGURATION_POWER_DESCRIPTOR;
+
+/**
+ *  A structure representing the USB Interface power related features.
+ */
 
 typedef struct _USB_INTERFACE_POWER_DESCRIPTOR
 {

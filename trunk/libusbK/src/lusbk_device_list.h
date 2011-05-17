@@ -9,6 +9,11 @@
 #include "lusbk_common.h"
 
 #include <PSHPACK1.H>
+
+/*! \addtogroup lstk
+ *  @{
+ */
+
 typedef struct _KUSB_DEV_LIST_SEARCH
 {
 	BOOL EnableRawDeviceInterfaceGuid;
@@ -50,22 +55,20 @@ extern "C" {
 }
 #endif
 
-//! Get a usb device list.
-/*!
-  \ingroup devlist
-  \param DeviceList Pointer reference that will receive a a populated device list.
-  \param SearchParameters search/filtering options.
+/*! Get a usb device list.
+* \param DeviceList Pointer reference that will receive a a populated device list.
+* \param SearchParameters search/filtering options.
 */
 KUSB_EXP LONG KUSB_API LstK_GetDeviceList(
     __deref_inout PKUSB_DEV_LIST* DeviceList,
     __in PKUSB_DEV_LIST_SEARCH SearchParameters);
 
-//! Free a usb device list.
-/*!
-  \ingroup devlist
-  \param DeviceList The list to free.
+/*! Free a usb device list.
+* \ingroup devlist
+* \param DeviceList The list to free.
 */
 KUSB_EXP VOID KUSB_API LstK_FreeDeviceList(
     __deref_inout PKUSB_DEV_LIST* DeviceList);
 
+/*! @} */
 #endif

@@ -348,6 +348,28 @@ FORCEINLINE BOOL Lock_Destroy(__in PSYNC_LOCK syncLock)
 	}
 	return TRUE;
 }
+
+#define SPINLOCK_HELD ((long)'KBSU')
+FORCEINLINE BOOL SpinLock_Acquire(__in volatile long* lock, __in BOOL wait)
+{
+	if (wait)
+	{
+		while (InterlockedExchange(lock, SPINLOCK_HELD) != 0)
+			SwitchToThread();
+
+		return TRUE;
+	}
+	else
+	{
+		return InterlockedExchange(lock, SPINLOCK_HELD) == 0;
+	}
+}
+
+FORCEINLINE VOID SpinLock_Release(__in volatile long* lock)
+{
+	InterlockedExchange(lock, 0);
+}
+
 #endif
 
 #endif
