@@ -19,29 +19,46 @@
 #include <stddef.h>
 #include <objbase.h>
 
+/*! \addtogroup core_general
+*  @{
+*/
 
+/*! \struct OVERLAPPED
+* \brief
+* A standard Windows \c OVERLAPPED structure.
+* see \htmlonly
+* <A href="http://msdn.microsoft.com/en-us/library/ms684342%28v=vs.85%29.aspx">OVERLAPPED Structure</A>
+* \endhtmlonly
+*/
+
+/*! \typedef OVERLAPPED* LPOVERLAPPED
+* \brief Pointer to a standard Windows \ref OVERLAPPED structure.
+*/
+
+//! Indicates the size in bytes of a \ref KUSB_USER_CONTEXT structure.
 #define KUSB_CONTEXT_SIZE 32
 
 typedef INT_PTR (FAR WINAPI* KPROC)();
 
-/*!
-  \def KUSB_EXP
-  Indicates that a function is an exported API call.
-*/
+//! Indicates that a function is an exported API call.
 #if defined(DYNAMIC_DLL)
 #define KUSB_EXP
 #else
 #define KUSB_EXP
 #endif
 
-/*! Indicates the calling convention. This is always WINAPI (stdcall) by default.
-*/
+//! Indicates the calling convention. This is always WINAPI (stdcall) by default.
 #if !defined(KUSB_API)
 #define KUSB_API WINAPI
 #endif
 
 #pragma warning(disable:4201)
 #include <pshpack1.h>
+
+//! Represents 32 bytes of user defined storage space.
+/*!
+* Most libusbK device objects contain additional stoarge space
+*/
 typedef struct _KUSB_USER_CONTEXT
 {
 	union
@@ -63,10 +80,6 @@ typedef KUSB_USER_CONTEXT* PKUSB_USER_CONTEXT;
 
 #include <poppack.h>
 #pragma warning(default:4201)
-
-/*! \addtogroup core_general
-*  @{
-*/
 
 //! libusbK interfacing handle.
 /*!
