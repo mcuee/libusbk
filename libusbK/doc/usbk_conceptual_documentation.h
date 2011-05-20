@@ -17,7 +17,7 @@
 <IMG src="ftv2node.png" style="display: none" />
 <IMG src="ftv2blank.png" style="display: none" />
 
-\section usbk_about_section What is libusbK?
+\section usbk_about_section About libusbK
 \copydoc usbk_about
 
 \section usbk_installing_section Installing libusbK
@@ -26,12 +26,16 @@
 \section usbk_building_section Building libusbK from source
 \copydoc usbk_building
 
+\section usbk_usage_section Using the libusbK Library
+
 The libusbK library documentation is divided into the following sections:
 - \copybrief core_general
 - \copybrief core
 - \copybrief lstk
 - \copybrief drvk
 - \copybrief ovlk
+
+\subsection usbk_getting_started_section Getting Started
 
 \section usbk_drivers_section Supported Drivers
 \copydoc usbk_drivers
@@ -83,7 +87,7 @@ The libusbK library documentation is divided into the following sections:
 
 /*! @} */
 
-/*! \page usbk_about What is libusbK?
+/*! \page usbk_about About libusbK
 * 
 */
 
