@@ -1,41 +1,55 @@
 /*! \mainpage notitle
-*
-* \section mainpage_core UsbK Core API details
-* \copydetails core
-*
-* \author Travis Lee Robinson
-* \version 3.0
-* \date 2011
-* <img src="ftv2folderclosed.png" style="display: none" />
-* <img src="ftv2folderopen.png" style="display: none" />
-* <img src="ftv2mnode.png" style="display: none" />
-* <img src="ftv2pnode.png" style="display: none" />
-* <img src="ftv2mlastnode.png" style="display: none" />
-* <img src="ftv2plastnode.png" style="display: none" />
-* <img src="ftv2vertline.png" style="display: none" />
-* <img src="ftv2node.png" style="display: none" />
-* <img src="ftv2blank.png" style="display: none" />
+
+<TABLE>
+<TR>
+	<TH><B>libusbK Author</B>: <TT>Travis Lee Robinson</TT></TH>
+	<TH><B>Version</B>: <TT>3.0</TT></TH>
+	<TH><B>Date</B>: <TT>2011</TT></TH>
+</TR>
+</TABLE>
+<IMG src="ftv2folderclosed.png" style="display: none" />
+<IMG src="ftv2folderopen.png" style="display: none" />
+<IMG src="ftv2mnode.png" style="display: none" />
+<IMG src="ftv2pnode.png" style="display: none" />
+<IMG src="ftv2mlastnode.png" style="display: none" />
+<IMG src="ftv2plastnode.png" style="display: none" />
+<IMG src="ftv2vertline.png" style="display: none" />
+<IMG src="ftv2node.png" style="display: none" />
+<IMG src="ftv2blank.png" style="display: none" />
+
+\section usbk_about_section What is libusbK?
+\copydoc usbk_about
+
+\section usbk_installing_section Installing libusbK
+\copydoc usbk_installing
+
+\section usbk_building_section Building libusbK from source
+\copydoc usbk_building
+
+The libusbK library documentation is divided into the following sections:
+- \copybrief core_general
+- \copybrief core
+- \copybrief lstk
+- \copybrief drvk
+- \copybrief ovlk
+
+\section usbk_drivers_section Supported Drivers
+\copydoc usbk_drivers
+
 */
 
 /*! \addtogroup core_general UsbK General
+* \brief
+* \ref core_general encompasses general functions and members used by other modules
+*
 *  @{
 */
 
 /*! @} */
 
 /*! \addtogroup core UsbK Core API
-* The \ref core encompasses the libary functions/members for usb device communication
-* using any of three (3) drivers:
-* - libusbK.sys
-* - libusb0.sys
-* - WinUSB.sys
-*
-* All UsbK Core API functions are available in two forms:
-* - As exported stdcall api functions for use with libusbK.sys or libusb0.sys. (not WinUSB)
-*   <br/>These functions begin with \c "UsbK_"
-*
-* - As dynamically loaded functions based on the devices driver type. (all supported drivers)
-*   <br/>For more information on dynamic function loading, see \ref DrvK_LoadDriverApi and \ref DrvK_GetProcAddress
+* \brief
+* \ref core encompasses usb functions and members for usb device communication
 *
 *  @{
 */
@@ -43,23 +57,54 @@
 /*! @} */
 
 /*! \addtogroup lstk Device List API
-* \brief Device list/enumeration and hot plug notification
+* \brief
+* \ref lstk encompasses listing functions and members for usb device enumeration and detection
+*
 *  @{
 */
 
 /*! @} */
 
 /*! \addtogroup ovlk OverlappedK API
+* \brief
+* \ref ovlk encompasses overlapped functions and members for asynchronous usb transfers
+*
 *  @{
 */
 
 /*! @} */
 
 /*! \addtogroup drvk Dynamic Driver API
+* \brief
+* \ref drvk encompasses functions and members for loading a driver api set dynamically.
+*
 *  @{
 */
 
 /*! @} */
+
+/*! \page usbk_about What is libusbK?
+* 
+*/
+
+/*! \page usbk_installing Installing libusbK
+* 
+*/
+
+/*! \page usbk_building Building libusbK from source
+* 
+*/
+
+/*! \page usbk_drivers Supported Drivers
+* The following drivers are supported by the libusbK library:
+* - libusbK.sys
+* - libusb0.sys
+*   - Using the api functions exported by the libusbK library (functions beginning with with \b UsbK_)
+*   - Using dynamically loaded functions based on the devices driver type. see \ref drvk
+* - WinUSB.sys
+*   - Using dynamically loaded functions based on the devices driver type. see \ref drvk
+*
+*/
 
 /*! \page usbk_power_management libusbK Power Management
 * libusbK uses the KMDF state machines for power management. Power

@@ -131,7 +131,7 @@ extern "C" {
 	* \note
 	* When an interface is released, it is moved to the bottom if an interface stack making a previously
 	* claimed interface the current.  This will continue to occur regardless of whether the interface is claimed.
-	* For this reason, \ref UsbK_ReleasInterface can be used as a means to change the current/default interface
+	* For this reason, \ref UsbK_ReleaseInterface can be used as a means to change the current/default interface
 	* of an \c InterfaceHandle without claiming the interface.
 	*
 	* \param InterfaceNumberOrIndex
@@ -267,7 +267,7 @@ extern "C" {
 	*
 	* A \ref UsbK_ControlTransfer is never cached.  These requests always go directly to the usb device.
 	*
-	* \important
+	* \attention
 	* This function should not be used for operations supported by the library.\n
 	* e.g. \ref UsbK_SetConfiguration, \ref UsbK_SetAltInterface, etc..
 	*
@@ -632,7 +632,7 @@ extern "C" {
 	*
 	* \param InformationType
 	* A value that specifies which interface information value to retrieve.
-	* On input, InformationType must have the following value: \ref DEVICE_SPEED
+	* On input, InformationType must have the following value: \c DEVICE_SPEED
 	* (0x01).
 	*
 	* \param BufferLength
@@ -709,7 +709,7 @@ extern "C" {
 	* - \ref UsbK_Initialize
 	* - \ref UsbK_GetAssociatedInterface
 	*
-	* \param AlternateInterfaceNumber
+	* \param AlternateSettingNumber
 	* A value that specifies the alternate interface to return the
 	* information for.
 	*
