@@ -1,13 +1,16 @@
 /*! \file lusbk_common.h
-* \brief The libusbK library provides a subset of general usb/descriptor types.
+* \brief General structs, typedefs, enums, defines, and functions used with the libusbK library.
 *
+* \note
+* The libusbK library provides a subset of general usb/descriptor types.
+* <BR>
 * The general usb/descriptor types are also available as part of the WDK.
 * In order to maximum compatiblity with all \ref usbk_drivers, the
 * usb/descriptor types defined in libusbK are \b identical to those found
 * in Microsoft WDK distributions.
 *
 * \attention
-* If the libusbK usb/descriptor types are inadequate, include the Microsoft WDK
+* If the subset of libusbK usb/descriptor types are inadequate, include the Microsoft WDK
 * \c usb.h \b before including any libusbk header files.
 *
 */
@@ -19,7 +22,7 @@
 #include <stddef.h>
 #include <objbase.h>
 
-/*! \addtogroup core_general
+/*! \addtogroup genk
 *  @{
 */
 
@@ -179,20 +182,20 @@ enum USB_DESCRIPTOR_TYPE_ENUM
 #define USB_ENDPOINT_TYPE_MASK                    0x03
 
 //! Values used in the \c bmAttributes field of a \ref USB_ENDPOINT_DESCRIPTOR
-typedef enum USB_ENDPOINT_TYPE_ENUM
+typedef enum _USBD_PIPE_TYPE
 {
 	//! Indicates a control endpoint
-	USB_ENDPOINT_TYPE_CONTROL = 0x00,
+	UsbdPipeTypeControl       = 0,
 
 	//! Indicates an isochronous endpoint
-	USB_ENDPOINT_TYPE_ISOCHRONOUS = 0x01,
+	UsbdPipeTypeIsochronous   = 1,
 
 	//! Indicates a bulk endpoint
-	USB_ENDPOINT_TYPE_BULK = 0x02,
+	UsbdPipeTypeBulk          = 2,
 
 	//! Indicates an interrupt endpoint
-	USB_ENDPOINT_TYPE_INTERRUPT = 0x03,
-} USB_ENDPOINT_TYPE;
+	UsbdPipeTypeInterrupt     = 3
+} USBD_PIPE_TYPE;
 
 //! Config power mask for the \c bmAttributes field of a \ref USB_CONFIGURATION_DESCRIPTOR
 #define USB_CONFIG_POWERED_MASK                   0xc0

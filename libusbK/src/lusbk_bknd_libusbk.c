@@ -295,14 +295,14 @@ LONG k_ClaimReleaseCB (__in PKUSB_INTERFACE_STACK UsbStack,
 	else
 	{
 		// The most recently claimed interface is always at the list head.
-		List_Remove(UsbStack->InterfaceList, InterfaceElement);
+		DL_DELETE(UsbStack->InterfaceList, InterfaceElement);
 		if (IsClaim)
 		{
-			List_AddHead(UsbStack->InterfaceList, InterfaceElement);
+			DL_PREPEND(UsbStack->InterfaceList, InterfaceElement);
 		}
 		else
 		{
-			List_AddTail(UsbStack->InterfaceList, InterfaceElement);
+			DL_APPEND(UsbStack->InterfaceList, InterfaceElement);
 		}
 		// All device handles and interface handles are cached.
 		UsbStack_BuildCache(UsbStack);
@@ -548,7 +548,7 @@ KUSB_EXP BOOL KUSB_API UsbK_GetAssociatedInterface (
 	findVirtualIndex = backendContext->UsbStack.InterfaceList->VirtualIndex;
 	findVirtualIndex = (findVirtualIndex + 1) + (INT)AssociatedInterfaceIndex;
 
-	List_SearchField(backendContext->UsbStack.InterfaceList, assocEL, VirtualIndex, findVirtualIndex);
+	DL_SEARCH_SCALAR(backendContext->UsbStack.InterfaceList, assocEL, VirtualIndex, findVirtualIndex);
 	if (!assocEL)
 	{
 		LusbwError(ERROR_NO_MORE_ITEMS);
@@ -568,9 +568,9 @@ KUSB_EXP BOOL KUSB_API UsbK_GetAssociatedInterface (
 	ErrorNoSet(!success, Error, "->UsbStack_Clone");
 
 	// move this interface to top if stack for the cloned handle.
-	List_SearchField(assocContext->UsbStack.InterfaceList, assocEL, VirtualIndex, findVirtualIndex);
-	List_Remove(assocContext->UsbStack.InterfaceList, assocEL);
-	List_AddHead(assocContext->UsbStack.InterfaceList, assocEL);
+	DL_SEARCH_SCALAR(assocContext->UsbStack.InterfaceList, assocEL, VirtualIndex, findVirtualIndex);
+	DL_DELETE(assocContext->UsbStack.InterfaceList, assocEL);
+	DL_PREPEND(assocContext->UsbStack.InterfaceList, assocEL);
 
 	// clone the backend
 	memcpy(&assocContext->Version, &backendContext->Version, sizeof(assocContext->Version));
@@ -1213,7 +1213,7 @@ KUSB_EXP BOOL KUSB_API UsbK_Open(
 
 	if (DeviceListItem->CompositeList)
 	{
-		List_ForEach(DeviceListItem->CompositeList, nextCompositeEL)
+		DL_FOREACH(DeviceListItem->CompositeList, nextCompositeEL)
 		{
 			success = UsbStack_AddDevice(
 			              &backendContext->UsbStack,
@@ -1301,11 +1301,11 @@ KUSB_EXP BOOL KUSB_API UsbK_SetAltInterface(
 
 	if (IsIndex)
 	{
-		List_SearchField(backendContext->UsbStack.InterfaceList, interfaceEL, VirtualIndex, InterfaceNumberOrIndex);
+		DL_SEARCH_SCALAR(backendContext->UsbStack.InterfaceList, interfaceEL, VirtualIndex, InterfaceNumberOrIndex);
 	}
 	else
 	{
-		List_SearchField(backendContext->UsbStack.InterfaceList, interfaceEL, Number, InterfaceNumberOrIndex);
+		DL_SEARCH_SCALAR(backendContext->UsbStack.InterfaceList, interfaceEL, Number, InterfaceNumberOrIndex);
 	}
 	if (!interfaceEL)
 	{
@@ -1356,11 +1356,11 @@ KUSB_EXP BOOL KUSB_API UsbK_GetAltInterface(
 
 	if (IsIndex)
 	{
-		List_SearchField(backendContext->UsbStack.InterfaceList, interfaceEL, VirtualIndex, InterfaceNumberOrIndex);
+		DL_SEARCH_SCALAR(backendContext->UsbStack.InterfaceList, interfaceEL, VirtualIndex, InterfaceNumberOrIndex);
 	}
 	else
 	{
-		List_SearchField(backendContext->UsbStack.InterfaceList, interfaceEL, Number, InterfaceNumberOrIndex);
+		DL_SEARCH_SCALAR(backendContext->UsbStack.InterfaceList, interfaceEL, Number, InterfaceNumberOrIndex);
 	}
 	if (!interfaceEL)
 	{

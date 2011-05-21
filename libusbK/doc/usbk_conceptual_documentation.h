@@ -1,4 +1,4 @@
-/*! \mainpage notitle
+/*! \mainpage libusbK Home
 
 <TABLE>
 <TR>
@@ -17,43 +17,31 @@
 <IMG src="ftv2node.png" style="display: none" />
 <IMG src="ftv2blank.png" style="display: none" />
 
-\section usbk_about_section About libusbK
-\copydoc usbk_about
-
-\section usbk_installing_section Installing libusbK
-\copydoc usbk_installing
-
-\section usbk_building_section Building libusbK from source
-\copydoc usbk_building
-
-\section usbk_usage_section Using the libusbK Library
-
-The libusbK library documentation is divided into the following sections:
-- \copybrief core_general
-- \copybrief core
-- \copybrief lstk
-- \copybrief drvk
-- \copybrief ovlk
-
-\subsection usbk_getting_started_section Getting Started
-
-\section usbk_drivers_section Supported Drivers
-\copydoc usbk_drivers
+- \subpage usbk_about
+  <BR>Explanation of the libusbK project, the user mode library, and its \ref usbk_drivers.
+  <HR>
+- \subpage usbk_installing
+  <BR>Methods for installing the libusbK binaries and drivers.
+  <HR>
+- \subpage usbk_usage
+  <BR>Where to begin and how to get started writing your new libusbK based application.
+  <HR>
+- \subpage usbk_building
+  <BR>Methods for building the libusbK user mode library and driver from source code.
+  <HR>
 
 */
 
-/*! \addtogroup core_general UsbK General
-* \brief
-* \ref core_general encompasses general functions and members used by other modules
+/*! \addtogroup genk UsbK General
+* \brief \ref genk \copybrief lusbk_common.h
 *
 *  @{
 */
 
 /*! @} */
 
-/*! \addtogroup core UsbK Core API
-* \brief
-* \ref core encompasses usb functions and members for usb device communication
+/*! \addtogroup usbk UsbK Core API
+* \brief \ref usbk \copybrief lusbk_usb.h
 *
 *  @{
 */
@@ -61,8 +49,7 @@ The libusbK library documentation is divided into the following sections:
 /*! @} */
 
 /*! \addtogroup lstk Device List API
-* \brief
-* \ref lstk encompasses listing functions and members for usb device enumeration and detection
+* \brief \ref lstk \copybrief lusbk_device_list.h
 *
 *  @{
 */
@@ -70,8 +57,7 @@ The libusbK library documentation is divided into the following sections:
 /*! @} */
 
 /*! \addtogroup ovlk OverlappedK API
-* \brief
-* \ref ovlk encompasses overlapped functions and members for asynchronous usb transfers
+* \brief \ref ovlk \copybrief lusbk_overlapped.h
 *
 *  @{
 */
@@ -79,35 +65,108 @@ The libusbK library documentation is divided into the following sections:
 /*! @} */
 
 /*! \addtogroup drvk Dynamic Driver API
-* \brief
-* \ref drvk encompasses functions and members for loading a driver api set dynamically.
+* \brief \ref drvk \copybrief lusbk_dynamic.h
 *
 *  @{
 */
 
 /*! @} */
 
-/*! \page usbk_about About libusbK
-* 
+//! Explanation of the libusbK project, the user mode library, and its \ref usbk_drivers
+/*! \page usbk_about About
+
+libusbK can be separated into two major components:
+- A Windows user mode USB library (libusbK.dll)
+- A Windows kernel mode USB driver (libusbK.sys)
+
+\section usbk_about_dll libusbK.dll (libusbK user library)
+libusbK.dll is a generic user mode usb library for
+the Microsoft Windows Operating System family. (Windows XP and up)
+
+Windows 2000 is currently not supported by the release builds or driver installer packages
+but can still be achieved with manual builds and custom driver installations.
+
+\note
+The libusbK library allows developers to target multiple drivers using the same set of api function declarations.
+
+\par
+\subsection usbk_drivers Supported Drivers
+The following usb kernel drivers are supported by the libusbK library:
+- \b libusbK.sys
+- \b libusb0.sys
+  - Using the api functions exported by the libusbK library (functions beginning with with \b UsbK_)
+  - Using dynamically loaded functions based on the devices driver type. see \ref drvk
+- \b WinUSB.sys
+  - Using dynamically loaded functions based on the devices driver type. see \ref drvk
+
+\par
+\subsection usbk_winusb_compat WinUSB Compatibility Layer
+The libusbK library includes a \c Winusb.dll compatiblity layer.
+This makes libusbK a drop-in replacement for an existing WinUSB application.
+Developers can make use of this functionality in two ways:
+- Using the \b WinUsb_ prefixed function which are directly exported by libusbK.dll
+  - Usage of the \c WinUsb_ prefixed functions is intended for developers who want to switch away from the
+    \c WinUSB.sys driver without modifying application code.
+  - The \c WinUsb_ prefixed functions must \b not be used for devices installed with the WinUSB.sys driver.
+  - The \c WinUsb_ prefixed functions are identical to the exported \c UsbK_ prefixed functions, thus \b must
+    be installed with either the \c libusbK.sys or \c libusb0.sys driver.
+- Using the \ref drvk
+  - This option allows users to target any of the \ref usbk_drivers
+    but requires small modifications to the applications source code.
+
+\section usbk_about_sys libusbK.sys (libusbK kernel driver)
+
+libusbK.sys is a KMDF based usb device kernel driver for
+the Microsoft Windows Operating System family. (Windows XP and up)
+
+Windows 2000 is currently not supported by the release builds or driver installer packages
+but can still be achieved with manual builds and custom driver installations.
+
+The libusbK kernel driver uses an extended libusb-win32 (libusb0.sys) compatible
+driver api and provides higher-level functionality when compared to libusb0.sys.
+
+libusbK.sys advantages when compared to libusb0.sys:
+- Winusb-like power management
+- Winusb-like pipe policies
+- Driver-level asynchronous transfer timeouts
+- Improved isochronous transfer support
+- Newer, more robust KMDF based design
+
+libusbK.sys disadvantages when compared to libusb0.sys:
+- Does not support multiple configurations
+- Does not support a "filter driver" mode
+- Significantly larger device driver installation packages
+- Less tolerant of usb devices which or not fully compliant with usb specifications
+
+The following user mode usb libraries support the \c libusbK.sys kernel driver:
+- \b libusbK.dll
+- \b libusb0.dll
+
 */
 
-/*! \page usbk_installing Installing libusbK
-* 
+//! Methods for installing the libusbK binaries and drivers.
+/*! \page usbk_installing Installation
 */
 
-/*! \page usbk_building Building libusbK from source
-* 
+//! Methods for building the libusbK user mode library and driver from source code.
+/*! \page usbk_building Building from source
 */
 
-/*! \page usbk_drivers Supported Drivers
-* The following drivers are supported by the libusbK library:
-* - libusbK.sys
-* - libusb0.sys
-*   - Using the api functions exported by the libusbK library (functions beginning with with \b UsbK_)
-*   - Using dynamically loaded functions based on the devices driver type. see \ref drvk
-* - WinUSB.sys
-*   - Using dynamically loaded functions based on the devices driver type. see \ref drvk
-*
+//! Where to begin and how to get started writing your new libusbK based application.
+/*! \page usbk_usage Using the Library
+
+The libusbK library documentation is divided into the following sections:
+- \copybrief genk
+  <HR>
+- \copybrief usbk
+  <HR>
+- \copybrief lstk
+  <HR>
+- \copybrief drvk
+  <HR>
+- \copybrief ovlk
+  <HR>
+
 */
 
 /*! \page usbk_power_management libusbK Power Management

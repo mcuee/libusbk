@@ -59,7 +59,7 @@ VOID UsbStack_Clone(
 
 	newDeviceEL = NULL;
 
-	List_ForEach(SrcUsbStack->DeviceList, nextDeviceEL)
+	DL_FOREACH(SrcUsbStack->DeviceList, nextDeviceEL)
 	{
 		if (!nextDeviceEL->Device->ConfigDescriptor)
 		{
@@ -76,40 +76,40 @@ VOID UsbStack_Clone(
 		IncDeviceUsageCount(newDeviceEL->Device);
 
 		// add cloned device
-		List_AddTail(DstUsbStack->DeviceList, newDeviceEL);
+		DL_APPEND(DstUsbStack->DeviceList, newDeviceEL);
 	}
 
-	List_ForEach(SrcUsbStack->InterfaceList, nextInterfaceEL)
+	DL_FOREACH(SrcUsbStack->InterfaceList, nextInterfaceEL)
 	{
 
-		List_SearchField(DstUsbStack->DeviceList, nextDeviceEL, Device, nextInterfaceEL->ParentDevice->Device);
+		DL_SEARCH_SCALAR(DstUsbStack->DeviceList, nextDeviceEL, Device, nextInterfaceEL->ParentDevice->Device);
 
 		// clone interface
 		L_Clone(newInterfaceEL, nextInterfaceEL);
 		newInterfaceEL->AltInterfaceList = NULL;
 		newInterfaceEL->ParentDevice = nextDeviceEL;
 
-		List_ForEach(nextInterfaceEL->AltInterfaceList, nextAltInterfaceEL)
+		DL_FOREACH(nextInterfaceEL->AltInterfaceList, nextAltInterfaceEL)
 		{
 			// clone alt-interface
 			L_Clone(newAltInterfaceEL, nextAltInterfaceEL);
 			newAltInterfaceEL->PipeList = NULL;
 
-			List_ForEach(nextAltInterfaceEL->PipeList, nextPipeEL)
+			DL_FOREACH(nextAltInterfaceEL->PipeList, nextPipeEL)
 			{
 				// clone pipe
 				L_Clone(newPipeEL, nextPipeEL);
 
 				// add cloned pipe
-				List_AddTail(newAltInterfaceEL->PipeList, newPipeEL);
+				DL_APPEND(newAltInterfaceEL->PipeList, newPipeEL);
 			}
 
 			// add cloned alt-interface
-			List_AddTail(newInterfaceEL->AltInterfaceList, newAltInterfaceEL);
+			DL_APPEND(newInterfaceEL->AltInterfaceList, newAltInterfaceEL);
 		}
 
 		// add clone interface
-		List_AddTail(DstUsbStack->InterfaceList, newInterfaceEL);
+		DL_APPEND(DstUsbStack->InterfaceList, newInterfaceEL);
 	}
 }
 
@@ -128,7 +128,7 @@ BOOL UsbStack_Free(
 	// safely free the device list.
 	// the caller may supply a call back function
 	// to free additional resources for the device.
-	List_ForEachSafe(UsbStack->DeviceList, nextDeviceEL, t3)
+	DL_FOREACH_SAFE(UsbStack->DeviceList, nextDeviceEL, t3)
 	{
 		long lockCount;
 		AquireDeviceActionPendingLock(nextDeviceEL->Device);
@@ -141,7 +141,7 @@ BOOL UsbStack_Free(
 			{
 				// * Call CloseInterfaceCB for all of the elements that belong to this device.
 				// * Update the shared device interface array.
-				List_ForEachSafe(UsbStack->InterfaceList, nextInterfaceEL, t0)
+				DL_FOREACH_SAFE(UsbStack->InterfaceList, nextInterfaceEL, t0)
 				{
 					if (nextInterfaceEL->ParentDevice == nextDeviceEL)
 					{
@@ -184,27 +184,27 @@ BOOL UsbStack_Free(
 			DecDeviceUsageCount(nextDeviceEL->Device);
 		}
 
-		List_Remove(UsbStack->DeviceList, nextDeviceEL);
+		DL_DELETE(UsbStack->DeviceList, nextDeviceEL);
 		Mem_Free(&nextDeviceEL);
 	}
 
 	// free the interface list
-	List_ForEachSafe(UsbStack->InterfaceList, nextInterfaceEL, t0)
+	DL_FOREACH_SAFE(UsbStack->InterfaceList, nextInterfaceEL, t0)
 	{
 		// free the stack collection lists
-		List_ForEachSafe(nextInterfaceEL->AltInterfaceList, nextAltInterfaceEL, t1)
+		DL_FOREACH_SAFE(nextInterfaceEL->AltInterfaceList, nextAltInterfaceEL, t1)
 		{
-			List_ForEachSafe(nextAltInterfaceEL->PipeList, nextPipeEL, t2)
+			DL_FOREACH_SAFE(nextAltInterfaceEL->PipeList, nextPipeEL, t2)
 			{
-				List_Remove(nextAltInterfaceEL->PipeList, nextPipeEL);
+				DL_DELETE(nextAltInterfaceEL->PipeList, nextPipeEL);
 				Mem_Free(&nextPipeEL);
 			}
 
-			List_Remove(nextInterfaceEL->AltInterfaceList, nextAltInterfaceEL);
+			DL_DELETE(nextInterfaceEL->AltInterfaceList, nextAltInterfaceEL);
 			Mem_Free(&nextAltInterfaceEL);
 		}
 
-		List_Remove(UsbStack->InterfaceList, nextInterfaceEL);
+		DL_DELETE(UsbStack->InterfaceList, nextInterfaceEL);
 		Mem_Free(&nextInterfaceEL);
 	}
 
@@ -413,7 +413,7 @@ BOOL UsbStack_Add(
 	BOOL success = FALSE;
 
 	// don't add duplicates
-	List_SearchField(UsbStack->DeviceList, nextDeviceEL, Device, SharedDevice);
+	DL_SEARCH_SCALAR(UsbStack->DeviceList, nextDeviceEL, Device, SharedDevice);
 	if (nextDeviceEL)
 	{
 		USBWRN("attempted to add a duplicate device.\n\tDevicePath = %s\n", SharedDevice->DevicePath);
@@ -424,7 +424,7 @@ BOOL UsbStack_Add(
 	nextDeviceEL->Device = SharedDevice;
 	nextDeviceEL->Context = Context;
 
-	List_AddTail(UsbStack->DeviceList, nextDeviceEL);
+	DL_APPEND(UsbStack->DeviceList, nextDeviceEL);
 	success = mergeConfigDescriptor(UsbStack, SharedDevice->ConfigDescriptor);
 	ErrorNoSet(!success, Error, "->mergeConfigDescriptor");
 
@@ -445,7 +445,7 @@ AddInterfaceDescriptorJump:
 
 		interfaceDescriptor = (PUSB_INTERFACE_DESCRIPTOR)nextNewDescriptor;
 
-		List_SearchField(UsbStack->InterfaceList, nextInterfaceEL, Number, interfaceDescriptor->bInterfaceNumber);
+		DL_SEARCH_SCALAR(UsbStack->InterfaceList, nextInterfaceEL, Number, interfaceDescriptor->bInterfaceNumber);
 		if (!nextInterfaceEL)
 		{
 			HANDLE newInterfaceHandle = NULL;
@@ -476,14 +476,14 @@ AddInterfaceDescriptorJump:
 			nextInterfaceEL->ParentDevice		= nextDeviceEL;
 			nextInterfaceEL->Number				= interfaceDescriptor->bInterfaceNumber;
 
-			List_AddTail(UsbStack->InterfaceList, nextInterfaceEL);
+			DL_APPEND(UsbStack->InterfaceList, nextInterfaceEL);
 		}
 		else
 		{
 			altIndex++;
 		}
 
-		List_SearchField(nextInterfaceEL->AltInterfaceList, nextAltInterfaceEL, Number, interfaceDescriptor->bAlternateSetting);
+		DL_SEARCH_SCALAR(nextInterfaceEL->AltInterfaceList, nextAltInterfaceEL, Number, interfaceDescriptor->bAlternateSetting);
 
 		if (nextAltInterfaceEL)
 		{
@@ -499,7 +499,7 @@ AddInterfaceDescriptorJump:
 			nextAltInterfaceEL->Number = interfaceDescriptor->bAlternateSetting;
 			nextAltInterfaceEL->Index = altIndex++;
 
-			List_AddTail(nextInterfaceEL->AltInterfaceList, nextAltInterfaceEL);
+			DL_APPEND(nextInterfaceEL->AltInterfaceList, nextAltInterfaceEL);
 
 		}
 
@@ -520,7 +520,7 @@ AddInterfaceDescriptorJump:
 				endpointDescriptor = (PUSB_ENDPOINT_DESCRIPTOR)nextNewDescriptor;
 
 				// make sure we don't already have this one.
-				List_SearchField(nextAltInterfaceEL->PipeList, nextPipeEL, Number, endpointDescriptor->bEndpointAddress);
+				DL_SEARCH_SCALAR(nextAltInterfaceEL->PipeList, nextPipeEL, Number, endpointDescriptor->bEndpointAddress);
 				if (nextPipeEL)
 				{
 					USBWRN("duplicate pipe id %02Xh on alternate interface #%02Xh on interface #%02Xh\n",
@@ -537,7 +537,7 @@ AddInterfaceDescriptorJump:
 					nextPipeEL->Index = pipeIndex++;
 					memcpy(&nextPipeEL->Descriptor, endpointDescriptor, sizeof(nextPipeEL->Descriptor));
 
-					List_AddTail(nextAltInterfaceEL->PipeList, nextPipeEL);
+					DL_APPEND(nextAltInterfaceEL->PipeList, nextPipeEL);
 				}
 			}
 			AdvanceDescriptor(nextNewDescriptor, ConfigSizeLeft);
@@ -546,7 +546,7 @@ AddInterfaceDescriptorJump:
 
 	// build virtual interface indexes
 	interfaceIndex = 0;
-	List_ForEach(UsbStack->InterfaceList, nextInterfaceEL)
+	DL_FOREACH(UsbStack->InterfaceList, nextInterfaceEL)
 	{
 		nextInterfaceEL->VirtualIndex = interfaceIndex++;
 	}
@@ -574,11 +574,11 @@ LONG UsbStack_ClaimOrRelease(
 
 	if (IsIndex)
 	{
-		List_SearchField(UsbStack->InterfaceList, interfaceEL, VirtualIndex, InterfaceIndexOrNumber);
+		DL_SEARCH_SCALAR(UsbStack->InterfaceList, interfaceEL, VirtualIndex, InterfaceIndexOrNumber);
 	}
 	else
 	{
-		List_SearchField(UsbStack->InterfaceList, interfaceEL, Number, InterfaceIndexOrNumber);
+		DL_SEARCH_SCALAR(UsbStack->InterfaceList, interfaceEL, Number, InterfaceIndexOrNumber);
 	}
 
 	if (UsbStack->Cb.ClaimReleaseInterface)
@@ -600,21 +600,21 @@ USB_STACK_HANDLER_RESULT UsbStackHandler_SetAltInterface(
 
 	if (IsInterfaceIndex)
 	{
-		List_SearchField(UsbStack->InterfaceList, interfaceEL, Index, InterfaceIndexOrNumber);
+		DL_SEARCH_SCALAR(UsbStack->InterfaceList, interfaceEL, Index, InterfaceIndexOrNumber);
 	}
 	else
 	{
-		List_SearchField(UsbStack->InterfaceList, interfaceEL, Number, InterfaceIndexOrNumber);
+		DL_SEARCH_SCALAR(UsbStack->InterfaceList, interfaceEL, Number, InterfaceIndexOrNumber);
 	}
 	if (interfaceEL)
 	{
 		if (IsAltSettingIndex)
 		{
-			List_SearchField(interfaceEL->AltInterfaceList, altInterfaceEL, Index, AltSettingIndexOrNumber);
+			DL_SEARCH_SCALAR(interfaceEL->AltInterfaceList, altInterfaceEL, Index, AltSettingIndexOrNumber);
 		}
 		else
 		{
-			List_SearchField(interfaceEL->AltInterfaceList, altInterfaceEL, Number, AltSettingIndexOrNumber);
+			DL_SEARCH_SCALAR(interfaceEL->AltInterfaceList, altInterfaceEL, Number, AltSettingIndexOrNumber);
 		}
 	}
 
@@ -622,8 +622,8 @@ USB_STACK_HANDLER_RESULT UsbStackHandler_SetAltInterface(
 	{
 		interfaceEL->CurrentAltSetting = altInterfaceEL->Number;
 
-		List_Remove(interfaceEL->AltInterfaceList, altInterfaceEL);
-		List_AddHead(interfaceEL->AltInterfaceList, altInterfaceEL);
+		DL_DELETE(interfaceEL->AltInterfaceList, altInterfaceEL);
+		DL_PREPEND(interfaceEL->AltInterfaceList, altInterfaceEL);
 
 		UsbStack_BuildCache(UsbStack);
 
@@ -645,16 +645,16 @@ USB_STACK_HANDLER_RESULT UsbStackHandler_GetAltInterface(
 
 	if (IsInterfaceIndex)
 	{
-		List_SearchField(UsbStack->InterfaceList, interfaceEL, Index, InterfaceIndexOrNumber);
+		DL_SEARCH_SCALAR(UsbStack->InterfaceList, interfaceEL, Index, InterfaceIndexOrNumber);
 	}
 	else
 	{
-		List_SearchField(UsbStack->InterfaceList, interfaceEL, Number, InterfaceIndexOrNumber);
+		DL_SEARCH_SCALAR(UsbStack->InterfaceList, interfaceEL, Number, InterfaceIndexOrNumber);
 	}
 	if (interfaceEL)
 	{
 		*AltSettingNumber = interfaceEL->CurrentAltSetting;
-		List_SearchField(interfaceEL->AltInterfaceList, altInterfaceEL, Number, interfaceEL->CurrentAltSetting);
+		DL_SEARCH_SCALAR(interfaceEL->AltInterfaceList, altInterfaceEL, Number, interfaceEL->CurrentAltSetting);
 	}
 
 	if (interfaceEL && altInterfaceEL)
@@ -678,7 +678,7 @@ BOOL UsbStack_BuildCache(
 	HANDLE firstInterfaceHandle = NULL;
 	ULONG deviceCount = 0;
 
-	List_ForEach(UsbStack->DeviceList, nextDeviceEL)
+	DL_FOREACH(UsbStack->DeviceList, nextDeviceEL)
 	{
 		deviceCount++;
 	}
@@ -686,11 +686,11 @@ BOOL UsbStack_BuildCache(
 
 	Mem_Zero(&UsbStack->PipeNumberCache, sizeof(UsbStack->PipeNumberCache));
 
-	List_ForEach(UsbStack->InterfaceList, nextInterfaceEL)
+	DL_FOREACH(UsbStack->InterfaceList, nextInterfaceEL)
 	{
-		List_ForEach(nextInterfaceEL->AltInterfaceList, nextAltInterfaceEL)
+		DL_FOREACH(nextInterfaceEL->AltInterfaceList, nextAltInterfaceEL)
 		{
-			List_ForEach(nextAltInterfaceEL->PipeList, nextPipeEL)
+			DL_FOREACH(nextAltInterfaceEL->PipeList, nextPipeEL)
 			{
 				PKUSB_PIPE_CACHE pipeCache;
 				pipeCache = &GetPipeNumberCache(UsbStack, nextPipeEL->Number);
@@ -795,7 +795,7 @@ USB_STACK_HANDLER_RESULT UsbStackHandler_QueryInterfaceSettings (
 
 	if (UsbStack->InterfaceList)
 	{
-		List_SearchField(UsbStack->InterfaceList->AltInterfaceList, nextAltInterfaceEL, Number, AlternateSettingNumber);
+		DL_SEARCH_SCALAR(UsbStack->InterfaceList->AltInterfaceList, nextAltInterfaceEL, Number, AlternateSettingNumber);
 		if (!nextAltInterfaceEL)
 		{
 			LusbwError(ERROR_NO_MORE_ITEMS);
@@ -826,14 +826,14 @@ USB_STACK_HANDLER_RESULT UsbStackHandler_QueryPipe (
 
 	if (UsbStack->InterfaceList)
 	{
-		List_SearchField(UsbStack->InterfaceList->AltInterfaceList, nextAltInterfaceEL, Number, AlternateSettingNumber);
+		DL_SEARCH_SCALAR(UsbStack->InterfaceList->AltInterfaceList, nextAltInterfaceEL, Number, AlternateSettingNumber);
 		if (!nextAltInterfaceEL)
 		{
 			LusbwError(ERROR_NO_MORE_ITEMS);
 			return HANDLER_HANDLED_WITH_FALSE;
 		}
 
-		List_SearchField(nextAltInterfaceEL->PipeList, nextPipeEL, Index, PipeIndex);
+		DL_SEARCH_SCALAR(nextAltInterfaceEL->PipeList, nextPipeEL, Index, PipeIndex);
 		if (!nextPipeEL)
 		{
 			LusbwError(ERROR_NO_MORE_ITEMS);

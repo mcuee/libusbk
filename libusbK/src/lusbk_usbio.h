@@ -36,21 +36,21 @@
 ///! The \c WINUSB_PIPE_INFORMATION structure contains pipe information that the \ref UsbK_QueryPipe routine retrieves.
 typedef struct _WINUSB_PIPE_INFORMATION
 {
-	//! A \c USB_ENDPOINT_TYPE enumeration value that specifies the pipe type
-	USB_ENDPOINT_TYPE	PipeType;
+	//! A \c USBD_PIPE_TYPE enumeration value that specifies the pipe type
+	USBD_PIPE_TYPE	PipeType;
 
 	//! The pipe identifier (ID)
-	UCHAR				PipeId;
+	UCHAR PipeId;
 
 	//! The maximum size, in bytes, of the packets that are transmitted on the pipe
-	USHORT				MaximumPacketSize;
+	USHORT MaximumPacketSize;
 
 	//! The pipe interval
-	UCHAR				Interval;
-}WINUSB_PIPE_INFORMATION;
-//! Pointer to a \ref WINUSB_PIPE_INFORMATION structure
-typedef struct WINUSB_PIPE_INFORMATION *PWINUSB_PIPE_INFORMATION;
+	UCHAR Interval;
 
+} WINUSB_PIPE_INFORMATION;
+//! Pointer to a \ref WINUSB_PIPE_INFORMATION structure
+typedef WINUSB_PIPE_INFORMATION* PWINUSB_PIPE_INFORMATION;
 C_ASSERT(sizeof(WINUSB_PIPE_INFORMATION) == 12);
 
 #include <pshpack1.h>
@@ -65,7 +65,7 @@ C_ASSERT(sizeof(WINUSB_PIPE_INFORMATION) == 12);
 */
 typedef struct _WINUSB_SETUP_PACKET
 {
-	//! The request type. The values that are assigned to this member are defined in Table 9.2 of section 9.3 of the Universal Serial Bus (USB) specification (www.usb.org). 
+	//! The request type. The values that are assigned to this member are defined in Table 9.2 of section 9.3 of the Universal Serial Bus (USB) specification (www.usb.org).
 	UCHAR   RequestType;
 
 	//! The device request. The values that are assigned to this member are defined in Table 9.3 of section 9.4 of the Universal Serial Bus (USB) specification.
@@ -80,10 +80,10 @@ typedef struct _WINUSB_SETUP_PACKET
 	//! The number of bytes to transfer. (not including the \c WINUSB_SETUP_PACKET itself)
 	USHORT  Length;
 
-}WINUSB_SETUP_PACKET;
+} WINUSB_SETUP_PACKET;
 
 //! pointer to a \c WINUSB_SETUP_PACKET structure
-typedef WINUSB_SETUP_PACKET *PWINUSB_SETUP_PACKET;
+typedef WINUSB_SETUP_PACKET* PWINUSB_SETUP_PACKET;
 
 C_ASSERT(sizeof(WINUSB_SETUP_PACKET) == 8);
 

@@ -220,7 +220,7 @@ VOID DumpIntfElements(__deref_inout PKUSB_DEV_LIST* head)
 	PKUSB_DEV_LIST check = NULL;
 	PKUSB_DEV_LIST tmp = NULL;
 	PKUSB_DEV_LIST root = *head;
-	List_ForEachSafe(root, check, tmp)
+	DL_FOREACH_SAFE(root, check, tmp)
 	{
 		printf("DeviceInterfaceGUID = %s\n", check->DeviceInterfaceGUID);
 		printf("DeviceInstance      = %s\n", check->DeviceInstance);
@@ -261,7 +261,7 @@ PKUSB_DEV_LIST AddElementCopy(__deref_inout PKUSB_DEV_LIST* head,
 	PKUSB_DEV_LIST newEntry = NULL;
 	PKUSB_DEV_LIST root = *head;
 
-	List_ForEachSafe(root, newEntry, tmp)
+	DL_FOREACH_SAFE(root, newEntry, tmp)
 	{
 		if (strstr(newEntry->SymbolicLink, elementToClone->SymbolicLink) == newEntry->SymbolicLink)
 		{
@@ -271,7 +271,7 @@ PKUSB_DEV_LIST AddElementCopy(__deref_inout PKUSB_DEV_LIST* head,
 	newEntry = Mem_Alloc(sizeof(*newEntry));
 	memcpy(newEntry, elementToClone, sizeof(*newEntry));
 	InitElement(newEntry, sizeof(*newEntry));
-	List_AddTail(root, newEntry);
+	DL_APPEND(root, newEntry);
 	*head = root;
 	return newEntry;
 
@@ -331,7 +331,7 @@ VOID ApplyCompositeDeviceMode(__in PKUSB_DEV_LIST_SEARCH SearchParameters,
 	if (!SearchParameters->EnableCompositeDeviceMode)
 		return;
 
-	List_ForEachSafe(root, devEL, devEL_t0)
+	DL_FOREACH_SAFE(root, devEL, devEL_t0)
 	{
 		PCHAR mi;
 		strcpy_s(deviceInstance, sizeof(deviceInstance) - 1, devEL->DeviceInstance);
@@ -344,7 +344,7 @@ VOID ApplyCompositeDeviceMode(__in PKUSB_DEV_LIST_SEARCH SearchParameters,
 			if (NewCompositeElement(deviceInstance, &compositeDeviceElement))
 			{
 				compositeDeviceElement->DrvId = devEL->DrvId;
-				List_ForEachSafe(compositeRoot, devCompositeEL, devCompositeEL_t0)
+				DL_FOREACH_SAFE(compositeRoot, devCompositeEL, devCompositeEL_t0)
 				{
 					if (devCompositeEL->DrvId == compositeDeviceElement->DrvId &&
 					        strncmp(devCompositeEL->DeviceInstance, compositeDeviceElement->DeviceInstance, strlen(devCompositeEL->DeviceInstance)) == 0)
@@ -357,7 +357,7 @@ VOID ApplyCompositeDeviceMode(__in PKUSB_DEV_LIST_SEARCH SearchParameters,
 				if (!devCompositeEL)
 				{
 					// this is a new composite parent.
-					List_AddTail(compositeRoot, compositeDeviceElement);
+					DL_APPEND(compositeRoot, compositeDeviceElement);
 					devCompositeEL = compositeDeviceElement;
 				}
 				else
@@ -365,16 +365,16 @@ VOID ApplyCompositeDeviceMode(__in PKUSB_DEV_LIST_SEARCH SearchParameters,
 					Mem_Free(&compositeDeviceElement);
 				}
 
-				List_Remove(root, devEL);
-				List_AddTail(devCompositeEL->CompositeList, devEL);
+				DL_DELETE(root, devEL);
+				DL_APPEND(devCompositeEL->CompositeList, devEL);
 			}
 		}
 	}
 
-	List_ForEachSafe(compositeRoot, devCompositeEL, devCompositeEL_t0)
+	DL_FOREACH_SAFE(compositeRoot, devCompositeEL, devCompositeEL_t0)
 	{
-		List_Remove(compositeRoot, devCompositeEL);
-		List_AddTail(root, devCompositeEL);
+		DL_DELETE(compositeRoot, devCompositeEL);
+		DL_APPEND(root, devCompositeEL);
 	}
 
 	*DeviceList = root;
@@ -386,13 +386,13 @@ VOID ApplySearchFilter(__in PKUSB_DEV_LIST_SEARCH SearchParameters,
 	PKUSB_DEV_LIST check = NULL;
 	PKUSB_DEV_LIST tmp = NULL;
 	PKUSB_DEV_LIST root = *DeviceList;
-	List_ForEachSafe(root, check, tmp)
+	DL_FOREACH_SAFE(root, check, tmp)
 	{
 		if (!SearchParameters->EnableRawDeviceInterfaceGuid)
 		{
 			if (_stricmp(check->DeviceInterfaceGUID, RawDeviceGuidA) == 0)
 			{
-				List_Remove(root, check);
+				DL_DELETE(root, check);
 				Mem_Free(&check);
 			}
 		}
@@ -628,9 +628,9 @@ KUSB_EXP VOID KUSB_API LstK_FreeDeviceList(__deref_inout PKUSB_DEV_LIST* DeviceL
 	PKUSB_DEV_LIST check = NULL;
 	PKUSB_DEV_LIST tmp = NULL;
 	PKUSB_DEV_LIST root = *DeviceList;
-	List_ForEachSafe(root, check, tmp)
+	DL_FOREACH_SAFE(root, check, tmp)
 	{
-		List_Remove(root, check);
+		DL_DELETE(root, check);
 		if (InterlockedDecrement(&check->refCount) < 1)
 		{
 			Mem_Free(&check);
