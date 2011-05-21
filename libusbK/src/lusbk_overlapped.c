@@ -138,7 +138,6 @@ KUSB_EXP POVERLAPPED_K KUSB_API OvlK_Acquire(
 	ULONG count = 0;
 	POVERLAPPED_K_INTERNAL next = NULL;
 	POVERLAPPED_K_POOL_USER pool = (POVERLAPPED_K_POOL_USER)Pool;
-	BOOL reUseListAvailable = FALSE;
 
 	if (!pool)
 		pool = (POVERLAPPED_K_POOL_USER)&DefaultPool;

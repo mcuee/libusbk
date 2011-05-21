@@ -119,28 +119,58 @@ typedef KUSB_DEV_LIST* PKUSB_DEV_LIST;
 extern "C" {
 #endif
 
+//! Creates a new usb device list.
+	/*!
+	*
+	* \param DeviceList
+	* Pointer reference that will receive a a populated device list.
+	*
+	* \param SearchParameters
+	* Search, filter, and listing options.
+	*
+	* \returns
+	* - 0 if no device are found
+	* - On success, the number of elements in the device list.
+	* - On failure, a negative win32 error code.
+	*
+	*/
+	KUSB_EXP LONG KUSB_API LstK_GetDeviceList(
+	    __deref_inout PKUSB_DEV_LIST* DeviceList,
+	    __in PKUSB_DEV_LIST_SEARCH SearchParameters);
+
+//! Destroys a usb device list created with \ref LstK_GetDeviceList.
+	/*!
+	*
+	* \param DeviceList
+	* The list to free.
+	*
+	* \returns NONE
+	*/
+	KUSB_EXP VOID KUSB_API LstK_FreeDeviceList(
+	    __deref_inout PKUSB_DEV_LIST* DeviceList);
 
 #ifdef __cplusplus
 }
 #endif
 
-//! Get a usb device list
 /*!
+* \example example-device-list.c
 *
-* \param DeviceList Pointer reference that will receive a a populated device list.
-* \param SearchParameters search/filtering options.
-*/
-KUSB_EXP LONG KUSB_API LstK_GetDeviceList(
-    __deref_inout PKUSB_DEV_LIST* DeviceList,
-    __in PKUSB_DEV_LIST_SEARCH SearchParameters);
+* <B>Device list example</B>:
+* -# Creates a usb device list.
+* -# Prints a single line description for each device list element.
+* -# Searches for the example device hardware id
+* -# Prints example device connection status.
+* -# Destroys the usb device list created in step #1
+*
 
-//! Free a usb device list
-/*!
-*
-* \param DeviceList The list to free.
+\par Console Output
+\verbatim
+USB\VID_04D8&PID_FA2E\LUSBW1: Benchmark Device (Travis Robinson)
+Example device connected!
+\endverbatim
+
 */
-KUSB_EXP VOID KUSB_API LstK_FreeDeviceList(
-    __deref_inout PKUSB_DEV_LIST* DeviceList);
 
 /*! @} */
 #endif
