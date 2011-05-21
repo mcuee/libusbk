@@ -133,68 +133,109 @@ enum BMREQUEST_DIR_ENUM
 //! bmRequest.Type
 enum BMREQUEST_TYPE_ENUM
 {
+	//! Standard request. See \ref USB_REQUEST_ENUM
 	BMREQUEST_STANDARD = 0,
+
+	//! Class-specific request.
 	BMREQUEST_CLASS = 1,
+
+	//! Vendor-specific request
 	BMREQUEST_VENDOR = 2,
 };
 
 //! bmRequest.Recipient
 enum BMREQUEST_RECIPIENT_ENUM
 {
+	//! Request is for a device.
 	BMREQUEST_TO_DEVICE = 0,
+
+	//! Request is for an interface of a device.
 	BMREQUEST_TO_INTERFACE = 1,
+
+	//! Request is for an endpoint of a device.
 	BMREQUEST_TO_ENDPOINT = 2,
+
+	//! Request is for a vendor-specific purpose.
 	BMREQUEST_TO_OTHER = 3,
 };
 
-
+//! Maximum length (in bytes) of a usb string. USB strings are always stored in wide-char format.
 #define MAXIMUM_USB_STRING_LENGTH 255
 
-// values for the bits returned by the USB GET_STATUS command
-#define USB_GETSTATUS_SELF_POWERED                0x01
-#define USB_GETSTATUS_REMOTE_WAKEUP_ENABLED       0x02
+//! Values for the bits returned by the \ref USB_REQUEST_GET_STATUS request.
+enum USB_GETSTATUS_ENUM
+{
+	//! Device is self powered
+	USB_GETSTATUS_SELF_POWERED = 0x01,
 
+	//! Device can wake the system from a low power/sleeping state.
+	USB_GETSTATUS_REMOTE_WAKEUP_ENABLED = 0x02
+};
+
+//! Standard USB descriptor types. For more information, see section 9-5 of the USB 3.0 specifications.
 enum USB_DESCRIPTOR_TYPE_ENUM
 {
+	//! Device descriptor type.
 	USB_DEVICE_DESCRIPTOR_TYPE = 0x01,
 
+	//! Configuration descriptor type.
 	USB_CONFIGURATION_DESCRIPTOR_TYPE = 0x02,
 
+	//! String descriptor type.
 	USB_STRING_DESCRIPTOR_TYPE = 0x03,
 
+	//! Interface descriptor type.
 	USB_INTERFACE_DESCRIPTOR_TYPE = 0x04,
 
+	//! Endpoint descriptor type.
 	USB_ENDPOINT_DESCRIPTOR_TYPE = 0x05,
 
+	//! Device qualifier descriptor type.
 	USB_DEVICE_QUALIFIER_DESCRIPTOR_TYPE = 0x06,
 
+	//! Config power descriptor type.
 	USB_CONFIG_POWER_DESCRIPTOR_TYPE = 0x07,
 
+	//! Interface power descriptor type.
 	USB_INTERFACE_POWER_DESCRIPTOR_TYPE = 0x08,
 
+	//! Interface association descriptor type.
 	USB_INTERFACE_ASSOCIATION_DESCRIPTOR_TYPE = 0x0B,
 };
 
-#define USB_DESCRIPTOR_MAKE_TYPE_AND_INDEX(d, i) ((USHORT)((USHORT)d<<8 | i))
-
+//! Makes the \ref USB_DEFAULT_PIPE_SETUP_PACKET::_wValue for a \ref USB_REQUEST_GET_DESCRIPTOR or \ref USB_REQUEST_SET_DESCRIPTOR request.
+#define USB_DESCRIPTOR_MAKE_TYPE_AND_INDEX(d, i)	\
+	((USHORT)((USHORT)d<<8 | i))
 
 //! Endpoint type mask for the \c bmAttributes field of a \ref USB_ENDPOINT_DESCRIPTOR
 #define USB_ENDPOINT_TYPE_MASK                    0x03
+
+//! Indicates a control endpoint
+#define USB_ENDPOINT_TYPE_CONTROL                 0x00
+
+//! Indicates an isochronous endpoint
+#define USB_ENDPOINT_TYPE_ISOCHRONOUS             0x01
+
+//! Indicates a bulk endpoint
+#define USB_ENDPOINT_TYPE_BULK                    0x02
+
+//! Indicates an interrupt endpoint
+#define USB_ENDPOINT_TYPE_INTERRUPT               0x03
 
 //! Values used in the \c bmAttributes field of a \ref USB_ENDPOINT_DESCRIPTOR
 typedef enum _USBD_PIPE_TYPE
 {
 	//! Indicates a control endpoint
-	UsbdPipeTypeControl       = 0,
+	UsbdPipeTypeControl,
 
 	//! Indicates an isochronous endpoint
-	UsbdPipeTypeIsochronous   = 1,
+	UsbdPipeTypeIsochronous,
 
 	//! Indicates a bulk endpoint
-	UsbdPipeTypeBulk          = 2,
+	UsbdPipeTypeBulk,
 
 	//! Indicates an interrupt endpoint
-	UsbdPipeTypeInterrupt     = 3
+	UsbdPipeTypeInterrupt,
 } USBD_PIPE_TYPE;
 
 //! Config power mask for the \c bmAttributes field of a \ref USB_CONFIGURATION_DESCRIPTOR
