@@ -1,5 +1,8 @@
 /*! \file lusbk_usb.h
-* Main libusbK USB user include file.
+* \brief functions for usb device communication.
+*
+* \note
+* This is the \b main libusbK USB user include file.
 */
 
 #ifndef _LUSBK_USB_H__
@@ -17,7 +20,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-	/*! \addtogroup core
+	/*! \addtogroup usbk
 	*  @{
 	*/
 
@@ -31,7 +34,11 @@ extern "C" {
 	* - If \c DeviceListItem is a composite device, multiple device file handles are managed as one.
 	*
 	* \param DeviceListItem
-	* The device list element to open.
+	* The device list element to open.<BR>
+	* To obtain a \c DeviceListItem:
+	* - Get a list of device elements using \ref LstK_GetDeviceList.
+	* - Use the linked list macros in \ref lusbk_linked_list.h to interate/search the list for the device element of interest.
+	* - Once \c UsbK_Open returns, the device list can be freed at the users descretion.
 	*
 	* \param InterfaceHandle
 	* Receives a handle configured to the first (default) interface on the device.

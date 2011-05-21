@@ -1,16 +1,16 @@
 <doxygenlayout version="1.0">
   <!-- Navigation index tabs for HTML output -->
   <navindex>
-    <tab type="mainpage" visible="yes" title=""/>
-    <tab type="pages" visible="yes" title="" intro=""/>
-    <tab type="modules" visible="yes" title="" intro=""/>
+    <tab type="mainpage" visible="yes" title="libusbK Home"/>
+    <tab type="pages" visible="yes" title="Conceptual Content" intro=""/>
+    <tab type="modules" visible="yes" title="API Reference" intro=""/>
     <tab type="namespaces" visible="yes" title="">
       <tab type="namespaces" visible="yes" title="" intro=""/>
       <tab type="namespacemembers" visible="yes" title="" intro=""/>
     </tab>
     <tab type="classes" visible="yes" title="">
       <tab type="classes" visible="yes" title="" intro=""/>
-      <tab type="classindex" visible="$ALPHABETICAL_INDEX" title=""/> 
+      <tab type="classindex" visible="no" title=""/> 
       <tab type="hierarchy" visible="yes" title="" intro=""/>
       <tab type="classmembers" visible="yes" title="" intro=""/>
     </tab>

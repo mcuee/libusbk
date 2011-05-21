@@ -1,6 +1,50 @@
-/******************************************************************************
- * doubly linked list macros (non-circular)                                   *
- *****************************************************************************/
+/*! \file lusbk_linked_list.h
+* \brief Linked list macros for C structures. <A href="http://uthash.sourceforge.net/utlist.html">utlist.h</A>
+* \brief Provided by <A href="http://uthash.sourceforge.net">Troy D. Hanson</A>
+*
+* \attention
+* All lists used by the libusbK library are \b non-circular \b doubly-linked lists. (\b DL_ prefixed macros)
+*
+* This file contains macros to manipulate singly and doubly-linked lists:
+* -# LL_ macros:  singly-linked lists.
+* -# DL_ macros:  doubly-linked lists.
+* -# CDL_ macros: circular doubly-linked lists.
+*
+* \note
+* Only a small subset of the \c utlist.h macros are documented.
+* Undocumented macros will not appear in this documentation but \ref lusbk_linked_list.h
+* contains the entire <A href="http://uthash.sourceforge.net/utlist.html">utlist.h</A>.
+*
+* \note
+* To use singly-linked lists, your structure must have a "next" pointer.
+* <BR>
+* To use doubly-linked lists, your structure must "prev" and "next" pointers.
+* <BR>
+* Either way, the pointer to the head of the list must be initialized to NULL.
+*
+* \code
+struct item
+{
+     int id;
+     struct item *prev, *next;
+}
+
+struct item *list = NULL:
+
+int main()
+{
+     struct item *item;
+     ... allocate and populate item ...
+     DL_APPEND(list, item);
+}
+* \endcode
+*
+* <B>Performance Considerations</B>:
+* - For doubly-linked lists, the append and delete macros are O(1)
+* - For singly-linked lists, append and delete are O(n) but prepend is O(1)
+* - The sort macro is O(n log(n)) for all types of single/double/circular lists.
+*/
+
 /*
 Copyright (c) 2007-2010, Troy D. Hanson   http://uthash.sourceforge.net
 All rights reserved.
@@ -23,14 +67,351 @@ LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
 NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-//
-// L_{(AddHead|AddTail|Remove|ForEachSafe|ForEach|SearchField|Search)}
-//
 
-#ifndef __LUSBK_LINKED_LIST_H
-#define __LUSBK_LINKED_LIST_H
+#ifndef UTLIST_H
+#define UTLIST_H
 
-#define List_AddHead(head,add)                                                                 \
+/*! \addtogroup genk
+* @{
+*/
+
+//! utlist version
+#define UTLIST_VERSION 1.9.1
+
+/* These macros use decltype or the earlier __typeof GNU extension.
+   As decltype is only available in newer compilers (VS2010 or gcc 4.3+
+   when compiling c++ code), this code uses whatever method is needed
+   or, for VS2008 where neither is available, uses casting workarounds. */
+#ifdef _MSC_VER            /* MS compiler */
+#if _MSC_VER >= 1600 && defined(__cplusplus)  /* VS2010 or newer in C++ mode */
+#define LDECLTYPE(x) decltype(x)
+#else                     /* VS2008 or older (or VS2010 in C mode) */
+#define NO_DECLTYPE
+#define LDECLTYPE(x) char*
+#endif
+#else                      /* GNU, Sun and other compilers */
+#define LDECLTYPE(x) __typeof(x)
+#endif
+
+/* for VS2008 we use some workarounds to get around the lack of decltype,
+ * namely, we always reassign our tmp variable to the list head if we need
+ * to dereference its prev/next pointers, and save/restore the real head.*/
+#ifdef NO_DECLTYPE
+#define _SV(elt,list) _tmp = (char*)(list); {char **_alias = (char**)&(list); *_alias = (elt); }
+#define _NEXT(elt,list) ((char*)((list)->next))
+#define _NEXTASGN(elt,list,to) { char **_alias = (char**)&((list)->next); *_alias=(char*)(to); }
+#define _PREV(elt,list) ((char*)((list)->prev))
+#define _PREVASGN(elt,list,to) { char **_alias = (char**)&((list)->prev); *_alias=(char*)(to); }
+#define _RS(list) { char **_alias = (char**)&(list); *_alias=_tmp; }
+#define _CASTASGN(a,b) { char **_alias = (char**)&(a); *_alias=(char*)(b); }
+#else
+#define _SV(elt,list)
+#define _NEXT(elt,list) ((elt)->next)
+#define _NEXTASGN(elt,list,to) ((elt)->next)=(to)
+#define _PREV(elt,list) ((elt)->prev)
+#define _PREVASGN(elt,list,to) ((elt)->prev)=(to)
+#define _RS(list)
+#define _CASTASGN(a,b) (a)=(b)
+#endif
+
+/******************************************************************************
+ * The sort macro is an adaptation of Simon Tatham's O(n log(n)) mergesort    *
+ * Unwieldy variable names used here to avoid shadowing passed-in variables.  *
+ *****************************************************************************/
+#define LL_SORT(list, cmp)                                                                     \
+do {                                                                                           \
+  LDECLTYPE(list) _ls_p;                                                                       \
+  LDECLTYPE(list) _ls_q;                                                                       \
+  LDECLTYPE(list) _ls_e;                                                                       \
+  LDECLTYPE(list) _ls_tail;                                                                    \
+  LDECLTYPE(list) _ls_oldhead;                                                                 \
+  LDECLTYPE(list) _tmp;                                                                        \
+  int _ls_insize, _ls_nmerges, _ls_psize, _ls_qsize, _ls_i, _ls_looping;                       \
+  if (list) {                                                                                  \
+    _ls_insize = 1;                                                                            \
+    _ls_looping = 1;                                                                           \
+    while (_ls_looping) {                                                                      \
+      _CASTASGN(_ls_p,list);                                                                   \
+      _CASTASGN(_ls_oldhead,list);                                                             \
+      list = NULL;                                                                             \
+      _ls_tail = NULL;                                                                         \
+      _ls_nmerges = 0;                                                                         \
+      while (_ls_p) {                                                                          \
+        _ls_nmerges++;                                                                         \
+        _ls_q = _ls_p;                                                                         \
+        _ls_psize = 0;                                                                         \
+        for (_ls_i = 0; _ls_i < _ls_insize; _ls_i++) {                                         \
+          _ls_psize++;                                                                         \
+          _SV(_ls_q,list); _ls_q = _NEXT(_ls_q,list); _RS(list);                               \
+          if (!_ls_q) break;                                                                   \
+        }                                                                                      \
+        _ls_qsize = _ls_insize;                                                                \
+        while (_ls_psize > 0 || (_ls_qsize > 0 && _ls_q)) {                                    \
+          if (_ls_psize == 0) {                                                                \
+            _ls_e = _ls_q; _SV(_ls_q,list); _ls_q = _NEXT(_ls_q,list); _RS(list); _ls_qsize--; \
+          } else if (_ls_qsize == 0 || !_ls_q) {                                               \
+            _ls_e = _ls_p; _SV(_ls_p,list); _ls_p = _NEXT(_ls_p,list); _RS(list); _ls_psize--; \
+          } else if (cmp(_ls_p,_ls_q) <= 0) {                                                  \
+            _ls_e = _ls_p; _SV(_ls_p,list); _ls_p = _NEXT(_ls_p,list); _RS(list); _ls_psize--; \
+          } else {                                                                             \
+            _ls_e = _ls_q; _SV(_ls_q,list); _ls_q = _NEXT(_ls_q,list); _RS(list); _ls_qsize--; \
+          }                                                                                    \
+          if (_ls_tail) {                                                                      \
+            _SV(_ls_tail,list); _NEXTASGN(_ls_tail,list,_ls_e); _RS(list);                     \
+          } else {                                                                             \
+            _CASTASGN(list,_ls_e);                                                             \
+          }                                                                                    \
+          _ls_tail = _ls_e;                                                                    \
+        }                                                                                      \
+        _ls_p = _ls_q;                                                                         \
+      }                                                                                        \
+      _SV(_ls_tail,list); _NEXTASGN(_ls_tail,list,NULL); _RS(list);                            \
+      if (_ls_nmerges <= 1) {                                                                  \
+        _ls_looping=0;                                                                         \
+      }                                                                                        \
+      _ls_insize *= 2;                                                                         \
+    }                                                                                          \
+  } else _tmp=NULL; /* quiet gcc unused variable warning */                                    \
+} while (0)
+
+#define DL_SORT(list, cmp)                                                                     \
+do {                                                                                           \
+  LDECLTYPE(list) _ls_p;                                                                       \
+  LDECLTYPE(list) _ls_q;                                                                       \
+  LDECLTYPE(list) _ls_e;                                                                       \
+  LDECLTYPE(list) _ls_tail;                                                                    \
+  LDECLTYPE(list) _ls_oldhead;                                                                 \
+  LDECLTYPE(list) _tmp;                                                                        \
+  int _ls_insize, _ls_nmerges, _ls_psize, _ls_qsize, _ls_i, _ls_looping;                       \
+  if (list) {                                                                                  \
+    _ls_insize = 1;                                                                            \
+    _ls_looping = 1;                                                                           \
+    while (_ls_looping) {                                                                      \
+      _CASTASGN(_ls_p,list);                                                                   \
+      _CASTASGN(_ls_oldhead,list);                                                             \
+      list = NULL;                                                                             \
+      _ls_tail = NULL;                                                                         \
+      _ls_nmerges = 0;                                                                         \
+      while (_ls_p) {                                                                          \
+        _ls_nmerges++;                                                                         \
+        _ls_q = _ls_p;                                                                         \
+        _ls_psize = 0;                                                                         \
+        for (_ls_i = 0; _ls_i < _ls_insize; _ls_i++) {                                         \
+          _ls_psize++;                                                                         \
+          _SV(_ls_q,list); _ls_q = _NEXT(_ls_q,list); _RS(list);                               \
+          if (!_ls_q) break;                                                                   \
+        }                                                                                      \
+        _ls_qsize = _ls_insize;                                                                \
+        while (_ls_psize > 0 || (_ls_qsize > 0 && _ls_q)) {                                    \
+          if (_ls_psize == 0) {                                                                \
+            _ls_e = _ls_q; _SV(_ls_q,list); _ls_q = _NEXT(_ls_q,list); _RS(list); _ls_qsize--; \
+          } else if (_ls_qsize == 0 || !_ls_q) {                                               \
+            _ls_e = _ls_p; _SV(_ls_p,list); _ls_p = _NEXT(_ls_p,list); _RS(list); _ls_psize--; \
+          } else if (cmp(_ls_p,_ls_q) <= 0) {                                                  \
+            _ls_e = _ls_p; _SV(_ls_p,list); _ls_p = _NEXT(_ls_p,list); _RS(list); _ls_psize--; \
+          } else {                                                                             \
+            _ls_e = _ls_q; _SV(_ls_q,list); _ls_q = _NEXT(_ls_q,list); _RS(list); _ls_qsize--; \
+          }                                                                                    \
+          if (_ls_tail) {                                                                      \
+            _SV(_ls_tail,list); _NEXTASGN(_ls_tail,list,_ls_e); _RS(list);                     \
+          } else {                                                                             \
+            _CASTASGN(list,_ls_e);                                                             \
+          }                                                                                    \
+          _SV(_ls_e,list); _PREVASGN(_ls_e,list,_ls_tail); _RS(list);                          \
+          _ls_tail = _ls_e;                                                                    \
+        }                                                                                      \
+        _ls_p = _ls_q;                                                                         \
+      }                                                                                        \
+      _CASTASGN(list->prev, _ls_tail);                                                         \
+      _SV(_ls_tail,list); _NEXTASGN(_ls_tail,list,NULL); _RS(list);                            \
+      if (_ls_nmerges <= 1) {                                                                  \
+        _ls_looping=0;                                                                         \
+      }                                                                                        \
+      _ls_insize *= 2;                                                                         \
+    }                                                                                          \
+  } else _tmp=NULL; /* quiet gcc unused variable warning */                                    \
+} while (0)
+
+#define CDL_SORT(list, cmp)                                                                    \
+do {                                                                                           \
+  LDECLTYPE(list) _ls_p;                                                                       \
+  LDECLTYPE(list) _ls_q;                                                                       \
+  LDECLTYPE(list) _ls_e;                                                                       \
+  LDECLTYPE(list) _ls_tail;                                                                    \
+  LDECLTYPE(list) _ls_oldhead;                                                                 \
+  LDECLTYPE(list) _tmp;                                                                        \
+  LDECLTYPE(list) _tmp2;                                                                       \
+  int _ls_insize, _ls_nmerges, _ls_psize, _ls_qsize, _ls_i, _ls_looping;                       \
+  if (list) {                                                                                  \
+    _ls_insize = 1;                                                                            \
+    _ls_looping = 1;                                                                           \
+    while (_ls_looping) {                                                                      \
+      _CASTASGN(_ls_p,list);                                                                   \
+      _CASTASGN(_ls_oldhead,list);                                                             \
+      list = NULL;                                                                             \
+      _ls_tail = NULL;                                                                         \
+      _ls_nmerges = 0;                                                                         \
+      while (_ls_p) {                                                                          \
+        _ls_nmerges++;                                                                         \
+        _ls_q = _ls_p;                                                                         \
+        _ls_psize = 0;                                                                         \
+        for (_ls_i = 0; _ls_i < _ls_insize; _ls_i++) {                                         \
+          _ls_psize++;                                                                         \
+          _SV(_ls_q,list);                                                                     \
+          if (_NEXT(_ls_q,list) == _ls_oldhead) {                                              \
+            _ls_q = NULL;                                                                      \
+          } else {                                                                             \
+            _ls_q = _NEXT(_ls_q,list);                                                         \
+          }                                                                                    \
+          _RS(list);                                                                           \
+          if (!_ls_q) break;                                                                   \
+        }                                                                                      \
+        _ls_qsize = _ls_insize;                                                                \
+        while (_ls_psize > 0 || (_ls_qsize > 0 && _ls_q)) {                                    \
+          if (_ls_psize == 0) {                                                                \
+            _ls_e = _ls_q; _SV(_ls_q,list); _ls_q = _NEXT(_ls_q,list); _RS(list); _ls_qsize--; \
+            if (_ls_q == _ls_oldhead) { _ls_q = NULL; }                                        \
+          } else if (_ls_qsize == 0 || !_ls_q) {                                               \
+            _ls_e = _ls_p; _SV(_ls_p,list); _ls_p = _NEXT(_ls_p,list); _RS(list); _ls_psize--; \
+            if (_ls_p == _ls_oldhead) { _ls_p = NULL; }                                        \
+          } else if (cmp(_ls_p,_ls_q) <= 0) {                                                  \
+            _ls_e = _ls_p; _SV(_ls_p,list); _ls_p = _NEXT(_ls_p,list); _RS(list); _ls_psize--; \
+            if (_ls_p == _ls_oldhead) { _ls_p = NULL; }                                        \
+          } else {                                                                             \
+            _ls_e = _ls_q; _SV(_ls_q,list); _ls_q = _NEXT(_ls_q,list); _RS(list); _ls_qsize--; \
+            if (_ls_q == _ls_oldhead) { _ls_q = NULL; }                                        \
+          }                                                                                    \
+          if (_ls_tail) {                                                                      \
+            _SV(_ls_tail,list); _NEXTASGN(_ls_tail,list,_ls_e); _RS(list);                     \
+          } else {                                                                             \
+            _CASTASGN(list,_ls_e);                                                             \
+          }                                                                                    \
+          _SV(_ls_e,list); _PREVASGN(_ls_e,list,_ls_tail); _RS(list);                          \
+          _ls_tail = _ls_e;                                                                    \
+        }                                                                                      \
+        _ls_p = _ls_q;                                                                         \
+      }                                                                                        \
+      _CASTASGN(list->prev,_ls_tail);                                                          \
+      _CASTASGN(_tmp2,list);                                                                   \
+      _SV(_ls_tail,list); _NEXTASGN(_ls_tail,list,_tmp2); _RS(list);                           \
+      if (_ls_nmerges <= 1) {                                                                  \
+        _ls_looping=0;                                                                         \
+      }                                                                                        \
+      _ls_insize *= 2;                                                                         \
+    }                                                                                          \
+  } else _tmp=NULL; /* quiet gcc unused variable warning */                                    \
+} while (0)
+
+/******************************************************************************
+ * singly linked list macros (non-circular)                                   *
+ *****************************************************************************/
+#define LL_PREPEND(head,add)                                                                   \
+do {                                                                                           \
+  (add)->next = head;                                                                          \
+  head = add;                                                                                  \
+} while (0)
+
+#define LL_APPEND(head,add)                                                                    \
+do {                                                                                           \
+  LDECLTYPE(head) _tmp;                                                                        \
+  (add)->next=NULL;                                                                            \
+  if (head) {                                                                                  \
+    _tmp = head;                                                                               \
+    while (_tmp->next) { _tmp = _tmp->next; }                                                  \
+    _tmp->next=(add);                                                                          \
+  } else {                                                                                     \
+    (head)=(add);                                                                              \
+  }                                                                                            \
+} while (0)
+
+#define LL_DELETE(head,del)                                                                    \
+do {                                                                                           \
+  LDECLTYPE(head) _tmp;                                                                        \
+  if ((head) == (del)) {                                                                       \
+    (head)=(head)->next;                                                                       \
+  } else {                                                                                     \
+    _tmp = head;                                                                               \
+    while (_tmp->next && (_tmp->next != (del))) {                                              \
+      _tmp = _tmp->next;                                                                       \
+    }                                                                                          \
+    if (_tmp->next) {                                                                          \
+      _tmp->next = ((del)->next);                                                              \
+    }                                                                                          \
+  }                                                                                            \
+} while (0)
+
+/* Here are VS2008 replacements for LL_APPEND and LL_DELETE */
+#define LL_APPEND_VS2008(head,add)                                                             \
+do {                                                                                           \
+  if (head) {                                                                                  \
+    (add)->next = head;     /* use add->next as a temp variable */                             \
+    while ((add)->next->next) { (add)->next = (add)->next->next; }                             \
+    (add)->next->next=(add);                                                                   \
+  } else {                                                                                     \
+    (head)=(add);                                                                              \
+  }                                                                                            \
+  (add)->next=NULL;                                                                            \
+} while (0)
+
+#define LL_DELETE_VS2008(head,del)                                                             \
+do {                                                                                           \
+  if ((head) == (del)) {                                                                       \
+    (head)=(head)->next;                                                                       \
+  } else {                                                                                     \
+    char *_tmp = (char*)(head);                                                                \
+    while (head->next && (head->next != (del))) {                                              \
+      head = head->next;                                                                       \
+    }                                                                                          \
+    if (head->next) {                                                                          \
+      head->next = ((del)->next);                                                              \
+    }                                                                                          \
+    {                                                                                          \
+      char **_head_alias = (char**)&(head);                                                    \
+      *_head_alias = _tmp;                                                                     \
+    }                                                                                          \
+  }                                                                                            \
+} while (0)
+#ifdef NO_DECLTYPE
+#undef LL_APPEND
+#define LL_APPEND LL_APPEND_VS2008
+#undef LL_DELETE
+#define LL_DELETE LL_DELETE_VS2008
+#endif
+/* end VS2008 replacements */
+
+#define LL_FOREACH(head,el)                                                                    \
+    for(el=head;el;el=el->next)
+
+#define LL_FOREACH_SAFE(head,el,tmp)                                                           \
+  for((el)=(head);(el) && (tmp = (el)->next, 1); (el) = tmp)
+
+#define LL_SEARCH_SCALAR(head,out,field,val)                                                   \
+do {                                                                                           \
+    LL_FOREACH(head,out) {                                                                     \
+      if ((out)->field == (val)) break;                                                        \
+    }                                                                                          \
+} while(0)
+
+#define LL_SEARCH(head,out,elt,cmp)                                                            \
+do {                                                                                           \
+    LL_FOREACH(head,out) {                                                                     \
+      if ((cmp(out,elt))==0) break;                                                            \
+    }                                                                                          \
+} while(0)
+
+/******************************************************************************
+ * doubly linked list macros (non-circular)                                   *
+ *****************************************************************************/
+
+//! Adds an element to the beginning of a linked list.
+/*!
+* \param head
+* First element of the list.
+*
+* \param add
+* Element to add.
+*/
+#define DL_PREPEND(head,add)                                                                   \
 do {                                                                                           \
  (add)->next = head;                                                                           \
  if (head) {                                                                                   \
@@ -42,7 +423,15 @@ do {                                                                            
  (head) = (add);                                                                               \
 } while (0)
 
-#define List_AddTail(head,add)                                                                 \
+//! Adds an element to the end of a linked list.
+/*!
+* \param head
+* First element of the list.
+*
+* \param add
+* Element to add.
+*/
+#define DL_APPEND(head,add)                                                                    \
 do {                                                                                           \
   if (head) {                                                                                  \
       (add)->prev = (head)->prev;                                                              \
@@ -54,9 +443,21 @@ do {                                                                            
       (head)->prev = (head);                                                                   \
       (head)->next = NULL;                                                                     \
   }                                                                                            \
-} while (0)
+} while (0);
 
-#define List_Remove(head,del)                                                                  \
+//! Removes an element from a linked list.
+/*!
+* \attention
+* \c DL_DELETE does not free or de-allocate memory.
+* It "de-links" the element specified by \c del from the list.
+*
+* \param head
+* First element of the list.
+*
+* \param del
+* Element to remove.
+*/
+#define DL_DELETE(head,del)                                                                    \
 do {                                                                                           \
   if ((del)->prev == (del)) {                                                                  \
       (head)=NULL;                                                                             \
@@ -71,27 +472,104 @@ do {                                                                            
           (head)->prev = (del)->prev;                                                          \
       }                                                                                        \
   }                                                                                            \
-} while (0)
+} while (0);
 
-#define List_ForEach(head,el)                                                                  \
+//! Start a \c foreach like enumeration though a linked list using a \b for loop.
+/*!
+* \param head
+* First element of the list.
+*
+* \param el
+* assgined to an element of the linked list on each iteration.
+*/
+#define DL_FOREACH(head,el)                                                                    \
     for(el=head;el;el=el->next)
 
-/* this version is safe for deleting the elements during iteration */
-#define List_ForEachSafe(head,el,tmp)                                                          \
+//! \copybrief DL_FOREACH
+/*!
+* \attention
+* This version is safe for deleting the elements during iteration.
+*
+* \copydetails DL_FOREACH
+*
+* \param tmp
+* A temporary list element used to ensure safe deletion during iteration.
+*/
+#define DL_FOREACH_SAFE(head,el,tmp)                                                           \
   for((el)=(head);(el) && (tmp = (el)->next, 1); (el) = tmp)
 
-#define List_SearchField(head,out,field,val)                                                   \
+/* these are identical to their singly-linked list counterparts */
+
+//! Searches for a scalar field using a \ref DL_FOREACH.
+/*!
+* \param head
+* First element of the list.
+*
+* \param out
+* First element whose \c field value equals \c val.
+*
+* \param field
+* Name of the field member to search.
+*
+* \param val
+* Value to compare with the field member.
+*/
+#define DL_SEARCH_SCALAR LL_SEARCH_SCALAR
+
+
+#define DL_SEARCH LL_SEARCH
+
+/******************************************************************************
+ * circular doubly linked list macros                                         *
+ *****************************************************************************/
+#define CDL_PREPEND(head,add)                                                                  \
 do {                                                                                           \
-    List_ForEach(head,out) {                                                                   \
+ if (head) {                                                                                   \
+   (add)->prev = (head)->prev;                                                                 \
+   (add)->next = (head);                                                                       \
+   (head)->prev = (add);                                                                       \
+   (add)->prev->next = (add);                                                                  \
+ } else {                                                                                      \
+   (add)->prev = (add);                                                                        \
+   (add)->next = (add);                                                                        \
+ }                                                                                             \
+(head)=(add);                                                                                  \
+} while (0)
+
+#define CDL_DELETE(head,del)                                                                   \
+do {                                                                                           \
+  if ( ((head)==(del)) && ((head)->next == (head))) {                                          \
+      (head) = 0L;                                                                             \
+  } else {                                                                                     \
+     (del)->next->prev = (del)->prev;                                                          \
+     (del)->prev->next = (del)->next;                                                          \
+     if ((del) == (head)) (head)=(del)->next;                                                  \
+  }                                                                                            \
+} while (0);
+
+#define CDL_FOREACH(head,el)                                                                   \
+    for(el=head;el;el=(el->next==head ? 0L : el->next))
+
+#define CDL_FOREACH_SAFE(head,el,tmp1,tmp2)                                                    \
+  for((el)=(head), ((tmp1)=(head)?((head)->prev):NULL);                                        \
+      (el) && ((tmp2)=(el)->next, 1);                                                          \
+      ((el) = (((el)==(tmp1)) ? 0L : (tmp2))))
+
+#define CDL_SEARCH_SCALAR(head,out,field,val)                                                  \
+do {                                                                                           \
+    CDL_FOREACH(head,out) {                                                                    \
       if ((out)->field == (val)) break;                                                        \
     }                                                                                          \
 } while(0)
 
-#define List_Search(head,out,elt,cmp)                                                          \
+#define CDL_SEARCH(head,out,elt,cmp)                                                           \
 do {                                                                                           \
-    List_ForEach(head,out) {                                                                   \
+    CDL_FOREACH(head,out) {                                                                    \
       if ((cmp(out,elt))==0) break;                                                            \
     }                                                                                          \
 } while(0)
 
-#endif
+/*! @} */
+
+#endif /* UTLIST_H */
+

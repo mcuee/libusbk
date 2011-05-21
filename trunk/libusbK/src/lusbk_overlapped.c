@@ -154,7 +154,7 @@ Retry:
 			if (next)
 			{
 				SpinLock_Release(&next->IsReUsableLock);
-				List_Remove(pool->Private.ReUseList, pool->Private.ReUseList);
+				DL_DELETE(pool->Private.ReUseList, pool->Private.ReUseList);
 				SpinLock_Release(&pool->Private.BusyCount);
 				goto Success;
 			}
@@ -213,7 +213,7 @@ KUSB_EXP BOOL KUSB_API OvlK_Release(
 	if (SpinLock_Acquire(&overlapped->IsReUsableLock, FALSE))
 	{
 		overlapped->ReUseLink.Overlapped = OverlappedK;
-		List_AddTail(pool->Private.ReUseList, &overlapped->ReUseLink);
+		DL_APPEND(pool->Private.ReUseList, &overlapped->ReUseLink);
 	}
 
 	SpinLock_Release(&pool->Private.BusyCount);

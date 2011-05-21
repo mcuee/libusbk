@@ -1,4 +1,5 @@
 /*! \file lusbk_device_list.h
+* \brief structs, typedefs, enums, defines, and functions for usb device enumeration and detection.
 */
 
 #ifndef __LUSBK_DEVICE_LIST_H

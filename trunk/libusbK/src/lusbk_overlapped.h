@@ -1,4 +1,5 @@
 /*! \file lusbk_overlapped.h
+* \brief structs, typedefs, enums, defines, and functions for asynchronous usb transfers and \c OVERLAPPED I/O management.
 */
 
 #ifndef __LUSBK_OVERLAPPED_
@@ -27,7 +28,7 @@
 * windows api function which take a \ref LPOVERLAPPED as a parameter.
 * However, in-order to make use of the OverlappedK functions (such as \ref
 * OvlK_WaitComplete and \ref OvlK_IsComplete) the \ref POVERLAPPED_K must
-* pass through one of the libusbK core transfer functions. e.g. \ref UsbK_ReadPipe
+* pass through one of the libusbK \ref usbk transfer functions. e.g. \ref UsbK_ReadPipe
 * and \ref UsbK_WritePipe
 *
 * \note
@@ -81,7 +82,7 @@ typedef enum _OVERLAPPEDK_WAIT_FLAGS
 //! Structure representing internal \ref POVERLAPPED_K information.
 /* \sa OvlK_GetInfo
  * \note
- * This structure is populated after it is passes through one of the libusbK core transfer functions.
+ * This structure is populated after it is passes through one of the libusbK \ref usbk transfer functions.
  * e.g. \ref UsbK_ReadPipe and \ref UsbK_WritePipe
 */
 typedef struct _OVERLAPPED_K_INFO
@@ -120,7 +121,7 @@ extern "C" {
 	* \note To acquire an OverlappedK from the \b default pool, pass \c NULL for the \c Pool parameter.
 	*
 	* After calling \ref OvlK_Acquire or \ref OvlK_ReUse the OverlappedK is ready for use.
-	* Simply pass it into one of the libusbK core transfer functions.
+	* Simply pass it into one of the libusbK \ref usbk transfer functions.
 	* e.g. \ref UsbK_ReadPipe and \ref UsbK_WritePipe
 	*
 	* If possible, the \ref OvlK_Acquire function will choose an overlapped
