@@ -150,6 +150,255 @@ The following user mode usb libraries support the \c libusbK.sys kernel driver:
 
 //! Methods for building the libusbK user mode library and driver from source code.
 /*! \page usbk_building Building from source
+- \subpage usbk_building_make_cmd
+  <BR>Building and packaging with the automated MSDOS script \b make.cmd.
+  <HR>
+- \subpage usbk_building_wdk
+  <BR>Building with a <A href="http://msdn.microsoft.com/en-us/windows/hardware/gg487463">Windows Driver Kit</A>.
+  <HR>
+- \subpage usbk_building_msvc
+  <BR>Building with Microsoft Visual Studios 2008/Express Editions.
+  <HR>
+
+*/
+
+//! Building and packaging with the automated MSDOS script \b make.cmd.
+/*! \page usbk_building_make_cmd Building with make.cmd
+*
+* On this page:
+* - \ref usbk_building_make_cmd_about
+*   - \ref usbk_building_make_cmd_about_features
+*   - \ref usbk_building_make_cmd_about_requirements
+* - \ref usbk_building_make_cmd_config
+*   - \ref usbk_building_make_cmd_config_wdk
+* - \ref usbk_building_make_cmd_usage
+*   - \ref usbk_building_make_cmd_usage_syntax
+*   - \ref usbk_building_make_cmd_usage_commands
+* - \ref usbk_building_make_cmd_usage_examples
+*   - \ref usbk_building_make_cmd_usage_example_build
+*   - \ref usbk_building_make_cmd_usage_example_dist
+*   - \ref usbk_building_make_cmd_usage_example_clean
+* - \ref usbk_building_make_cmd_config_examples
+*   - \ref usbk_building_make_cmd_config_example_make_cfg
+*   - \ref usbk_building_make_cmd_config_example_make_versions
+*
+* <HR>
+* \section usbk_building_make_cmd_about About
+* \b make.cmd is a MSDOS (extended mode) batch file which fully automates several tasks.
+* 
+* \note
+* \b make.cmd is non-specific to libusbK.
+* It is fully configurable from its \b make.cfg configuration.
+*
+* \subsection usbk_building_make_cmd_about_features Features
+*  - Generates WDK "sources" from custom ".sources" file templates
+*    - By design, WDK allows only one project (or sources file) per directory.
+*      The \b make.cmd custom ".sources" file templates eliminate this restriction.
+*    - Provides pre-tagging functionality for WDK "sources" files.
+*  - Code signing
+*  - INNO setup installer creation
+*  - Version control
+*  - Binary package creation
+*  - Source package creation
+*  - Regular expression based cleaning
+*  - Source code re/formatting
+* 
+* \subsection usbk_building_make_cmd_about_requirements Requirements
+*  - <A href="http://msdn.microsoft.com/en-us/windows/hardware/gg487463.aspx">Windows Driver Kit</A> (6001.18002 or greater)
+*  - <A href="http://www.jrsoftware.org/isdl.php">INNO Setup</A>
+*  - <A href="http://astyle.sourceforge.net/">Astyle</A> (optional)
+*  - 7Zip (included is src package)
+*
+*
+* <HR>
+* \section usbk_building_make_cmd_config Initial Setup and Configuration
+* After installing the required software, make.cfg must be configured to use it.
+* Generally this only requires modifying the WDK SETUP section so make.cmd can locate your WDK installation.
+* See the comments in \b make.cfg for more information.
+*
+* \subsection usbk_building_make_cmd_config_wdk Automatically configuring make.cmd with a WDK installation
+* -# From the start menu, locate the WDK installation programs folder
+* -# Open a build window for the build environment that will be used as the default.
+* -# Execute <TT>make.cmd build</TT>
+* -# Close the build window and open a \b normal command prompt
+* -# Verify propper operation by repeating step #3
+*
+* <HR>
+* \section usbk_building_make_cmd_usage make.cmd Command Line Usage
+*
+* \subsection usbk_building_make_cmd_usage_syntax Syntax
+* \verbatim make.cmd command[=value] <command-specific-arguments> \endverbatim
+*
+* \subsection usbk_building_make_cmd_usage_commands Commands
+<TABLE>
+<TR>
+	<TH>Command[=value]</TH>
+	<TH>command-specific-arguments</TH>
+</TR>
+<TR>
+	<TD>
+		\par BUILD
+		Builds all projects defined in \b WDK_SOURCES_LIST for a single environment/architecture combination. 
+		See the <B>WDK SETUP</B> and \b BUILD sections in \b make.cfg. 
+
+		If no \b setenv.bat command-specific arguments are specified, 
+		\b make.cmd will use the defaults defined by \b WDK_DEF_ENV_OPTIONS.
+		See the <B>WDK SETUP</B> section in \b make.cfg.
+
+	</TD>
+	<TD>
+		For more information, see 
+		<A href="http://msdn.microsoft.com/en-us/library/ff554139%28v=vs.85%29.aspx">Using the SetEnv.bat</A>
+		\par [fre|chk]
+		For release builds use the \c fre, for debug builds use \c chk.<BR>
+		NOTE: Debug builds include log messages.
+
+		\par [64|x64]:
+		Build architecture:
+		- \b x64 = AMD64
+		- \b 64  = IA64 (rare)
+
+		\par [WIN7|WLH|WXP|WNET|W2K]
+		Specifies the Build environment:
+		- WIN7 = Windows 7
+		- WLH  = Windows Vista
+		- WXP  = Windows XP
+		- WNET = Windows Server 2003
+		- W2K  = Windows 2000
+		  W2K is Only supported with WDK version 6001.18002
+
+		\par [no_oacr]
+		Disables OACR (Microsoft Auto Code Review)
+		
+		<HR>
+		\par [sign]
+		Sign dll, sys, and exe files with a code signing certificate after compiling.<BR>
+		See the \b SIGN section in \b make.cfg. 
+	</TD>
+</TR>
+<TR>
+	<TD>
+		\par DIST
+		Build all projects for all environment/architecture combinations defined in \b DIST_BUILD_LIST.
+		See the \b DIST section in \b make.cfg. 
+
+		\par dist=finalize
+		Used for official release builds.<BR>Build additional components and installers.
+		Requires additional configuration.  See \b post_build_libusbK_dll.cfg
+	</TD>
+	<TD>
+		\par [fre|chk]
+		For release builds use the \c fre, for debug builds use \c chk.<BR>
+		NOTE: chk builds include debug log messages.
+
+		\par [sign]
+		Sign dll, sys, and exe files with a code signing certificate after compiling.<BR>
+		See the \b SIGN section in \b make.cfg. 
+	</TD>
+</TR>
+<TR>
+	<TD>
+		\par CLEAN
+		Cleans the source and output directories.
+		See the \b CLEAN section in \b make.cfg
+
+		\par clean=bin
+		Removes temporary files and directories from the output directory.
+		See \b CLEAN_BIN_EXP in \b make.cfg.
+
+		\par clean=src
+		Removes temporary files and directories from the source directory.
+		See \b CLEAN_SRC_EXP in \b make.cfg.
+
+		\par clean=full
+		Cleans the source directory.  Removes the output directory entirely.
+
+	</TD>
+	<TD>&nbsp;</TD>
+</TR>
+<TR>
+	<TD>
+		\par version=package;inc
+		Increment the package \b nano version number.
+
+		\par version=package;dec
+		Decrement the package \b nano version number.
+
+		\par version=[package|project name]; [inc|dec|set]; [major|macro|minor|nano]; [set value];
+		Full package/project version control
+
+	</TD>
+	<TD>&nbsp;</TD>
+</TR>
+<TR>
+	<TD>
+		\par ZIP
+		Create a combined binary and source package.
+
+		\par zip=bin
+		Create a binary zip package from the output directory.
+
+		\par zip=src
+		Create a source zip package from the source directory.
+	</TD>
+	<TD>&nbsp;</TD>
+</TR>
+<TR>
+	<TD>
+		\par FORMATCODE
+		Format source code. (Uses Astyle by default)
+		See the \b FORMATCODE section in \b make.cfg
+	</TD>
+	<TD>&nbsp;</TD>
+</TR>
+</TABLE>
+*
+* <HR>
+* \section usbk_building_make_cmd_usage_examples Usage Examples
+*
+
+* \subsection usbk_building_make_cmd_usage_example_build BUILD examples
+\verbatim
+make.cmd build
+make.cmd build chk
+make.cmd build sign
+make.cmd build wxp chk sign
+\endverbatim
+
+* \subsection usbk_building_make_cmd_usage_example_dist DIST examples
+\verbatim
+make.cmd dist
+make.cmd dist chk
+make.cmd dist=finalize chk sign
+\endverbatim
+
+* \subsection usbk_building_make_cmd_usage_example_clean CLEAN examples
+\par CLEAN examples:
+\verbatim
+make.cmd clean
+make.cmd clean=full
+\endverbatim
+
+*
+* <HR>
+* \section usbk_building_make_cmd_config_examples Configuration Examples
+*
+* \subsection usbk_building_make_cmd_config_example_make_cfg make.cfg example
+\par make.cfg Example:
+\include make.cfg
+
+* \subsection usbk_building_make_cmd_config_example_make_versions make.versions example
+\par make.versions Example:
+\include make.versions
+
+*/
+
+//! Building with a <A href="http://msdn.microsoft.com/en-us/windows/hardware/gg487463">Windows Driver Kit</A>.
+/*! \page usbk_building_wdk Building with WDK
+*/
+
+//! Building with Microsoft Visual Studios 2008/2010/Express Editions.
+/*! \page usbk_building_msvc Building with MSVC
 */
 
 //! Where to begin and how to get started writing your new libusbK based application.
