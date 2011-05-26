@@ -29,7 +29,6 @@
 - \subpage usbk_building
   <BR>Methods for building the libusbK user mode library and driver from source code.
   <HR>
-
 */
 
 /*! \addtogroup genk UsbK General
@@ -185,7 +184,7 @@ The following user mode usb libraries support the \c libusbK.sys kernel driver:
 * <HR>
 * \section usbk_building_make_cmd_about About
 * \b make.cmd is a MSDOS (extended mode) batch file which fully automates several tasks.
-* 
+*
 * \note
 * \b make.cmd is non-specific to libusbK.
 * It is fully configurable from its \b make.cfg configuration.
@@ -202,7 +201,7 @@ The following user mode usb libraries support the \c libusbK.sys kernel driver:
 *  - Source package creation
 *  - Regular expression based cleaning
 *  - Source code re/formatting
-* 
+*
 * \subsection usbk_building_make_cmd_about_requirements Requirements
 *  - <A href="http://msdn.microsoft.com/en-us/windows/hardware/gg487463.aspx">Windows Driver Kit</A> (6001.18002 or greater)
 *  - <A href="http://www.jrsoftware.org/isdl.php">INNO Setup</A>
@@ -238,16 +237,16 @@ The following user mode usb libraries support the \c libusbK.sys kernel driver:
 <TR>
 	<TD>
 		\par BUILD
-		Builds all projects defined in \b WDK_SOURCES_LIST for a single environment/architecture combination. 
-		See the <B>WDK SETUP</B> and \b BUILD sections in \b make.cfg. 
+		Builds all projects defined in \b WDK_SOURCES_LIST for a single environment/architecture combination.
+		See the <B>WDK SETUP</B> and \b BUILD sections in \b make.cfg.
 
-		If no \b setenv.bat command-specific arguments are specified, 
+		If no \b setenv.bat command-specific arguments are specified,
 		\b make.cmd will use the defaults defined by \b WDK_DEF_ENV_OPTIONS.
 		See the <B>WDK SETUP</B> section in \b make.cfg.
 
 	</TD>
 	<TD>
-		For more information, see 
+		For more information, see
 		<A href="http://msdn.microsoft.com/en-us/library/ff554139%28v=vs.85%29.aspx">Using the SetEnv.bat</A>
 		\par [fre|chk]
 		For release builds use the \c fre, for debug builds use \c chk.<BR>
@@ -269,18 +268,18 @@ The following user mode usb libraries support the \c libusbK.sys kernel driver:
 
 		\par [no_oacr]
 		Disables OACR (Microsoft Auto Code Review)
-		
+
 		<HR>
 		\par [sign]
 		Sign dll, sys, and exe files with a code signing certificate after compiling.<BR>
-		See the \b SIGN section in \b make.cfg. 
+		See the \b SIGN section in \b make.cfg.
 	</TD>
 </TR>
 <TR>
 	<TD>
 		\par DIST
 		Build all projects for all environment/architecture combinations defined in \b DIST_BUILD_LIST.
-		See the \b DIST section in \b make.cfg. 
+		See the \b DIST section in \b make.cfg.
 
 		\par dist=finalize
 		Used for official release builds.<BR>Build additional components and installers.
@@ -293,7 +292,7 @@ The following user mode usb libraries support the \c libusbK.sys kernel driver:
 
 		\par [sign]
 		Sign dll, sys, and exe files with a code signing certificate after compiling.<BR>
-		See the \b SIGN section in \b make.cfg. 
+		See the \b SIGN section in \b make.cfg.
 	</TD>
 </TR>
 <TR>
@@ -373,7 +372,6 @@ make.cmd dist=finalize chk sign
 \endverbatim
 
 * \subsection usbk_building_make_cmd_usage_example_clean CLEAN examples
-\par CLEAN examples:
 \verbatim
 make.cmd clean
 make.cmd clean=full
@@ -384,12 +382,10 @@ make.cmd clean=full
 * \section usbk_building_make_cmd_config_examples Configuration Examples
 *
 * \subsection usbk_building_make_cmd_config_example_make_cfg make.cfg example
-\par make.cfg Example:
-\include make.cfg
+\verbinclude make.cfg
 
 * \subsection usbk_building_make_cmd_config_example_make_versions make.versions example
-\par make.versions Example:
-\include make.versions
+\verbinclude make.versions
 
 */
 

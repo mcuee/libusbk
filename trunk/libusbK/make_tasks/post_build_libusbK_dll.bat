@@ -18,7 +18,7 @@ IF EXIST "!K_LIBUSB10_DEP_DIR!" IF EXIST "!K_LIBUSB0_DEP_DIR!" (
 		POPD
 		goto Error
 	)
-	COPY /Y "!K_LIBUSB10_OUTPUT_DIR!\!K_LIBUSB10_NAME!.lib" "!G_BUILD_OUTPUT_BASE_ABS_DIR!\!DDKBUILDENV!\lib\!G_TARGET_OUTPUT_ARCH!"
+	COPY /Y "!K_LIBUSB10_OUTPUT_DIR!\!K_LIBUSB10_NAME!.lib" "!G_BUILD_OUTPUT_BASE_ABS_DIR!\lib\!G_TARGET_OUTPUT_ARCH!"
 	
 	CALL ddk_build DLL
 	IF NOT EXIST "!K_LIBUSB10_OUTPUT_DIR!\!K_LIBUSB10_NAME!.dll" (
@@ -61,19 +61,13 @@ GOTO :EOF
 	ECHO [FinalizeDistribution]
 	ECHO.
 	
+	SET K_PKG=!G_PACKAGE_TEMP_ABS_DIR!
+	SET K_PKG_BIN=!K_PKG!\!G_BUILD_OUTPUT_BASE_DIR!
+	
 	REM - Remove pdb and exp files; leave the driver pdb.
-	DEL /S /Q !G_BUILD_OUTPUT_BASE_ABS_DIR!\!DDKBUILDENV!\dll\*.pdb
-	DEL /S /Q !G_BUILD_OUTPUT_BASE_ABS_DIR!\!DDKBUILDENV!\*.exp
+	DEL /S /Q !G_BUILD_OUTPUT_BASE_ABS_DIR!\dll\*.pdb
+	DEL /S /Q !G_BUILD_OUTPUT_BASE_ABS_DIR!\*.exp
 
-	REM - Copy in the libusb-win32 includes
-	CALL .\make_tasks\deploy_dep.cmd "!K_LIBUSB0_DEP_DIR!" "!G_BUILD_OUTPUT_BASE_ABS_DIR!" "!K_LIBUSB0_NAME!" ".\make_tasks\!K_LIBUSB0_NAME!.dep.lst"
-
-	REM - Copy in the libusb-1.x includes
-	CALL .\make_tasks\deploy_dep.cmd "!K_LIBUSB10_DEP_DIR!" "!G_BUILD_OUTPUT_BASE_ABS_DIR!" "!K_LIBUSB10_NAME!" ".\make_tasks\!K_LIBUSB10_NAME!.dep.lst"
-	
-	REM - Copy in the libusbK includes
-	CALL .\make_tasks\deploy_dep.cmd "!K_LIBUSBK_DEP_DIR!" "!G_BUILD_OUTPUT_BASE_ABS_DIR!" "!K_LIBUSBK_NAME!" ".\make_tasks\!K_LIBUSBK_NAME!.dep.lst"
-	
 	REM - Get rid of those i386 dirs.
 	CALL :RenameOutputSubDirs "\sys\i386" "\sys\x86" "\lib\i386" "\lib\x86" "\dll\i386" "\dll\x86" "\exe\i386" "\exe\x86"
 	
@@ -83,11 +77,23 @@ GOTO :EOF
 	REM - Move the dynamic .lib files to the lib dir.
 	CALL :MoveOutputFiles "\dll\x86\*.lib" "\lib\x86" "\dll\amd64\*.lib" "\lib\amd64" "\dll\ia64\*.lib" "\lib\ia64"
 	
+	REM - Copy the entire binary tree to K_PKG_BIN
+	XCOPY "!G_BUILD_OUTPUT_BASE_ABS_DIR!\*" "!K_PKG_BIN!" /S /I /Y
+	
+	REM - Copy in the libusb-win32 includes
+	CALL .\make_tasks\deploy_dep.cmd "!K_LIBUSB0_DEP_DIR!" "!K_PKG!" "!K_LIBUSB0_NAME!" ".\make_tasks\!K_LIBUSB0_NAME!.dep.lst"
+
+	REM - Copy in the libusb-1.x includes
+	CALL .\make_tasks\deploy_dep.cmd "!K_LIBUSB10_DEP_DIR!" "!K_PKG!" "!K_LIBUSB10_NAME!" ".\make_tasks\!K_LIBUSB10_NAME!.dep.lst"
+	
+	REM - Copy in the libusbK includes
+	CALL .\make_tasks\deploy_dep.cmd "!K_LIBUSBK_DEP_DIR!" "!K_PKG!" "!K_LIBUSBK_NAME!" ".\make_tasks\!K_LIBUSBK_NAME!.dep.lst"
+	
 	REM - generate def files to the gcc lib dir.
-	CALL :MakeOutputDefFiles "\dll\x86\*.dll" "\lib\gcc"
+	REM CALL :MakeOutputDefFiles "\dll\x86\*.dll" "\lib\gcc"
 
 	REM - generate gcc libs from .def files.
-	CALL :MakeGccLibs "\lib\gcc\*.def" "\lib\gcc"
+	REM CALL :MakeGccLibs "\lib\gcc\*.def" "\lib\gcc"
 	
 	REM - Move the customized libusbK inf-wizard files into the libwdi directory.
 	CALL :SwapFile "!K_LIBWDI_DIR!\msvc\config.h" libwdi ".\src\libwdi\config.h"
@@ -97,8 +103,7 @@ GOTO :EOF
 	REM - Build libwdiK and inf-wizardK.
 	PUSHD !CD!
 	CD /D "!K_LIBWDI_DIR!"
-	SET K_LIBUSBK_DIR=!G_BUILD_OUTPUT_BASE_ABS_DIR!\!DDKBUILDENV!
-	SET C_DEFINES=/DLIBUSBK_DIR=\"!K_LIBUSBK_DIR:\=/!\" /DLIBUSB0_DIR=\"!K_LIBUSB0_DEP_DIR:\=/!\" /DINFWIZARD_LIBUSBK=1
+	SET C_DEFINES=/DLIBUSBK_DIR=\"!K_PKG_BIN:\=/!\" /DLIBUSB0_DIR=\"!K_LIBUSB0_DEP_DIR:\=/!\" /DINFWIZARD_LIBUSBK=1
 	SET RC_DEFINES=!C_DEFINES!
 	CALL ddk_build inf_wizard_only
 	SET C_DEFINES=
@@ -114,22 +119,22 @@ GOTO :EOF
 		ECHO ERROR - "!K_LIBWDI_DIR!\examples\inf-wizard.exe" not found.
 		GOTO :EOF
 	)
-	COPY /Y "!K_LIBWDI_DIR!\examples\inf-wizard.exe" "!K_LIBUSBK_DIR!\libusbK-inf-wizard.exe"
+	COPY /Y "!K_LIBWDI_DIR!\examples\inf-wizard.exe" "!K_PKG!\libusbK-inf-wizard.exe"
 	
 	SET TOKVAR_LTAG=@
 	SET TOKVAR_RTAG=@
-	IF EXIST "!G_BUILD_OUTPUT_BASE_ABS_DIR!\!K_LIBUSBK_SETUP_NAME!.iss" DEL "!G_BUILD_OUTPUT_BASE_ABS_DIR!\!K_LIBUSBK_SETUP_NAME!.iss" >NUL
-	!DCMD! -et ".\src\setup.iss.in" "!G_BUILD_OUTPUT_BASE_ABS_DIR!\!K_LIBUSBK_SETUP_NAME!.iss"
+	IF EXIST "!G_PACKAGE_ABS_DIR!\!K_LIBUSBK_SETUP_NAME!.iss" DEL "!G_PACKAGE_ABS_DIR!\!K_LIBUSBK_SETUP_NAME!.iss" >NUL
+	!DCMD! -et ".\src\setup.iss.in" "!G_PACKAGE_ABS_DIR!\!K_LIBUSBK_SETUP_NAME!.iss"
 	SET TOKVAR_LTAG=
 	SET TOKVAR_RTAG=
-	COPY /Y .\make_tasks\libusbK.bmp "!G_BUILD_OUTPUT_BASE_ABS_DIR!\"
-	!K_ISCC_EXE! "!G_BUILD_OUTPUT_BASE_ABS_DIR!\!K_LIBUSBK_SETUP_NAME!.iss"
+	COPY /Y .\make_tasks\libusbK.bmp "!G_PACKAGE_ABS_DIR!\"
+	!K_ISCC_EXE! "!G_PACKAGE_ABS_DIR!\!K_LIBUSBK_SETUP_NAME!.iss"
 
 GOTO :EOF
 
 :RenameOutputSubDirs
-	IF EXIST "!G_BUILD_OUTPUT_BASE_ABS_DIR!\!DDKBUILDENV!%~2" RMDIR /S /Q "!G_BUILD_OUTPUT_BASE_ABS_DIR!\!DDKBUILDENV!%~2"
-	MOVE /Y "!G_BUILD_OUTPUT_BASE_ABS_DIR!\!DDKBUILDENV!%~1" "!G_BUILD_OUTPUT_BASE_ABS_DIR!\!DDKBUILDENV!%~2"
+	IF EXIST "!G_BUILD_OUTPUT_BASE_ABS_DIR!%~2" RMDIR /S /Q "!G_BUILD_OUTPUT_BASE_ABS_DIR!%~2"
+	MOVE /Y "!G_BUILD_OUTPUT_BASE_ABS_DIR!%~1" "!G_BUILD_OUTPUT_BASE_ABS_DIR!%~2"
 	SHIFT /1
 	SHIFT /1
 	IF "%~1" NEQ "" GOTO RenameOutputSubDirs
@@ -147,8 +152,8 @@ GOTO :EOF
 GOTO :EOF
 
 :MoveOutputFiles
-	SET __MoveOutputFiles_SrcPattern=!G_BUILD_OUTPUT_BASE_ABS_DIR!\!DDKBUILDENV!%~1
-	SET __MoveOutputFiles_Dst=!G_BUILD_OUTPUT_BASE_ABS_DIR!\!DDKBUILDENV!%~2
+	SET __MoveOutputFiles_SrcPattern=!G_BUILD_OUTPUT_BASE_ABS_DIR!%~1
+	SET __MoveOutputFiles_Dst=!G_BUILD_OUTPUT_BASE_ABS_DIR!%~2
 	FOR /F "usebackq eol=; tokens=* delims=" %%A IN (`DIR /A-D-H-R-S /S /B "!__MoveOutputFiles_SrcPattern!"`) DO (
 		SET __SrcDir=%%~dpA
 		SET __DstName=%%~nxA
@@ -163,8 +168,8 @@ GOTO :EOF
 GOTO :EOF
 
 :MakeOutputDefFiles
-	SET __MakeOutputDefFiles_SrcPattern=!G_BUILD_OUTPUT_BASE_ABS_DIR!\!DDKBUILDENV!%~1
-	SET __MakeOutputDefFiles_Dst=!G_BUILD_OUTPUT_BASE_ABS_DIR!\!DDKBUILDENV!%~2
+	SET __MakeOutputDefFiles_SrcPattern=!G_BUILD_OUTPUT_BASE_ABS_DIR!%~1
+	SET __MakeOutputDefFiles_Dst=!G_BUILD_OUTPUT_BASE_ABS_DIR!%~2
 	FOR /F "usebackq eol=; tokens=* delims=" %%A IN (`DIR /A-D-H-R-S /S /B "!__MakeOutputDefFiles_SrcPattern!"`) DO (
 		SET __SrcDir=%%~dpA
 		SET __DstName=%%~nA.def
@@ -179,8 +184,8 @@ GOTO :EOF
 GOTO :EOF
 
 :MakeGccLibs
-	SET __MakeGccLibs_SrcPattern=!G_BUILD_OUTPUT_BASE_ABS_DIR!\!DDKBUILDENV!%~1
-	SET __MakeGccLibs_Dst=!G_BUILD_OUTPUT_BASE_ABS_DIR!\!DDKBUILDENV!%~2
+	SET __MakeGccLibs_SrcPattern=!G_BUILD_OUTPUT_BASE_ABS_DIR!%~1
+	SET __MakeGccLibs_Dst=!G_BUILD_OUTPUT_BASE_ABS_DIR!%~2
 	FOR /F "usebackq eol=; tokens=* delims=" %%A IN (`DIR /A-D-H-R-S /S /B "!__MakeGccLibs_SrcPattern!"`) DO (
 		SET __SrcDir=%%~dpA
 		SET __DstName=%%~nA.a

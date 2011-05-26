@@ -21,7 +21,7 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="$(SolutionDir)\output\chk\libusbK_sys\i386"
+			OutputDirectory="$(SolutionDir)\bin\chk\libusbK_sys\i386"
 			IntermediateDirectory="$(ProjectDir)objchk_wxp_x86\i386"
 			ConfigurationType="0"
 			>
@@ -41,7 +41,7 @@
 		</Configuration>
 		<Configuration
 			Name="Debug|x64"
-			OutputDirectory="$(SolutionDir)\output\chk\libusbK_sys\amd64"
+			OutputDirectory="$(SolutionDir)\bin\chk\libusbK_sys\amd64"
 			IntermediateDirectory="$(ProjectDir)objchk_win7_amd64\amd64"
 			ConfigurationType="0"
 			>
@@ -61,7 +61,7 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="$(SolutionDir)\output\fre\libusbK_sys\i386"
+			OutputDirectory="$(SolutionDir)\bin\fre\libusbK_sys\i386"
 			IntermediateDirectory="$(ProjectDir)objfre_wxp_x86\i386"
 			ConfigurationType="0"
 			>
@@ -81,7 +81,7 @@
 		</Configuration>
 		<Configuration
 			Name="Release|x64"
-			OutputDirectory="$(SolutionDir)\output\fre\libusbK_sys\amd64"
+			OutputDirectory="$(SolutionDir)\bin\fre\libusbK_sys\amd64"
 			IntermediateDirectory="$(ProjectDir)objfre_win7_amd64\amd64"
 			ConfigurationType="0"
 			>
@@ -218,7 +218,7 @@
 					>
 				</File>
 				<File
-					RelativePath="..\lusbk_usbio.h"
+					RelativePath="..\include\lusbk_usbio.h"
 					>
 				</File>
 				<File

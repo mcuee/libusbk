@@ -63,7 +63,13 @@ IF "%~1" NEQ "!WOUND_GUID!" (
 	
 	REM - If the dist arg was specified, build all platforms/archs listed in the DIST_BUILD_LIST env var.
 	IF DEFINED G_DIST (
-	
+
+		IF NOT EXIST "!G_PACKAGE_DIR!" MKDIR "!G_PACKAGE_DIR!"
+		CALL :ToAbsPath  G_PACKAGE_ABS_DIR "!G_PACKAGE_DIR!"
+		
+		IF NOT EXIST "!G_PACKAGE_TEMP_DIR!" MKDIR "!G_PACKAGE_TEMP_DIR!"
+		CALL :ToAbsPath  G_PACKAGE_TEMP_ABS_DIR "!G_PACKAGE_TEMP_DIR!"
+
 		REM - default to a FRE build if none was specified.
 		IF "!G_FRE!!G_CHK!" EQU "" SET G_FRE=FRE
 		CALL :ExecuteUserTask pre dist
@@ -432,7 +438,7 @@ GOTO :EOF
 		CALL :LoadCfgFile "!G_MAKE_CFG_FILE!" PACKAGE_ALL_SUBDIR_FORMAT
 		SET __Zip_TempDir=!__Zip_TempDir!\!G_PACKAGE_ALL_SUBDIR_FORMAT!
 		CALL :Zip_Src "!G_PACKAGE_SRC_NAME!"
-		CALL :Zip_Bin "!G_PACKAGE_BIN_NAME!"
+		CALL :Zip_Package "@NONE@"
 	GOTO :EOF
 	
 	:Zip_Bin
@@ -444,12 +450,13 @@ GOTO :EOF
 	CALL :CreateTempFile __Zip_FileList
 	CALL :SyncPathList F __Zip_FileList "!G_BUILD_OUTPUT_BASE_DIR!" "/A-D-H-R-S /S" G_CLEAN_BIN_EXP "/I /V" @NULL ""
 	
-	IF "%~1" EQU "" (
-		SET F_PACKAGE_NAME=!G_PACKAGE_BIN_NAME!
-		CALL :LoadCfgFile "!G_MAKE_CFG_FILE!" PACKAGE_NAME_FORMAT
-		CALL :ZipAddFileSet "!__Zip_TempDir!\!G_PACKAGE_NAME_FORMAT!" "!G_BUILD_OUTPUT_BASE_DIR!" __Zip_FileList __Zip_FileCount
+	SET F_PACKAGE_NAME=!G_PACKAGE_BIN_NAME!
+	CALL :LoadCfgFile "!G_MAKE_CFG_FILE!" PACKAGE_NAME_FORMAT
+
+	IF "%~1" NEQ "" (
+		CALL :ZipAddFileSet "!__Zip_TempDir!\%~1\!G_BUILD_OUTPUT_BASE_DIR!" "!G_BUILD_OUTPUT_BASE_DIR!" __Zip_FileList __Zip_FileCount
 	) ELSE (
-		CALL :ZipAddFileSet "!__Zip_TempDir!\%~1" "!G_BUILD_OUTPUT_BASE_DIR!" __Zip_FileList __Zip_FileCount
+		CALL :ZipAddFileSet "!__Zip_TempDir!\!G_PACKAGE_NAME_FORMAT!\!G_BUILD_OUTPUT_BASE_DIR!" "!G_BUILD_OUTPUT_BASE_DIR!" __Zip_FileList __Zip_FileCount
 	)
 	GOTO :EOF
 	
@@ -460,14 +467,38 @@ GOTO :EOF
 	!DCMD! -ff "!__Zip_RegExpExcludeList!" "@s\n@s\n" "!__Zip_BuildOutputDirEsc!" "!__Zip_PackageDirEsc!"
 	
 	CALL :SyncPathList F __Zip_FileList "!CD!" "/A-D-H-R-S /S" G_CLEAN_SRC_EXP "/I /V" __Zip_RegExpExcludeList "/I /V"
-	IF "%~1" EQU "" (
+	IF "%~1" NEQ "" (
+		CALL :ZipAddFileSet "!__Zip_TempDir!\%~1" "!CD!" __Zip_FileList __Zip_FileCount
+	) ELSE (
 		SET F_PACKAGE_NAME=!G_PACKAGE_SRC_NAME!
 		CALL :LoadCfgFile "!G_MAKE_CFG_FILE!" PACKAGE_NAME_FORMAT
 		CALL :ZipAddFileSet "!__Zip_TempDir!\!G_PACKAGE_NAME_FORMAT!" "!CD!" __Zip_FileList __Zip_FileCount
-	) ELSE (
-		CALL :ZipAddFileSet "!__Zip_TempDir!\%~1" "!CD!" __Zip_FileList __Zip_FileCount
 	)
 	GOTO :EOF
+
+	:Zip_Package
+	IF NOT EXIST "!G_PACKAGE_TEMP_DIR!" (
+		CALL :Print W "ZIP" "Package temp directory @s does not exist." "!G_PACKAGE_TEMP_DIR!"
+		GOTO :EOF
+	)
+	CALL :ToAbsPath  G_PACKAGE_ABS_DIR "!G_PACKAGE_DIR!"
+	CALL :ToAbsPath  G_PACKAGE_TEMP_ABS_DIR "!G_PACKAGE_TEMP_DIR!"
+
+	CALL :CreateTempFile __Zip_FileList
+	CALL :SyncPathList F __Zip_FileList "!G_PACKAGE_TEMP_ABS_DIR!" "/A-D-H-R-S /S" G_CLEAN_PACKAGE_TEMP_EXP "/I /V" @NULL ""
+	
+
+	IF "%~1" EQU "@NONE@" (
+		CALL :ZipAddFileSet "!__Zip_TempDir!" "!G_PACKAGE_TEMP_DIR!" __Zip_FileList __Zip_FileCount
+	) ELSE IF "%~1" NEQ "" (
+		CALL :ZipAddFileSet "!__Zip_TempDir!\%~1" "!G_PACKAGE_TEMP_DIR!" __Zip_FileList __Zip_FileCount
+	) ELSE (
+		SET F_PACKAGE_NAME=!G_PACKAGE_BIN_NAME!
+		CALL :LoadCfgFile "!G_MAKE_CFG_FILE!" PACKAGE_NAME_FORMAT
+		CALL :ZipAddFileSet "!__Zip_TempDir!\!G_PACKAGE_NAME_FORMAT!" "!G_PACKAGE_TEMP_DIR!" __Zip_FileList __Zip_FileCount
+	)
+	GOTO :EOF
+	
 GOTO :EOF
 
 REM - %1 = package directory. all files and dirs under this are zipped

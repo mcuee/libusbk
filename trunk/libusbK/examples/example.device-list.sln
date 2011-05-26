@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "example-device-list", "example.device-list.vcproj", "{C92C079A-D7DD-4780-B462-88B7E9105649}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		chk|Win32 = chk|Win32
+		chk|x64 = chk|x64
+		fre|Win32 = fre|Win32
+		fre|x64 = fre|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C92C079A-D7DD-4780-B462-88B7E9105649}.chk|Win32.ActiveCfg = chk|Win32
+		{C92C079A-D7DD-4780-B462-88B7E9105649}.chk|Win32.Build.0 = chk|Win32
+		{C92C079A-D7DD-4780-B462-88B7E9105649}.chk|x64.ActiveCfg = chk|x64
+		{C92C079A-D7DD-4780-B462-88B7E9105649}.chk|x64.Build.0 = chk|x64
+		{C92C079A-D7DD-4780-B462-88B7E9105649}.fre|Win32.ActiveCfg = fre|Win32
+		{C92C079A-D7DD-4780-B462-88B7E9105649}.fre|Win32.Build.0 = fre|Win32
+		{C92C079A-D7DD-4780-B462-88B7E9105649}.fre|x64.ActiveCfg = fre|x64
+		{C92C079A-D7DD-4780-B462-88B7E9105649}.fre|x64.Build.0 = fre|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
