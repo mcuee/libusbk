@@ -51,7 +51,7 @@ PROJECT_LOGO           = libusbK.png
 # If a relative path is entered, it will be relative to the location 
 # where doxygen was started. If left blank the current directory will be used.
 
-OUTPUT_DIRECTORY       = Z:/SVNMAIN/GoogleCode/usb-travis/trunk/libusbK/doc/output
+OUTPUT_DIRECTORY       = ./output
 
 # If the CREATE_SUBDIRS tag is set to YES, then doxygen will create 
 # 4096 sub-directories (in 2 levels) under the output directory of each output 
@@ -974,7 +974,7 @@ GENERATE_HTMLHELP      = NO
 # can add a path in front of the file if the result should not be 
 # written to the html output directory.
 
-CHM_FILE               = libusbk_Help.chm
+CHM_FILE               = libusbK-help.chm
 
 # If the GENERATE_HTMLHELP tag is set to YES, the HHC_LOCATION tag can 
 # be used to specify the location (absolute path including file name) of 
