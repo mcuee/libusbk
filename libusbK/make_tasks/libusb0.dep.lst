@@ -7,32 +7,32 @@
 # source location   = Dependeny file path relative to base source directory. 
 # dir category name = Output directory category name. 
 #
-\include\lusb0_usb.h; \include;
-\lib\dynamic\libusb_dyn.c; \include;
+\include\lusb0_usb.h; \includes;
+\lib\dynamic\libusb_dyn.c; \includes;
 #
 #
 # libusb0 amd64 binaries
-\bin\amd64\install-filter-win.exe; @\!DDKBUILDENV!\exe\amd64
-\bin\amd64\install-filter.exe;     @\!DDKBUILDENV!\exe\amd64
-\bin\amd64\testlibusb.exe;         @\!DDKBUILDENV!\exe\amd64
-\bin\amd64\testlibusb-win.exe;     @\!DDKBUILDENV!\exe\amd64
-\bin\amd64\libusb0.sys;            @\!DDKBUILDENV!\sys\amd64
-\bin\amd64\libusb0.dll;            @\!DDKBUILDENV!\dll\amd64
+\bin\amd64\install-filter-win.exe; @\!K_PKG_BIN!\exe\amd64
+\bin\amd64\install-filter.exe;     @\!K_PKG_BIN!\exe\amd64
+\bin\amd64\testlibusb.exe;         @\!K_PKG_BIN!\exe\amd64
+\bin\amd64\testlibusb-win.exe;     @\!K_PKG_BIN!\exe\amd64
+\bin\amd64\libusb0.sys;            @\!K_PKG_BIN!\sys\amd64
+\bin\amd64\libusb0.dll;            @\!K_PKG_BIN!\dll\amd64
 #
 #
 # libusb0 ia64 binaries
-\bin\ia64\install-filter-win.exe; @\!DDKBUILDENV!\exe\ia64
-\bin\ia64\install-filter.exe;     @\!DDKBUILDENV!\exe\ia64
-\bin\ia64\testlibusb.exe;         @\!DDKBUILDENV!\exe\ia64
-\bin\ia64\testlibusb-win.exe;     @\!DDKBUILDENV!\exe\ia64
-\bin\ia64\libusb0.sys;            @\!DDKBUILDENV!\sys\ia64
-\bin\ia64\libusb0.dll;            @\!DDKBUILDENV!\dll\ia64
+\bin\ia64\install-filter-win.exe; @\!K_PKG_BIN!\exe\ia64
+\bin\ia64\install-filter.exe;     @\!K_PKG_BIN!\exe\ia64
+\bin\ia64\testlibusb.exe;         @\!K_PKG_BIN!\exe\ia64
+\bin\ia64\testlibusb-win.exe;     @\!K_PKG_BIN!\exe\ia64
+\bin\ia64\libusb0.sys;            @\!K_PKG_BIN!\sys\ia64
+\bin\ia64\libusb0.dll;            @\!K_PKG_BIN!\dll\ia64
 #
 #
 # libusb0 x86 binaries
-\bin\x86\install-filter-win.exe; @\!DDKBUILDENV!\exe\i386
-\bin\x86\install-filter.exe;     @\!DDKBUILDENV!\exe\i386
-\bin\x86\testlibusb.exe;         @\!DDKBUILDENV!\exe\i386
-\bin\x86\testlibusb-win.exe;     @\!DDKBUILDENV!\exe\i386
-\bin\x86\libusb0.sys;            @\!DDKBUILDENV!\sys\i386
-\bin\x86\libusb0.dll;            @\!DDKBUILDENV!\dll\i386
+\bin\x86\install-filter-win.exe; @\!K_PKG_BIN!\exe\i386
+\bin\x86\install-filter.exe;     @\!K_PKG_BIN!\exe\i386
+\bin\x86\testlibusb.exe;         @\!K_PKG_BIN!\exe\i386
+\bin\x86\testlibusb-win.exe;     @\!K_PKG_BIN!\exe\i386
+\bin\x86\libusb0.sys;            @\!K_PKG_BIN!\sys\i386
+\bin\x86\libusb0.dll;            @\!K_PKG_BIN!\dll\i386

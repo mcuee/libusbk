@@ -21,8 +21,8 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="$(SolutionDir)output\$(ConfigurationName)\$(ProjectName)\$(PlatformName)"
-			IntermediateDirectory="$(SolutionDir)output\$(ConfigurationName)\$(ProjectName)\$(PlatformName)"
+			OutputDirectory="$(SolutionDir)bin\$(ConfigurationName)\$(ProjectName)\$(PlatformName)"
+			IntermediateDirectory="$(SolutionDir)bin\$(ConfigurationName)\$(ProjectName)\$(PlatformName)"
 			ConfigurationType="1"
 			CharacterSet="1"
 			>
@@ -44,7 +44,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories=".\;..\"
+				AdditionalIncludeDirectories=".\;..\;..\includes"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -67,11 +67,11 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="kernel32.lib user32.lib advapi32.lib setupapi.lib $(NOINHERIT)"
+				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib advapi32.lib setupapi.lib $(NOINHERIT)"
 				OutputFile="$(OutDir)\$(ProjectName)"
 				LinkIncremental="2"
-				IgnoreAllDefaultLibraries="false"
-				IgnoreDefaultLibraryNames="libcmtd"
+				IgnoreAllDefaultLibraries="true"
+				IgnoreDefaultLibraryNames=""
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				TargetMachine="1"
@@ -100,8 +100,8 @@
 		</Configuration>
 		<Configuration
 			Name="Debug|x64"
-			OutputDirectory="$(SolutionDir)output\$(ConfigurationName)\$(ProjectName)\$(PlatformName)"
-			IntermediateDirectory="$(SolutionDir)output\$(ConfigurationName)\$(ProjectName)\$(PlatformName)"
+			OutputDirectory="$(SolutionDir)bin\$(ConfigurationName)\$(ProjectName)\$(PlatformName)"
+			IntermediateDirectory="$(SolutionDir)bin\$(ConfigurationName)\$(ProjectName)\$(PlatformName)"
 			ConfigurationType="1"
 			CharacterSet="1"
 			>
@@ -124,12 +124,12 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories=".\;..\"
+				AdditionalIncludeDirectories=".\;..\;..\includes"
 				PreprocessorDefinitions="_DEBUG;_CONSOLE;_WIN64;_CRT_SECURE_NO_WARNINGS"
 				MinimalRebuild="false"
 				ExceptionHandling="0"
 				BasicRuntimeChecks="0"
-				RuntimeLibrary="1"
+				RuntimeLibrary="3"
 				UsePrecompiledHeader="0"
 				WarningLevel="4"
 				DebugInformationFormat="3"
@@ -148,10 +148,10 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="kernel32.lib user32.lib advapi32.lib setupapi.lib $(NOINHERIT)"
+				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib advapi32.lib setupapi.lib $(NOINHERIT)"
 				OutputFile="$(OutDir)\$(ProjectName)"
 				LinkIncremental="2"
-				IgnoreAllDefaultLibraries="false"
+				IgnoreAllDefaultLibraries="true"
 				IgnoreDefaultLibraryNames=""
 				GenerateDebugInformation="true"
 				SubSystem="1"
@@ -181,8 +181,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="$(SolutionDir)output\$(ConfigurationName)\$(ProjectName)\$(PlatformName)"
-			IntermediateDirectory="$(SolutionDir)output\$(ConfigurationName)\$(ProjectName)\$(PlatformName)"
+			OutputDirectory="$(SolutionDir)bin\$(ConfigurationName)\$(ProjectName)\$(PlatformName)"
+			IntermediateDirectory="$(SolutionDir)bin\$(ConfigurationName)\$(ProjectName)\$(PlatformName)"
 			ConfigurationType="1"
 			CharacterSet="1"
 			WholeProgramOptimization="1"
@@ -206,10 +206,11 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories=".\;..\"
+				FavorSizeOrSpeed="1"
+				AdditionalIncludeDirectories=".\;..\;..\includes"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS"
+				ExceptionHandling="0"
 				RuntimeLibrary="2"
-				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="0"
 				WarningLevel="4"
 				DebugInformationFormat="3"
@@ -228,12 +229,11 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="kernel32.lib user32.lib advapi32.lib setupapi.lib $(NOINHERIT)"
+				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib advapi32.lib setupapi.lib $(NOINHERIT)"
 				OutputFile="$(OutDir)\$(ProjectName)"
 				LinkIncremental="1"
-				IgnoreAllDefaultLibraries="false"
+				IgnoreAllDefaultLibraries="true"
 				IgnoreDefaultLibraryNames="libcmt"
-				GenerateDebugInformation="true"
 				SubSystem="1"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
@@ -263,8 +263,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release|x64"
-			OutputDirectory="$(SolutionDir)output\$(ConfigurationName)\$(ProjectName)\$(PlatformName)"
-			IntermediateDirectory="$(SolutionDir)output\$(ConfigurationName)\$(ProjectName)\$(PlatformName)"
+			OutputDirectory="$(SolutionDir)bin\$(ConfigurationName)\$(ProjectName)\$(PlatformName)"
+			IntermediateDirectory="$(SolutionDir)bin\$(ConfigurationName)\$(ProjectName)\$(PlatformName)"
 			ConfigurationType="1"
 			CharacterSet="1"
 			WholeProgramOptimization="1"
@@ -289,10 +289,11 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories=".\;..\"
+				FavorSizeOrSpeed="1"
+				AdditionalIncludeDirectories=".\;..\;..\includes"
 				PreprocessorDefinitions="NDEBUG;_CONSOLE;_WIN64;_CRT_SECURE_NO_WARNINGS"
-				RuntimeLibrary="0"
-				EnableFunctionLevelLinking="true"
+				ExceptionHandling="0"
+				RuntimeLibrary="2"
 				UsePrecompiledHeader="0"
 				WarningLevel="4"
 				DebugInformationFormat="3"
@@ -311,12 +312,11 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="kernel32.lib user32.lib advapi32.lib setupapi.lib $(NOINHERIT)"
+				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib advapi32.lib setupapi.lib $(NOINHERIT)"
 				OutputFile="$(OutDir)\$(ProjectName)"
 				LinkIncremental="1"
-				IgnoreAllDefaultLibraries="false"
+				IgnoreAllDefaultLibraries="true"
 				IgnoreDefaultLibraryNames=""
-				GenerateDebugInformation="true"
 				SubSystem="1"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"

@@ -44,7 +44,7 @@ PROJECT_BRIEF          = "Library Documentation"
 # exceed 55 pixels and the maximum width should not exceed 200 pixels. 
 # Doxygen will copy the logo to the output directory.
 
-PROJECT_LOGO           = ../make_tasks/libusbK.bmp
+PROJECT_LOGO           = libusbK.png
 
 # The OUTPUT_DIRECTORY tag is used to specify the (relative or absolute) 
 # base path where the generated documentation will be put. 
@@ -620,15 +620,15 @@ WARN_LOGFILE           =
 # with spaces.
 
 INPUT                  = usbk_conceptual_documentation.h \
-                         ../src/lusbk_common.h \
-                         ../src/lusbk_dynamic.h \
-                         ../src/lusbk_device_list.h \
-                         ../src/lusbk_overlapped.h \
-                         ../src/lusbk_dynamic.h \
-                         ../src/lusbk_usb.h \
-                         ../src/lusbk_linked_list.h \
-                         ../src/lusbk_usbio.h \
-                         ../src/libusbK_examples/example.h
+                         ../src/includes/lusbk_common.h \
+                         ../src/includes/lusbk_dynamic.h \
+                         ../src/includes/lusbk_device_list.h \
+                         ../src/includes/lusbk_overlapped.h \
+                         ../src/includes/lusbk_dynamic.h \
+                         ../src/includes/lusbk_usb.h \
+                         ../src/includes/lusbk_linked_list.h \
+                         ../src/includes/lusbk_usbio.h \
+                         ../examples/example.h
 
 # This tag can be used to specify the character encoding of the source files 
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding, which is 
@@ -686,7 +686,7 @@ EXCLUDE_SYMBOLS        =
 # directories that contain example code fragments that are included (see 
 # the \include command).
 
-EXAMPLE_PATH           = ../src/libusbK_examples \
+EXAMPLE_PATH           = ../examples \
                          ../
 
 # If the value of the EXAMPLE_PATH tag contains directories, you can use the 
@@ -854,13 +854,13 @@ HTML_FILE_EXTENSION    = .html
 # have to redo this when upgrading to a newer version of doxygen or when
 # changing the value of configuration settings such as GENERATE_TREEVIEW!
 
-HTML_HEADER            = 
+HTML_HEADER            = usbk_header.html
 
 # The HTML_FOOTER tag can be used to specify a personal HTML footer for 
 # each generated HTML page. If it is left blank doxygen will generate a 
 # standard footer.
 
-HTML_FOOTER            = 
+HTML_FOOTER            = usbk_footer.html
 
 # The HTML_STYLESHEET tag can be used to specify a user-defined cascading 
 # style sheet that is used by each HTML page. It can be used to 
@@ -869,7 +869,7 @@ HTML_FOOTER            =
 # the style sheet file to the HTML output directory, so don't put your own 
 # stylesheet in the HTML output directory as well, or it will be erased!
 
-HTML_STYLESHEET        = 
+HTML_STYLESHEET        = usbk_stylesheet.css
 
 # The HTML_EXTRA_FILES tag can be used to specify one or more extra images or 
 # other source files which should be copied to the HTML output directory. Note 
@@ -878,7 +878,7 @@ HTML_STYLESHEET        =
 # files. In the HTML_STYLESHEET file, use the file name only. Also note that 
 # the files will be copied as-is; there are no commands or markers available.
 
-HTML_EXTRA_FILES       = 
+HTML_EXTRA_FILES       = ../make_tasks/libusbK.bmp
 
 # The HTML_COLORSTYLE_HUE tag controls the color of the HTML output. 
 # Doxygen will adjust the colors in the stylesheet and background images 
@@ -967,7 +967,7 @@ DOCSET_PUBLISHER_NAME  = Publisher
 # Microsoft HTML help workshop to generate a compiled HTML help file (.chm) 
 # of the generated HTML documentation.
 
-GENERATE_HTMLHELP      = NO
+GENERATE_HTMLHELP      = YES
 
 # If the GENERATE_HTMLHELP tag is set to YES, the CHM_FILE tag can 
 # be used to specify the file name of the resulting .chm file. You 
@@ -1097,7 +1097,7 @@ ENUM_VALUES_PER_LINE   = 1
 # JavaScript, DHTML, CSS and frames is required (i.e. any modern browser). 
 # Windows users are probably better off using the HTML help feature.
 
-GENERATE_TREEVIEW      = YES
+GENERATE_TREEVIEW      = NO
 
 # By enabling USE_INLINE_TREES, doxygen will generate the Groups, Directories, 
 # and Class Hierarchy pages using a tree view instead of an ordered list.
@@ -1159,7 +1159,7 @@ MATHJAX_RELPATH        = http://www.mathjax.org/mathjax
 # typically be disabled. For large projects the javascript based search engine 
 # can be slow, then enabling SERVER_BASED_SEARCH may provide a better solution.
 
-SEARCHENGINE           = YES
+SEARCHENGINE           = NO
 
 # When the SERVER_BASED_SEARCH tag is enabled the search engine will be 
 # implemented using a PHP enabled web server instead of at the web client 

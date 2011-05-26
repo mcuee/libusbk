@@ -7,7 +7,10 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libusbK.dll", "src\libusbK.
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libusbK.sys", "src\libusbK.sys\libusbK.vcproj", "{6F681E4D-0C70-4D7E-A55F-74913E78138E}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "wdk", "wdk", "{11FAB3B1-0C95-4FCC-9326-09052D8B5C9D}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "make.cmd", "make.cmd", "{11FAB3B1-0C95-4FCC-9326-09052D8B5C9D}"
+	ProjectSection(SolutionItems) = preProject
+		src\setup.iss.in = src\setup.iss.in
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "inf", "inf", "{CE8F5C1F-2B0B-4A77-A40F-20FA5A5FB05C}"
 	ProjectSection(SolutionItems) = preProject
@@ -45,12 +48,20 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "kList.exe", "src\kList.exe\
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "doc", "doc", "{C1227A3C-7AF9-46F7-BFE7-3CE1C3DB7672}"
 	ProjectSection(SolutionItems) = preProject
-		doc\Doxyfile = doc\Doxyfile
 		doc\usbk_conceptual_documentation.h = doc\usbk_conceptual_documentation.h
-		doc\usbk_doxygen.css = doc\usbk_doxygen.css
-		doc\usbk_footer.html = doc\usbk_footer.html
-		doc\usbk_header.html = doc\usbk_header.html
 		doc\usbk_layout.xml = doc\usbk_layout.xml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tasks", "tasks", "{9ECC0BBA-7145-44E1-9CE0-9201242F1B29}"
+	ProjectSection(SolutionItems) = preProject
+		make_tasks\deploy_dep.cmd = make_tasks\deploy_dep.cmd
+		make_tasks\libusb-1.0.dep.lst = make_tasks\libusb-1.0.dep.lst
+		make_tasks\libusb0.dep.lst = make_tasks\libusb0.dep.lst
+		make_tasks\libusbK.bmp = make_tasks\libusbK.bmp
+		make_tasks\libusbK.dep.lst = make_tasks\libusbK.dep.lst
+		make_tasks\post_build_libusbK_dll.bat = make_tasks\post_build_libusbK_dll.bat
+		make_tasks\post_build_libusbK_dll.cfg = make_tasks\post_build_libusbK_dll.cfg
+		make_tasks\post_build_libusbK_sys.bat = make_tasks\post_build_libusbK_sys.bat
 	EndProjectSection
 EndProject
 Global
@@ -109,6 +120,7 @@ Global
 		{CE8F5C1F-2B0B-4A77-A40F-20FA5A5FB05C} = {11FAB3B1-0C95-4FCC-9326-09052D8B5C9D}
 		{623B14B1-DB3A-43F5-A4B6-2100510BFBD8} = {11FAB3B1-0C95-4FCC-9326-09052D8B5C9D}
 		{14CE2241-F8CE-4FE8-A194-B2F6C0FCC9D1} = {11FAB3B1-0C95-4FCC-9326-09052D8B5C9D}
+		{9ECC0BBA-7145-44E1-9CE0-9201242F1B29} = {14CE2241-F8CE-4FE8-A194-B2F6C0FCC9D1}
 		{046C67B6-9D81-473F-B738-D67C9EB18B99} = {6EA087C1-3738-4F25-8675-96E824E1E1AD}
 		{046C67B6-9D81-473F-8FD4-D67C9EB18B99} = {6EA087C1-3738-4F25-8675-96E824E1E1AD}
 	EndGlobalSection

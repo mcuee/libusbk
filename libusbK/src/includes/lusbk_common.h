@@ -22,6 +22,22 @@
 #include <stddef.h>
 #include <objbase.h>
 
+#ifndef __deref_inout
+
+#define __in
+#define __in_opt
+#define __deref_in
+
+#define __out
+#define __out_opt
+#define __deref_out
+
+#define __inout
+#define __inout_opt
+#define __deref_inout
+
+#endif
+
 /*! \addtogroup genk
 *  @{
 */

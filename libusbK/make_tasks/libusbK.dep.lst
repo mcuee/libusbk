@@ -7,15 +7,39 @@
 # source location   = Dependeny file path relative to base source directory. 
 # dir category name = Output directory category name. 
 #
-\lusbk_usb.h;                       \include;
-\lusbk_common.h;                    \include;
-\lusbk_dynamic.h;                   \include;
-\lusbk_linked_list.h;               \include;
-\lusbk_device_list.h;               \include;
-\lusbk_overlapped.h;                \include;
-\lusbk_usbio.h;                     \include;
-\..\license\AUTHORS-libusbK.txt;     @\license
-\..\license\AUTHORS-libusb0.txt;     @\license
-\..\license\LICENSE-bsd.txt;         @\license
-\..\license\LICENSE-gpl3.txt;        @\license
-\..\license\LICENSE-lpl3.txt;        @\license
+#
+##
+# Public libusbK header includes
+#
+\includes\lusbk_usb.h;                @\includes;
+\includes\lusbk_common.h;             @\includes;
+\includes\lusbk_dynamic.h;            @\includes;
+\includes\lusbk_linked_list.h;        @\includes;
+\includes\lusbk_device_list.h;        @\includes;
+\includes\lusbk_overlapped.h;         @\includes;
+\includes\lusbk_usbio.h;              @\includes;
+#
+#
+##
+# Example solutions, gcc make files and example dependencies
+#
+\..\examples\clean.cmd;                 @\examples;
+\..\examples\examples.mak;              @\examples;
+\..\examples\example.device-list.sln;   @\examples;
+\..\examples\example.h;                 @\examples;
+#
+# Example projects and c source files
+#
+# EXAMPLE: device-list 
+\..\examples\example.device-list.vcproj; @\examples;
+\..\examples\example-device-list.c;      @\examples;
+#
+#
+##
+# Licenses
+#
+\..\license\AUTHORS-libusbK.txt;     @\license;
+\..\license\AUTHORS-libusb0.txt;     @\license;
+\..\license\LICENSE-bsd.txt;         @\license;
+\..\license\LICENSE-gpl3.txt;        @\license;
+\..\license\LICENSE-lpl3.txt;        @\license;

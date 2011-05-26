@@ -20,7 +20,7 @@ CreateUninstallRegKey = IsTaskSelected('upgrader\sys') or IsTaskSelected('upgrad
 Uninstallable		  = IsTaskSelected('upgrader\sys') or IsTaskSelected('upgrader\dll') or IsTaskSelected('upgrader\libusb0sys')
 Compression			= lzma/ultra64
 SolidCompression	= yes
-OutputDir			= @G_BUILD_OUTPUT_BASE_ABS_DIR@
+OutputDir			= @G_PACKAGE_ABS_DIR@
 OutputBaseFilename	= @K_LIBUSBK_SETUP_NAME@
 PrivilegesRequired	= admin
 WizardSmallImageFile = @K_LIBUSBK_NAME@.bmp
@@ -128,32 +128,32 @@ Name: filter; Description: "Install a @K_LIBUSB0_NAME@ device filter. (advanced 
 [Files]
 ; ============================================================================
 ; ** @K_LIBUSBK_NAME@ x86 (Windows 2000/XP and greater)
-Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\sys\x86\@K_LIBUSBK_NAME@.sys"; DestDir: {sys}\drivers; Flags: uninsneveruninstall replacesameversion restartreplace promptifolder; Check: IsX86; Tasks: upgrader\sys;
+Source: "@K_PKG_BIN@\sys\x86\@K_LIBUSBK_NAME@.sys"; DestDir: {sys}\drivers; Flags: uninsneveruninstall replacesameversion restartreplace promptifolder; Check: IsX86; Tasks: upgrader\sys;
 Source: "@K_LIBUSB0_DEP_DIR@\bin\x86\@K_LIBUSB0_NAME@.sys"; DestDir: {sys}\drivers; Flags: uninsneveruninstall replacesameversion restartreplace promptifolder; Check: IsX86; Tasks: upgrader\libusb0sys;
 
 ; 32 bit program support
-Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\dll\x86\@K_LIBUSBK_NAME@.dll"; DestDir: {sys}; Flags: replacesameversion restartreplace promptifolder; Check: IsX86; Tasks: upgrader\dll;
-Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\dll\x86\@K_LIBUSB0_NAME@.dll"; DestDir: {sys}; Flags: replacesameversion restartreplace promptifolder; Check: IsX86; Tasks: upgrader\dll;
-Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\dll\x86\@K_LIBUSB10_NAME@.dll"; DestDir: {sys}; Flags: replacesameversion restartreplace promptifolder; Check: IsX86; Tasks: upgrader\dll;
+Source: "@K_PKG_BIN@\dll\x86\@K_LIBUSBK_NAME@.dll"; DestDir: {sys}; Flags: replacesameversion restartreplace promptifolder; Check: IsX86; Tasks: upgrader\dll;
+Source: "@K_PKG_BIN@\dll\x86\@K_LIBUSB0_NAME@.dll"; DestDir: {sys}; Flags: replacesameversion restartreplace promptifolder; Check: IsX86; Tasks: upgrader\dll;
+Source: "@K_PKG_BIN@\dll\x86\@K_LIBUSB10_NAME@.dll"; DestDir: {sys}; Flags: replacesameversion restartreplace promptifolder; Check: IsX86; Tasks: upgrader\dll;
 
 ; ============================================================================
 ; ** @K_LIBUSBK_NAME@ AMD 64bit
-Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\sys\amd64\@K_LIBUSBK_NAME@.sys"; DestDir: {sys}\drivers; Flags: uninsneveruninstall replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\sys;
+Source: "@K_PKG_BIN@\sys\amd64\@K_LIBUSBK_NAME@.sys"; DestDir: {sys}\drivers; Flags: uninsneveruninstall replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\sys;
 Source: "@K_LIBUSB0_DEP_DIR@\bin\amd64\@K_LIBUSB0_NAME@.sys"; DestDir: {sys}\drivers; Flags: uninsneveruninstall replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\libusb0sys;
 
 ; 32 bit program support
-Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\dll\x86\@K_LIBUSBK_NAME@.dll"; DestDir: {syswow64}; Flags: replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\dll;
-Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\dll\x86\@K_LIBUSB0_NAME@.dll"; DestDir: {syswow64}; Flags: replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\dll;
-Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\dll\x86\@K_LIBUSB10_NAME@.dll"; DestDir: {syswow64}; Flags: replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\dll;
+Source: "@K_PKG_BIN@\dll\x86\@K_LIBUSBK_NAME@.dll"; DestDir: {syswow64}; Flags: replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\dll;
+Source: "@K_PKG_BIN@\dll\x86\@K_LIBUSB0_NAME@.dll"; DestDir: {syswow64}; Flags: replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\dll;
+Source: "@K_PKG_BIN@\dll\x86\@K_LIBUSB10_NAME@.dll"; DestDir: {syswow64}; Flags: replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\dll;
 
 ; 64bit bit program support
-Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\dll\amd64\@K_LIBUSBK_NAME@.dll"; DestDir: {sys}; Flags: replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\dll;
-Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\dll\amd64\@K_LIBUSB0_NAME@.dll"; DestDir: {sys}; Flags: replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\dll;
-Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\dll\amd64\@K_LIBUSB10_NAME@.dll"; DestDir: {sys}; Flags: replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\dll;
+Source: "@K_PKG_BIN@\dll\amd64\@K_LIBUSBK_NAME@.dll"; DestDir: {sys}; Flags: replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\dll;
+Source: "@K_PKG_BIN@\dll\amd64\@K_LIBUSB0_NAME@.dll"; DestDir: {sys}; Flags: replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\dll;
+Source: "@K_PKG_BIN@\dll\amd64\@K_LIBUSB10_NAME@.dll"; DestDir: {sys}; Flags: replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\dll;
 
 ; ============================================================================
 ; ** @K_LIBUSBK_NAME@/@K_LIBUSB0_NAME@ inf-wizard
-Source: "@G_BUILD_OUTPUT_BASE_ABS_DIR@\@DDKBUILDENV@\@K_LIBUSBK_NAME@-inf-wizard.exe"; DestDir: {tmp}; Flags: deleteafterinstall; Tasks: installer;
+Source: "@K_PKG@\@K_LIBUSBK_NAME@-inf-wizard.exe"; DestDir: {tmp}; Flags: deleteafterinstall; Tasks: installer;
 
 ; ============================================================================
 ; ** @K_LIBUSB0_NAME@ filter installer
