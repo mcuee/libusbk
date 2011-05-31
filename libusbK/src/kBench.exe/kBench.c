@@ -3,8 +3,8 @@ libusbK - kBench USB benchmark/diagnostic tool.
 Copyright (C) 2011 All Rights Reserved.
 libusb-win32.sourceforge.net
 
-Development : Travis Robinson  (libusbdotnet@gmail.com)
-Testing     : Xiaofan Chen     (xiaofanc@gmail.com)
+Development : Travis Lee Robinson  (libusbdotnet@gmail.com)
+Testing     : Xiaofan Chen         (xiaofanc@gmail.com)
 
 At the discretion of the user of this library, this software may be
 licensed under the terms of the GNU Public License v3 or a BSD-Style
@@ -1774,5 +1774,5 @@ void ShowCopyright(void)
 	       RC_FILENAME_STR,
 	       RC_VERSION_STR,
 	       DEFINE_TO_STR(VERSION_DATE));
-	CONMSG0("Copyright (c) 2011 Travis Robinson. <libusbdotnet@gmail.com>\n");
+	CONMSG0("Copyright (c) 2011 Travis Lee Robinson. <libusbdotnet@gmail.com>\n");
 }

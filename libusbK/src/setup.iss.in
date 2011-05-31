@@ -1,6 +1,6 @@
 ; @K_LIBUSBK_NAME@ (KMDF) USB Library - installer/upgrader script
 ; 
-; Copyright (c) 2011 Travis Robinson <libusbdotnet@gmail.com>
+; Copyright (c) 2011 Travis Lee Robinson <libusbdotnet@gmail.com>
 ; All rights reserved.
 ; 
 ; Redistribution and use in source and binary forms, with or without
@@ -23,16 +23,16 @@
 ; 
 
 [Setup]
-AppName				= @K_LIBUSBK_NAME@
-AppVerName			= @K_LIBUSBK_NAME@ Development Kit Setup v@TARGET_VERSION@
-AppId				= @K_LIBUSBK_NAME@-Setup
-AppPublisher		= Travis Robinson 
+AppName				= @K_USBK_NAME@ Development Kit
+AppVerName			= @K_USBK_NAME@ Development Kit v@TARGET_VERSION@
+AppId				= @K_LIBUSBK_NAME@-dev-kit
+AppPublisher		= Travis Lee Robinson 
 AppPublisherURL		= http://libusb-win32.sourceforge.net
 AppVersion			= @TARGET_VERSION@
 VersionInfoVersion	= @TARGET_VERSION@
-DefaultDirName		= {sd}\@K_LIBUSBK_NAME@\@K_LIBUSBK_NAME@-@TARGET_VERSION@
-DefaultGroupName	= @K_LIBUSBK_NAME@ Development Kit
-UninstallFilesDir	= {pf}\@K_LIBUSBK_NAME@\@K_LIBUSBK_NAME@-@TARGET_VERSION@
+DefaultDirName		= {sd}\@K_LIBUSBK_NAME@-dev-kit
+DefaultGroupName	= @K_USBK_NAME@ Development Kit
+UninstallFilesDir	= {pf}\@K_LIBUSBK_NAME@-dev-kit
 Compression			= lzma/ultra64
 SolidCompression	= yes
 OutputDir			= @G_PACKAGE_ABS_DIR@
@@ -40,7 +40,6 @@ OutputBaseFilename	= @K_LIBUSBK_SETUP_NAME@
 PrivilegesRequired	= admin
 WizardSmallImageFile = @K_LIBUSBK_NAME@.bmp
 AllowNoIcons		= yes
-UsePreviousAppDir	= no
 
 ; requires Win2k, or higher (x86 or amd64 only)
 MinVersion						= 0, 5.0.2195 
@@ -124,9 +123,9 @@ begin
 end;
 
 [Components]
-Name: "devpackage"; Description: "@K_LIBUSBK_NAME@ Development Kit"; Types: full custom; Flags: exclusive;
-Name: "devpackage\examples"; Description: "@K_LIBUSBK_NAME@ Example Source Code"; Types: full custom;
-Name: "devpackage\chmhelp"; Description: "@K_LIBUSBK_NAME@ Documentation (.chm)"; Types: full custom;
+Name: "devpackage"; Description: "@K_USBK_NAME@ Development Kit"; Types: full custom; Flags: exclusive;
+Name: "devpackage\examples"; Description: "@K_USBK_NAME@ Example Source Code"; Types: full custom;
+Name: "devpackage\chmhelp"; Description: "@K_USBK_NAME@ Documentation (.chm)"; Types: full custom;
 
 [Tasks]
 Name: installer; Description: "Create and install a libusb-win32 device driver a package."; Flags: unchecked;
@@ -138,11 +137,12 @@ Name: filter; Description: "Install a @K_LIBUSB0_NAME@ device filter. (advanced 
 
 [Icons]
 ; these icons are only used in debug builds
-Name: "{group}\libusbK Documentation"; Filename: {app}\libusbK-help.chm; Flags: createonlyiffileexists; Components: devpackage\chmhelp;
 Name: "{group}\Example Source Code"; Filename: {app}\examples; Flags: foldershortcut; Components: devpackage\examples; 
-Name: "{group}\Driver Install Creator Wizard"; Filename: {app}\@K_LIBUSBK_NAME@-inf-wizard.exe; Flags: createonlyiffileexists;  Components: devpackage;
+Name: "{group}\@K_USBK_NAME@ License"; Filename: {app}\license\AUTHORS-@K_LIBUSBK_NAME@.txt; Flags: createonlyiffileexists; Components: devpackage; 
+Name: "{group}\@K_USBK_NAME@ Documentation"; Filename: {app}\@K_LIBUSBK_NAME@-help.chm; Flags: createonlyiffileexists; Components: devpackage\chmhelp;
 Name: "{group}\libusb-win32 Filter Wizard"; Filename: {app}\install-filter-win.exe; Flags: createonlyiffileexists;  Components: devpackage;
-Name: "{group}\Uninstall libusbK Development Kit"; Filename: "{uninstallexe}"
+Name: "{group}\Driver Install Creator Wizard"; Filename: {app}\@K_LIBUSBK_NAME@-inf-wizard.exe; Flags: createonlyiffileexists;  Components: devpackage;
+Name: "{group}\Uninstall @K_USBK_NAME@ Development Kit"; Filename: "{uninstallexe}"
 
 [Files]
 ; ============================================================================
@@ -181,10 +181,12 @@ Source: "@K_LIBUSB0_DEP_DIR@\bin\amd64\install-filter-win.exe"; DestDir: {app}; 
 
 ; ============================================================================
 ; ** documentation and examples
-Source: "@K_PKG@\libusbK-help.chm"; DestDir: {app}; Components: devpackage\chmhelp;
+Source: "@K_PKG@\@K_LIBUSBK_NAME@-help.chm"; DestDir: {app}; Components: devpackage\chmhelp;
+Source: "@K_PKG@\includes\*"; DestDir: {app}\includes; Components: devpackage\examples;
 Source: "@K_PKG@\examples\*"; Flags: recursesubdirs; DestDir: {app}\examples; Components: devpackage\examples;
-Source: "@K_PKG_BIN@\dll\libusbK*";  Flags: recursesubdirs; DestDir: {app}\bin\dll; Components: devpackage;
-Source: "@K_PKG_BIN@\lib\libusbK*";  Flags: recursesubdirs; DestDir: {app}\bin\lib; Components: devpackage;
+Source: "@K_PKG_BIN@\dll\@K_LIBUSBK_NAME@*";  Flags: recursesubdirs; DestDir: {app}\bin\dll; Components: devpackage\examples;
+Source: "@K_PKG_BIN@\lib\@K_LIBUSBK_NAME@*";  Flags: recursesubdirs; DestDir: {app}\bin\lib; Components: devpackage\examples;
+Source: "@K_PKG@\license\*"; Flags: recursesubdirs; DestDir: {app}\license;
 
 [Run]
 Filename: "{app}\@K_LIBUSBK_NAME@-inf-wizard.exe"; Parameters: "--no-welcome"; Description: "@K_LIBUSBK_NAME@ Driver Installer"; Flags: hidewizard runascurrentuser; Tasks: installer; AfterInstall: CheckInstallerResults;
