@@ -20,8 +20,6 @@
 #	device  device_name				<-- single tab
 #		interface  interface_name		<-- two tabs
 
-1234  Travis Robinson
-	0001  MCP Benchmark Device
 0001  Fry's Electronics
 	142b  Arbiter Systems, Inc.
 0002  Ingram
