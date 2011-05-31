@@ -2,9 +2,9 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9.00"
-	Name="example-device-list"
-	ProjectGUID="{C92C079A-D7DD-4780-B462-88B7E9105649}"
-	RootNamespace="exampledevicelist"
+	Name="show-device"
+	ProjectGUID="{19FFF11F-BBB4-342B-1921-E2E707A0AA8F}"
+	RootNamespace="show_device"
 	Keyword="Win32Proj"
 	TargetFrameworkVersion="196613"
 	>
@@ -20,7 +20,7 @@
 	</ToolFiles>
 	<Configurations>
 		<Configuration
-			Name="chk|Win32"
+			Name="Debug|Win32"
 			OutputDirectory="$(ProjectDir)$(ConfigurationName)\$(PlatformName)"
 			IntermediateDirectory="$(ConfigurationName)\$(PlatformName)"
 			ConfigurationType="1"
@@ -44,8 +44,8 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories=".\;..\;"
-				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;_WIN32_WINNT=0x501"
+				AdditionalIncludeDirectories=".\;..\;..\..\includes;"
+				PreprocessorDefinitions="_CRT_SECURE_NO_WARNINGS=1;WIN32;_DEBUG;_CONSOLE;_WIN32_WINNT=0x501"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -66,10 +66,10 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="libusbK.lib msvcrt.lib"
+				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib libusbK.lib"
 				Version="3.0.0.0"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="..\..\..\$(ConfigurationName)\lib\x86;..\..\..\chk\lib\x86;..\..\..\fre\lib\x86"
+				AdditionalLibraryDirectories="..\lib\x86;..\..\bin\lib\x86"
 				IgnoreAllDefaultLibraries="true"
 				GenerateDebugInformation="true"
 				SubSystem="1"
@@ -98,7 +98,7 @@
 			/>
 		</Configuration>
 		<Configuration
-			Name="chk|x64"
+			Name="Debug|x64"
 			OutputDirectory="$(ProjectDir)$(ConfigurationName)\$(PlatformName)"
 			IntermediateDirectory="$(ConfigurationName)\$(PlatformName)"
 			ConfigurationType="1"
@@ -123,8 +123,8 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories=".\;..\;"
-				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;_WIN32_WINNT=0x501"
+				AdditionalIncludeDirectories=".\;..\;..\..\includes;"
+				PreprocessorDefinitions="_CRT_SECURE_NO_WARNINGS=1;WIN32;_DEBUG;_CONSOLE;_WIN32_WINNT=0x501"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -145,10 +145,10 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="libusbK.lib msvcrt.lib"
+				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib libusbK.lib"
 				Version="3.0.0.0"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="..\..\..\$(ConfigurationName)\lib\amd64;..\..\..\chk\lib\amd64;..\..\..\fre\lib\amd64"
+				AdditionalLibraryDirectories="..\lib\amd64;..\..\bin\lib\amd64"
 				IgnoreAllDefaultLibraries="true"
 				GenerateDebugInformation="true"
 				SubSystem="1"
@@ -177,7 +177,7 @@
 			/>
 		</Configuration>
 		<Configuration
-			Name="fre|Win32"
+			Name="Release|Win32"
 			OutputDirectory="$(ProjectDir)$(ConfigurationName)\$(PlatformName)"
 			IntermediateDirectory="$(ConfigurationName)\$(PlatformName)"
 			ConfigurationType="1"
@@ -204,8 +204,8 @@
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
 				WholeProgramOptimization="true"
-				AdditionalIncludeDirectories=".\;..\;"
-				PreprocessorDefinitions="WIN32;_CONSOLE;_WIN32_WINNT=0x501"
+				AdditionalIncludeDirectories=".\;..\;..\..\includes;"
+				PreprocessorDefinitions="_CRT_SECURE_NO_WARNINGS=1;WIN32;_CONSOLE;_WIN32_WINNT=0x501"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="false"
 				UsePrecompiledHeader="0"
@@ -224,9 +224,9 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="libusbK.lib msvcrt.lib"
+				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib libusbK.lib"
 				Version="3.0.0.0"
-				AdditionalLibraryDirectories="..\..\..\$(ConfigurationName)\lib\x86;..\..\..\chk\lib\x86;..\..\..\fre\lib\x86"
+				AdditionalLibraryDirectories="..\lib\x86;..\..\bin\lib\x86"
 				IgnoreAllDefaultLibraries="true"
 				SubSystem="1"
 				TargetMachine="1"
@@ -254,7 +254,7 @@
 			/>
 		</Configuration>
 		<Configuration
-			Name="fre|x64"
+			Name="Release|x64"
 			OutputDirectory="$(ProjectDir)$(ConfigurationName)\$(PlatformName)"
 			IntermediateDirectory="$(ConfigurationName)\$(PlatformName)"
 			ConfigurationType="1"
@@ -282,8 +282,8 @@
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
 				WholeProgramOptimization="true"
-				AdditionalIncludeDirectories=".\;..\;"
-				PreprocessorDefinitions="WIN32;_CONSOLE;_WIN32_WINNT=0x501"
+				AdditionalIncludeDirectories=".\;..\;..\..\includes;"
+				PreprocessorDefinitions="_CRT_SECURE_NO_WARNINGS=1;WIN32;_CONSOLE;_WIN32_WINNT=0x501"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="false"
 				UsePrecompiledHeader="0"
@@ -302,9 +302,9 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="libusbK.lib msvcrt.lib"
+				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib libusbK.lib"
 				Version="3.0.0.0"
-				AdditionalLibraryDirectories="..\..\..\$(ConfigurationName)\lib\amd64;..\..\..\chk\lib\amd64;..\..\..\fre\lib\amd64"
+				AdditionalLibraryDirectories="..\lib\amd64;..\..\bin\lib\amd64"
 				IgnoreAllDefaultLibraries="true"
 				SubSystem="1"
 				TargetMachine="17"
@@ -341,45 +341,49 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\example-device-list.c"
+				RelativePath=".\show-device.c"
 				>
 			</File>
-		</Filter>
+			<File
+				RelativePath="..\examples.c"
+				>
+			</File>
+			</Filter>
 		<Filter
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath=".\example.h"
+				RelativePath="..\examples.h"
 				>
 			</File>
 			<File
-				RelativePath="..\lusbk_common.h"
+				RelativePath="..\..\includes\lusbk_common.h"
 				>
 			</File>
 			<File
-				RelativePath="..\lusbk_device_list.h"
+				RelativePath="..\..\includes\lusbk_device_list.h"
 				>
 			</File>
 			<File
-				RelativePath="..\lusbk_dynamic.h"
+				RelativePath="..\..\includes\lusbk_dynamic.h"
 				>
 			</File>
 			<File
-				RelativePath="..\lusbk_linked_list.h"
+				RelativePath="..\..\includes\lusbk_linked_list.h"
 				>
 			</File>
 			<File
-				RelativePath="..\lusbk_overlapped.h"
+				RelativePath="..\..\includes\lusbk_overlapped.h"
 				>
 			</File>
 			<File
-				RelativePath="..\lusbk_usb.h"
+				RelativePath="..\..\includes\lusbk_usb.h"
 				>
 			</File>
 			<File
-				RelativePath="..\lusbk_usbio.h"
+				RelativePath="..\..\includes\lusbk_usbio.h"
 				>
 			</File>
 		</Filter>

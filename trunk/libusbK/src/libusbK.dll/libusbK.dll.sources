@@ -20,7 +20,7 @@ TARGETLIBS=$(SDK_LIB_PATH)\kernel32.lib \
            $(SDK_LIB_PATH)\advapi32.lib \
            $(SDK_LIB_PATH)\user32.lib
 
-INCLUDES=.\;..\;..\includes;$(DDK_INC_PATH);$(INCLUDES)
+INCLUDES=.\;..\;..\..\includes;$(DDK_INC_PATH);$(INCLUDES)
 
 SOURCES=lusbk_dllmain.c \
 		lusbk_rc.rc \

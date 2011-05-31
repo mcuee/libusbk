@@ -619,16 +619,16 @@ WARN_LOGFILE           =
 # directories like "/usr/src/myproject". Separate the files or directories 
 # with spaces.
 
-INPUT                  = usbk_conceptual_documentation.h \
-                         ../src/includes/lusbk_common.h \
-                         ../src/includes/lusbk_dynamic.h \
-                         ../src/includes/lusbk_device_list.h \
-                         ../src/includes/lusbk_overlapped.h \
-                         ../src/includes/lusbk_dynamic.h \
-                         ../src/includes/lusbk_usb.h \
-                         ../src/includes/lusbk_linked_list.h \
-                         ../src/includes/lusbk_usbio.h \
-                         ../examples/example.h
+INPUT                  = usbk_conceptual_documentation.doc \
+                         ../includes/lusbk_common.h \
+                         ../includes/lusbk_dynamic.h \
+                         ../includes/lusbk_device_list.h \
+                         ../includes/lusbk_overlapped.h \
+                         ../includes/lusbk_dynamic.h \
+                         ../includes/lusbk_usb.h \
+                         ../includes/lusbk_linked_list.h \
+                         ../includes/lusbk_usbio.h \
+                         ../examples/examples.h
 
 # This tag can be used to specify the character encoding of the source files 
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding, which is 
@@ -703,7 +703,7 @@ EXAMPLE_PATTERNS       = *.c \
 # commands irrespective of the value of the RECURSIVE tag. 
 # Possible values are YES and NO. If left blank NO is used.
 
-EXAMPLE_RECURSIVE      = NO
+EXAMPLE_RECURSIVE      = YES
 
 # The IMAGE_PATH tag can be used to specify one or more files or 
 # directories that contain image that are included in the documentation (see 

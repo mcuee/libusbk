@@ -1235,7 +1235,7 @@ KUSB_EXP BOOL KUSB_API UsbK_Open(
 		              &backendContext->UsbStack,
 		              DeviceListItem->DevicePath,
 		              NULL,
-		              NULL);
+		              backendContext);
 	}
 
 	ErrorNoSet(!backendContext->UsbStack.DeviceCount, Error, "failed opening %s device. ErrorCode=%d",

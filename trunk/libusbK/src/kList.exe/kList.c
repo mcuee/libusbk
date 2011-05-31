@@ -382,10 +382,10 @@ BOOL GetRealConfigDescriptor(__in UCHAR Index,
                              __out PULONG LengthTransferred)
 {
 	WINUSB_SETUP_PACKET Pkt;
-	PUSB_DEFAULT_PIPE_SETUP_PACKET defPkt = (PUSB_DEFAULT_PIPE_SETUP_PACKET)&Pkt;
+	PKUSB_SETUP_PACKET defPkt = (PKUSB_SETUP_PACKET)&Pkt;
 
 	memset(&Pkt, 0, sizeof(Pkt));
-	defPkt->bmRequestType.Dir = BMREQUEST_DEVICE_TO_HOST;
+	defPkt->bmRequestType.BM.Dir = BMREQUEST_DEVICE_TO_HOST;
 	defPkt->bRequest = USB_REQUEST_GET_DESCRIPTOR;
 	defPkt->wValue.HiByte = USB_CONFIGURATION_DESCRIPTOR_TYPE;
 	defPkt->wValue.LowByte = Index;
@@ -784,13 +784,13 @@ BOOL DumpDescriptorHidReport(__in PHID_DESCRIPTOR desc,
 	PUCHAR reportBuffer = LocalAlloc(LPTR, reportLength);
 
 	WINUSB_SETUP_PACKET Pkt;
-	PUSB_DEFAULT_PIPE_SETUP_PACKET defPkt = (PUSB_DEFAULT_PIPE_SETUP_PACKET)&Pkt;
+	PKUSB_SETUP_PACKET defPkt = (PKUSB_SETUP_PACKET)&Pkt;
 
 	memset(&idContext, 0, sizeof(idContext));
 	memset(&Pkt, 0, sizeof(Pkt));
 
-	defPkt->bmRequestType.Dir = BMREQUEST_DEVICE_TO_HOST;
-	defPkt->bmRequestType.Recipient = BMREQUEST_TO_INTERFACE;
+	defPkt->bmRequestType.BM.Dir = BMREQUEST_DEVICE_TO_HOST;
+	defPkt->bmRequestType.BM.Recipient = BMREQUEST_TO_INTERFACE;
 
 	defPkt->bRequest = USB_REQUEST_GET_DESCRIPTOR;
 

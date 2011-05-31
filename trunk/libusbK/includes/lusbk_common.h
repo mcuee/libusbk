@@ -22,19 +22,22 @@
 #include <stddef.h>
 #include <objbase.h>
 
+
+#include <specstrings.h>
+
 #ifndef __deref_inout
 
-#define __in
-#define __in_opt
-#define __deref_in
+#define __in				SAL__in
+#define __in_opt			SAL__in_opt
+#define __deref_in			SAL__deref_in
 
-#define __out
-#define __out_opt
-#define __deref_out
+#define __out				SAL__out
+#define __out_opt			SAL__out_opt
+#define __deref_out			SAL__deref_out
 
-#define __inout
-#define __inout_opt
-#define __deref_inout
+#define __inout				SAL__inout
+#define __inout_opt			SAL__inout_opt
+#define __deref_inout		SAL__deref_inout
 
 #endif
 
@@ -74,6 +77,12 @@ typedef INT_PTR (FAR WINAPI* KPROC)();
 #pragma warning(disable:4201)
 #include <pshpack1.h>
 
+#if _MSC_VER >= 1200
+#pragma warning(push)
+#endif
+#pragma warning (disable:4201)
+#pragma warning(disable:4214) // named type definition in parentheses
+
 //! Represents 32 bytes of user defined storage space.
 /*!
 * Most libusbK device objects contain additional stoarge space
@@ -93,12 +102,83 @@ typedef struct _KUSB_USER_CONTEXT
 		ULONG_PTR	Ptr[KUSB_CONTEXT_SIZE / sizeof(__int64)];
 	};
 } KUSB_USER_CONTEXT;
-
 //! pointer to a \c KUSB_USER_CONTEXT
 typedef KUSB_USER_CONTEXT* PKUSB_USER_CONTEXT;
 
+typedef union _KUSB_BM_REQUEST_TYPE
+{
+	struct _BM
+	{
+		UCHAR   Recipient: 2;
+		UCHAR   Reserved: 3;
+		UCHAR   Type: 2;
+		UCHAR   Dir: 1;
+	} BM;
+	UCHAR B;
+} KUSB_BM_REQUEST_TYPE;
+//! pointer to a \c KUSB_BM_REQUEST_TYPE
+typedef KUSB_BM_REQUEST_TYPE* PKUSB_BM_REQUEST_TYPE;
+
+//! USB control setup packet
+/*!
+* This structure is identical in size to a \ref WINUSB_SETUP_PACKET,
+* but provides additional user friendly members.
+*/
+typedef struct _KUSB_SETUP_PACKET
+{
+	//! Request value
+	KUSB_BM_REQUEST_TYPE bmRequestType;
+
+
+	//! Request type value
+	UCHAR bRequest;
+
+	//! Unionized wValue
+	union _wValue
+	{
+		//! wValue structure
+		struct
+		{
+			//! Low byte of \c wValue
+			UCHAR LowByte;
+			//! High byte of \c wValue
+			UCHAR HiByte;
+		};
+
+		//! wValue ushort value
+		USHORT W;
+	} wValue;
+
+	//! Unionized wIndex
+	union _wIndex
+	{
+		//! wIndex structure
+		struct
+		{
+			//! Low byte of \c wIndex
+			UCHAR LowByte;
+			//! High byte of \c wIndex
+			UCHAR HiByte;
+		};
+
+		//! wIndex ushort value
+		USHORT W;
+	} wIndex;
+
+	//! wLength ushort value
+	USHORT wLength;
+
+} KUSB_SETUP_PACKET;
+//! pointer to a \c KUSB_SETUP_PACKET
+typedef KUSB_SETUP_PACKET* PKUSB_SETUP_PACKET;
+// setup packet is eight bytes -- defined by spec
+C_ASSERT(sizeof(KUSB_SETUP_PACKET) == 8);
+
+#if _MSC_VER >= 1200
+#pragma warning(pop)
+#endif
+
 #include <poppack.h>
-#pragma warning(default:4201)
 
 //! libusbK interfacing handle.
 /*!
@@ -219,7 +299,7 @@ enum USB_DESCRIPTOR_TYPE_ENUM
 	USB_INTERFACE_ASSOCIATION_DESCRIPTOR_TYPE = 0x0B,
 };
 
-//! Makes the \ref USB_DEFAULT_PIPE_SETUP_PACKET::_wValue for a \ref USB_REQUEST_GET_DESCRIPTOR or \ref USB_REQUEST_SET_DESCRIPTOR request.
+//! Makes the \ref KUSB_SETUP_PACKET::_wValue for a \ref USB_REQUEST_GET_DESCRIPTOR or \ref USB_REQUEST_SET_DESCRIPTOR request.
 #define USB_DESCRIPTOR_MAKE_TYPE_AND_INDEX(d, i)	\
 	((USHORT)((USHORT)d<<8 | i))
 
@@ -572,75 +652,6 @@ typedef USB_COMMON_DESCRIPTOR* PUSB_COMMON_DESCRIPTOR;
 #endif
 #pragma warning (disable:4201)
 #pragma warning(disable:4214) // named type definition in parentheses
-
-typedef union _BM_REQUEST_TYPE
-{
-	struct _BM
-	{
-		UCHAR   Recipient: 2;
-		UCHAR   Reserved: 3;
-		UCHAR   Type: 2;
-		UCHAR   Dir: 1;
-	};
-	UCHAR B;
-} BM_REQUEST_TYPE;
-//! pointer to a \c BM_REQUEST_TYPE
-typedef BM_REQUEST_TYPE* PBM_REQUEST_TYPE;
-
-//! USB control setup packet
-/*!
-* This structure is identical to a \ref WINUSB_SETUP_PACKET,
-* but provides additional user friendly members.
-*/
-typedef struct _USB_DEFAULT_PIPE_SETUP_PACKET
-{
-	//! Request value
-	BM_REQUEST_TYPE bmRequestType;
-
-
-	//! Request type value
-	UCHAR bRequest;
-
-	//! Unionized wValue
-	union _wValue
-	{
-		//! wValue structure
-		struct
-		{
-			//! Low byte of \c wValue
-			UCHAR LowByte;
-			//! High byte of \c wValue
-			UCHAR HiByte;
-		};
-
-		//! wValue ushort value
-		USHORT W;
-	} wValue;
-
-	//! Unionized wIndex
-	union _wIndex
-	{
-		//! wIndex structure
-		struct
-		{
-			//! Low byte of \c wIndex
-			UCHAR LowByte;
-			//! High byte of \c wIndex
-			UCHAR HiByte;
-		};
-
-		//! wIndex ushort value
-		USHORT W;
-	} wIndex;
-
-	//! wLength ushort value
-	USHORT wLength;
-
-} USB_DEFAULT_PIPE_SETUP_PACKET;
-//! pointer to a \c USB_DEFAULT_PIPE_SETUP_PACKET
-typedef USB_DEFAULT_PIPE_SETUP_PACKET* PUSB_DEFAULT_PIPE_SETUP_PACKET;
-// setup packet is eight bytes -- defined by spec
-C_ASSERT(sizeof(USB_DEFAULT_PIPE_SETUP_PACKET) == 8);
 
 //! The ECN specifies a USB descriptor, called the Interface Association
 //! Descriptor (IAD), that allows hardware manufacturers to define groupings

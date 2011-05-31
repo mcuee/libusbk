@@ -8,7 +8,10 @@ REM - _BUILDARCH = x86, amd64, or ia64
 REM - G_TARGET_OUTPUT_ARCH = i386,  amd64, or ia64
 REM
 
-IF /I "!G_DIST!" NEQ "finalize" goto Done
+IF /I "!G_DIST!" NEQ "finalize" (
+	IF /I "!_BUILDARCH!" EQU "x86" CALL :DistFixup
+	goto Done
+)
 
 IF EXIST "!K_LIBUSB10_DEP_DIR!" IF EXIST "!K_LIBUSB0_DEP_DIR!" (
 	PUSHD !CD!
@@ -57,6 +60,17 @@ IF EXIST "!K_LIBUSB10_DEP_DIR!" IF EXIST "!K_LIBUSB0_DEP_DIR!" (
 :Done
 GOTO :EOF
 
+:DistFixup
+	REM - Get rid of those i386 dirs.
+	CALL :RenameOutputSubDirs "\sys\i386" "\sys\x86" "\lib\i386" "\lib\x86" "\dll\i386" "\dll\x86" "\exe\i386" "\exe\x86"
+	
+	REM - The lib dir contains the static libs; move these into a static subdir.
+	CALL :MoveOutputFiles "\lib\x86\*.lib" "\lib\static\x86" "\lib\amd64\*.lib" "\lib\static\amd64" "\lib\ia64\*.lib" "\lib\static\ia64"
+	
+	REM - Move the dynamic .lib files to the lib dir.
+	CALL :MoveOutputFiles "\dll\x86\*.lib" "\lib\x86" "\dll\amd64\*.lib" "\lib\amd64" "\dll\ia64\*.lib" "\lib\ia64"
+GOTO :EOF
+
 :FinalizeDistribution
 	ECHO [FinalizeDistribution]
 	ECHO.
@@ -68,14 +82,7 @@ GOTO :EOF
 	DEL /S /Q !G_BUILD_OUTPUT_BASE_ABS_DIR!\dll\*.pdb
 	DEL /S /Q !G_BUILD_OUTPUT_BASE_ABS_DIR!\*.exp
 
-	REM - Get rid of those i386 dirs.
-	CALL :RenameOutputSubDirs "\sys\i386" "\sys\x86" "\lib\i386" "\lib\x86" "\dll\i386" "\dll\x86" "\exe\i386" "\exe\x86"
-	
-	REM - The lib dir contains the static libs; move these into a static subdir.
-	CALL :MoveOutputFiles "\lib\x86\*.lib" "\lib\static\x86" "\lib\amd64\*.lib" "\lib\static\amd64" "\lib\ia64\*.lib" "\lib\static\ia64"
-	
-	REM - Move the dynamic .lib files to the lib dir.
-	CALL :MoveOutputFiles "\dll\x86\*.lib" "\lib\x86" "\dll\amd64\*.lib" "\lib\amd64" "\dll\ia64\*.lib" "\lib\ia64"
+	CALL :DistFixup
 	
 	REM - Copy the entire binary tree to K_PKG_BIN
 	XCOPY "!G_BUILD_OUTPUT_BASE_ABS_DIR!\*" "!K_PKG_BIN!" /S /I /Y
@@ -120,6 +127,11 @@ GOTO :EOF
 		GOTO :EOF
 	)
 	COPY /Y "!K_LIBWDI_DIR!\examples\inf-wizard.exe" "!K_PKG!\libusbK-inf-wizard.exe"
+	
+	PUSHD !CD!
+	CD .\doc
+	CALL make_dist_docs.cmd
+	POPD
 	
 	SET TOKVAR_LTAG=@
 	SET TOKVAR_RTAG=@

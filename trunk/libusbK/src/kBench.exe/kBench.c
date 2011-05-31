@@ -444,11 +444,11 @@ BOOL Bench_Configure(__in LIBUSBK_INTERFACE_HANDLE handle,
 	UCHAR buffer[1];
 	DWORD transferred = 0;
 	WINUSB_SETUP_PACKET Pkt;
-	PUSB_DEFAULT_PIPE_SETUP_PACKET defPkt = (PUSB_DEFAULT_PIPE_SETUP_PACKET)&Pkt;
+	PKUSB_SETUP_PACKET defPkt = (PKUSB_SETUP_PACKET)&Pkt;
 
 	memset(&Pkt, 0, sizeof(Pkt));
-	defPkt->bmRequestType.Dir = BMREQUEST_DEVICE_TO_HOST;
-	defPkt->bmRequestType.Type = BMREQUEST_VENDOR;
+	defPkt->bmRequestType.BM.Dir = BMREQUEST_DEVICE_TO_HOST;
+	defPkt->bmRequestType.BM.Type = BMREQUEST_VENDOR;
 	defPkt->bRequest = (UCHAR)command;
 	defPkt->wValue.W = (UCHAR) * testType;
 	defPkt->wIndex.W = intf;

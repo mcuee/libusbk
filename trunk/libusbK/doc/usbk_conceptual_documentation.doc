@@ -1,12 +1,5 @@
 /*! \mainpage libusbK Home
 
-<TABLE>
-<TR>
-	<TH><B>libusbK Author</B>: <TT>Travis Lee Robinson</TT></TH>
-	<TH><B>Version</B>: <TT>3.0</TT></TH>
-	<TH><B>Date</B>: <TT>2011</TT></TH>
-</TR>
-</TABLE>
 <IMG src="ftv2folderclosed.png" style="display: none" />
 <IMG src="ftv2folderopen.png" style="display: none" />
 <IMG src="ftv2mnode.png" style="display: none" />
@@ -16,7 +9,7 @@
 <IMG src="ftv2vertline.png" style="display: none" />
 <IMG src="ftv2node.png" style="display: none" />
 <IMG src="ftv2blank.png" style="display: none" />
-
+<H1>libusbK USB Library and Driver Documentation</H1>
 - \subpage usbk_about
   <BR>Explanation of the libusbK project, the user mode library, and its \ref usbk_drivers.
   <HR>
@@ -391,10 +384,35 @@ make.cmd clean=full
 
 //! Building with a <A href="http://msdn.microsoft.com/en-us/windows/hardware/gg487463">Windows Driver Kit</A>.
 /*! \page usbk_building_wdk Building with WDK
+libusbK source code and examples can be built with WDK in the same way as WDK examples:
+- From the start menu, locate the <TT>Windows Driver Kits</TT> folder and open the desired build environment command prompt.\n
+  e.g. <TT>Windows XP x86 Free Build Environment</TT>
+- Navigvate to any folder with a \b sources file and execute the WDK \c build application.
+  - This is also any folder with a \b .sln solution file or \b .vcproj project file.
+
+\par Build all libusbK modules (dll,lib,sys,kList,kBench)
+\verbatim
+cd \libusbK-3.0.2.4-src
+build /cegZ
+\endverbatim
+
+\par Build libusbK.dll only
+\verbatim
+cd \libusbK-3.0.2.4-src\src\libusbK.dll
+build /cegZ
+\endverbatim
+  
+MSDN Link: <A href="http://msdn.microsoft.com/en-us/library/ff542420%28v=VS.85%29.aspx" target="kMSDN">Build Utility Command-Line Parameters</A>
 */
 
 //! Building with Microsoft Visual Studios 2008/2010/Express Editions.
 /*! \page usbk_building_msvc Building with MSVC
+
+Visual Studio solution and project files are included for all libusbK modules and examples.
+\attention
+The libusbK driver can only be built with WDK.  A Visual Studio project file exist but it is
+a \c makefile project which uses \c make.cmd for it's building tasks. See \ref usbk_building_make_cmd
+
 */
 
 //! Where to begin and how to get started writing your new libusbK based application.

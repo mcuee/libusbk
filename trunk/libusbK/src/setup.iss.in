@@ -1,29 +1,46 @@
 ; @K_LIBUSBK_NAME@ (KMDF) USB Library - installer/upgrader script
+; 
 ; Copyright (c) 2011 Travis Robinson <libusbdotnet@gmail.com>
-; ============================================================================
+; All rights reserved.
+; 
+; Redistribution and use in source and binary forms, with or without
+; modification, are permitted provided that the following conditions are met:
+; 
+;     * Redistributions of source code must retain the above copyright
+;       notice, this list of conditions and the following disclaimer.
+; 	  
+; THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS 
+; IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED 
+; TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A 
+; PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL TRAVIS LEE ROBINSON 
+; BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+; CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF 
+; SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+; INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN 
+; CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
+; ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF 
+; THE POSSIBILITY OF SUCH DAMAGE. 
+; 
 
 [Setup]
 AppName				= @K_LIBUSBK_NAME@
-AppVerName			= @K_LIBUSBK_NAME@-Installer v@TARGET_VERSION@
-AppId				= @K_LIBUSBK_NAME@-Installer
+AppVerName			= @K_LIBUSBK_NAME@ Development Kit Setup v@TARGET_VERSION@
+AppId				= @K_LIBUSBK_NAME@-Setup
 AppPublisher		= Travis Robinson 
 AppPublisherURL		= http://libusb-win32.sourceforge.net
 AppVersion			= @TARGET_VERSION@
 VersionInfoVersion	= @TARGET_VERSION@
-DefaultDirName		= {cf}\@K_LIBUSBK_NAME@-Installer
-UninstallFilesDir	= {cf}\@K_LIBUSBK_NAME@-Installer
-DisableFinishedPage = no
-DisableDirPage		= yes
-DisableReadyPage	= yes
-UninstallLogMode    = overwrite
-CreateUninstallRegKey = IsTaskSelected('upgrader\sys') or IsTaskSelected('upgrader\dll') or IsTaskSelected('upgrader\libusb0sys')
-Uninstallable		  = IsTaskSelected('upgrader\sys') or IsTaskSelected('upgrader\dll') or IsTaskSelected('upgrader\libusb0sys')
+DefaultDirName		= {sd}\@K_LIBUSBK_NAME@\@K_LIBUSBK_NAME@-@TARGET_VERSION@
+DefaultGroupName	= @K_LIBUSBK_NAME@ Development Kit
+UninstallFilesDir	= {pf}\@K_LIBUSBK_NAME@\@K_LIBUSBK_NAME@-@TARGET_VERSION@
 Compression			= lzma/ultra64
 SolidCompression	= yes
 OutputDir			= @G_PACKAGE_ABS_DIR@
 OutputBaseFilename	= @K_LIBUSBK_SETUP_NAME@
 PrivilegesRequired	= admin
 WizardSmallImageFile = @K_LIBUSBK_NAME@.bmp
+AllowNoIcons		= yes
+UsePreviousAppDir	= no
 
 ; requires Win2k, or higher (x86 or amd64 only)
 MinVersion						= 0, 5.0.2195 
@@ -103,27 +120,29 @@ function ShouldSkipPage(PageID: Integer): Boolean;
 begin
   Result := false;
   if PageID=wpFinished then
-    Result := IsTaskSelected('installer');
+    Result := IsTaskSelected('installer') and not IsComponentSelected('programIcons');
 end;
 
-function NextButtonClick(CurPageID: Integer): Boolean;
-begin
-  Result := true;
-  if CurPageID = wpSelectTasks then begin
-    if not IsTaskSelected('installer') and not IsTaskSelected('upgrader\sys') and not IsTaskSelected('upgrader\dll') and not IsTaskSelected('filter') then begin
-      MsgBox('No tasks selected.',mbError, MB_OK);
-      Result := false;
-    end;
-  end;
-end;
+[Components]
+Name: "devpackage"; Description: "@K_LIBUSBK_NAME@ Development Kit"; Types: full custom; Flags: exclusive;
+Name: "devpackage\examples"; Description: "@K_LIBUSBK_NAME@ Example Source Code"; Types: full custom;
+Name: "devpackage\chmhelp"; Description: "@K_LIBUSBK_NAME@ Documentation (.chm)"; Types: full custom;
 
 [Tasks]
-Name: installer; Description: "Create and install a libusb-win32 device driver a package."; Flags: exclusive;
-Name: upgrader;  Description: "Upgrade libusb-win32 components"; Flags: exclusive;
+Name: installer; Description: "Create and install a libusb-win32 device driver a package."; Flags: unchecked;
+Name: upgrader;  Description: "Upgrade libusb-win32 components"; Flags: unchecked;
 Name: upgrader\sys;  Description: "Driver (@K_LIBUSBK_NAME@.sys)";
 Name: upgrader\libusb0sys;  Description: "Driver (@K_LIBUSB0_NAME@.sys)";
 Name: upgrader\dll;  Description: "User libraries (@K_LIBUSBK_NAME@, @K_LIBUSB10_NAME@, @K_LIBUSB0_NAME@)";
-Name: filter; Description: "Install a @K_LIBUSB0_NAME@ device filter. (advanced users)"; Flags: exclusive;
+Name: filter; Description: "Install a @K_LIBUSB0_NAME@ device filter. (advanced users)"; Flags: unchecked;
+
+[Icons]
+; these icons are only used in debug builds
+Name: "{group}\libusbK Documentation"; Filename: {app}\libusbK-help.chm; Flags: createonlyiffileexists; Components: devpackage\chmhelp;
+Name: "{group}\Example Source Code"; Filename: {app}\examples; Flags: foldershortcut; Components: devpackage\examples; 
+Name: "{group}\Driver Install Creator Wizard"; Filename: {app}\@K_LIBUSBK_NAME@-inf-wizard.exe; Flags: createonlyiffileexists;  Components: devpackage;
+Name: "{group}\libusb-win32 Filter Wizard"; Filename: {app}\install-filter-win.exe; Flags: createonlyiffileexists;  Components: devpackage;
+Name: "{group}\Uninstall libusbK Development Kit"; Filename: "{uninstallexe}"
 
 [Files]
 ; ============================================================================
@@ -153,15 +172,22 @@ Source: "@K_PKG_BIN@\dll\amd64\@K_LIBUSB10_NAME@.dll"; DestDir: {sys}; Flags: re
 
 ; ============================================================================
 ; ** @K_LIBUSBK_NAME@/@K_LIBUSB0_NAME@ inf-wizard
-Source: "@K_PKG@\@K_LIBUSBK_NAME@-inf-wizard.exe"; DestDir: {tmp}; Flags: deleteafterinstall; Tasks: installer;
+Source: "@K_PKG@\@K_LIBUSBK_NAME@-inf-wizard.exe"; DestDir: {app}; Components: devpackage;
 
 ; ============================================================================
 ; ** @K_LIBUSB0_NAME@ filter installer
-Source: "@K_LIBUSB0_DEP_DIR@\bin\x86\install-filter-win.exe"; DestDir: {tmp}; Flags: deleteafterinstall; Check: IsX86; Tasks: filter;
-Source: "@K_LIBUSB0_DEP_DIR@\bin\amd64\install-filter-win.exe"; DestDir: {tmp}; Flags: deleteafterinstall; Check: IsX64; Tasks: filter;
+Source: "@K_LIBUSB0_DEP_DIR@\bin\x86\install-filter-win.exe"; DestDir: {app}; Check: IsX86; Components: devpackage;
+Source: "@K_LIBUSB0_DEP_DIR@\bin\amd64\install-filter-win.exe"; DestDir: {app}; Check: IsX64; Components: devpackage;
+
+; ============================================================================
+; ** documentation and examples
+Source: "@K_PKG@\libusbK-help.chm"; DestDir: {app}; Components: devpackage\chmhelp;
+Source: "@K_PKG@\examples\*"; Flags: recursesubdirs; DestDir: {app}\examples; Components: devpackage\examples;
+Source: "@K_PKG_BIN@\dll\libusbK*";  Flags: recursesubdirs; DestDir: {app}\bin\dll; Components: devpackage;
+Source: "@K_PKG_BIN@\lib\libusbK*";  Flags: recursesubdirs; DestDir: {app}\bin\lib; Components: devpackage;
 
 [Run]
-Filename: "{tmp}\@K_LIBUSBK_NAME@-inf-wizard.exe"; Parameters: "--no-welcome"; Description: "@K_LIBUSBK_NAME@ Driver Installer"; Flags: hidewizard runascurrentuser; Tasks: installer; AfterInstall: CheckInstallerResults;
-Filename: "{tmp}\install-filter-win.exe"; Description: "@K_LIBUSB0_NAME@ Filter Installer"; Flags: hidewizard runascurrentuser; Tasks: filter;
+Filename: "{app}\@K_LIBUSBK_NAME@-inf-wizard.exe"; Parameters: "--no-welcome"; Description: "@K_LIBUSBK_NAME@ Driver Installer"; Flags: hidewizard runascurrentuser; Tasks: installer; AfterInstall: CheckInstallerResults;
+Filename: "{app}\install-filter-win.exe"; Description: "@K_LIBUSB0_NAME@ Filter Installer"; Flags: hidewizard runascurrentuser; Tasks: filter;
 
 

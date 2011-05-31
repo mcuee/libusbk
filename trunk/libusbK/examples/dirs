@@ -1,0 +1,3 @@
+DIRS= \
+     open-device \
+     show-device

@@ -1,6 +1,6 @@
-#include "example.h"
+#include "examples.h"
 
-int main(int argc, char* argv[])
+int __cdecl main(int argc, char* argv[])
 {
 	PKUSB_DEV_LIST headEL = NULL;
 	PKUSB_DEV_LIST itemEL = NULL;
