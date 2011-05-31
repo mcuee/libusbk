@@ -21,6 +21,6 @@ TARGETLIBS=$(SDK_LIB_PATH)\kernel32.lib \
            $(SDK_LIB_PATH)\user32.lib \
 		   $(TARGET_OUTPUT_BASE_DIR)\lib\$(WDK_OUTPUT_SUBDIR)\libusbK.lib
 		   
-INCLUDES=.\;..\;..\includes;$(DDK_INC_PATH);$(INCLUDES)
+INCLUDES=.\;..\;..\..\includes;$(DDK_INC_PATH);$(INCLUDES)
 
 SOURCES=kList_rc.rc kList.c UsbIds.c

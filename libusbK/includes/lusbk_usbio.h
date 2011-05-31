@@ -57,7 +57,7 @@ C_ASSERT(sizeof(WINUSB_PIPE_INFORMATION) == 12);
 
 ///! The \c WINUSB_SETUP_PACKET structure describes a USB setup packet.
 /*!
-* It is often more convient to use this structure in combination with a \ref USB_DEFAULT_PIPE_SETUP_PACKET.
+* It is often more convient to use this structure in combination with a \ref KUSB_SETUP_PACKET.
 * For example:
 * \code
 

@@ -43,7 +43,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories=".\;..\;..\includes"
+				AdditionalIncludeDirectories=".\;..\;..\..\includes"
 				PreprocessorDefinitions="_WIN32_WINNT=0x0500;_DEBUG=1"
 				ExceptionHandling="0"
 				BasicRuntimeChecks="3"
@@ -108,7 +108,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories=".\;..\;..\includes"
+				AdditionalIncludeDirectories=".\;..\;..\..\includes"
 				PreprocessorDefinitions="_DEBUG=1;_WIN64"
 				ExceptionHandling="0"
 				BasicRuntimeChecks="3"
@@ -175,7 +175,7 @@
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
-				AdditionalIncludeDirectories=".\;..\;..\includes"
+				AdditionalIncludeDirectories=".\;..\;..\..\includes"
 				PreprocessorDefinitions="_WIN32_WINNT=0x0500"
 				ExceptionHandling="0"
 				RuntimeLibrary="2"
@@ -242,7 +242,7 @@
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
-				AdditionalIncludeDirectories=".\;..\;..\includes"
+				AdditionalIncludeDirectories=".\;..\;..\..\includes"
 				PreprocessorDefinitions="_WIN64"
 				ExceptionHandling="0"
 				RuntimeLibrary="2"
@@ -386,31 +386,31 @@
 			Name="Public Headers"
 			>
 			<File
-				RelativePath="..\includes\lusbk_common.h"
+				RelativePath="..\..\includes\lusbk_common.h"
 				>
 			</File>
 			<File
-				RelativePath="..\includes\lusbk_device_list.h"
+				RelativePath="..\..\includes\lusbk_device_list.h"
 				>
 			</File>
 			<File
-				RelativePath="..\includes\lusbk_dynamic.h"
+				RelativePath="..\..\includes\lusbk_dynamic.h"
 				>
 			</File>
 			<File
-				RelativePath="..\includes\lusbk_linked_list.h"
+				RelativePath="..\..\includes\lusbk_linked_list.h"
 				>
 			</File>
 			<File
-				RelativePath="..\includes\lusbk_overlapped.h"
+				RelativePath="..\..\includes\lusbk_overlapped.h"
 				>
 			</File>
 			<File
-				RelativePath="..\includes\lusbk_usb.h"
+				RelativePath="..\..\includes\lusbk_usb.h"
 				>
 			</File>
 			<File
-				RelativePath="..\includes\lusbk_usbio.h"
+				RelativePath="..\..\includes\lusbk_usbio.h"
 				>
 			</File>
 		</Filter>

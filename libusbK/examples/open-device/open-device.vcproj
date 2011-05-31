@@ -2,9 +2,9 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9.00"
-	Name="kList.exe"
-	ProjectGUID="{046C67B6-9D81-473F-8FD4-D67C9EB18B99}"
-	RootNamespace="kList"
+	Name="open-device"
+	ProjectGUID="{19FFF11F-D99D-197D-1921-E2E77A673646}"
+	RootNamespace="open_device"
 	Keyword="Win32Proj"
 	TargetFrameworkVersion="196613"
 	>
@@ -21,8 +21,8 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="$(SolutionDir)bin\$(ConfigurationName)\$(ProjectName)\$(PlatformName)"
-			IntermediateDirectory="$(SolutionDir)bin\$(ConfigurationName)\$(ProjectName)\$(PlatformName)"
+			OutputDirectory="$(ProjectDir)$(ConfigurationName)\$(PlatformName)"
+			IntermediateDirectory="$(ConfigurationName)\$(PlatformName)"
 			ConfigurationType="1"
 			CharacterSet="1"
 			>
@@ -44,17 +44,16 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories=".\;..\;..\..\includes"
-				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS"
+				AdditionalIncludeDirectories=".\;..\;..\..\includes;"
+				PreprocessorDefinitions="_CRT_SECURE_NO_WARNINGS=1;WIN32;_DEBUG;_CONSOLE;_WIN32_WINNT=0x501"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
+				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="0"
-				WarningLevel="4"
+				WarningLevel="3"
 				DebugInformationFormat="4"
-				CallingConvention="0"
 				CompileAs="1"
-				ForcedIncludeFiles=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -67,11 +66,11 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib advapi32.lib setupapi.lib $(NOINHERIT)"
-				OutputFile="$(OutDir)\$(ProjectName)"
+				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib libusbK.lib"
+				Version="3.0.0.0"
 				LinkIncremental="2"
+				AdditionalLibraryDirectories="..\lib\x86;..\..\bin\lib\x86"
 				IgnoreAllDefaultLibraries="true"
-				IgnoreDefaultLibraryNames=""
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				TargetMachine="1"
@@ -100,8 +99,8 @@
 		</Configuration>
 		<Configuration
 			Name="Debug|x64"
-			OutputDirectory="$(SolutionDir)bin\$(ConfigurationName)\$(ProjectName)\$(PlatformName)"
-			IntermediateDirectory="$(SolutionDir)bin\$(ConfigurationName)\$(ProjectName)\$(PlatformName)"
+			OutputDirectory="$(ProjectDir)$(ConfigurationName)\$(PlatformName)"
+			IntermediateDirectory="$(ConfigurationName)\$(PlatformName)"
 			ConfigurationType="1"
 			CharacterSet="1"
 			>
@@ -124,18 +123,16 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories=".\;..\;..\..\includes"
-				PreprocessorDefinitions="_DEBUG;_CONSOLE;_WIN64;_CRT_SECURE_NO_WARNINGS"
-				MinimalRebuild="false"
-				ExceptionHandling="0"
-				BasicRuntimeChecks="0"
+				AdditionalIncludeDirectories=".\;..\;..\..\includes;"
+				PreprocessorDefinitions="_CRT_SECURE_NO_WARNINGS=1;WIN32;_DEBUG;_CONSOLE;_WIN32_WINNT=0x501"
+				MinimalRebuild="true"
+				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
+				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="0"
-				WarningLevel="4"
+				WarningLevel="3"
 				DebugInformationFormat="3"
-				CallingConvention="0"
 				CompileAs="1"
-				ForcedIncludeFiles=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -148,11 +145,11 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib advapi32.lib setupapi.lib $(NOINHERIT)"
-				OutputFile="$(OutDir)\$(ProjectName)"
+				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib libusbK.lib"
+				Version="3.0.0.0"
 				LinkIncremental="2"
+				AdditionalLibraryDirectories="..\lib\amd64;..\..\bin\lib\amd64"
 				IgnoreAllDefaultLibraries="true"
-				IgnoreDefaultLibraryNames=""
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				TargetMachine="17"
@@ -181,11 +178,10 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="$(SolutionDir)bin\$(ConfigurationName)\$(ProjectName)\$(PlatformName)"
-			IntermediateDirectory="$(SolutionDir)bin\$(ConfigurationName)\$(ProjectName)\$(PlatformName)"
+			OutputDirectory="$(ProjectDir)$(ConfigurationName)\$(PlatformName)"
+			IntermediateDirectory="$(ConfigurationName)\$(PlatformName)"
 			ConfigurationType="1"
 			CharacterSet="1"
-			WholeProgramOptimization="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -204,19 +200,18 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="2"
+				InlineFunctionExpansion="2"
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
-				AdditionalIncludeDirectories=".\;..\;..\..\includes"
-				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS"
-				ExceptionHandling="0"
+				WholeProgramOptimization="true"
+				AdditionalIncludeDirectories=".\;..\;..\..\includes;"
+				PreprocessorDefinitions="_CRT_SECURE_NO_WARNINGS=1;WIN32;_CONSOLE;_WIN32_WINNT=0x501"
 				RuntimeLibrary="2"
+				EnableFunctionLevelLinking="false"
 				UsePrecompiledHeader="0"
-				WarningLevel="4"
-				DebugInformationFormat="3"
-				CallingConvention="0"
+				WarningLevel="3"
+				DebugInformationFormat="0"
 				CompileAs="1"
-				ForcedIncludeFiles=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -229,14 +224,11 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib advapi32.lib setupapi.lib $(NOINHERIT)"
-				OutputFile="$(OutDir)\$(ProjectName)"
-				LinkIncremental="1"
+				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib libusbK.lib"
+				Version="3.0.0.0"
+				AdditionalLibraryDirectories="..\lib\x86;..\..\bin\lib\x86"
 				IgnoreAllDefaultLibraries="true"
-				IgnoreDefaultLibraryNames="libcmt"
 				SubSystem="1"
-				OptimizeReferences="2"
-				EnableCOMDATFolding="2"
 				TargetMachine="1"
 			/>
 			<Tool
@@ -263,11 +255,10 @@
 		</Configuration>
 		<Configuration
 			Name="Release|x64"
-			OutputDirectory="$(SolutionDir)bin\$(ConfigurationName)\$(ProjectName)\$(PlatformName)"
-			IntermediateDirectory="$(SolutionDir)bin\$(ConfigurationName)\$(ProjectName)\$(PlatformName)"
+			OutputDirectory="$(ProjectDir)$(ConfigurationName)\$(PlatformName)"
+			IntermediateDirectory="$(ConfigurationName)\$(PlatformName)"
 			ConfigurationType="1"
 			CharacterSet="1"
-			WholeProgramOptimization="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -287,19 +278,18 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="2"
+				InlineFunctionExpansion="2"
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
-				AdditionalIncludeDirectories=".\;..\;..\..\includes"
-				PreprocessorDefinitions="NDEBUG;_CONSOLE;_WIN64;_CRT_SECURE_NO_WARNINGS"
-				ExceptionHandling="0"
+				WholeProgramOptimization="true"
+				AdditionalIncludeDirectories=".\;..\;..\..\includes;"
+				PreprocessorDefinitions="_CRT_SECURE_NO_WARNINGS=1;WIN32;_CONSOLE;_WIN32_WINNT=0x501"
 				RuntimeLibrary="2"
+				EnableFunctionLevelLinking="false"
 				UsePrecompiledHeader="0"
-				WarningLevel="4"
-				DebugInformationFormat="3"
-				CallingConvention="0"
+				WarningLevel="3"
+				DebugInformationFormat="0"
 				CompileAs="1"
-				ForcedIncludeFiles=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -312,14 +302,11 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib advapi32.lib setupapi.lib $(NOINHERIT)"
-				OutputFile="$(OutDir)\$(ProjectName)"
-				LinkIncremental="1"
+				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib libusbK.lib"
+				Version="3.0.0.0"
+				AdditionalLibraryDirectories="..\lib\amd64;..\..\bin\lib\amd64"
 				IgnoreAllDefaultLibraries="true"
-				IgnoreDefaultLibraryNames=""
 				SubSystem="1"
-				OptimizeReferences="2"
-				EnableCOMDATFolding="2"
 				TargetMachine="17"
 			/>
 			<Tool
@@ -354,25 +341,49 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\kList.c"
+				RelativePath=".\open-device.c"
 				>
 			</File>
 			<File
-				RelativePath=".\UsbIds.c"
+				RelativePath="..\examples.c"
 				>
 			</File>
-		</Filter>
+			</Filter>
 		<Filter
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath=".\lusbk_version.h"
+				RelativePath="..\examples.h"
 				>
 			</File>
 			<File
-				RelativePath=".\UsbIds.h"
+				RelativePath="..\..\includes\lusbk_common.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\includes\lusbk_device_list.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\includes\lusbk_dynamic.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\includes\lusbk_linked_list.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\includes\lusbk_overlapped.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\includes\lusbk_usb.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\includes\lusbk_usbio.h"
 				>
 			</File>
 		</Filter>
@@ -381,19 +392,11 @@
 			Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav"
 			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
 			>
-			<File
-				RelativePath=".\kList.txt"
-				>
-			</File>
-			<File
-				RelativePath=".\kList_rc.rc"
-				>
-			</File>
-			<File
-				RelativePath=".\usb-ids.txt"
-				>
-			</File>
 		</Filter>
+		<File
+			RelativePath=".\clean.cmd"
+			>
+		</File>
 	</Files>
 	<Globals>
 	</Globals>

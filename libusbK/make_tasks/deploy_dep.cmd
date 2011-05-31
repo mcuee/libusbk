@@ -22,19 +22,17 @@ FOR /F "eol=# tokens=1,2 delims=;" %%A IN (!__DepFileList!) DO (
 		SET __DepSrc=!__DepBaseSrcDir!!__DepSrcRel!
 		IF "!__DepDstRel:~0,1!" EQU "@" (
 			SET __DepDstRel=!__DepDstRel:~1!
-			SET __DepDst=!__DepBaseOutDir!!__DepDstRel!
-		) ELSE (
-			SET __DepDst=!__DepBaseOutDir!!__DepDstRel!\!__DepBaseOutDirName!
-		)
-		
-		ECHO Deploying !__DepSrc! to !__DepDst!..
-		IF NOT EXIST "!__DepSrc!" (
-			ECHO [WARNING] Dependency !__DepSrc! not found.
-		) ELSE (
-			CALL :GetFName "!__DepSrc!"
+			SET __DepDst=!__DepBaseOutDir!!__DepDstRel!!__DepBaseOutDirName!
 			IF NOT EXIST "!__DepDst!" MKDIR "!__DepDst!"
-			COPY /Y "!__DepSrc!" "!__DepDst!\!_FD!" 2>NUL>NUL
-			IF NOT "!ERRORLEVEL!" EQU "0" ECHO [WARNING] Dependency copy failed from !__DepSrc! to "!__DepDst!\!_FD!".
+			XCOPY "!__DepSrc!" "!__DepDst!" /S /Y /I
+		) ELSE (
+			SET __DepDst=!__DepBaseOutDir!!__DepDstRel!
+			IF "!__DepDst:~-1!" EQU "\" (
+				IF NOT EXIST "!__DepDst!" MKDIR "!__DepDst!"
+				XCOPY "!__DepSrc!" "!__DepDst!" /S /Y /I
+			) ELSE (
+				COPY /Y "!__DepSrc!" "!__DepDst!"
+			)
 		)
 	)
 )
