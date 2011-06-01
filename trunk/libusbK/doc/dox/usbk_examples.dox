@@ -1,0 +1,17 @@
+//! Example console application which displays the connected devices that can be used by libusbK.
+/*!
+* \example example-device-list.c
+*
+* <B>Device list example</B>:
+* -# Creates a usb device list.
+* -# Prints a single line description for each device list element.
+* -# Searches for the example device hardware id
+* -# Prints example device connection status.
+* -# Destroys the usb device list created in step #1
+*
+\par Console Output
+\verbatim
+USB\VID_04D8&PID_FA2E\LUSBW1: Benchmark Device (Travis Robinson)
+Example device connected!
+\endverbatim
+*/
