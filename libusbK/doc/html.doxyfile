@@ -619,15 +619,11 @@ WARN_LOGFILE           =
 # directories like "/usr/src/myproject". Separate the files or directories 
 # with spaces.
 
-INPUT                  = usbk_conceptual_documentation.doc \
-                         ../includes/lusbk_common.h \
-                         ../includes/lusbk_dynamic.h \
-                         ../includes/lusbk_device_list.h \
-                         ../includes/lusbk_overlapped.h \
-                         ../includes/lusbk_dynamic.h \
-                         ../includes/lusbk_usb.h \
-                         ../includes/lusbk_linked_list.h \
-                         ../includes/lusbk_usbio.h \
+INPUT                  = dox/usbk_mainpage.dox \
+                         dox/usbk_conceptual_documentation.dox \
+                         dox/usbk_pipe_power_management.dox \
+                         dox/usbk_examples.dox \
+                         ../includes \
                          ../examples/examples.h
 
 # This tag can be used to specify the character encoding of the source files 
