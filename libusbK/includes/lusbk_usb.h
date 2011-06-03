@@ -28,7 +28,7 @@ extern "C" {
 	/*!
 	*
 	* \ref UsbK_Open performs the same tasks as \ref UsbK_Initialize with the following exceptions:
-	* - Uses a \ref KUSB_DEV_LIST instead of a file handle created with the Windows CreateFile() API function.
+	* - Uses a \ref KUSB_DEV_INFO instead of a file handle created with the Windows CreateFile() API function.
 	* - File handles are managed internally and are closed when the last \ref LIBUSBK_INTERFACE_HANDLE is
 	*   closed with \ref UsbK_Close.
 	* - If \c DeviceListItem is a composite device, multiple device file handles are managed as one.
@@ -36,7 +36,7 @@ extern "C" {
 	* \param DeviceListItem
 	* The device list element to open.<BR>
 	* To obtain a \c DeviceListItem:
-	* - Get a list of device elements using \ref LstK_GetDeviceList.
+	* - Get a list of device elements using \ref LstK_Init.
 	* - Use the linked list macros in \ref lusbk_linked_list.h to interate/search the list for the device element of interest.
 	* - Once \c UsbK_Open returns, the device list can be freed at the users descretion.
 	*
@@ -49,7 +49,7 @@ extern "C" {
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_Open (
-	    __in PKUSB_DEV_LIST DeviceListItem,
+	    __in PKUSB_DEV_INFO DeviceListItem,
 	    __out PLIBUSBK_INTERFACE_HANDLE InterfaceHandle);
 
 //! Closes a libusbK interface handle opened by \ref UsbK_Open or \ref UsbK_Initialize. This is a perferred method.

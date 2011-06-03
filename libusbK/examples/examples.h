@@ -12,7 +12,7 @@
 #ifndef __EXAMPLE_H_
 #define __EXAMPLE_H_
 
-//! Handy format string for matching against the \ref KUSB_DEV_LIST::DeviceInstance prefix.
+//! Handy format string for matching against the \ref KUSB_DEV_INFO::DeviceInstance prefix.
 #define EXAMPLES_DEVICE_HWID_FORMAT "USB\\VID_%04X&PID_%04X"
 
 //! Default example vendor id
@@ -25,7 +25,7 @@
 //! The \b default is the official Microchip PIC Benchmark Device hardware id.
 #define EXAMPLE_HWID "USB\\VID_04D8&PID_FA2E"
 
-//! Compares the \ref KUSB_DEV_LIST::DeviceInstance of \c deviceElement with \c hwid.
+//! Compares the \ref KUSB_DEV_INFO::DeviceInstance of \c deviceElement with \c hwid.
 /*!
 * \param deviceElement
 * The device list element to test
@@ -51,10 +51,10 @@
 * - pid=<4 digit hex>
 *   - hex number is a product id.
 *
-* \param headDeviceList
+* \param DeviceList
 * On success, the head device list element.
 *
-* \param foundDevice
+* \param DeviceInfo
 * On success, the device list element that matches.
 *
 * \param argc
@@ -64,10 +64,10 @@
 * The \c argv parameter of the \b main() application function.
 *
 * \returns
-* On success 0, otherwise a win32 system error code value.
+* TRUE if a devices was found, otherwise FALSE.
 */
-DWORD Examples_GetTestDevice(__deref_out PKUSB_DEV_LIST* headDeviceList,
-                             __deref_out PKUSB_DEV_LIST* foundDevice,
+BOOL Examples_GetTestDevice( __deref_out PKUSB_DEV_LIST* DeviceList,
+                             __deref_out PKUSB_DEV_INFO* DeviceInfo,
                              __in int argc,
                              __in char* argv[]);
 #endif

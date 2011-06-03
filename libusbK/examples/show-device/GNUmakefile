@@ -28,12 +28,12 @@
 # THE POSSIBILITY OF SUCH DAMAGE. 
 #
 
-# The examples-project-makefile.inc is included by all of the example
+# The examples-project.mkinc is included by all of the example
 # application. When a file is "included", it is the same as if it were
 # copy and pasted in.  This include file configures variable that are
 # shared be each of the examples applications.
 #
-include ../GNUmakefile-examples-project.inc
+include ../examples-project.mkinc
 
 $(info [K] Running show-device PROJECT makefile..)
 
@@ -43,14 +43,6 @@ $(info [K] Running show-device PROJECT makefile..)
 #
 .PHONY: all
 all: show-device
-ifneq ("$(SLN_OUTPUT_DIR)","")
-# the solution makefile passes an optional SLN_OUTPUT_DIR argument into
-# the project makefile.  It is used to consolidate all of the applications
-# into a single location.
-	$(info [K] Copying $(notdir $(wildcard $(OUT_DIR)/*.*)) to $(SLN_OUTPUT_DIR)/$(ARCH))
-	$(MKDIR) $(SLN_OUTPUT_DIR)/$(ARCH)
-	$(CP) -f $(OUT_DIR)/*.* $(SLN_OUTPUT_DIR)/$(ARCH)
-endif
 # ---------------------------------------------------------------------
 
 # multi-all -----------------------------------------------------------

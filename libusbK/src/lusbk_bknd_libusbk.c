@@ -414,7 +414,7 @@ KUSB_EXP BOOL KUSB_API UsbK_SetConfiguration(
 {
 	libusb_request request;
 	USB_STACK_HANDLER_RESULT result;
-	CHAR devicePath[MAX_PATH];
+	CHAR devicePath[LSTK_STRING_MAX_LEN];
 
 	LUSBKFN_CTX_DEVICE_PREFIX();
 
@@ -1187,15 +1187,36 @@ Error:
 	return success;
 }
 
+BOOL KUSB_API k_AddDeviceToStackCB(__in PKUSB_DEV_LIST List,
+                                   __in PKUSB_DEV_INFO Item,
+                                   __in PLIBUSBK_BKND_CONTEXT BackendContext)
+{
+	BOOL success;
+
+	UNREFERENCED_PARAMETER(List);
+
+	success = UsbStack_AddDevice(
+	              &BackendContext->UsbStack,
+	              Item->DevicePath,
+	              NULL,
+	              BackendContext);
+
+	if (!success)
+	{
+		USBWRN("skipping composite device %s. ErrorCode=%08Xh\n",
+		       Item->DeviceDesc, GetLastError());
+	}
+
+	return TRUE;
+}
+
 KUSB_EXP BOOL KUSB_API UsbK_Open(
-    __in PKUSB_DEV_LIST DeviceListItem,
+    __in PKUSB_DEV_INFO DeviceListItem,
     __out PLIBUSBK_INTERFACE_HANDLE InterfaceHandle)
 {
 	BOOL success;
 	PKUSB_INTERFACE_HANDLE_INTERNAL interfaceHandle = NULL;
 	PLIBUSBK_BKND_CONTEXT backendContext = NULL;
-
-	PKUSB_DEV_LIST nextCompositeEL;
 
 	CheckLibInitialized();
 
@@ -1211,22 +1232,9 @@ KUSB_EXP BOOL KUSB_API UsbK_Open(
 	K_CTX(backendContext, interfaceHandle);
 	ErrorHandle(!backendContext, Error, "backendContext");
 
-	if (DeviceListItem->CompositeList)
+	if (DeviceListItem->CompositeDevices)
 	{
-		DL_FOREACH(DeviceListItem->CompositeList, nextCompositeEL)
-		{
-			success = UsbStack_AddDevice(
-			              &backendContext->UsbStack,
-			              nextCompositeEL->DevicePath,
-			              NULL,
-			              backendContext);
-
-			if (!success)
-			{
-				USBWRN("skipping composite device %s. ErrorCode=%08Xh\n",
-				       nextCompositeEL->DeviceDesc, GetLastError());
-			}
-		}
+		LstK_Enumerate(DeviceListItem->CompositeDevices, k_AddDeviceToStackCB, backendContext);
 	}
 	else
 	{

@@ -31,6 +31,37 @@ binary distributions.
 // warning C4127: conditional expression is constant.
 #pragma warning(disable: 4127)
 
+// internal device info
+typedef struct _KUSB_DEV_INFO_EL
+{
+	KUSB_DEV_INFO Public;
+
+	DWORD ReferenceCount;
+	DWORD Linked;
+	DWORD LUsb0SymbolicLinkIndex;
+
+	struct _KUSB_DEV_INFO_EL* next;
+	struct _KUSB_DEV_INFO_EL* prev;
+} KUSB_DEV_INFO_EL;
+typedef KUSB_DEV_INFO_EL* PKUSB_DEV_INFO_EL;
+
+// internal device list
+typedef struct _KUSB_DEV_LIST_EL
+{
+	KUSB_DEV_LIST Public;
+
+	PKUSB_DEV_INFO_EL current;
+	PKUSB_DEV_INFO_EL head;
+
+	struct
+	{
+		SPIN_LOCK_EX Acquire;
+		volatile long UsageCount;
+	} Locks;
+
+} KUSB_DEV_LIST_EL;
+typedef KUSB_DEV_LIST_EL* PKUSB_DEV_LIST_EL;
+
 typedef struct _SERVICE_DRVID_MAP
 {
 	INT DrvId;
@@ -89,21 +120,12 @@ static const SERVICE_DRVID_MAP DevGuidDrvIdMap[] =
 	{KUSB_DRVID_INVALID,	NULL}
 };
 
-BOOL InitElement(__in PKUSB_DEV_LIST element, __in DWORD cbSize);
-
-PKUSB_DEV_LIST AddElementCopy(__deref_inout PKUSB_DEV_LIST* head,
-                              __in PKUSB_DEV_LIST elementToClone);
+KUSB_DEV_LIST_EL DevListHandlePool[KUSB_MAX_INTERFACE_HANDLES];
+volatile BOOL DevListInitialized = FALSE;
+volatile long DevListInitializedLockCount = 0;
+volatile long DevListHandlePos = -1;
 
 PCHAR CopyLast(__in CHAR sep, __out PCHAR dst, __in PCHAR src);
-
-VOID DumpIntfElements(__deref_inout PKUSB_DEV_LIST* head);
-
-VOID ApplySearchFilter(__in PKUSB_DEV_LIST_SEARCH SearchParameters,
-                       __deref_inout PKUSB_DEV_LIST* DeviceList);
-
-VOID ApplyCompositeDeviceMode(__in PKUSB_DEV_LIST_SEARCH SearchParameters,
-                              __deref_inout PKUSB_DEV_LIST* DeviceList);
-
 BOOL IsUsbRegKey(__in LPCSTR keyName);
 
 LONG RegGetValueDWord(__in HKEY hKeyParent,
@@ -131,7 +153,7 @@ LONG RegGetValueString(__in HKEY hKeyParent,
 	LONG status = ERROR_SUCCESS;
 	HKEY hKey = NULL;
 	DWORD valueType;
-	DWORD valueDataSize = MAX_PATH;
+	DWORD valueDataSize = LSTK_STRING_MAX_LEN;
 
 	memset(keyPath, 0, sizeof(keyPath));
 	if ((status = (LONG)strcat_s(keyPath, sizeof(keyPath) - 1, keyBasePath)) != ERROR_SUCCESS)
@@ -211,143 +233,448 @@ PCHAR CopyLast(__in CHAR sep, __out PCHAR dst, __in PCHAR src)
 	{
 		src = next + 1;
 	}
-	strcpy_s(dst, MAX_PATH, src);
+	strcpy_s(dst, LSTK_STRING_MAX_LEN, src);
 	return dst;
 }
 
-VOID DumpIntfElements(__deref_inout PKUSB_DEV_LIST* head)
+VOID CheckDevListInitialized()
 {
-	PKUSB_DEV_LIST check = NULL;
-	PKUSB_DEV_LIST tmp = NULL;
-	PKUSB_DEV_LIST root = *head;
-	DL_FOREACH_SAFE(root, check, tmp)
+recheck:
+	if (!DevListInitialized)
 	{
-		printf("DeviceInterfaceGUID = %s\n", check->DeviceInterfaceGUID);
-		printf("DeviceInstance      = %s\n", check->DeviceInstance);
-		printf("Connected Instances = %d\n", check->ReferenceCount);
-		printf("ClassGUID           = %s\n", check->ClassGUID);
-		printf("Mfg                 = %s\n", check->Mfg);
-		printf("DeviceDesc          = %s\n", check->DeviceDesc);
-		printf("DrvId               = %d (%s)\n", check->DrvId, GetDrvIdString(check->DrvId));
-		printf("SymbolicLink        = %s\n", check->SymbolicLink);
-		printf("\n");
-	}
-}
-BOOL InitElement(__in PKUSB_DEV_LIST element, __in DWORD cbSize)
-{
-	if (!element)
-	{
-		SetLastError(ERROR_INVALID_HANDLE);
-		return FALSE;
-	}
-	if (cbSize != element->cbSize)
-	{
-		element->cbSize = sizeof(*element);
-		SetLastError(ERROR_INSTRUCTION_MISALIGNMENT);
-		return FALSE;
-	}
-	element->refCount = 1;
-	element->next = NULL;
-	element->prev = NULL;
-	element->CompositeList = NULL;
-
-	return TRUE;
-}
-
-PKUSB_DEV_LIST AddElementCopy(__deref_inout PKUSB_DEV_LIST* head,
-                              __in PKUSB_DEV_LIST elementToClone)
-{
-	PKUSB_DEV_LIST tmp = NULL;
-	PKUSB_DEV_LIST newEntry = NULL;
-	PKUSB_DEV_LIST root = *head;
-
-	DL_FOREACH_SAFE(root, newEntry, tmp)
-	{
-		if (strstr(newEntry->SymbolicLink, elementToClone->SymbolicLink) == newEntry->SymbolicLink)
+		if (InterlockedIncrement(&DevListInitializedLockCount) == 1)
 		{
-			return newEntry;
+			Mem_Zero(&DevListHandlePool, sizeof(DevListHandlePool));
+			DevListInitialized = TRUE;
+		}
+		else
+		{
+			InterlockedDecrement(&DevListInitializedLockCount);
+			SwitchToThread();
+			goto recheck;
 		}
 	}
-	newEntry = Mem_Alloc(sizeof(*newEntry));
-	memcpy(newEntry, elementToClone, sizeof(*newEntry));
-	InitElement(newEntry, sizeof(*newEntry));
-	DL_APPEND(root, newEntry);
-	*head = root;
-	return newEntry;
-
 }
 
-BOOL GetCompositeDevice(__in PKUSB_DEV_LIST deviceInterface,
-                        __inout PKUSB_DEV_LIST* compositeDevice)
+PKUSB_DEV_LIST_EL DevList_Acquire()
 {
-	PCHAR miStart;
-	PKUSB_DEV_LIST dev;
-	*compositeDevice = dev = Mem_Alloc(sizeof(KUSB_DEV_LIST));
-	if (!dev)
-		return LusbwError(ERROR_NOT_ENOUGH_MEMORY);
+	int count = 0;
+	int maxHandles = sizeof(DevListHandlePool) / sizeof(DevListHandlePool[0]);
 
-	strcpy_s(dev->DeviceInstance, sizeof(dev->DeviceInstance) - 1, deviceInterface->DeviceInstance);
-	_strupr_s(dev->DeviceInstance, sizeof(dev->DeviceInstance) - 1);
-	if ((miStart = strstr(dev->DeviceInstance, "&MI_")) != NULL)
+	CheckDevListInitialized();
+
+	while(count++ < maxHandles)
 	{
-		*miStart = '\0';
-		strcpy_s(dev->DeviceDesc, sizeof(dev->DeviceDesc) - 1, "USB Composite Device");
-		strcpy_s(dev->Service, sizeof(dev->Service) - 1, "usbccgp");
-		dev->DrvId = deviceInterface->DrvId;
+		PKUSB_DEV_LIST_EL next = &DevListHandlePool[InterlockedIncrement(&DevListHandlePos) & (maxHandles - 1)];
+		if (next->Locks.UsageCount == 0)
+		{
+			if (InterlockedIncrement(&next->Locks.UsageCount) == 1)
+			{
+				next->current = NULL;
+				next->head = NULL;
+				memset(&next->Public, 0, sizeof(next->Public));
 
-		return TRUE;
+				InterlockedIncrement(&next->Locks.UsageCount);
+				return next;
+			}
+			else
+			{
+				InterlockedDecrement(&next->Locks.UsageCount);
+				SwitchToThread();
+			}
+		}
 	}
-	Mem_Free(compositeDevice);
+	USBERR("no more device list handles! (max=%d)\n", maxHandles);
+	LusbwError(ERROR_OUT_OF_STRUCTURES);
+	return NULL;
+}
+
+
+BOOL DevList_Release(PKUSB_DEV_LIST_EL deviceList)
+{
+	if (InterlockedDecrement(&deviceList->Locks.UsageCount) < 0)
+		InterlockedIncrement(&deviceList->Locks.UsageCount);
 
 	return FALSE;
 }
 
-BOOL NewCompositeElement(__in LPCSTR DeviceInstance,
-                         __inout PKUSB_DEV_LIST* compositeDevice)
+
+
+
+
+
+
+
+typedef struct _KUSB_ENUM_REGKEY_PARAMS
 {
-	PKUSB_DEV_LIST dev;
-	*compositeDevice = dev = Mem_Alloc(sizeof(KUSB_DEV_LIST));
-	if (!dev)
-		return LusbwError(ERROR_NOT_ENOUGH_MEMORY);
+	// assigned by LstK_Init, copied by sub enumeration routines
+	// (global)
+	PKUSB_DEV_LIST_EL DeviceList;
+	PKUSB_DEV_LIST_INIT_PARAMS InitParams;
 
-	strcpy_s(dev->DeviceInstance, sizeof(dev->DeviceInstance) - 1, DeviceInstance);
-	_strupr_s(dev->DeviceInstance, sizeof(dev->DeviceInstance) - 1);
+	// required before calling EnumRegKey
+	HKEY hParentKey;
+	BOOL (*EnumRegKeyCB) (LPCSTR, struct _KUSB_ENUM_REGKEY_PARAMS* RegEnumParams);
 
-	strcpy_s(dev->DeviceDesc, sizeof(dev->DeviceDesc) - 1, "USB Composite Device");
-	strcpy_s(dev->Service, sizeof(dev->Service) - 1, "usbccgp");
+	// optional
+	LPCSTR SubKey;
+	LPCSTR CurrentGUID;
+
+	// optional
+	PVOID Context;
+	DWORD ErrorCode;
+
+	// managed by EnumRegKey
+	HKEY hOpenedKey;
+
+	PKUSB_DEV_INFO_EL TempItem;
+
+} KUSB_ENUM_REGKEY_PARAMS;
+typedef KUSB_ENUM_REGKEY_PARAMS* PKUSB_ENUM_REGKEY_PARAMS;
+typedef BOOL ENUM_REGKEY_DELEGATE (LPCSTR Name, PKUSB_ENUM_REGKEY_PARAMS RegEnumParams);
+typedef ENUM_REGKEY_DELEGATE* PENUM_REGKEY_DELEGATE;
+
+BOOL EnumRegKey(PKUSB_ENUM_REGKEY_PARAMS params)
+{
+	LONG status;
+	DWORD keyIndex = (DWORD) - 1;
+	CHAR keyName[1024];
+
+	params->hOpenedKey = NULL;
+
+	status = RegOpenKeyExA(params->hParentKey, params->SubKey, 0, KEY_READ, &params->hOpenedKey);
+	if (status != ERROR_SUCCESS)
+		return FALSE;
+
+	while(RegEnumKeyA(params->hOpenedKey, ++keyIndex, keyName, sizeof(keyName) - 1) == ERROR_SUCCESS)
+	{
+		if (!params->EnumRegKeyCB(keyName, params))
+			goto Done;
+	}
+
+Done:
+	// close the key
+	if (IsHandleValid(params->hOpenedKey))
+		RegCloseKey(params->hOpenedKey);
+
+	params->hOpenedKey = NULL;
 
 	return TRUE;
 }
 
-VOID ApplyCompositeDeviceMode(__in PKUSB_DEV_LIST_SEARCH SearchParameters,
-                              __deref_inout PKUSB_DEV_LIST* DeviceList)
-{
-	PKUSB_DEV_LIST compositeDeviceElement;
-	PKUSB_DEV_LIST devEL, devEL_t0, devCompositeEL, devCompositeEL_t0;
-	PKUSB_DEV_LIST root = *DeviceList;
-	PKUSB_DEV_LIST compositeRoot = NULL;
-	CHAR deviceInstance[MAX_PATH];
 
-	if (!SearchParameters->EnableCompositeDeviceMode)
+#define Match_DevItem_SymbolicLink(check, find) \
+	strcmp(check->Public.SymbolicLink, find)
+
+BOOL InterfaceInstance_AddElement(PKUSB_DEV_LIST_EL DeviceList,
+                                  PKUSB_DEV_INFO_EL DevItemToAdd,
+                                  PKUSB_DEV_INFO_EL* DevItemAdded)
+{
+	PKUSB_DEV_INFO_EL newEntry = NULL;
+
+	*DevItemAdded = NULL;
+
+	DL_SEARCH(DeviceList->head, newEntry, DevItemToAdd->Public.SymbolicLink, Match_DevItem_SymbolicLink);
+	if (newEntry)
+	{
+		*DevItemAdded = newEntry;
+		return FALSE;
+	}
+
+	newEntry = Mem_Alloc(sizeof(*newEntry));
+	ErrorMemory(!newEntry, Done);
+
+	memcpy(newEntry, DevItemToAdd, sizeof(*newEntry));
+	newEntry->next = NULL;
+	newEntry->prev = NULL;
+	newEntry->Public.CompositeDevices = NULL;
+
+	DL_APPEND(DeviceList->head, newEntry);
+	*DevItemAdded = newEntry;
+
+	return TRUE;
+
+Done:
+	return FALSE;
+}
+
+BOOL InterfaceInstance_AssignDriver(PKUSB_DEV_INFO_EL devItem)
+{
+
+	PSERVICE_DRVID_MAP map;
+
+	// find driver type by device interface guid
+	devItem->Public.DrvId = KUSB_DRVID_INVALID;
+	map = (PSERVICE_DRVID_MAP)DevGuidDrvIdMap;
+	while(devItem->Public.DrvId == KUSB_DRVID_INVALID && map->DrvId != KUSB_DRVID_INVALID)
+	{
+		LPCSTR* devGuid = map->MapNames;
+		while(*devGuid)
+		{
+			if (_stricmp(devItem->Public.DeviceInterfaceGUID, *devGuid) == 0)
+			{
+				devItem->Public.DrvId = map->DrvId;
+				break;
+			}
+			devGuid++;
+		}
+		map++;
+	}
+
+	// find driver type by service name (if not found)
+	map = (PSERVICE_DRVID_MAP)ServiceDrvIdMap;
+	while(devItem->Public.DrvId == KUSB_DRVID_INVALID && map->DrvId != KUSB_DRVID_INVALID)
+	{
+		LPCSTR* serviceName = map->MapNames;
+		while(*serviceName)
+		{
+			if (_stricmp(devItem->Public.Service, *serviceName) == 0)
+			{
+				devItem->Public.DrvId = map->DrvId;
+				break;
+			}
+			serviceName++;
+		}
+		map++;
+	}
+
+	if (devItem->Public.DrvId != KUSB_DRVID_INVALID)
+	{
+		if (devItem->Public.DrvId == KUSB_DRVID_LIBUSB0_FILTER ||
+		        devItem->Public.DrvId == KUSB_DRVID_LIBUSB0 )
+		{
+			if (devItem->LUsb0SymbolicLinkIndex <= 255)
+			{
+				sprintf_s(devItem->Public.DevicePath, sizeof(devItem->Public.DevicePath) - 1,
+				          "\\\\.\\libusb0-%04d", devItem->LUsb0SymbolicLinkIndex);
+
+				// new device with  an assigned driver (ready for device list)
+				return TRUE;
+			}
+		}
+		else
+		{
+			// new device with  an assigned driver (ready for device list)
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+BOOL InterfaceInstance_FillProperties(PKUSB_DEV_INFO_EL devItem)
+{
+	CHAR devRegEnumKey[1024];
+	CHAR valueName[LSTK_STRING_MAX_LEN];
+	CHAR valueData[LSTK_STRING_MAX_LEN];
+
+	DWORD valueNameLength, valueDataLength;
+	HKEY hDevRegEnumKey = NULL;
+	DWORD devRegEnumKeyIndex = (DWORD)(-1);
+	DWORD valueType;
+
+	memset(devRegEnumKey, 0, sizeof(devRegEnumKey));
+	strcat_s(devRegEnumKey, sizeof(devRegEnumKey), "SYSTEM\\CurrentControlSet\\Enum\\");
+	strcat_s(devRegEnumKey, sizeof(devRegEnumKey), devItem->Public.DeviceInstance);
+
+	// opening device instance reg key node
+	// e.g. HKLM\SYSTEM\CurrentControlSet\Enum\USB\VID_1234&PID_0001&MI_00\7&15c836fa&2&0000
+	if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, devRegEnumKey, 0, KEY_READ, &hDevRegEnumKey) != ERROR_SUCCESS)
+		return FALSE;
+
+	memset(valueName, 0, sizeof(valueName));
+	memset(valueData, 0, sizeof(valueData));
+	valueNameLength = sizeof(valueName) - 1;
+	valueDataLength = sizeof(valueData) - 1;
+
+	while(RegEnumValueA(hDevRegEnumKey, ++devRegEnumKeyIndex, valueName, &valueNameLength, 0, &valueType, (LPBYTE)valueData, &valueDataLength) == ERROR_SUCCESS)
+	{
+
+		// e.g. HKLM\SYSTEM\CurrentControlSet\Enum\USB\VID_1234&PID_0001&MI_00\7&15c836fa&2&0000\[ValueNames]
+
+		if (GetRegDevNodeString(devItem->Public, valueName, ClassGUID, valueData)) {}
+		else if (GetRegDevNodeString(devItem->Public, valueName, DeviceDesc, valueData)) {}
+		else if (GetRegDevNodeString(devItem->Public, valueName, Mfg, valueData)) {}
+		else if (GetRegDevNodeString(devItem->Public, valueName, Service, valueData)) {}
+
+		memset(valueName, 0, sizeof(valueName));
+		memset(valueData, 0, sizeof(valueData));
+		valueNameLength = sizeof(valueName) - 1;
+		valueDataLength = sizeof(valueData) - 1;
+	}
+
+	RegCloseKey(hDevRegEnumKey);
+
+	return (strlen(devItem->Public.Service) > 0);
+}
+
+BOOL EnumKeyCB_InterfaceInstance(LPCSTR Name, PKUSB_ENUM_REGKEY_PARAMS RegEnumParams)
+{
+	LONG status;
+	DWORD referenceCount;
+	BOOL isNewItem;
+
+	KUSB_DEV_INFO_EL devItem;
+	PKUSB_DEV_INFO_EL newDevItem = NULL;
+
+	if (!IsUsbRegKey(Name))
+		return TRUE;
+
+	Mem_Zero(&devItem, sizeof(devItem));
+
+	strcpy_s(devItem.Public.DeviceInterfaceGUID, sizeof(devItem.Public.DeviceInterfaceGUID), RegEnumParams->CurrentGUID);
+
+	// query reference count (connected device instance id count)
+	// e.g. HKLM\SYSTEM\CurrentControlSet\Control\DeviceClasses\{20343a29-6da1-4db8-8a3c-16e774057bf5}\##?#USB#VID_1234&PID_0001#BMD001#{20343a29-6da1-4db8-8a3c-16e774057bf5}\Control\ReferenceCount
+	status = RegGetValueDWord(RegEnumParams->hOpenedKey, Name, "\\Control", "ReferenceCount", &referenceCount);
+	if (status != ERROR_SUCCESS || !referenceCount)
+		return TRUE;
+
+	// query device instance id
+	// e.g. HKLM\SYSTEM\CurrentControlSet\Control\DeviceClasses\{20343a29-6da1-4db8-8a3c-16e774057bf5}\##?#USB#VID_1234&PID_0001#BMD001#{20343a29-6da1-4db8-8a3c-16e774057bf5}\DeviceInstance
+	status = RegGetValueString(RegEnumParams->hOpenedKey, Name, NULL, "DeviceInstance", devItem.Public.DeviceInstance);
+	if (status != ERROR_SUCCESS)
+		return TRUE;
+
+	// query symbolic link value
+	// e.g. HKLM\SYSTEM\CurrentControlSet\Control\DeviceClasses\{20343a29-6da1-4db8-8a3c-16e774057bf5}\##?#USB#VID_1234&PID_0001#BMD001#{20343a29-6da1-4db8-8a3c-16e774057bf5}\#\SymbolicLink
+	status = RegGetValueString(RegEnumParams->hOpenedKey, Name, "\\#", "SymbolicLink",  devItem.Public.SymbolicLink);
+	if (status != ERROR_SUCCESS)
+		return TRUE;
+
+	// DevicePath is equal to SymbolicLink unless it ends up being a libusb0 filter device
+	strcpy_s(devItem.Public.DevicePath, sizeof(devItem.Public.DevicePath), devItem.Public.SymbolicLink);
+
+	// query LUsb0
+	devItem.LUsb0SymbolicLinkIndex = (ULONG) - 1;
+	// e.g. HKLM\SYSTEM\CurrentControlSet\Control\DeviceClasses\{20343a29-6da1-4db8-8a3c-16e774057bf5}\##?#USB#VID_1234&PID_0001#BMD001#{20343a29-6da1-4db8-8a3c-16e774057bf5}\#\Device Parameters\LUsb0
+	status = RegGetValueDWord(RegEnumParams->hOpenedKey, Name, "\\#\\Device Parameters", "LUsb0", &devItem.LUsb0SymbolicLinkIndex);
+
+	if (!InterfaceInstance_FillProperties(&devItem))
+		return TRUE;
+
+	if (!InterfaceInstance_AssignDriver(&devItem))
+		return TRUE;
+
+	isNewItem = InterfaceInstance_AddElement(RegEnumParams->DeviceList, &devItem, &newDevItem);
+	if (isNewItem)
+	{
+		// new element added
+		PKUSB_DEV_COMMON_INFO commonInfo = &devItem.Public.Common;
+		PCHAR chLast = NULL;
+		PCHAR chNext = devItem.Public.DeviceInstance;
+		commonInfo->MI = UINT_MAX;
+		while((chNext = strchr(chNext, '\\')) != NULL)
+		{
+			chNext++;
+			chLast = chNext;
+			if (!commonInfo->Vid || !commonInfo->Pid)
+				sscanf_s(chNext, "VID_%04X&PID_%04X&MI_%02X", &commonInfo->Vid, &commonInfo->Pid, &commonInfo->MI);
+		}
+		if (commonInfo->MI != UINT_MAX)
+			commonInfo->MI &= 0x7F;
+
+		commonInfo->InstanceID = chLast;
+	}
+	else if (newDevItem)
+	{
+		// element already exists
+	}
+	else
+	{
+		// an error occured
+		return TRUE;
+
+	}
+
+	return TRUE;
+}
+BOOL EnumKeyCB_InterfaceGuid(LPCSTR Name, PKUSB_ENUM_REGKEY_PARAMS RegEnumParams)
+{
+	// enumeration device interface instances
+	// e.g. HKLM\SYSTEM\CurrentControlSet\Control\DeviceClasses\{20343a29-6da1-4db8-8a3c-16e774057bf5}\##?#USB#VID_1234&PID_0001#BMD001#{20343a29-6da1-4db8-8a3c-16e774057bf5}
+
+	KUSB_ENUM_REGKEY_PARAMS enumParamsInterfaceGUIDs;
+
+	memcpy(&enumParamsInterfaceGUIDs, RegEnumParams, sizeof(enumParamsInterfaceGUIDs));
+
+	enumParamsInterfaceGUIDs.EnumRegKeyCB	= EnumKeyCB_InterfaceInstance;
+	enumParamsInterfaceGUIDs.hParentKey		= RegEnumParams->hOpenedKey;
+	enumParamsInterfaceGUIDs.SubKey			= Name;
+	enumParamsInterfaceGUIDs.CurrentGUID    = Name;
+
+	return EnumRegKey(&enumParamsInterfaceGUIDs);
+}
+
+#define Match_DevItem_DeviceInterfaceGUID(check, find) \
+	_stricmp(check->Public.DeviceInterfaceGUID, find)
+
+VOID ApplyFilter(__in PKUSB_DEV_LIST_INIT_PARAMS InitParams,
+                 __inout PKUSB_DEV_LIST_EL DeviceList)
+{
+	PKUSB_DEV_INFO_EL check = NULL;
+	PKUSB_DEV_INFO_EL tmp = NULL;
+
+	DL_FOREACH_SAFE(DeviceList->head, check, tmp)
+	{
+		if (!InitParams->EnableRawDeviceInterfaceGuid)
+		{
+			if (Match_DevItem_DeviceInterfaceGUID(check, RawDeviceGuidA) == 0)
+			{
+				DL_DELETE(DeviceList->head, check);
+				Mem_Free(&check);
+			}
+		}
+	}
+}
+
+BOOL CreateCompositeParent(__in LPCSTR DeviceInstance,
+                           __inout PKUSB_DEV_INFO_EL* compositeDevice)
+{
+	PKUSB_DEV_INFO_EL devComposite;
+	*compositeDevice = devComposite = Mem_Alloc(sizeof(KUSB_DEV_INFO_EL));
+	if (!devComposite)
+		return LusbwError(ERROR_NOT_ENOUGH_MEMORY);
+
+	strcpy_s(devComposite->Public.DeviceInstance, sizeof(devComposite->Public.DeviceInstance) - 1, DeviceInstance);
+	_strupr_s(devComposite->Public.DeviceInstance, sizeof(devComposite->Public.DeviceInstance) - 1);
+
+	strcpy_s(devComposite->Public.DeviceDesc, sizeof(devComposite->Public.DeviceDesc) - 1, "USB Composite Device");
+	strcpy_s(devComposite->Public.Service, sizeof(devComposite->Public.Service) - 1, "usbccgp");
+
+	return TRUE;
+}
+
+
+VOID ApplyCompositeDevicesMode(__in PKUSB_DEV_LIST_INIT_PARAMS InitParams,
+                               __inout PKUSB_DEV_LIST_EL DeviceList)
+{
+	PKUSB_DEV_INFO_EL compositeDeviceElement;
+	PKUSB_DEV_INFO_EL devEL, devEL_t0, devCompositeEL, devCompositeEL_t0;
+	PKUSB_DEV_INFO_EL root = DeviceList->head;
+	PKUSB_DEV_INFO_EL compositeRoot = NULL;
+	CHAR deviceInstance[LSTK_STRING_MAX_LEN];
+	PKUSB_DEV_LIST_EL newCompositeList;
+
+	if (!InitParams->EnableCompositeDeviceMode)
 		return;
 
 	DL_FOREACH_SAFE(root, devEL, devEL_t0)
 	{
 		PCHAR mi;
-		strcpy_s(deviceInstance, sizeof(deviceInstance) - 1, devEL->DeviceInstance);
+		strcpy_s(deviceInstance, sizeof(deviceInstance) - 1, devEL->Public.DeviceInstance);
 		_strupr_s(deviceInstance, sizeof(deviceInstance) - 1);
 		mi = strstr(deviceInstance, "&MI_");
 		if (mi)
 		{
 			mi[0] = '\0';
 			// this is a composite device
-			if (NewCompositeElement(deviceInstance, &compositeDeviceElement))
+			if (CreateCompositeParent(deviceInstance, &compositeDeviceElement))
 			{
-				compositeDeviceElement->DrvId = devEL->DrvId;
+				compositeDeviceElement->Public.DrvId = devEL->Public.DrvId;
 				DL_FOREACH_SAFE(compositeRoot, devCompositeEL, devCompositeEL_t0)
 				{
-					if (devCompositeEL->DrvId == compositeDeviceElement->DrvId &&
-					        strncmp(devCompositeEL->DeviceInstance, compositeDeviceElement->DeviceInstance, strlen(devCompositeEL->DeviceInstance)) == 0)
+					if (devCompositeEL->Public.DrvId == compositeDeviceElement->Public.DrvId &&
+					        strncmp(devCompositeEL->Public.DeviceInstance, compositeDeviceElement->Public.DeviceInstance, strlen(devCompositeEL->Public.DeviceInstance)) == 0)
 					{
 						// We already have a composite parent for this one.
 						break;
@@ -365,8 +692,21 @@ VOID ApplyCompositeDeviceMode(__in PKUSB_DEV_LIST_SEARCH SearchParameters,
 					Mem_Free(&compositeDeviceElement);
 				}
 
-				DL_DELETE(root, devEL);
-				DL_APPEND(devCompositeEL->CompositeList, devEL);
+				if (!devCompositeEL->Public.CompositeDevices)
+				{
+					newCompositeList = (PKUSB_DEV_LIST_EL) Mem_Alloc(sizeof(KUSB_DEV_LIST_EL));
+					devCompositeEL->Public.CompositeDevices = (PKUSB_DEV_LIST)newCompositeList;
+				}
+				else
+				{
+					newCompositeList = (PKUSB_DEV_LIST_EL)devCompositeEL->Public.CompositeDevices;
+				}
+
+				if (newCompositeList)
+				{
+					DL_DELETE(root, devEL);
+					DL_APPEND(newCompositeList->head, devEL);
+				}
 			}
 		}
 	}
@@ -377,264 +717,242 @@ VOID ApplyCompositeDeviceMode(__in PKUSB_DEV_LIST_SEARCH SearchParameters,
 		DL_APPEND(root, devCompositeEL);
 	}
 
-	*DeviceList = root;
+	DeviceList->head = root;
 }
 
-VOID ApplySearchFilter(__in PKUSB_DEV_LIST_SEARCH SearchParameters,
-                       __deref_inout PKUSB_DEV_LIST* DeviceList)
+VOID DevList_RefreshCounts(__inout PKUSB_DEV_LIST_EL DeviceList)
 {
-	PKUSB_DEV_LIST check = NULL;
-	PKUSB_DEV_LIST tmp = NULL;
-	PKUSB_DEV_LIST root = *DeviceList;
-	DL_FOREACH_SAFE(root, check, tmp)
+	PKUSB_DEV_INFO_EL nextItem = NULL;
+	DeviceList->Public.DeviceCount = 0;
+
+	DL_FOREACH(DeviceList->head, nextItem)
 	{
-		if (!SearchParameters->EnableRawDeviceInterfaceGuid)
+		DeviceList->Public.DeviceCount++;
+		if (nextItem->Public.CompositeDevices)
 		{
-			if (_stricmp(check->DeviceInterfaceGUID, RawDeviceGuidA) == 0)
+			DevList_RefreshCounts((PKUSB_DEV_LIST_EL)&nextItem->Public.CompositeDevices);
+		}
+	}
+}
+
+#define IsLstKHandle(PublicListHandle)	IsStaticHandle(PublicListHandle,DevListHandlePool)
+
+KUSB_EXP VOID KUSB_API LstK_Free(__deref_inout PKUSB_DEV_LIST* DeviceList)
+{
+	PKUSB_DEV_INFO_EL check = NULL;
+	PKUSB_DEV_INFO_EL tmp = NULL;
+	PKUSB_DEV_INFO_EL check2 = NULL;
+	PKUSB_DEV_INFO_EL tmp2 = NULL;
+	PKUSB_DEV_LIST_EL deviceList;
+
+
+	ErrorParam(!DeviceList, Error, DeviceList);
+
+	deviceList = (PKUSB_DEV_LIST_EL) * DeviceList;
+	*DeviceList = NULL;
+	ErrorHandle(!IsLstKHandle(deviceList), Error, DeviceList);
+
+	if (deviceList->Locks.UsageCount < 1)
+		return;
+
+	if (InterlockedDecrement(&deviceList->Locks.UsageCount) != 1)
+	{
+		InterlockedIncrement(&deviceList->Locks.UsageCount);
+		return;
+	}
+
+	DL_FOREACH_SAFE(deviceList->head, check, tmp)
+	{
+		DL_DELETE(deviceList->head, check);
+
+		if (check->Public.CompositeDevices)
+		{
+			PKUSB_DEV_LIST_EL compositeList = (PKUSB_DEV_LIST_EL)check->Public.CompositeDevices;
+			DL_FOREACH_SAFE(compositeList->head, check2, tmp2)
 			{
-				DL_DELETE(root, check);
-				Mem_Free(&check);
+				DL_DELETE(compositeList->head, check2);
+				Mem_Free(&check2);
 			}
+			Mem_Free(&check->Public.CompositeDevices);
 		}
+
+		Mem_Free(&check);
 	}
-	*DeviceList = root;
+
+	DevList_Release(deviceList);
+
+
+Error:
+	return;
 }
 
-KUSB_EXP LONG KUSB_API LstK_GetDeviceList(
-    __deref_inout PKUSB_DEV_LIST* DeviceList,
-    __in PKUSB_DEV_LIST_SEARCH SearchParameters)
+KUSB_EXP BOOL KUSB_API LstK_Init(__deref_out PKUSB_DEV_LIST* DeviceList,
+                                 __in_opt PKUSB_DEV_LIST_INIT_PARAMS InitParams)
 {
-	HKEY hDeviceClasses = NULL;
-	LONG status;
-	DWORD deviceClasseIndex = (DWORD) - 1;
-	PKUSB_DEV_LIST devIntfList = NULL;
-	KUSB_DEV_LIST devIntfElement;
-	LONG deviceCount = 0;
-	PSERVICE_DRVID_MAP map;
-	PKUSB_DEV_LIST_SEARCH searchParameters = SearchParameters;
-	KUSB_DEV_LIST_SEARCH defSearchParameters;
+	KUSB_DEV_LIST_INIT_PARAMS defInitParams;
+	PKUSB_DEV_LIST_INIT_PARAMS initParams = InitParams;
+	KUSB_ENUM_REGKEY_PARAMS enumParams;
+	BOOL success = FALSE;
+	PKUSB_DEV_LIST_EL deviceList = NULL;
 
-	memset(&defSearchParameters, 0, sizeof(defSearchParameters));
-	if (!searchParameters)
-		searchParameters = &defSearchParameters;
+	deviceList = DevList_Acquire();
+	ErrorHandle(!deviceList, Done, DeviceList);
 
+	memset(&defInitParams, 0, sizeof(defInitParams));
+	if (!initParams)
+		initParams = &defInitParams;
 
-	status = RegOpenKeyExA(HKEY_LOCAL_MACHINE, KEY_DEVICECLASSES, 0, KEY_READ, &hDeviceClasses);
-	if (status != ERROR_SUCCESS)
-		return -status;
+	Mem_Zero(&enumParams, sizeof(enumParams));
 
-	memset(&devIntfElement, 0, sizeof(devIntfElement));
-	while(RegEnumKeyA(hDeviceClasses, ++deviceClasseIndex, devIntfElement.DeviceInterfaceGUID, sizeof(devIntfElement.DeviceInterfaceGUID) - 1) == ERROR_SUCCESS)
+	enumParams.DeviceList		= deviceList;
+	enumParams.InitParams		= initParams;
+	enumParams.EnumRegKeyCB		= EnumKeyCB_InterfaceGuid;
+	enumParams.hParentKey		= HKEY_LOCAL_MACHINE;
+	enumParams.SubKey			= KEY_DEVICECLASSES;
+
+	// enumerate device interface guids
+	// e.g. HKLM\SYSTEM\CurrentControlSet\Control\DeviceClasses\{20343a29-6da1-4db8-8a3c-16e774057bf5}
+	if (EnumRegKey(&enumParams))
 	{
-		// enumeration device interface guids
-		// e.g. HKLM\SYSTEM\CurrentControlSet\Control\DeviceClasses\{20343a29-6da1-4db8-8a3c-16e774057bf5}
-		CHAR deviceInstanceKeyPath[1024];
-		HKEY hDeviceInterfaceGuid = NULL;
-		DWORD deviceInterfaceIndex = (DWORD) - 1;
-
-		memset(deviceInstanceKeyPath, 0, sizeof(deviceInstanceKeyPath));
-
-		status = RegOpenKeyExA(hDeviceClasses, devIntfElement.DeviceInterfaceGUID, 0, KEY_READ, &hDeviceInterfaceGuid);
-		if (status != ERROR_SUCCESS)
-			continue;
-
-		while(RegEnumKeyA(hDeviceInterfaceGuid, ++deviceInterfaceIndex, deviceInstanceKeyPath, sizeof(deviceInstanceKeyPath) - 1) == ERROR_SUCCESS)
+		if (deviceList->head && InitParams)
 		{
-			// enumeration device interface instances
-			// e.g. HKLM\SYSTEM\CurrentControlSet\Control\DeviceClasses\{20343a29-6da1-4db8-8a3c-16e774057bf5}\##?#USB#VID_1234&PID_0001#BMD001#{20343a29-6da1-4db8-8a3c-16e774057bf5}
-			HKEY hDeviceKeyPath = NULL;
-
-			if (IsUsbRegKey(deviceInstanceKeyPath))
-			{
-				// query device instance id
-				// e.g. HKLM\SYSTEM\CurrentControlSet\Control\DeviceClasses\{20343a29-6da1-4db8-8a3c-16e774057bf5}\##?#USB#VID_1234&PID_0001#BMD001#{20343a29-6da1-4db8-8a3c-16e774057bf5}\DeviceInstance
-				status = RegGetValueString(hDeviceInterfaceGuid, deviceInstanceKeyPath, NULL, "DeviceInstance", devIntfElement.DeviceInstance);
-				if (status != ERROR_SUCCESS)
-					continue;
-
-				// query symbolic link value
-				// e.g. HKLM\SYSTEM\CurrentControlSet\Control\DeviceClasses\{20343a29-6da1-4db8-8a3c-16e774057bf5}\##?#USB#VID_1234&PID_0001#BMD001#{20343a29-6da1-4db8-8a3c-16e774057bf5}\#\SymbolicLink
-				status = RegGetValueString(hDeviceInterfaceGuid, deviceInstanceKeyPath, "\\#", "SymbolicLink", devIntfElement.SymbolicLink);
-				if (status != ERROR_SUCCESS)
-					continue;
-				strcpy_s(devIntfElement.DevicePath, sizeof(devIntfElement.DevicePath) - 1, devIntfElement.SymbolicLink);
-
-				// query reference count (connected device instance id count)
-				// e.g. HKLM\SYSTEM\CurrentControlSet\Control\DeviceClasses\{20343a29-6da1-4db8-8a3c-16e774057bf5}\##?#USB#VID_1234&PID_0001#BMD001#{20343a29-6da1-4db8-8a3c-16e774057bf5}\Control\ReferenceCount
-				status = RegGetValueDWord(hDeviceInterfaceGuid, deviceInstanceKeyPath, "\\Control", "ReferenceCount", &devIntfElement.ReferenceCount);
-				if (status != ERROR_SUCCESS)
-					continue;
-
-				status = ERROR_SUCCESS;
-
-				if (devIntfElement.ReferenceCount)
-				{
-					CHAR devRegEnumKey[1024];
-
-					CHAR valueName[MAX_PATH];
-					CHAR valueData[MAX_PATH];
-
-					DWORD valueType;
-					DWORD valueNameLength;
-					DWORD valueDataLength;
-
-					HKEY hDevRegEnumKey = NULL;
-					DWORD devRegEnumKeyIndex = (DWORD) - 1;
-
-					// query LUsb0
-					devIntfElement.LUsb0SymbolicLinkIndex = (ULONG) - 1;
-					// e.g. HKLM\SYSTEM\CurrentControlSet\Control\DeviceClasses\{20343a29-6da1-4db8-8a3c-16e774057bf5}\##?#USB#VID_1234&PID_0001#BMD001#{20343a29-6da1-4db8-8a3c-16e774057bf5}\#\Device Parameters\LUsb0
-					status = RegGetValueDWord(hDeviceInterfaceGuid, deviceInstanceKeyPath, "\\#\\Device Parameters", "LUsb0", &devIntfElement.LUsb0SymbolicLinkIndex);
-
-					// query Linked
-					// e.g. HKLM\SYSTEM\CurrentControlSet\Control\DeviceClasses\{20343a29-6da1-4db8-8a3c-16e774057bf5}\##?#USB#VID_1234&PID_0001#BMD001#{20343a29-6da1-4db8-8a3c-16e774057bf5}\#\Control\Linked
-					devIntfElement.Linked = 0;
-					RegGetValueDWord(hDeviceInterfaceGuid, deviceInstanceKeyPath, "\\#\\Control", "Linked", &devIntfElement.Linked);
-
-					memset(devRegEnumKey, 0, sizeof(devRegEnumKey));
-					strcat_s(devRegEnumKey, sizeof(devRegEnumKey), "SYSTEM\\CurrentControlSet\\Enum\\");
-					strcat_s(devRegEnumKey, sizeof(devRegEnumKey), devIntfElement.DeviceInstance);
-
-					// opening device instance reg key node
-					// e.g. HKLM\SYSTEM\CurrentControlSet\Enum\USB\VID_1234&PID_0001&MI_00\7&15c836fa&2&0000
-					status = RegOpenKeyExA(HKEY_LOCAL_MACHINE, devRegEnumKey, 0, KEY_READ, &hDevRegEnumKey);
-					if (status != ERROR_SUCCESS)
-						continue;
-
-					memset(valueName, 0, sizeof(valueName));
-					memset(valueData, 0, sizeof(valueData));
-					valueNameLength = sizeof(valueName) - 1;
-					valueDataLength = sizeof(valueData) - 1;
-
-
-					memset(devIntfElement.ClassGUID,	0, sizeof(devIntfElement.ClassGUID));
-					memset(devIntfElement.DeviceDesc,	0, sizeof(devIntfElement.DeviceDesc));
-					memset(devIntfElement.Mfg,			0, sizeof(devIntfElement.Mfg));
-					memset(devIntfElement.Service,	0, sizeof(devIntfElement.Service));
-					while(RegEnumValueA(hDevRegEnumKey, ++devRegEnumKeyIndex, valueName, &valueNameLength, 0, &valueType, (LPBYTE)valueData, &valueDataLength) == ERROR_SUCCESS)
-					{
-
-						// e.g. HKLM\SYSTEM\CurrentControlSet\Enum\USB\VID_1234&PID_0001&MI_00\7&15c836fa&2&0000\[ValueNames]
-
-						if (GetRegDevNodeString(devIntfElement, valueName, ClassGUID, valueData)) {}
-						else if (GetRegDevNodeString(devIntfElement, valueName, DeviceDesc, valueData)) {}
-						else if (GetRegDevNodeString(devIntfElement, valueName, Mfg, valueData)) {}
-						else if (GetRegDevNodeString(devIntfElement, valueName, Service, valueData)) {}
-
-						memset(valueName, 0, sizeof(valueName));
-						memset(valueData, 0, sizeof(valueData));
-						valueNameLength = sizeof(valueName) - 1;
-						valueDataLength = sizeof(valueData) - 1;
-
-					}
-
-					// find driver type by device interface guid
-					devIntfElement.DrvId = KUSB_DRVID_INVALID;
-					map = (PSERVICE_DRVID_MAP)DevGuidDrvIdMap;
-					while(devIntfElement.DrvId == KUSB_DRVID_INVALID && map->DrvId != KUSB_DRVID_INVALID)
-					{
-						LPCSTR* devGuid = map->MapNames;
-						while(*devGuid)
-						{
-							if (_stricmp(devIntfElement.DeviceInterfaceGUID, *devGuid) == 0)
-							{
-								devIntfElement.DrvId = map->DrvId;
-								break;
-							}
-							devGuid++;
-						}
-						map++;
-					}
-
-					// find driver type by service name (if not found)
-					map = (PSERVICE_DRVID_MAP)ServiceDrvIdMap;
-					while(devIntfElement.DrvId == KUSB_DRVID_INVALID && map->DrvId != KUSB_DRVID_INVALID)
-					{
-						LPCSTR* serviceName = map->MapNames;
-						while(*serviceName)
-						{
-							if (_stricmp(devIntfElement.Service, *serviceName) == 0)
-							{
-								devIntfElement.DrvId = map->DrvId;
-								break;
-							}
-							serviceName++;
-						}
-						map++;
-					}
-					RegCloseKey(hDevRegEnumKey);
-					hDevRegEnumKey = NULL;
-					if (devIntfElement.DrvId != KUSB_DRVID_INVALID)
-					{
-						if (devIntfElement.DrvId == KUSB_DRVID_LIBUSB0_FILTER ||
-						        devIntfElement.DrvId == KUSB_DRVID_LIBUSB0 )
-						{
-							if (devIntfElement.LUsb0SymbolicLinkIndex <= 255)
-							{
-								sprintf_s(devIntfElement.DevicePath, sizeof(devIntfElement.DevicePath) - 1,
-								          "\\\\.\\libusb0-%04d", devIntfElement.LUsb0SymbolicLinkIndex);
-								AddElementCopy(&devIntfList, &devIntfElement);
-								deviceCount++;
-							}
-
-						}
-						else
-						{
-							AddElementCopy(&devIntfList, &devIntfElement);
-							deviceCount++;
-						}
-					}
-				}
-				hDeviceKeyPath = NULL;
-
-			}
-			if (hDeviceKeyPath)
-				RegCloseKey(hDeviceKeyPath);
-
+			ApplyFilter(initParams, deviceList);
+			ApplyCompositeDevicesMode(initParams, deviceList);
 		}
-		if (hDeviceInterfaceGuid)
-			RegCloseKey(hDeviceInterfaceGuid);
 
-		memset(&devIntfElement, 0, sizeof(devIntfElement));
+		DevList_RefreshCounts(deviceList);
+
+		success = TRUE;
 	}
 
-	if (hDeviceClasses)
-		RegCloseKey(hDeviceClasses);
-
-	if (devIntfList && searchParameters)
+Done:
+	if (success)
 	{
-		ApplySearchFilter(searchParameters, &devIntfList);
-		ApplyCompositeDeviceMode(searchParameters, &devIntfList);
+		*DeviceList = (PKUSB_DEV_LIST)deviceList;
 	}
-
-	deviceCount = 0;
-	*DeviceList = devIntfList;
-	while(*DeviceList)
+	else
 	{
-		deviceCount++;
-		*DeviceList = devIntfList->next;
+		LstK_Free(&(PKUSB_DEV_LIST)deviceList);
 	}
-
-	*DeviceList = devIntfList;
-	return deviceCount;
-
-	//DumpIntfElements(&devIntfList);
-	//LstK_FreeDeviceList(&devIntfList);
-	//return -ERROR_NOT_SUPPORTED;
+	return success;
 }
 
-KUSB_EXP VOID KUSB_API LstK_FreeDeviceList(__deref_inout PKUSB_DEV_LIST* DeviceList)
+KUSB_EXP BOOL KUSB_API LstK_Next(__inout PKUSB_DEV_LIST DeviceList,
+                                 __deref_out_opt PKUSB_DEV_INFO* DeviceInfo)
 {
-	PKUSB_DEV_LIST check = NULL;
-	PKUSB_DEV_LIST tmp = NULL;
-	PKUSB_DEV_LIST root = *DeviceList;
-	DL_FOREACH_SAFE(root, check, tmp)
+	PKUSB_DEV_LIST_EL deviceList = (PKUSB_DEV_LIST_EL)DeviceList;
+
+	ErrorParam(!deviceList, Error, DeviceList);
+	ErrorHandle(deviceList->Locks.UsageCount < 1, Error, DeviceList);
+
+	if (DeviceInfo)
+		*DeviceInfo = NULL;
+
+	if (!deviceList->current)
 	{
-		DL_DELETE(root, check);
-		if (InterlockedDecrement(&check->refCount) < 1)
+		if (!deviceList->head)
 		{
-			Mem_Free(&check);
+			SetLastError(ERROR_EMPTY);
+			return FALSE;
 		}
+		deviceList->current = deviceList->head;
+		*DeviceInfo = (PKUSB_DEV_INFO)deviceList->current;
+		return TRUE;
 	}
-	*DeviceList = root;
+
+	if ((deviceList->current = deviceList->current->next) == NULL)
+	{
+		SetLastError(ERROR_NO_MORE_ITEMS);
+		return FALSE;
+	}
+
+	if (DeviceInfo)
+		*DeviceInfo = (PKUSB_DEV_INFO)deviceList->current;
+
+	return TRUE;
+
+Error:
+	return FALSE;
+}
+
+KUSB_EXP BOOL KUSB_API LstK_Current(__in PKUSB_DEV_LIST DeviceList,
+                                    __deref_out PKUSB_DEV_INFO* DeviceInfo)
+{
+	PKUSB_DEV_LIST_EL deviceList = (PKUSB_DEV_LIST_EL)DeviceList;
+
+	ErrorParam(!deviceList, Error, DeviceList);
+	ErrorHandle(deviceList->Locks.UsageCount < 1, Error, DeviceList);
+
+	if (!deviceList->current)
+	{
+		SetLastError(ERROR_NO_MORE_ITEMS);
+		return FALSE;
+	}
+	*DeviceInfo = (PKUSB_DEV_INFO)deviceList->current;
+
+	return TRUE;
+
+Error:
+	return FALSE;
+}
+
+KUSB_EXP VOID KUSB_API LstK_Reset(__inout PKUSB_DEV_LIST DeviceList)
+{
+	PKUSB_DEV_LIST_EL deviceList = (PKUSB_DEV_LIST_EL)DeviceList;
+
+	ErrorParam(!deviceList, Error, DeviceList);
+	ErrorHandle(deviceList->Locks.UsageCount < 1, Error, DeviceList);
+
+	deviceList->current = NULL;
+
+Error:
+	return;
+}
+
+KUSB_EXP BOOL KUSB_API LstK_Enumerate(__in PKUSB_DEV_LIST DeviceList,
+                                      __in PENUM_DEV_LIST_CB EnumDevListCB,
+                                      __in_opt PVOID Context)
+{
+	PKUSB_DEV_INFO_EL check = NULL;
+	PKUSB_DEV_LIST_EL deviceList = (PKUSB_DEV_LIST_EL)DeviceList;
+
+	ErrorParam(!deviceList, Error, DeviceList);
+	ErrorHandle(deviceList->Locks.UsageCount < 1, Error, DeviceList);
+	ErrorParam(!EnumDevListCB, Error, EnumDevListCB);
+
+	DL_FOREACH(deviceList->head, check)
+	{
+		if (EnumDevListCB(DeviceList, (PKUSB_DEV_INFO)check, Context) == FALSE)
+			break;
+	}
+	return TRUE;
+
+Error:
+	return FALSE;
+}
+
+KUSB_EXP BOOL KUSB_API LstK_Lock(__in PKUSB_DEV_LIST DeviceList, BOOL wait)
+{
+	PKUSB_DEV_LIST_EL deviceList = (PKUSB_DEV_LIST_EL)DeviceList;
+
+	ErrorParam(!deviceList, Error, DeviceList);
+	ErrorHandle(deviceList->Locks.UsageCount < 1, Error, DeviceList);
+
+	return SpinLock_AcquireEx(&deviceList->Locks.Acquire, wait);
+
+Error:
+	return FALSE;
+}
+
+KUSB_EXP BOOL KUSB_API LstK_Unlock(__in PKUSB_DEV_LIST DeviceList)
+{
+	PKUSB_DEV_LIST_EL deviceList = (PKUSB_DEV_LIST_EL)DeviceList;
+
+	ErrorParam(!deviceList, Error, DeviceList);
+	ErrorHandle(deviceList->Locks.UsageCount < 1, Error, DeviceList);
+
+	return SpinLock_ReleaseEx(&deviceList->Locks.Acquire);
+
+Error:
+	return FALSE;
 }

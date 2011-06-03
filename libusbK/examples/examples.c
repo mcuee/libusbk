@@ -1,20 +1,20 @@
 #include "examples.h"
 
-DWORD Examples_GetTestDevice(__deref_out PKUSB_DEV_LIST* headDeviceList,
-                             __deref_out PKUSB_DEV_LIST* foundDevice,
+BOOL Examples_GetTestDevice( __deref_out PKUSB_DEV_LIST* DeviceList,
+                             __deref_out PKUSB_DEV_INFO* DeviceInfo,
                              __in int argc,
                              __in char* argv[])
 {
-	PKUSB_DEV_LIST headEL = NULL;
-	PKUSB_DEV_LIST itemEL = NULL;
-	LONG ret;
 	ULONG vidArg = EXAMPLE_VID;
 	ULONG pidArg = EXAMPLE_PID;
 	int argPos;
 	char exampleDeviceID[24];
+	PKUSB_DEV_LIST deviceList = NULL;
+	PKUSB_DEV_INFO deviceInfo = NULL;
 
 	// init
-	*foundDevice = NULL;
+	*DeviceList = NULL;
+	*DeviceInfo = NULL;
 
 	// Get the test device vid/pid from the command line (if specified)
 	for (argPos = 1; argPos < argc; argPos++)
@@ -24,36 +24,41 @@ DWORD Examples_GetTestDevice(__deref_out PKUSB_DEV_LIST* headDeviceList,
 	}
 
 	// Get the device list
-	ret = LstK_GetDeviceList(headDeviceList, NULL);
-
-	// If ret == 0 then no supported devices were found.
-	if (ret < 1)
+	if (!LstK_Init(&deviceList, NULL))
+	{
+		printf("Error initializing device list.\n");
+		return FALSE;
+	}
+	if (!deviceList->DeviceCount)
 	{
 		printf("No device not connected.\n");
-		// If ret < 0 is is a negative win32 error code.
-		return ERROR_DEVICE_NOT_CONNECTED;
+		SetLastError(ERROR_DEVICE_NOT_CONNECTED);
+		LstK_Free(&deviceList);
+		return FALSE;
 	}
-
-	headEL = *headDeviceList;
 
 	memset(exampleDeviceID, 0, sizeof(exampleDeviceID));
 	sprintf(exampleDeviceID, EXAMPLES_DEVICE_HWID_FORMAT, vidArg, pidArg);
 	printf("Looking for device %s..\n", exampleDeviceID);
 
-	// Search for the example device hardware id using the DL_SEARCH macro.
-	// This will call Match_DeviceID() for each device element until it returns 0.
-	DL_SEARCH(headEL, itemEL, exampleDeviceID, Match_DeviceID);
+	LstK_Reset(deviceList);
+	while(LstK_Next(deviceList, &deviceInfo))
+	{
+		if (Match_DeviceID(deviceInfo, exampleDeviceID) == 0)
+			break;
+	}
 
 	// Report the connection state of the example device
-	if (itemEL)
+	if (deviceInfo)
 	{
 		printf("Using device %s: %s (%s)\n",
-		       itemEL->DeviceInstance,
-		       itemEL->DeviceDesc,
-		       itemEL->Mfg);
+		       deviceInfo->DeviceInstance,
+		       deviceInfo->DeviceDesc,
+		       deviceInfo->Mfg);
 
-		*foundDevice = itemEL;
-		return ERROR_SUCCESS;
+		*DeviceInfo = deviceInfo;
+		*DeviceList = deviceList;
+		return TRUE;
 	}
 	else
 	{
@@ -62,8 +67,8 @@ DWORD Examples_GetTestDevice(__deref_out PKUSB_DEV_LIST* headDeviceList,
 		printf("       e.g. vid=04D8 pid=FA2E\n\n");
 
 		// Free the device list
-		LstK_FreeDeviceList(headDeviceList);
+		LstK_Free(&deviceList);
 
-		return ERROR_NO_MATCH;
+		return FALSE;
 	}
 }

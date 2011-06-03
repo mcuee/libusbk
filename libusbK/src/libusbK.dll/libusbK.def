@@ -2,8 +2,15 @@ LIBRARY
 EXPORTS
 	DrvK_GetProcAddress
 	DrvK_LoadDriverApi
-	LstK_GetDeviceList
-	LstK_FreeDeviceList
+	
+	LstK_Init
+	LstK_Free
+	LstK_Enumerate
+	LstK_Current
+	LstK_Next
+	LstK_Reset
+	LstK_Lock
+	LstK_Unlock
 	
 	UsbK_Initialize
 	UsbK_Free

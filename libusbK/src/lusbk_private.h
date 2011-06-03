@@ -160,6 +160,9 @@ VOID CheckLibInitialized();
 // Checks for null and invalid handle value.
 #define IsHandleValid(MemoryPtrOrHandle) (((MemoryPtrOrHandle) && (MemoryPtrOrHandle) != INVALID_HANDLE_VALUE)?TRUE:FALSE)
 
+#define IsStaticHandle(Handle, Pool)	\
+		((((PVOID)Handle) >= ((PVOID)&Pool[0])) && (((PVOID)Handle) <= ((PVOID)&Pool[sizeof(Pool)/sizeof(Pool[0])-1])))
+
 #define IsLusbkHandle(PublicInterfaceHandle)	\
 	((((PVOID)PublicInterfaceHandle) >= ((PVOID)&InternalHandlePool[0])) && (((PVOID)PublicInterfaceHandle) <= ((PVOID)&InternalHandlePool[KUSB_MAX_INTERFACE_HANDLES-1])))
 
@@ -368,6 +371,66 @@ FORCEINLINE BOOL SpinLock_Acquire(__in volatile long* lock, __in BOOL wait)
 FORCEINLINE VOID SpinLock_Release(__in volatile long* lock)
 {
 	InterlockedExchange(lock, 0);
+}
+
+typedef struct _SPIN_LOCK_EX
+{
+	volatile long Lock;
+	long RefCount;
+	DWORD ThreadID;
+} SPIN_LOCK_EX;
+typedef SPIN_LOCK_EX* PSPIN_LOCK_EX;
+
+FORCEINLINE BOOL SpinLock_AcquireEx(__inout PSPIN_LOCK_EX SpinLock, __in BOOL wait)
+{
+	DWORD threadID;
+	if (!SpinLock) return FALSE;
+
+	threadID = GetCurrentThreadId();
+	if (SpinLock->ThreadID == threadID)
+	{
+		SpinLock->RefCount++;
+		return TRUE;
+	}
+
+	if (wait)
+	{
+		while (InterlockedExchange(&SpinLock->Lock, SPINLOCK_HELD) != 0)
+			SwitchToThread();
+
+		SpinLock->RefCount++;
+		SpinLock->ThreadID = threadID;
+		return TRUE;
+	}
+	else
+	{
+		if (InterlockedExchange(&SpinLock->Lock, SPINLOCK_HELD) == 0)
+		{
+			SpinLock->RefCount++;
+			SpinLock->ThreadID = threadID;
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+FORCEINLINE BOOL SpinLock_ReleaseEx(__inout PSPIN_LOCK_EX SpinLock)
+{
+	if (!SpinLock) return FALSE;
+
+	if (!SpinLock->ThreadID)
+		return FALSE;
+
+	if (--SpinLock->RefCount < 1)
+	{
+		SpinLock->ThreadID = 0;
+		SpinLock->RefCount = 0;
+
+		InterlockedExchange(&SpinLock->Lock, 0);
+	}
+
+	return TRUE;
+
 }
 
 #endif

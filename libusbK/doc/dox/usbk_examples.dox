@@ -1,8 +1,8 @@
-//! Example console application which displays the connected devices that can be used by libusbK.
+//! Displays the connected devices that can be used by libusbK.
 /*!
-* \example example-device-list.c
+* \example show-device.c
 *
-* <B>Device list example</B>:
+* <B>Show Device example</B>:
 * -# Creates a usb device list.
 * -# Prints a single line description for each device list element.
 * -# Searches for the example device hardware id
@@ -13,5 +13,22 @@
 \verbatim
 USB\VID_04D8&PID_FA2E\LUSBW1: Benchmark Device (Travis Robinson)
 Example device connected!
+\endverbatim
+*/
+
+//! Locates and opens a device by vid/pid.
+/*!
+* \example open-device.c
+*
+* <B>Open Device example</B>:
+* -# Finds a device by vid/pid (use vid=hhhh, pid=hhhhh and the command line).
+* -# Opens the device.
+* -# Prints device information.
+* -# Closes the device.
+* -# Destroys the usb device list created in step #1
+*
+\par Console Output
+\verbatim
+TODO:
 \endverbatim
 */
