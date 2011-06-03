@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="9.00"
 	Name="open-device"
-	ProjectGUID="{19FFF11F-D99D-197D-1921-E2E77A673646}"
+	ProjectGUID="{AC19FF1F-7D9D-4A19-19E2-E7B67A36464B}"
 	RootNamespace="open_device"
 	Keyword="Win32Proj"
 	TargetFrameworkVersion="196613"

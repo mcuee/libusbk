@@ -316,7 +316,7 @@ KUSB_EXP BOOL KUSB_API Hid_ResetDevice (
 }
 
 KUSB_EXP BOOL KUSB_API Hid_Open (
-    __in PKUSB_DEV_LIST DeviceListItem,
+    __in PKUSB_DEV_INFO DeviceListItem,
     __out PLIBUSBK_INTERFACE_HANDLE InterfaceHandle)
 {
 	UNREFERENCED_PARAMETER(DeviceListItem);

@@ -270,11 +270,11 @@ typedef struct _KUSB_DRIVER_API
 	*/
 	BOOL (KUSB_API* ResetDevice)			(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle);
 	/*!
-	* \fn Open(__in PKUSB_DEV_LIST DeviceListItem, __out PLIBUSBK_INTERFACE_HANDLE InterfaceHandle);
+	* \fn Open(__in PKUSB_DEV_INFO DeviceListItem, __out PLIBUSBK_INTERFACE_HANDLE InterfaceHandle);
 	* \brief Driver specific function pointer to \ref UsbK_Open
 	* \memberof KUSB_DRIVER_API
 	*/
-	BOOL (KUSB_API* Open)					(__in PKUSB_DEV_LIST DeviceListItem, __out PLIBUSBK_INTERFACE_HANDLE InterfaceHandle);
+	BOOL (KUSB_API* Open)					(__in PKUSB_DEV_INFO DeviceListItem, __out PLIBUSBK_INTERFACE_HANDLE InterfaceHandle);
 	/*!
 	* \fn Close(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle);
 	* \brief Driver specific function pointer to \ref UsbK_Close
@@ -452,7 +452,7 @@ typedef BOOL KUSB_API KUSB_ResetDevice (
     __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle);
 
 typedef BOOL KUSB_API KUSB_Open (
-    __in PKUSB_DEV_LIST DeviceListItem,
+    __in PKUSB_DEV_INFO DeviceListItem,
     __out PLIBUSBK_INTERFACE_HANDLE InterfaceHandle);
 
 typedef BOOL KUSB_API KUSB_Close (

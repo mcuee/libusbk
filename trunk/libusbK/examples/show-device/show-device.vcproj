@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="9.00"
 	Name="show-device"
-	ProjectGUID="{19FFF11F-BBB4-342B-1921-E2E707A0AA8F}"
+	ProjectGUID="{AC19FF1F-2BB4-4E34-19E2-E7B607AA8F4B}"
 	RootNamespace="show_device"
 	Keyword="Win32Proj"
 	TargetFrameworkVersion="196613"

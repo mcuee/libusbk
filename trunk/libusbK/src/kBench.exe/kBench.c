@@ -109,7 +109,7 @@ typedef struct _BENCHMARK_TEST_PARAM
 	// Internal value use during the test.
 	//
 	PKUSB_DEV_LIST DeviceList;
-	PKUSB_DEV_LIST SelectedDeviceProfile;
+	PKUSB_DEV_INFO SelectedDeviceProfile;
 	HANDLE DeviceHandle;
 	LIBUSBK_INTERFACE_HANDLE InterfaceHandle;
 	USB_DEVICE_DESCRIPTOR DeviceDescriptor;
@@ -271,29 +271,27 @@ BOOL Bench_Open(__in PBENCHMARK_TEST_PARAM test)
 	UCHAR altSetting;
 	LIBUSBK_INTERFACE_HANDLE associatedHandle;
 	ULONG transferred;
-	PKUSB_DEV_LIST list, next;
+	PKUSB_DEV_INFO deviceInfo;
 
 	test->SelectedDeviceProfile = NULL;
 
-	next = test->DeviceList;
-	while (next)
-	{
-		list = next;			// the one we are using now
-		next = list->next;	// the one we may use next
+	LstK_Reset(test->DeviceList);
 
-		if (!list->UserContext.Byte[0])
+	while (LstK_Next(test->DeviceList, &deviceInfo))
+	{
+		if (!deviceInfo->UserContext.Byte[0])
 			continue;
 
 		memset(&K, 0, sizeof(K));
-		if (!DrvK_LoadDriverApi(&K, list->DrvId))
+		if (!DrvK_LoadDriverApi(&K, deviceInfo->DrvId))
 		{
 			WinError(0);
-			CONWRN("could not load driver api %s.\n", GetDrvIdString(list->DrvId));
+			CONWRN("could not load driver api %s.\n", GetDrvIdString(deviceInfo->DrvId));
 			continue;
 		}
 		if (!test->UseCompositeDeviceList)
 		{
-			test->DeviceHandle = CreateFileA(list->DevicePath,
+			test->DeviceHandle = CreateFileA(deviceInfo->DevicePath,
 			                                 GENERIC_READ | GENERIC_WRITE,
 			                                 FILE_SHARE_READ | FILE_SHARE_WRITE,
 			                                 NULL,
@@ -305,7 +303,7 @@ BOOL Bench_Open(__in PBENCHMARK_TEST_PARAM test)
 			{
 				WinError(0);
 				test->DeviceHandle = NULL;
-				CONWRN("could not create device handle.\n%s\n", list->DevicePath);
+				CONWRN("could not create device handle.\n%s\n", deviceInfo->DevicePath);
 				continue;
 			}
 
@@ -315,18 +313,18 @@ BOOL Bench_Open(__in PBENCHMARK_TEST_PARAM test)
 				CloseHandle(test->DeviceHandle);
 				test->DeviceHandle = NULL;
 				test->InterfaceHandle = NULL;
-				CONWRN("could not initialize device.\n%s\n", list->DevicePath);
+				CONWRN("could not initialize device.\n%s\n", deviceInfo->DevicePath);
 				continue;
 			}
 		}
 		else
 		{
-			if (!K.Open(list, &test->InterfaceHandle))
+			if (!K.Open(deviceInfo, &test->InterfaceHandle))
 			{
 				WinError(0);
 				test->DeviceHandle = NULL;
 				test->InterfaceHandle = NULL;
-				CONWRN("could not open device.\n%s\n", list->DevicePath);
+				CONWRN("could not open device.\n%s\n", deviceInfo->DevicePath);
 				continue;
 			}
 
@@ -350,7 +348,7 @@ BOOL Bench_Open(__in PBENCHMARK_TEST_PARAM test)
 				test->DeviceHandle = NULL;
 			}
 
-			CONWRN("could not get device descriptor.\n%s\n", list->DevicePath);
+			CONWRN("could not get device descriptor.\n%s\n", deviceInfo->DevicePath);
 			continue;
 		}
 		test->Vid = (INT)test->DeviceDescriptor.idVendor;
@@ -401,7 +399,7 @@ NextInterface:
 					// this is the one we are looking for.
 					test->Intf = test->InterfaceDescriptor.bInterfaceNumber;
 					test->Altf = test->InterfaceDescriptor.bAlternateSetting;
-					test->SelectedDeviceProfile = list;
+					test->SelectedDeviceProfile = deviceInfo;
 
 					// some buffering is required for iso.
 					if (hasIsoEndpoints && test->BufferCount == 1)
@@ -1366,15 +1364,19 @@ void ResetRunningStatus(PBENCHMARK_TRANSFER_PARAM transferParam)
 int GetTestDeviceFromArgs(PBENCHMARK_TEST_PARAM test)
 {
 	CHAR id[MAX_PATH];
-	PKUSB_DEV_LIST list = test->DeviceList;
-	while (list)
+	PKUSB_DEV_INFO deviceInfo = NULL;
+
+	LstK_Reset(test->DeviceList);
+
+	while (LstK_Next(test->DeviceList, &deviceInfo))
 	{
 		int vid = -1;
 		int pid = -1;
 		int mi = -1;
 		PCHAR chID;
+
 		memset(id, 0, sizeof(id));
-		strcpy_s(id, MAX_PATH - 1, list->DeviceInstance);
+		strcpy_s(id, MAX_PATH - 1, deviceInfo->DeviceInstance);
 		_strlwr_s(id, MAX_PATH);
 
 		if ( (chID = strstr(id, "vid_")) != NULL)
@@ -1385,11 +1387,9 @@ int GetTestDeviceFromArgs(PBENCHMARK_TEST_PARAM test)
 			sscanf_s(chID, "mi_%02x", &mi);
 
 		if (test->Vid == vid && test->Pid == pid)
-			list->UserContext.Byte[0] = TRUE;
+			deviceInfo->UserContext.Byte[0] = TRUE;
 		else
-			list->UserContext.Byte[0] = FALSE;
-
-		list = list->next;
+			deviceInfo->UserContext.Byte[0] = FALSE;
 	}
 
 	return ERROR_SUCCESS;
@@ -1399,27 +1399,27 @@ int GetTestDeviceFromList(PBENCHMARK_TEST_PARAM test)
 {
 	UCHAR selection;
 	UCHAR count = 0;
-	PKUSB_DEV_LIST list = test->DeviceList;
+	PKUSB_DEV_INFO deviceInfo = NULL;
+
+	LstK_Reset(test->DeviceList);
 
 	if (test->ListDevicesOnly)
 	{
-		while (list)
+		while (LstK_Next(test->DeviceList, &deviceInfo))
 		{
 			count++;
-			CONMSG("%02u. %s (%s) [%s]\n", count, list->DeviceDesc, list->DeviceInstance, GetDrvIdString(list->DrvId));
-			list = list->next;
+			CONMSG("%02u. %s (%s) [%s]\n", count, deviceInfo->DeviceDesc, deviceInfo->DeviceInstance, GetDrvIdString(deviceInfo->DrvId));
 		}
 
 		return ERROR_SUCCESS;
 	}
 	else
 	{
-		while (list && count < 9)
+		while (LstK_Next(test->DeviceList, &deviceInfo) && count < 9)
 		{
-			CONMSG("%u. %s (%s) [%s]\n", count + 1, list->DeviceDesc, list->DeviceInstance, GetDrvIdString(list->DrvId));
-			list->UserContext.Byte[0] = FALSE;
+			CONMSG("%u. %s (%s) [%s]\n", count + 1, deviceInfo->DeviceDesc, deviceInfo->DeviceInstance, GetDrvIdString(deviceInfo->DrvId));
+			deviceInfo->UserContext.Byte[0] = FALSE;
 			count++;
-			list = list->next;
 		}
 		if (!count)
 		{
@@ -1437,17 +1437,16 @@ int GetTestDeviceFromList(PBENCHMARK_TEST_PARAM test)
 		if (selection > 0 && selection <= count)
 		{
 			count = 0;
-			list = test->DeviceList;
+			while (
+			    LstK_Next(test->DeviceList, &deviceInfo) &&
+			    ++count != selection);
 
-			while (list && ++count != selection)
-				list = list->next;
-
-			if (!list)
+			if (!deviceInfo)
 			{
 				CONERR("unknown selection\n");
 				return -1;
 			}
-			list->UserContext.Byte[0] = TRUE;
+			deviceInfo->UserContext.Byte[0] = TRUE;
 
 			return ERROR_SUCCESS;
 		}
@@ -1461,7 +1460,7 @@ int __cdecl main(int argc, char** argv)
 	BENCHMARK_TEST_PARAM Test;
 	PBENCHMARK_TRANSFER_PARAM ReadTest	= NULL;
 	PBENCHMARK_TRANSFER_PARAM WriteTest	= NULL;
-	KUSB_DEV_LIST_SEARCH searchParams = {0};
+	KUSB_DEV_LIST_INIT_PARAMS searchParams = {0};
 	int key;
 	LONG ec;
 
@@ -1488,23 +1487,25 @@ int __cdecl main(int argc, char** argv)
 		searchParams.EnableCompositeDeviceMode = TRUE;
 	}
 
-	ec = LstK_GetDeviceList(&Test.DeviceList, &searchParams);
-	if (ec < 0)
+	if (!LstK_Init(&Test.DeviceList, &searchParams))
 	{
-		CONERR("failed getting device list ec=\n", ec);
+		ec = GetLastError();
+		CONERR("failed getting device list ec=%08Xh\n", ec);
 		goto Done;
 	}
-	if (ec == 0)
+	if (!Test.DeviceList->DeviceCount)
 	{
-		CONERR("device list empty.\n", ec);
+		CONERR("device list empty.\n");
 		goto Done;
 	}
-
-
 
 	if (Test.ListDevicesOnly)
 	{
-		CONMSG("CurrentProcessId=%u Count=%d\n", GetCurrentProcessId(), ec);
+		CONMSG("CurrentProcessId=%u Count=%d\n", GetCurrentProcessId(), Test.DeviceList->DeviceCount);
+	}
+	else
+	{
+		CONMSG("device-count=%u\n", Test.DeviceList->DeviceCount);
 	}
 
 	if (Test.UseList)
@@ -1722,7 +1723,7 @@ Done:
 
 	}
 
-	LstK_FreeDeviceList(&Test.DeviceList);
+	LstK_Free(&Test.DeviceList);
 	FreeTransferParam(&ReadTest);
 	FreeTransferParam(&WriteTest);
 

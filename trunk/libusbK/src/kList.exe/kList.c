@@ -78,7 +78,7 @@ LONG WinError(__in_opt DWORD errorCode);
 BOOL OpenDeviceFileHandle(__in LPCSTR deviceFileName,
                           __out HANDLE* fileHandle);
 
-BOOL GetDescriptorReport(__in PKUSB_DEV_LIST deviceElement,
+BOOL GetDescriptorReport(__in PKUSB_DEV_INFO deviceElement,
                          __in BOOL detailed);
 
 BOOL GetRealConfigDescriptor(__in UCHAR Index,
@@ -282,9 +282,9 @@ void ShowCopyright(void);
 
 int __cdecl main(int argc, char** argv)
 {
-	LONG ec;
+	LONG ec = ERROR_SUCCESS;
 	PKUSB_DEV_LIST deviceList = NULL;
-	PKUSB_DEV_LIST deviceElement;
+	PKUSB_DEV_INFO deviceElement;
 	LONG devicePos = 0;
 	LONG_PTR selection;
 
@@ -293,20 +293,20 @@ int __cdecl main(int argc, char** argv)
 
 	UsbIdsText = LoadResourceUsbIds();
 
-	ec = LstK_GetDeviceList(&deviceList, NULL);
-	if (ec < 0)
+	if (!LstK_Init(&deviceList, NULL))
 	{
 		printf("failed getting device list.\n");
-		return WinError(0);
+		ec = WinError(0);
+		return ec;
 	}
-	if (ec == 0)
+	if (deviceList->DeviceCount == 0)
 	{
 		printf("No devices found.\n");
 		ec = -1;
 		goto Done;
 	}
-	deviceElement = deviceList;
-	while(deviceElement)
+
+	while(LstK_Next(deviceList, &deviceElement))
 	{
 		printf("%2d. %-21s: %s\n", devicePos + 1, "Driver", GetDrvIdString(deviceElement->DrvId));
 		PrintfDeviceElement(DeviceDesc);
@@ -319,7 +319,6 @@ int __cdecl main(int argc, char** argv)
 		printf("\n");
 
 		devicePos++;
-		deviceElement = deviceElement->next;
 
 	}
 
@@ -344,17 +343,16 @@ int __cdecl main(int argc, char** argv)
 	printf("\n");
 
 	devicePos = 1;
-	deviceElement = deviceList;
-	while(deviceElement)
+	while(LstK_Next(deviceList, &deviceElement))
 	{
 		if (devicePos == selection)
 			break;
 		devicePos++;
-		deviceElement = deviceElement->next;
 	}
 	if (!deviceElement)
 	{
 		printf("device list error\n");
+		ec = -1;
 		goto Done;
 	}
 
@@ -372,7 +370,7 @@ int __cdecl main(int argc, char** argv)
 	}
 
 Done:
-	LstK_FreeDeviceList(&deviceList);
+	LstK_Free(&deviceList);
 	return ec;
 }
 
@@ -414,7 +412,7 @@ BOOL OpenDeviceFileHandle(__in LPCSTR deviceFileName, __out HANDLE* fileHandle)
 	return TRUE;
 }
 
-BOOL GetDescriptorReport(__in PKUSB_DEV_LIST deviceElement, __in BOOL detailed)
+BOOL GetDescriptorReport(__in PKUSB_DEV_INFO deviceElement, __in BOOL detailed)
 {
 	HANDLE fileHandle = NULL;
 	ULONG length;

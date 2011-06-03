@@ -44,6 +44,7 @@ CP		= -cp
 ECHO	= @echo
 
 override ARCH:=$(strip $(arch))
+$(info [K] Multi-lib support = $(if $(strip $(findstring 32;@m32,$(shell $(CC) --print-multi-lib))),Yes,No))
 
 # configure the gcc multi-lib architecture based on the "arch=x86|amd64"
 # argument passed on the command line.  (default is x86)
@@ -75,8 +76,9 @@ OUT_BASE_DIR:=./bin
 #
 OUT_DIR:=$(OUT_BASE_DIR)/$(ARCH)
 
-# the directory name or .o files (relative to the output base directory)
-INT_DIR_NAME:=obj
+# intermediates (objects) output directory
+#
+INT_DIR:=$(OUT_DIR)
 
 # Include search paths
 #
@@ -116,7 +118,3 @@ CFLAGS:=$(MACHINE) $(INC_SEARCH) -mconsole -mwin32 -s -O2
 #
 LDFLAGS:= -Wl,--kill-at,--enable-stdcall-fixup $(STDC_LD_LIBS) -l$(USBK_LIB_NAME)
 
-# internal use only section -------------------------------------------
-#
-INT_DIR:=$(OUT_BASE_DIR)/$(INT_DIR_NAME)/$(ARCH)
-# ---------------------------------------------------------------------

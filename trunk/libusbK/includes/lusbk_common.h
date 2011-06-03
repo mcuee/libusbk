@@ -39,6 +39,8 @@
 #define __inout_opt			SAL__inout_opt
 #define __deref_inout		SAL__deref_inout
 
+#define __deref_out_opt		SAL__deref_out_opt
+
 #endif
 
 /*! \addtogroup genk

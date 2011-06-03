@@ -876,15 +876,36 @@ KUSB_EXP BOOL KUSB_API WUsb_GetOverlappedResult (
 	return UsbK_GetOverlappedResult(InterfaceHandle, lpOverlapped, lpNumberOfBytesTransferred, bWait);
 }
 
+BOOL KUSB_API w_AddDeviceToStackCB(__in PKUSB_DEV_LIST List,
+                                   __in PKUSB_DEV_INFO Item,
+                                   __in PWINUSB_BKND_CONTEXT BackendContext)
+{
+	BOOL success;
+
+	UNREFERENCED_PARAMETER(List);
+
+	success = UsbStack_AddDevice(
+	              &BackendContext->UsbStack,
+	              Item->DevicePath,
+	              NULL,
+	              BackendContext);
+
+	if (!success)
+	{
+		USBWRN("skipping composite device %s. ErrorCode=%08Xh\n",
+		       Item->DeviceDesc, GetLastError());
+	}
+
+	return TRUE;
+}
+
 KUSB_EXP BOOL KUSB_API WUsb_Open(
-    __in PKUSB_DEV_LIST DeviceListItem,
+    __in PKUSB_DEV_INFO DeviceListItem,
     __out PLIBUSBK_INTERFACE_HANDLE InterfaceHandle)
 {
 	BOOL success;
 	PKUSB_INTERFACE_HANDLE_INTERNAL interfaceHandle = NULL;
 	PWINUSB_BKND_CONTEXT backendContext = NULL;
-
-	PKUSB_DEV_LIST nextCompositeEL;
 
 	CheckLibInitialized();
 
@@ -900,22 +921,9 @@ KUSB_EXP BOOL KUSB_API WUsb_Open(
 	W_CTX(backendContext, interfaceHandle);
 	ErrorHandle(!backendContext, Error, "backendContext");
 
-	if (DeviceListItem->CompositeList)
+	if (DeviceListItem->CompositeDevices)
 	{
-		DL_FOREACH(DeviceListItem->CompositeList, nextCompositeEL)
-		{
-			success = UsbStack_AddDevice(
-			              &backendContext->UsbStack,
-			              nextCompositeEL->DevicePath,
-			              NULL,
-			              backendContext);
-
-			if (!success)
-			{
-				USBWRN("skipping composite device %s. ErrorCode=%08Xh\n",
-				       nextCompositeEL->DeviceDesc, GetLastError());
-			}
-		}
+		LstK_Enumerate(DeviceListItem->CompositeDevices, w_AddDeviceToStackCB, backendContext);
 	}
 	else
 	{

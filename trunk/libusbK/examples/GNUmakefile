@@ -34,8 +34,6 @@
 MAKE	= make
 RM		= -rm -fr
 
-SLN_OUTPUT_DIR=$(CURDIR)/bin
-
 $(info [K] Running examples SOLUTION makefile..)
 
 # make all examples for the specified "arch" (default is x86)
@@ -48,12 +46,12 @@ all: open-device
 #
 .PHONY: show-device
 show-device:
-	$(MAKE) --directory=./show-device $(subst w -- ,,$(MAKEFLAGS)) SLN_OUTPUT_DIR=$(SLN_OUTPUT_DIR) all
+	$(MAKE) --no-print-directory --directory=./show-device $(subst w -- ,,$(MAKEFLAGS)) all
 # make the open-device example for the specified "arch" (default is x86)
 #
 .PHONY: open-device
 open-device:
-	$(MAKE) --directory=./open-device $(subst w -- ,,$(MAKEFLAGS)) SLN_OUTPUT_DIR=$(SLN_OUTPUT_DIR) all
+	$(MAKE) --no-print-directory --directory=./open-device $(subst w -- ,,$(MAKEFLAGS)) all
 
 # make all examples for x86 and amd64 archs. ("arch" argument not used)
 #
@@ -68,4 +66,4 @@ multi-all:
 clean:
 	$(MAKE) --directory=./show-device $(MAKEFLAGS) clean
 	$(MAKE) --directory=./open-device $(MAKEFLAGS) clean
-	$(RM) $(SLN_OUTPUT_DIR) ./_ReSharper*
+	$(RM) ./_ReSharper*
