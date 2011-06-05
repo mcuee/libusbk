@@ -447,15 +447,16 @@ do {                                                                            
 
 //! Removes an element from a linked list.
 /*!
-* \attention
-* \c DL_DELETE does not free or de-allocate memory.
-* It "de-links" the element specified by \c del from the list.
 *
 * \param head
 * First element of the list.
 *
 * \param del
 * Element to remove.
+*
+* \attention
+* \c DL_DELETE does not free or de-allocate memory.
+* It "de-links" the element specified by \c del from the list.
 */
 #define DL_DELETE(head,del)                                                                    \
 do {                                                                                           \
@@ -487,13 +488,14 @@ do {                                                                            
 
 //! \copybrief DL_FOREACH
 /*!
-* \attention
-* This version is safe for deleting the elements during iteration.
 *
 * \copydetails DL_FOREACH
 *
 * \param tmp
 * A temporary list element used to ensure safe deletion during iteration.
+*
+* \attention
+* This version is safe for deleting the elements during iteration.
 */
 #define DL_FOREACH_SAFE(head,el,tmp)                                                           \
   for((el)=(head);(el) && (tmp = (el)->next, 1); (el) = tmp)

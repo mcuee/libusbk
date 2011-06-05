@@ -7,10 +7,27 @@ EXPORTS
 	LstK_Free
 	LstK_Enumerate
 	LstK_Current
-	LstK_Next
+	LstK_MoveNext
 	LstK_Reset
+	LstK_FindByVidPid
 	LstK_Lock
 	LstK_Unlock
+	
+	OvlK_Acquire
+	OvlK_Release
+	OvlK_CreatePool
+	OvlK_DestroyPool
+	OvlK_CreateDefaultPool
+	OvlK_DestroyDefaultPool
+	OvlK_GetEventHandle
+	OvlK_GetInfo
+	OvlK_GetContext
+	OvlK_GetPoolContext
+	OvlK_Wait
+	OvlK_WaitOrCancel
+	OvlK_WaitAndRelease
+	OvlK_IsComplete
+	OvlK_ReUse
 	
 	UsbK_Initialize
 	UsbK_Free

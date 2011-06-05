@@ -277,7 +277,7 @@ BOOL Bench_Open(__in PBENCHMARK_TEST_PARAM test)
 
 	LstK_Reset(test->DeviceList);
 
-	while (LstK_Next(test->DeviceList, &deviceInfo))
+	while (LstK_MoveNext(test->DeviceList, &deviceInfo))
 	{
 		if (!deviceInfo->UserContext.Byte[0])
 			continue;
@@ -1368,7 +1368,7 @@ int GetTestDeviceFromArgs(PBENCHMARK_TEST_PARAM test)
 
 	LstK_Reset(test->DeviceList);
 
-	while (LstK_Next(test->DeviceList, &deviceInfo))
+	while (LstK_MoveNext(test->DeviceList, &deviceInfo))
 	{
 		int vid = -1;
 		int pid = -1;
@@ -1405,7 +1405,7 @@ int GetTestDeviceFromList(PBENCHMARK_TEST_PARAM test)
 
 	if (test->ListDevicesOnly)
 	{
-		while (LstK_Next(test->DeviceList, &deviceInfo))
+		while (LstK_MoveNext(test->DeviceList, &deviceInfo))
 		{
 			count++;
 			CONMSG("%02u. %s (%s) [%s]\n", count, deviceInfo->DeviceDesc, deviceInfo->DeviceInstance, GetDrvIdString(deviceInfo->DrvId));
@@ -1415,7 +1415,7 @@ int GetTestDeviceFromList(PBENCHMARK_TEST_PARAM test)
 	}
 	else
 	{
-		while (LstK_Next(test->DeviceList, &deviceInfo) && count < 9)
+		while (LstK_MoveNext(test->DeviceList, &deviceInfo) && count < 9)
 		{
 			CONMSG("%u. %s (%s) [%s]\n", count + 1, deviceInfo->DeviceDesc, deviceInfo->DeviceInstance, GetDrvIdString(deviceInfo->DrvId));
 			deviceInfo->UserContext.Byte[0] = FALSE;
@@ -1438,7 +1438,7 @@ int GetTestDeviceFromList(PBENCHMARK_TEST_PARAM test)
 		{
 			count = 0;
 			while (
-			    LstK_Next(test->DeviceList, &deviceInfo) &&
+			    LstK_MoveNext(test->DeviceList, &deviceInfo) &&
 			    ++count != selection);
 
 			if (!deviceInfo)

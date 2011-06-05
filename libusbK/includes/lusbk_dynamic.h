@@ -516,6 +516,10 @@ extern "C" {
 	*
 	* \param DriverID
 	* The driver id of the api set to retrieve. See \ref KUSB_DRVID
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get
+	* extended error information.
+	*
 	*/
 	KUSB_EXP BOOL KUSB_API DrvK_LoadDriverApi(
 	    __inout PKUSB_DRIVER_API DriverAPI,
@@ -531,6 +535,10 @@ extern "C" {
 	*
 	* \param FunctionID
 	* The function id. See \ref KUSB_FNID
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get
+	* extended error information.
+	*
 	*/
 	KUSB_EXP BOOL KUSB_API DrvK_GetProcAddress(
 	    __out KPROC* ProcAddress,

@@ -306,7 +306,7 @@ int __cdecl main(int argc, char** argv)
 		goto Done;
 	}
 
-	while(LstK_Next(deviceList, &deviceElement))
+	while(LstK_MoveNext(deviceList, &deviceElement))
 	{
 		printf("%2d. %-21s: %s\n", devicePos + 1, "Driver", GetDrvIdString(deviceElement->DrvId));
 		PrintfDeviceElement(DeviceDesc);
@@ -343,7 +343,7 @@ int __cdecl main(int argc, char** argv)
 	printf("\n");
 
 	devicePos = 1;
-	while(LstK_Next(deviceList, &deviceElement))
+	while(LstK_MoveNext(deviceList, &deviceElement))
 	{
 		if (devicePos == selection)
 			break;

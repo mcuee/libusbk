@@ -6,6 +6,11 @@
 
 #include "lusbk_private.h"
 
+typedef BOOL WINAPI CANCEL_IO_EX(HANDLE, LPOVERLAPPED);
+typedef CANCEL_IO_EX* PCANCEL_IO_EX;
+
+extern PCANCEL_IO_EX Opt_CancelIoEx;
+
 #define GET_INTERNAL_HANDLE_EX(HandlePtrRtn, OnFailureReturnTrue)						\
 {																						\
 	HandlePtrRtn = PublicToPrivateHandle(InterfaceHandle);								\

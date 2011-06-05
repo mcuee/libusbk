@@ -100,8 +100,8 @@ typedef struct _KUSB_DEV_INFO
 	*/
 	CHAR DevicePath[LSTK_STRING_MAX_LEN];
 
-	//! see \ref KUSB_DEV_INFO_EL_SEARCH::EnableCompositeDeviceMode
-	struct _KUSB_DEV_LIST* CompositeDevices;
+	//! see \ref KUSB_DEV_LIST_INIT_PARAMS::EnableCompositeDeviceMode
+	struct _KUSB_DEV_LIST* CompositeList;
 
 } KUSB_DEV_INFO;
 //! pointer to a \ref KUSB_DEV_INFO
@@ -131,8 +131,8 @@ typedef struct _KUSB_DEV_LIST_INIT_PARAMS
 
 	//! Enable composite device list mode
 	/*!
-	* When \c EnableCompositeDeviceMode is TRUE, composite devices are merged into a single \ref KUSB_DEV_LIST and
-	* \ref KUSB_DEV_LIST::CompositeList is populated with the individual composite device elements.
+	* When \c EnableCompositeDeviceMode is TRUE, composite devices are merged into a single \ref KUSB_DEV_INFO and
+	* \ref KUSB_DEV_INFO::CompositeList is populated with the individual composite device elements.
 	*
 	*/
 	BOOL EnableCompositeDeviceMode;
@@ -203,18 +203,18 @@ extern "C" {
 //! Enumerates \ref KUSB_DEV_INFO elements of a \ref KUSB_DEV_LIST.
 	/*!
 	*
-	* Calls \c EnumDevListCB for each element in the device list or until \c EnumDevListCB returns FALSE.
-	*
 	* \param DeviceList
 	* The \c DeviceList to enumerate.
 	*
 	* \param EnumDevListCB
 	* Function to call for each iteration.
 	*
-	* \param PENUM_DEV_LIST_CB
+	* \param Context
 	* Optional user context pointer.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
+	* Calls \c EnumDevListCB for each element in the device list or until \c EnumDevListCB returns FALSE.
 	*/
 	KUSB_EXP BOOL KUSB_API LstK_Enumerate(
 	    __in PKUSB_DEV_LIST DeviceList,
@@ -232,6 +232,19 @@ extern "C" {
 	*
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
+	* After a \c DeviceList is created or after the \ref LstK_Reset method is
+	* called, the \c LstK_MoveNext method must be called to advance the device
+	* list enumerator to the first element of the \c DeviceList before calling
+	* \c LstK_Current otherwise, \c DeviceInfo is undefined.
+	*
+	* \c LstK_Current returns \c FALSE and sets last error to \c
+	* ERROR_NO_MORE_ITEMS if the last call to \c LstK_MoveNext returned \c
+	* FALSE, which indicates the end of the \c DeviceList.
+	*
+	* \c LstK_Current does not move the position of the device list
+	* enumerator, and consecutive calls to \c LstK_Current return the same
+	* object until either \c LstK_MoveNext or \ref LstK_Reset is called.
 	*/
 	KUSB_EXP BOOL KUSB_API LstK_Current(
 	    __in PKUSB_DEV_LIST DeviceList,
@@ -239,20 +252,31 @@ extern "C" {
 
 //! Advances the device list current \ref KUSB_DEV_INFO position.
 	/*!
-	*
 	* \param DeviceList
-	* The \c DeviceList to retrieve a current \ref KUSB_DEV_INFO for.
+	* A usb device list returned by \ref LstK_Init
 	*
-	* \param DeviceInfo
-	* The device information.
+	* \param DeviceInfo [OPTIONAL]
+	* On success, contains a pointer to the device information for the current enumerators position.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
+	* After a \c DeviceList is created or after \ref LstK_Reset is called, an
+	* enumerator is positioned before the first element of the \c DeviceList
+	* and the \b first call to \c LstK_MoveNext moves the enumerator over the
+	* first element of the \c DeviceList.
+	*
+	* If \c LstK_MoveNext passes the end of the \c DeviceList, the enumerator
+	* is positioned after the last element in the \c DeviceList and \c
+	* LstK_MoveNext returns \c FALSE. When the enumerator is at this position,
+	* a subsequent call to \c LstK_MoveNext will reset the enumerator and it
+	* continues from the beginning.
+	*
 	*/
-	KUSB_EXP BOOL KUSB_API LstK_Next(
+	KUSB_EXP BOOL KUSB_API LstK_MoveNext(
 	    __inout PKUSB_DEV_LIST DeviceList,
 	    __deref_out_opt PKUSB_DEV_INFO* DeviceInfo);
 
-//! Resets the device list current \ref KUSB_DEV_INFO position.
+//! Sets the device list to its initial position, which is before the first element in the list.
 	/*!
 	*
 	* \param DeviceList
@@ -262,6 +286,36 @@ extern "C" {
 	*/
 	KUSB_EXP VOID KUSB_API LstK_Reset(
 	    __inout PKUSB_DEV_LIST DeviceList);
+
+//! Find a device by vendor and product id
+	/*!
+	*
+	* \param DeviceList
+	* The \c DeviceList to retrieve a current \ref KUSB_DEV_INFO for.
+	*
+	* \param Vid
+	* ID is used in conjunction with the \c Pid to uniquely identify USB
+	* devices, providing traceability to the OEM.
+	*
+	* \param Pid
+	* ID is used in conjunction with the \c Pid to uniquely identify USB
+	* devices, providing traceability to the OEM.
+	*
+	* \param DeviceInfo
+	* On success, the device information pointer, otherwise NULL.
+	*
+	* \returns
+	* - TRUE if the device was found
+	* - FALSE if the device was \b not found or an error occured.
+	*   - Sets last error to \c ERROR_NO_MORE_ITEMS if the device was \b not found.
+	*
+	* Searches all elements in \c DeviceList for usb device matching the specified.
+	*/
+	KUSB_EXP BOOL KUSB_API LstK_FindByVidPid(
+	    __in PKUSB_DEV_LIST DeviceList,
+	    __in UINT Vid,
+	    __in UINT Pid,
+	    __deref_out PKUSB_DEV_INFO* DeviceInfo);
 
 //! Locks access to the device list.
 	/*!

@@ -80,9 +80,95 @@ typedef struct _LIBUSBK_BKND_CONTEXT
 #define ErrorStackDeviceCache()		ErrorSet(!success, Error, ERROR_DEVICE_NOT_AVAILABLE, "no devices found.")
 #define ErrorStackInterfaceCache()	ErrorSet(!success, Error, ERROR_DEVICE_NOT_AVAILABLE, "no interfaces found.")
 
+#define OVLK_CHECK_SUBMIT(mJump, mOverlapped, mPipeID, mBuffer, mBufferLength, mDeviceHandle, mPacketSize, mIoCtl)	\
+	if (mOverlapped && mOverlapped == mOverlapped->Pointer)														\
+	{																											\
+		POVERLAPPED_K_INFO ovlkInfo = OvlK_GetInfo(mOverlapped);												\
+		libusb_request* request = (libusb_request*)ovlkInfo->BackendContext;									\
+		mOverlapped->Pointer = NULL;																			\
+																												\
+		Mem_Zero(request, sizeof(*request));																	\
+		request->endpoint.endpoint = mPipeID;																	\
+		request->endpoint.packet_size = mPacketSize;															\
+		ovlkInfo->DataBuffer = mBuffer;																			\
+		ovlkInfo->DataBufferSize = mBufferLength;																\
+		ovlkInfo->DeviceHandle = mDeviceHandle;																	\
+		ovlkInfo->mPipeID = mPipeID;																			\
+		ovlkInfo->Cancel = k_CancelOverlappedK;																	\
+																												\
+		success = Ioctl_Async(ovlkInfo->DeviceHandle,															\
+		                      mIoCtl,																			\
+		                      request, sizeof(*request),														\
+		                      mBuffer, mBufferLength,															\
+		                      mOverlapped);																		\
+		goto mJump;																								\
+	}
+
+#define OVLK_CHECK_SUBMIT_CONTROL(mJump, mOverlapped, mSetupPacket, mBuffer, mBufferLength, mDeviceHandle, mIoCtl)	\
+	if (mOverlapped && mOverlapped == mOverlapped->Pointer)														\
+	{																											\
+		POVERLAPPED_K_INFO ovlkInfo = OvlK_GetInfo(mOverlapped);												\
+		libusb_request* request = (libusb_request*)ovlkInfo->BackendContext;									\
+		mOverlapped->Pointer = NULL;																			\
+																												\
+		Mem_Zero(request, sizeof(*request));																	\
+		memcpy(&request->control, &mSetupPacket, sizeof(request->control));										\
+		ovlkInfo->DataBuffer = mBuffer;																			\
+		ovlkInfo->DataBufferSize = mBufferLength;																\
+		ovlkInfo->DeviceHandle = mDeviceHandle;																	\
+		ovlkInfo->Cancel = k_CancelOverlappedK_Control;															\
+																												\
+		success = Ioctl_Async(ovlkInfo->DeviceHandle,															\
+		                      mIoCtl,																			\
+		                      request, sizeof(*request),														\
+		                      mBuffer, mBufferLength,															\
+		                      mOverlapped);																		\
+		goto mJump;																								\
+	}
+
 ///////////////////////////////////////////////////////////////////////
 // private libusbk/0 backend functions
 ///////////////////////////////////////////////////////////////////////
+
+static BOOL KUSB_API k_CancelOverlappedK(__in POVERLAPPED_K Overlapped)
+{
+	BOOL success;
+	POVERLAPPED_K_INFO ovInfo = OvlK_GetInfo(Overlapped);
+	if (Opt_CancelIoEx)
+	{
+		success = Opt_CancelIoEx(ovInfo->DeviceHandle, Overlapped);
+	}
+	else
+	{
+		libusb_request request;
+		Mem_Zero(&request, sizeof(request));
+		request.endpoint.endpoint = ovInfo->PipeID;
+
+		success = Ioctl_Sync(ovInfo->DeviceHandle,
+		                     LIBUSB_IOCTL_ABORT_ENDPOINT,
+		                     &request, sizeof(request),
+		                     NULL, 0,
+		                     NULL);
+	}
+
+	return success;
+}
+
+static BOOL KUSB_API k_CancelOverlappedK_Control(__in POVERLAPPED_K Overlapped)
+{
+	BOOL success;
+	POVERLAPPED_K_INFO ovInfo = OvlK_GetInfo(Overlapped);
+	if (Opt_CancelIoEx)
+	{
+		success = Opt_CancelIoEx(ovInfo->DeviceHandle, Overlapped);
+	}
+	else
+	{
+		success = CancelIo(ovInfo->DeviceHandle);
+	}
+
+	return success;
+}
 
 LONG k_ClosedBySetConfigCB(__in PKUSB_INTERFACE_STACK UsbStack,
                            __in PKUSB_DEVICE_EL DeviceElement,
@@ -934,17 +1020,25 @@ KUSB_EXP BOOL KUSB_API UsbK_ReadPipe (
     __out_opt PULONG LengthTransferred,
     __in_opt LPOVERLAPPED Overlapped)
 {
-	libusb_request request;
-
 	LUSBKFN_CTX_PIPE_PREFIX();
 
 	AcquireSyncLockRead(&handle->Instance.Lock);
 
-	Mem_Zero(&request, sizeof(request));
-	request.endpoint.endpoint = PipeID;
+	OVLK_CHECK_SUBMIT(
+	    Done,
+	    Overlapped,
+	    PipeID,
+	    Buffer,
+	    BufferLength,
+	    DeviceHandleByPipeID(PipeID),
+	    0,
+	    LIBUSB_IOCTL_INTERRUPT_OR_BULK_READ);
 
 	if (Overlapped)
 	{
+		libusb_request request;
+		Mem_Zero(&request, sizeof(request));
+		request.endpoint.endpoint = PipeID;
 		success = Ioctl_Async(DeviceHandleByPipeID(PipeID), LIBUSB_IOCTL_INTERRUPT_OR_BULK_READ,
 		                      &request, sizeof(request),
 		                      Buffer, BufferLength,
@@ -953,6 +1047,9 @@ KUSB_EXP BOOL KUSB_API UsbK_ReadPipe (
 	else
 	{
 		PLIBUSBK_BKND_CONTEXT backendContext;
+		libusb_request request;
+		Mem_Zero(&request, sizeof(request));
+		request.endpoint.endpoint = PipeID;
 		GET_BACKEND_CONTEXT(backendContext, handle, LIBUSBK_BKND_CONTEXT);
 
 		success = Ioctl_SyncWithTimeout(DeviceHandleByPipeID(PipeID),
@@ -964,6 +1061,7 @@ KUSB_EXP BOOL KUSB_API UsbK_ReadPipe (
 		                                LengthTransferred);
 	}
 
+Done:
 	ReleaseSyncLockRead(&handle->Instance.Lock);
 	return success;
 }
@@ -976,24 +1074,37 @@ KUSB_EXP BOOL KUSB_API UsbK_WritePipe (
     __out_opt PULONG LengthTransferred,
     __in_opt LPOVERLAPPED Overlapped)
 {
-	libusb_request request;
 
 	LUSBKFN_CTX_PIPE_PREFIX();
 
 	AcquireSyncLockRead(&handle->Instance.Lock);
 
-	Mem_Zero(&request, sizeof(request));
-	request.endpoint.endpoint = PipeID;
+	OVLK_CHECK_SUBMIT(
+	    Done,
+	    Overlapped,
+	    PipeID,
+	    Buffer,
+	    BufferLength,
+	    DeviceHandleByPipeID(PipeID),
+	    0,
+	    LIBUSB_IOCTL_INTERRUPT_OR_BULK_WRITE);
 
 	if (Overlapped)
 	{
-		success = Ioctl_Async(DeviceHandleByPipeID(PipeID), LIBUSB_IOCTL_INTERRUPT_OR_BULK_WRITE,
+		libusb_request request;
+		Mem_Zero(&request, sizeof(request));
+		request.endpoint.endpoint = PipeID;
+		success = Ioctl_Async(DeviceHandleByPipeID(PipeID),
+		                      LIBUSB_IOCTL_INTERRUPT_OR_BULK_WRITE,
 		                      &request, sizeof(request),
 		                      Buffer, BufferLength,
 		                      Overlapped);
 	}
 	else
 	{
+		libusb_request request;
+		Mem_Zero(&request, sizeof(request));
+		request.endpoint.endpoint = PipeID;
 		success = Ioctl_SyncWithTimeout(DeviceHandleByPipeID(PipeID),
 		                                LIBUSB_IOCTL_INTERRUPT_OR_BULK_WRITE,
 		                                &request,
@@ -1003,6 +1114,7 @@ KUSB_EXP BOOL KUSB_API UsbK_WritePipe (
 		                                LengthTransferred);
 	}
 
+Done:
 	ReleaseSyncLockRead(&handle->Instance.Lock);
 	return success;
 }
@@ -1022,24 +1134,28 @@ KUSB_EXP BOOL KUSB_API UsbK_ControlTransfer (
 
 	AcquireSyncLockRead(&handle->Instance.Lock);
 
-
-	Mem_Zero(&request, sizeof(request));
-	memcpy(&request.control, &SetupPacket, sizeof(request.control));
-
 	ioctlCode = (SetupPacket.RequestType & USB_ENDPOINT_DIRECTION_MASK) ? LIBUSB_IOCTL_CONTROL_READ : LIBUSB_IOCTL_CONTROL_WRITE;
+
+	OVLK_CHECK_SUBMIT_CONTROL(Done, Overlapped, SetupPacket, Buffer, BufferLength, DeviceHandleByPipeID(PipeID), ioctlCode);
 
 	if (Overlapped)
 	{
+		Mem_Zero(&request, sizeof(request));
+		memcpy(&request.control, &SetupPacket, sizeof(request.control));
 		success = Ioctl_Async(DeviceHandleByPipeID(PipeID), ioctlCode, &request, sizeof(request), Buffer, BufferLength, Overlapped);
 	}
 	else
 	{
 		UCHAR pipeID = (SetupPacket.RequestType & USB_ENDPOINT_DIRECTION_MASK) ? 0x80 : 0x00;
+
+		Mem_Zero(&request, sizeof(request));
+		memcpy(&request.control, &SetupPacket, sizeof(request.control));
 		request.timeout = GetSetPipePolicy(backendContext, pipeID).timeout;
 
 		success = Ioctl_Sync(DeviceHandleByPipeID(PipeID), ioctlCode, &request, sizeof(request), Buffer, BufferLength, LengthTransferred);
 	}
 
+Done:
 	ReleaseSyncLockRead(&handle->Instance.Lock);
 	return success;
 }
@@ -1232,9 +1348,9 @@ KUSB_EXP BOOL KUSB_API UsbK_Open(
 	K_CTX(backendContext, interfaceHandle);
 	ErrorHandle(!backendContext, Error, "backendContext");
 
-	if (DeviceListItem->CompositeDevices)
+	if (DeviceListItem->CompositeList)
 	{
-		LstK_Enumerate(DeviceListItem->CompositeDevices, k_AddDeviceToStackCB, backendContext);
+		LstK_Enumerate(DeviceListItem->CompositeList, k_AddDeviceToStackCB, backendContext);
 	}
 	else
 	{
@@ -1405,8 +1521,6 @@ KUSB_EXP BOOL KUSB_API UsbK_IsoReadPipe (
     __in ULONG IsoPacketSize,
     __in LPOVERLAPPED Overlapped)
 {
-	libusb_request request;
-
 	LUSBKFN_CTX_PIPE_PREFIX();
 
 	AcquireSyncLockRead(&handle->Instance.Lock);
@@ -1415,19 +1529,31 @@ KUSB_EXP BOOL KUSB_API UsbK_IsoReadPipe (
 	{
 		USBERR("isochronous transfers require an 'Overlapped' parameter.\n");
 		success = LusbwError(ERROR_INVALID_PARAMETER);
-		goto Error;
+		goto Done;
 	}
 
-	Mem_Zero(&request, sizeof(request));
-	request.endpoint.endpoint = PipeID;
-	request.endpoint.packet_size = IsoPacketSize;
+	OVLK_CHECK_SUBMIT(
+	    Done,
+	    Overlapped,
+	    PipeID,
+	    Buffer,
+	    BufferLength,
+	    DeviceHandleByPipeID(PipeID),
+	    IsoPacketSize,
+	    LIBUSB_IOCTL_ISOCHRONOUS_READ) else
+	{
+		libusb_request request;
+		Mem_Zero(&request, sizeof(request));
+		request.endpoint.endpoint = PipeID;
+		request.endpoint.packet_size = IsoPacketSize;
 
-	success = Ioctl_Async(DeviceHandleByPipeID(PipeID), LIBUSB_IOCTL_ISOCHRONOUS_READ,
-	                      &request, sizeof(request),
-	                      Buffer, BufferLength,
-	                      Overlapped);
+		success = Ioctl_Async(DeviceHandleByPipeID(PipeID), LIBUSB_IOCTL_ISOCHRONOUS_READ,
+		                      &request, sizeof(request),
+		                      Buffer, BufferLength,
+		                      Overlapped);
+	}
 
-Error:
+Done:
 	ReleaseSyncLockRead(&handle->Instance.Lock);
 	return success;
 }
@@ -1440,8 +1566,6 @@ KUSB_EXP BOOL KUSB_API UsbK_IsoWritePipe (
     __in ULONG IsoPacketSize,
     __in LPOVERLAPPED Overlapped)
 {
-	libusb_request request;
-
 	LUSBKFN_CTX_PIPE_PREFIX();
 
 	AcquireSyncLockRead(&handle->Instance.Lock);
@@ -1450,20 +1574,33 @@ KUSB_EXP BOOL KUSB_API UsbK_IsoWritePipe (
 	{
 		USBERR("isochronous transfers require an 'Overlapped' parameter.\n");
 		success = LusbwError(ERROR_INVALID_PARAMETER);
-		goto Error;
+		goto Done;
 	}
 
-	Mem_Zero(&request, sizeof(request));
-	request.endpoint.endpoint = PipeID;
-	request.endpoint.packet_size = IsoPacketSize;
+	OVLK_CHECK_SUBMIT(
+	    Done,
+	    Overlapped,
+	    PipeID,
+	    Buffer,
+	    BufferLength,
+	    DeviceHandleByPipeID(PipeID),
+	    IsoPacketSize,
+	    LIBUSB_IOCTL_ISOCHRONOUS_WRITE) else
+	{
 
-	success = Ioctl_Async(DeviceHandleByPipeID(PipeID), LIBUSB_IOCTL_ISOCHRONOUS_WRITE,
-	                      &request, sizeof(request),
-	                      Buffer, BufferLength,
-	                      Overlapped);
+		libusb_request request;
+		Mem_Zero(&request, sizeof(request));
+		request.endpoint.endpoint = PipeID;
+		request.endpoint.packet_size = IsoPacketSize;
 
+		success = Ioctl_Async(DeviceHandleByPipeID(PipeID),
+		                      LIBUSB_IOCTL_ISOCHRONOUS_WRITE,
+		                      &request, sizeof(request),
+		                      Buffer, BufferLength,
+		                      Overlapped);
+	}
 
-Error:
+Done:
 	ReleaseSyncLockRead(&handle->Instance.Lock);
 	return success;
 }

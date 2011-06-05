@@ -126,6 +126,7 @@ BOOL k_InitPool(
 		Pool->OverlappedKs[overlappedPos].IsReUsableLock = 0;
 	}
 
+	// RELEASE the POOL lock
 	SpinLock_Release(&Pool->Private.BusyCount);
 	return TRUE;
 }
@@ -145,20 +146,30 @@ KUSB_EXP POVERLAPPED_K KUSB_API OvlK_Acquire(
 Retry:
 	if (pool->Private.ReUseList)
 	{
+		POVERLAPPED_K_EL oldest;
+
+		// ACQUIRE the POOL lock
 		SpinLock_Acquire(&pool->Private.BusyCount, TRUE);
-		if (pool->Private.ReUseList)
+
+		if ((oldest = pool->Private.ReUseList) != NULL)
 		{
 			// We can use a refurbished one.
-			next = (POVERLAPPED_K_INTERNAL)pool->Private.ReUseList->Overlapped;
+			next = (POVERLAPPED_K_INTERNAL)oldest->Overlapped;
 			if (next)
 			{
-				SpinLock_Release(&next->IsReUsableLock);
-				DL_DELETE(pool->Private.ReUseList, pool->Private.ReUseList);
+				DL_DELETE(pool->Private.ReUseList, oldest);
+
+				// RELEASE the POOL lock
 				SpinLock_Release(&pool->Private.BusyCount);
+
+				// MARK overlapped as NOT re-usable
+				SpinLock_Release(&next->IsReUsableLock);
+
 				goto Success;
 			}
 		}
 
+		// RELEASE the POOL lock
 		SpinLock_Release(&pool->Private.BusyCount);
 	}
 
@@ -169,25 +180,27 @@ Retry:
 		long nextpos = IncLock(pool->Private.NextPosition) % pool->Private.MaxCount;
 		next = &pool->OverlappedKs[nextpos];
 
-		// this one is refurbishing; we will have to continue on.
-		if (next->IsReUsableLock) continue;
+		if (next->IsReUsableLock || pool->Private.ReUseList)
+		{
+			// There is one refurbishing; go try and get it.
+			count = 0;
+			goto Retry;
+		}
 
-		// make sure it's not already in-use.
-		if (IncUsageLock(next) == 1)
-			goto Success;
-		// it was..
-		DecUsageLock(next);
+		if (!next->UsageCount)
+		{
+			// make sure it's not already in-use.
+			if (IncUsageLock(next) == 1)
+				goto Success;
+			// it was..
+			DecUsageLock(next);
+		}
 	}
 
-	// a last ditch effort to get an overlapped.
-	// this will never happen with a moderately sized pool.
-	SwitchToThread();
-	Sleep(0);
+	// this queue is all used up
+	SetLastError(ERROR_NO_MORE_ITEMS);
+	return NULL;
 
-	USBWRN("no more overlappedKs (max=%d) but reUseListAvailable=TRUE; retrying..\n",
-	       pool->Private.MaxCount);
-
-	goto Retry;
 
 Success:
 	OvlK_ReUse((POVERLAPPED_K)next);
@@ -204,17 +217,20 @@ KUSB_EXP BOOL KUSB_API OvlK_Release(
 
 	pool = (POVERLAPPED_K_POOL_USER)overlapped->Pool;
 
-
+	// increment the usgae lock, but decrement, fail, and return if it's new count < 2
 	LockOnInUseOverlapped(overlapped, FALSE);
 
+	// ACQUIRE the POOL lock
 	SpinLock_Acquire(&pool->Private.BusyCount, TRUE);
 
+	// MARK overlapped as RE-USABLE and add to ReUseList (unless it is already in the list)
 	if (SpinLock_Acquire(&overlapped->IsReUsableLock, FALSE))
 	{
 		overlapped->ReUseLink.Overlapped = OverlappedK;
 		DL_APPEND(pool->Private.ReUseList, &overlapped->ReUseLink);
 	}
 
+	// RELEASE the POOL lock
 	SpinLock_Release(&pool->Private.BusyCount);
 
 	// release this functions reference.
@@ -236,6 +252,7 @@ KUSB_EXP BOOL KUSB_API OvlK_DestroyPool(
 	if (pool == (POVERLAPPED_K_POOL_USER)&DefaultPool)
 		IsDefaultPoolInitialized = FALSE;
 
+	// ACQUIRE the POOL lock
 	SpinLock_Acquire(&pool->Private.BusyCount, TRUE);
 
 	for (pos = 0; pos < pool->Private.MaxCount; pos++)
@@ -307,6 +324,11 @@ KUSB_EXP POVERLAPPED_K_POOL KUSB_API OvlK_CreateDefaultPool()
 			// init default pool.
 			k_InitPool((POVERLAPPED_K_POOL_USER)&DefaultPool, sizeof(DefaultPool), DEFAULT_POOL_MAX_COUNT);
 			IsDefaultPoolInitialized = TRUE;
+			USBDBG(
+			    "Memory Usage:\r\n"
+			    "\tDefaultPool  : %u bytes (%u each)\r\n",
+			    sizeof(DefaultPool), sizeof(DefaultPool.OverlappedKs[0])
+			);
 		}
 		else
 		{
@@ -364,7 +386,7 @@ Error:
 	return NULL;
 }
 
-KUSB_EXP BOOL KUSB_API OvlK_WaitComplete(
+KUSB_EXP BOOL KUSB_API OvlK_Wait(
     __in POVERLAPPED_K OverlappedK,
     __in_opt DWORD TimeoutMS,
     __in_opt OVERLAPPEDK_WAIT_FLAGS WaitFlags,
@@ -376,6 +398,7 @@ KUSB_EXP BOOL KUSB_API OvlK_WaitComplete(
 	BOOL success;
 
 	ErrorHandle(!overlapped, Error, "OverlappedK");
+	ErrorParam(!TransferredLength, Error, "TransferredLength");
 
 	// make sure this this overlapped is in-use.
 	ReturnOnFreeOverlapped(overlapped, FALSE);
@@ -388,42 +411,39 @@ KUSB_EXP BOOL KUSB_API OvlK_WaitComplete(
 		if (!success)
 		{
 			errorCode = GetLastError();
-			if (WaitFlags & WAIT_FLAGS_ON_FAIL_RELEASE)
+			if (WaitFlags & WAIT_FLAGS_RELEASE_ON_FAIL)
 				OvlK_Release(OverlappedK);
 		}
 		else
 		{
-			if (WaitFlags & WAIT_FLAGS_ON_SUCCESS_RELEASE)
+			if (WaitFlags & WAIT_FLAGS_RELEASE_ON_SUCCESS)
 				OvlK_Release(OverlappedK);
 		}
 		break;
 	case WAIT_TIMEOUT:
-		errorCode = ERROR_TIMEOUT;
-		if (WaitFlags & WAIT_FLAGS_ON_TIMEOUT_CANCEL)
+		errorCode = ERROR_IO_INCOMPLETE;
+		if (WaitFlags & WAIT_FLAGS_CANCEL_ON_TIMEOUT)
 		{
 			if (!overlapped->Private.Cancel(OverlappedK))
 			{
-				errorCode = ERROR_CANCELLED;
+				errorCode = GetLastError();
 				USBERR("failed cancelling OverlappedK.\n");
 				SetEvent(overlapped->Overlapped.hEvent);
 			}
 			else
 			{
-				if (WaitForSingleObject(overlapped->Overlapped.hEvent, 1) != WAIT_OBJECT_0)
+				errorCode = ERROR_OPERATION_ABORTED;
+				if (WaitForSingleObject(overlapped->Overlapped.hEvent, 5000) != WAIT_OBJECT_0)
 					SetEvent(overlapped->Overlapped.hEvent);
 			}
 		}
-		if (WaitFlags & WAIT_FLAGS_ON_TIMEOUT_RELEASE)
-		{
+		if (WaitFlags & WAIT_FLAGS_RELEASE_ON_TIMEOUT)
 			OvlK_Release(OverlappedK);
-		}
 		break;
 	default:
 		errorCode = GetLastError();
-		if (WaitFlags & WAIT_FLAGS_ON_FAIL_RELEASE)
-		{
+		if (WaitFlags & WAIT_FLAGS_RELEASE_ON_FAIL)
 			OvlK_Release(OverlappedK);
-		}
 		break;
 	}
 
@@ -432,11 +452,26 @@ Error:
 	return FALSE;
 }
 
+KUSB_EXP BOOL KUSB_API OvlK_WaitOrCancel(
+    __in POVERLAPPED_K OverlappedK,
+    __in_opt DWORD TimeoutMS,
+    __out PULONG TransferredLength)
+{
+	return OvlK_Wait(OverlappedK, TimeoutMS, WAIT_FLAGS_CANCEL_ON_TIMEOUT, TransferredLength);
+}
+
+KUSB_EXP BOOL KUSB_API OvlK_WaitAndRelease(
+    __in POVERLAPPED_K OverlappedK,
+    __in_opt DWORD TimeoutMS,
+    __out PULONG TransferredLength)
+{
+	return OvlK_Wait(OverlappedK, TimeoutMS, WAIT_FLAGS_RELEASE_ALWAYS, TransferredLength);
+}
 
 KUSB_EXP BOOL KUSB_API OvlK_IsComplete(
     __in POVERLAPPED_K OverlappedK)
 {
-	return WaitForSingleObject(((POVERLAPPED_K_INTERNAL)OverlappedK)->Overlapped.hEvent, 0) == WAIT_OBJECT_0;
+	return WaitForSingleObject(((POVERLAPPED_K_INTERNAL)OverlappedK)->Overlapped.hEvent, 0) != WAIT_TIMEOUT;
 }
 
 KUSB_EXP BOOL KUSB_API KUSB_API OvlK_ReUse(

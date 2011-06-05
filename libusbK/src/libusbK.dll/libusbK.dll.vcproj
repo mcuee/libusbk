@@ -368,6 +368,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\lusbk_overlapped.c"
+				>
+			</File>
+			<File
 				RelativePath="..\lusbk_stack_collection.c"
 				>
 			</File>
@@ -448,7 +452,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\includess\lusbk_overlapped.h"
+				RelativePath="..\..\includes\lusbk_overlapped.h"
 				>
 			</File>
 			<File
