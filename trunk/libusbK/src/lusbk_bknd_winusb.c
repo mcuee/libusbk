@@ -92,8 +92,36 @@ typedef struct _WINUSB_API
 #define GetStackInterfaceCache() {success=UsbStack_GetCache(&backendContext->UsbStack, NULL, &(interfaceEL)); }
 
 #define InterfaceHandleByPipeID(PipeID)	 GetPipeInterfaceHandle(backendContext->UsbStack,PipeID)
+#define DeviceHandleByPipeID(PipeID)	 GetPipeDeviceHandle(backendContext->UsbStack,PipeID)
 
 #define ErrorStackInterfaceCache()	ErrorSet(!success, Error, ERROR_DEVICE_NOT_AVAILABLE, "no interfaces found.")
+
+#define OVLK_CHECK(mOverlapped, mPipeID, mBuffer, mBufferLength, mDeviceHandle, mInterfaceHandle)				\
+	if (mOverlapped && mOverlapped == mOverlapped->Pointer)														\
+	{																											\
+		POVERLAPPED_K_INFO ovlkInfo = OvlK_GetInfo(mOverlapped);												\
+		mOverlapped->Pointer = NULL;																			\
+																												\
+		ovlkInfo->DataBuffer = mBuffer;																			\
+		ovlkInfo->DataBufferSize = mBufferLength;																\
+		ovlkInfo->DeviceHandle = mDeviceHandle;																	\
+		ovlkInfo->InterfaceHandle = mInterfaceHandle;															\
+		ovlkInfo->mPipeID = mPipeID;																			\
+		ovlkInfo->Cancel = w_CancelOverlappedK;																	\
+	}
+
+#define OVLK_CHECK_CONTROL(mOverlapped, mBuffer, mBufferLength, mDeviceHandle, mInterfaceHandle)				\
+	if (mOverlapped && mOverlapped == mOverlapped->Pointer)														\
+	{																											\
+		POVERLAPPED_K_INFO ovlkInfo = OvlK_GetInfo(mOverlapped);												\
+		mOverlapped->Pointer = NULL;																			\
+																												\
+		ovlkInfo->DataBuffer = mBuffer;																			\
+		ovlkInfo->DataBufferSize = mBufferLength;																\
+		ovlkInfo->DeviceHandle = mDeviceHandle;																	\
+		ovlkInfo->InterfaceHandle = mInterfaceHandle;															\
+		ovlkInfo->Cancel = w_CancelOverlappedK_Control;															\
+	}
 
 static volatile long WUsbInitLibLock = 0;
 static volatile BOOL IsWUsbInitialized = FALSE;
@@ -359,6 +387,40 @@ BOOL w_ClaimOrReleaseInterface(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
 
 	return LusbwError(action);
 }
+
+static BOOL KUSB_API w_CancelOverlappedK(__in POVERLAPPED_K Overlapped)
+{
+	BOOL success;
+	POVERLAPPED_K_INFO ovInfo = OvlK_GetInfo(Overlapped);
+	if (Opt_CancelIoEx)
+	{
+		success = Opt_CancelIoEx(ovInfo->DeviceHandle, Overlapped);
+	}
+	else
+	{
+		success = WinUsb.AbortPipe(ovInfo->InterfaceHandle, ovInfo->PipeID);
+	}
+
+	return success;
+}
+
+static BOOL KUSB_API w_CancelOverlappedK_Control(__in POVERLAPPED_K Overlapped)
+{
+	BOOL success;
+	POVERLAPPED_K_INFO ovInfo = OvlK_GetInfo(Overlapped);
+	if (Opt_CancelIoEx)
+	{
+		success = Opt_CancelIoEx(ovInfo->DeviceHandle, Overlapped);
+	}
+	else
+	{
+		success = CancelIo(ovInfo->DeviceHandle);
+	}
+
+	return success;
+}
+
+
 
 KUSB_EXP BOOL KUSB_API WUsb_Initialize(
     __in HANDLE DeviceHandle,
@@ -747,6 +809,14 @@ KUSB_EXP BOOL KUSB_API WUsb_ReadPipe (
 
 	AcquireSyncLockRead(&handle->Instance.Lock);
 
+	OVLK_CHECK(
+	    Overlapped,
+	    PipeID,
+	    Buffer,
+	    BufferLength,
+	    DeviceHandleByPipeID(PipeID),
+	    InterfaceHandleByPipeID(PipeID));
+
 	success = WinUsb.ReadPipe(InterfaceHandleByPipeID(PipeID), PipeID, Buffer, BufferLength, LengthTransferred, Overlapped);
 
 	ReleaseSyncLockRead(&handle->Instance.Lock);
@@ -765,6 +835,14 @@ KUSB_EXP BOOL KUSB_API WUsb_WritePipe (
 
 	AcquireSyncLockRead(&handle->Instance.Lock);
 
+	OVLK_CHECK(
+	    Overlapped,
+	    PipeID,
+	    Buffer,
+	    BufferLength,
+	    DeviceHandleByPipeID(PipeID),
+	    InterfaceHandleByPipeID(PipeID));
+
 	success = WinUsb.WritePipe(InterfaceHandleByPipeID(PipeID), PipeID, Buffer, BufferLength, LengthTransferred, Overlapped);
 
 	ReleaseSyncLockRead(&handle->Instance.Lock);
@@ -782,6 +860,13 @@ KUSB_EXP BOOL KUSB_API WUsb_ControlTransfer (
 	WUSBFN_CTX_PIPE_PREFIX();
 
 	AcquireSyncLockRead(&handle->Instance.Lock);
+
+	OVLK_CHECK_CONTROL(
+	    Overlapped,
+	    Buffer,
+	    BufferLength,
+	    DeviceHandleByPipeID(0),
+	    InterfaceHandleByPipeID(0));
 
 	success = WinUsb.ControlTransfer(InterfaceHandleByPipeID(0), SetupPacket, Buffer, BufferLength, LengthTransferred, Overlapped);
 
@@ -921,9 +1006,9 @@ KUSB_EXP BOOL KUSB_API WUsb_Open(
 	W_CTX(backendContext, interfaceHandle);
 	ErrorHandle(!backendContext, Error, "backendContext");
 
-	if (DeviceListItem->CompositeDevices)
+	if (DeviceListItem->CompositeList)
 	{
-		LstK_Enumerate(DeviceListItem->CompositeDevices, w_AddDeviceToStackCB, backendContext);
+		LstK_Enumerate(DeviceListItem->CompositeList, w_AddDeviceToStackCB, backendContext);
 	}
 	else
 	{

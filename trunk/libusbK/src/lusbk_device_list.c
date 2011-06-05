@@ -246,6 +246,11 @@ recheck:
 		{
 			Mem_Zero(&DevListHandlePool, sizeof(DevListHandlePool));
 			DevListInitialized = TRUE;
+			USBDBG(
+			    "Memory Usage:\r\n"
+			    "\tDevListHandlePool  : %u bytes (%u each)\r\n",
+			    sizeof(DevListHandlePool), sizeof(DevListHandlePool[0])
+			);
 		}
 		else
 		{
@@ -387,7 +392,7 @@ BOOL InterfaceInstance_AddElement(PKUSB_DEV_LIST_EL DeviceList,
 	memcpy(newEntry, DevItemToAdd, sizeof(*newEntry));
 	newEntry->next = NULL;
 	newEntry->prev = NULL;
-	newEntry->Public.CompositeDevices = NULL;
+	newEntry->Public.CompositeList = NULL;
 
 	DL_APPEND(DeviceList->head, newEntry);
 	*DevItemAdded = newEntry;
@@ -507,6 +512,25 @@ BOOL InterfaceInstance_FillProperties(PKUSB_DEV_INFO_EL devItem)
 	return (strlen(devItem->Public.Service) > 0);
 }
 
+VOID Common_ParseDevID(__in PKUSB_DEV_INFO_EL devItem)
+{
+	PKUSB_DEV_COMMON_INFO commonInfo = &devItem->Public.Common;
+	PCHAR chLast = NULL;
+	PCHAR chNext = devItem->Public.DeviceInstance;
+	commonInfo->MI = UINT_MAX;
+	while((chNext = strchr(chNext, '\\')) != NULL)
+	{
+		chNext++;
+		chLast = chNext;
+		if (!commonInfo->Vid || !commonInfo->Pid)
+			sscanf_s(chNext, "VID_%04X&PID_%04X&MI_%02X", &commonInfo->Vid, &commonInfo->Pid, &commonInfo->MI);
+	}
+	if (commonInfo->MI != UINT_MAX)
+		commonInfo->MI &= 0x7F;
+
+	commonInfo->InstanceID = chLast;
+}
+
 BOOL EnumKeyCB_InterfaceInstance(LPCSTR Name, PKUSB_ENUM_REGKEY_PARAMS RegEnumParams)
 {
 	LONG status;
@@ -558,22 +582,9 @@ BOOL EnumKeyCB_InterfaceInstance(LPCSTR Name, PKUSB_ENUM_REGKEY_PARAMS RegEnumPa
 	isNewItem = InterfaceInstance_AddElement(RegEnumParams->DeviceList, &devItem, &newDevItem);
 	if (isNewItem)
 	{
+		Common_ParseDevID(&devItem);
 		// new element added
-		PKUSB_DEV_COMMON_INFO commonInfo = &devItem.Public.Common;
-		PCHAR chLast = NULL;
-		PCHAR chNext = devItem.Public.DeviceInstance;
-		commonInfo->MI = UINT_MAX;
-		while((chNext = strchr(chNext, '\\')) != NULL)
-		{
-			chNext++;
-			chLast = chNext;
-			if (!commonInfo->Vid || !commonInfo->Pid)
-				sscanf_s(chNext, "VID_%04X&PID_%04X&MI_%02X", &commonInfo->Vid, &commonInfo->Pid, &commonInfo->MI);
-		}
-		if (commonInfo->MI != UINT_MAX)
-			commonInfo->MI &= 0x7F;
 
-		commonInfo->InstanceID = chLast;
 	}
 	else if (newDevItem)
 	{
@@ -641,6 +652,8 @@ BOOL CreateCompositeParent(__in LPCSTR DeviceInstance,
 	strcpy_s(devComposite->Public.DeviceDesc, sizeof(devComposite->Public.DeviceDesc) - 1, "USB Composite Device");
 	strcpy_s(devComposite->Public.Service, sizeof(devComposite->Public.Service) - 1, "usbccgp");
 
+	Common_ParseDevID(devComposite);
+
 	return TRUE;
 }
 
@@ -692,14 +705,14 @@ VOID ApplyCompositeDevicesMode(__in PKUSB_DEV_LIST_INIT_PARAMS InitParams,
 					Mem_Free(&compositeDeviceElement);
 				}
 
-				if (!devCompositeEL->Public.CompositeDevices)
+				if (!devCompositeEL->Public.CompositeList)
 				{
 					newCompositeList = (PKUSB_DEV_LIST_EL) Mem_Alloc(sizeof(KUSB_DEV_LIST_EL));
-					devCompositeEL->Public.CompositeDevices = (PKUSB_DEV_LIST)newCompositeList;
+					devCompositeEL->Public.CompositeList = (PKUSB_DEV_LIST)newCompositeList;
 				}
 				else
 				{
-					newCompositeList = (PKUSB_DEV_LIST_EL)devCompositeEL->Public.CompositeDevices;
+					newCompositeList = (PKUSB_DEV_LIST_EL)devCompositeEL->Public.CompositeList;
 				}
 
 				if (newCompositeList)
@@ -728,9 +741,9 @@ VOID DevList_RefreshCounts(__inout PKUSB_DEV_LIST_EL DeviceList)
 	DL_FOREACH(DeviceList->head, nextItem)
 	{
 		DeviceList->Public.DeviceCount++;
-		if (nextItem->Public.CompositeDevices)
+		if (nextItem->Public.CompositeList)
 		{
-			DevList_RefreshCounts((PKUSB_DEV_LIST_EL)&nextItem->Public.CompositeDevices);
+			DevList_RefreshCounts((PKUSB_DEV_LIST_EL)&nextItem->Public.CompositeList);
 		}
 	}
 }
@@ -745,12 +758,9 @@ KUSB_EXP VOID KUSB_API LstK_Free(__deref_inout PKUSB_DEV_LIST* DeviceList)
 	PKUSB_DEV_INFO_EL tmp2 = NULL;
 	PKUSB_DEV_LIST_EL deviceList;
 
-
-	ErrorParam(!DeviceList, Error, DeviceList);
-
 	deviceList = (PKUSB_DEV_LIST_EL) * DeviceList;
 	*DeviceList = NULL;
-	ErrorHandle(!IsLstKHandle(deviceList), Error, DeviceList);
+	ErrorHandle(!IsLstKHandle(deviceList), Error, "DeviceList");
 
 	if (deviceList->Locks.UsageCount < 1)
 		return;
@@ -765,15 +775,15 @@ KUSB_EXP VOID KUSB_API LstK_Free(__deref_inout PKUSB_DEV_LIST* DeviceList)
 	{
 		DL_DELETE(deviceList->head, check);
 
-		if (check->Public.CompositeDevices)
+		if (check->Public.CompositeList)
 		{
-			PKUSB_DEV_LIST_EL compositeList = (PKUSB_DEV_LIST_EL)check->Public.CompositeDevices;
+			PKUSB_DEV_LIST_EL compositeList = (PKUSB_DEV_LIST_EL)check->Public.CompositeList;
 			DL_FOREACH_SAFE(compositeList->head, check2, tmp2)
 			{
 				DL_DELETE(compositeList->head, check2);
 				Mem_Free(&check2);
 			}
-			Mem_Free(&check->Public.CompositeDevices);
+			Mem_Free(&check->Public.CompositeList);
 		}
 
 		Mem_Free(&check);
@@ -796,7 +806,7 @@ KUSB_EXP BOOL KUSB_API LstK_Init(__deref_out PKUSB_DEV_LIST* DeviceList,
 	PKUSB_DEV_LIST_EL deviceList = NULL;
 
 	deviceList = DevList_Acquire();
-	ErrorHandle(!deviceList, Done, DeviceList);
+	ErrorHandle(!deviceList, Done, "DeviceList");
 
 	memset(&defInitParams, 0, sizeof(defInitParams));
 	if (!initParams)
@@ -837,13 +847,13 @@ Done:
 	return success;
 }
 
-KUSB_EXP BOOL KUSB_API LstK_Next(__inout PKUSB_DEV_LIST DeviceList,
-                                 __deref_out_opt PKUSB_DEV_INFO* DeviceInfo)
+KUSB_EXP BOOL KUSB_API LstK_MoveNext(__inout PKUSB_DEV_LIST DeviceList,
+                                     __deref_out_opt PKUSB_DEV_INFO* DeviceInfo)
 {
 	PKUSB_DEV_LIST_EL deviceList = (PKUSB_DEV_LIST_EL)DeviceList;
 
-	ErrorParam(!deviceList, Error, DeviceList);
-	ErrorHandle(deviceList->Locks.UsageCount < 1, Error, DeviceList);
+	ErrorHandle(!deviceList, Error, "DeviceList");
+	ErrorHandle(deviceList->Locks.UsageCount < 1, Error, "DeviceList");
 
 	if (DeviceInfo)
 		*DeviceInfo = NULL;
@@ -880,8 +890,8 @@ KUSB_EXP BOOL KUSB_API LstK_Current(__in PKUSB_DEV_LIST DeviceList,
 {
 	PKUSB_DEV_LIST_EL deviceList = (PKUSB_DEV_LIST_EL)DeviceList;
 
-	ErrorParam(!deviceList, Error, DeviceList);
-	ErrorHandle(deviceList->Locks.UsageCount < 1, Error, DeviceList);
+	ErrorHandle(!deviceList, Error, "DeviceList");
+	ErrorHandle(deviceList->Locks.UsageCount < 1, Error, "DeviceList");
 
 	if (!deviceList->current)
 	{
@@ -900,8 +910,8 @@ KUSB_EXP VOID KUSB_API LstK_Reset(__inout PKUSB_DEV_LIST DeviceList)
 {
 	PKUSB_DEV_LIST_EL deviceList = (PKUSB_DEV_LIST_EL)DeviceList;
 
-	ErrorParam(!deviceList, Error, DeviceList);
-	ErrorHandle(deviceList->Locks.UsageCount < 1, Error, DeviceList);
+	ErrorHandle(!deviceList, Error, "DeviceList");
+	ErrorHandle(deviceList->Locks.UsageCount < 1, Error, "DeviceList");
 
 	deviceList->current = NULL;
 
@@ -916,9 +926,9 @@ KUSB_EXP BOOL KUSB_API LstK_Enumerate(__in PKUSB_DEV_LIST DeviceList,
 	PKUSB_DEV_INFO_EL check = NULL;
 	PKUSB_DEV_LIST_EL deviceList = (PKUSB_DEV_LIST_EL)DeviceList;
 
-	ErrorParam(!deviceList, Error, DeviceList);
-	ErrorHandle(deviceList->Locks.UsageCount < 1, Error, DeviceList);
-	ErrorParam(!EnumDevListCB, Error, EnumDevListCB);
+	ErrorHandle(!deviceList, Error, "DeviceList");
+	ErrorHandle(deviceList->Locks.UsageCount < 1, Error, "DeviceList");
+	ErrorParam(!EnumDevListCB, Error, "EnumDevListCB");
 
 	DL_FOREACH(deviceList->head, check)
 	{
@@ -931,12 +941,42 @@ Error:
 	return FALSE;
 }
 
+KUSB_EXP BOOL KUSB_API LstK_FindByVidPid(__in PKUSB_DEV_LIST DeviceList,
+        __in UINT Vid,
+        __in UINT Pid,
+        __deref_out PKUSB_DEV_INFO* DeviceInfo)
+{
+	PKUSB_DEV_INFO_EL check = NULL;
+	PKUSB_DEV_LIST_EL deviceList = (PKUSB_DEV_LIST_EL)DeviceList;
+
+	ErrorHandle(!deviceList, Error, "DeviceList");
+	ErrorParam(!DeviceInfo, Error, "DeviceInfo");
+	ErrorHandle(deviceList->Locks.UsageCount < 1, Error, "DeviceList");
+
+	DL_FOREACH(deviceList->head, check)
+	{
+		if ((check->Public.Common.Vid & 0xFFFF) == (Vid & 0xFFFF) &&
+		        (check->Public.Common.Pid & 0xFFFF) == (Pid & 0xFFFF))
+			break;
+	}
+
+	*DeviceInfo = (PKUSB_DEV_INFO)check;
+
+	if (!check)
+		return LusbwError(ERROR_NO_MORE_ITEMS);
+
+	return TRUE;
+
+Error:
+	return FALSE;
+}
+
 KUSB_EXP BOOL KUSB_API LstK_Lock(__in PKUSB_DEV_LIST DeviceList, BOOL wait)
 {
 	PKUSB_DEV_LIST_EL deviceList = (PKUSB_DEV_LIST_EL)DeviceList;
 
-	ErrorParam(!deviceList, Error, DeviceList);
-	ErrorHandle(deviceList->Locks.UsageCount < 1, Error, DeviceList);
+	ErrorHandle(!deviceList, Error, "DeviceList");
+	ErrorHandle(deviceList->Locks.UsageCount < 1, Error, "DeviceList");
 
 	return SpinLock_AcquireEx(&deviceList->Locks.Acquire, wait);
 
@@ -948,8 +988,8 @@ KUSB_EXP BOOL KUSB_API LstK_Unlock(__in PKUSB_DEV_LIST DeviceList)
 {
 	PKUSB_DEV_LIST_EL deviceList = (PKUSB_DEV_LIST_EL)DeviceList;
 
-	ErrorParam(!deviceList, Error, DeviceList);
-	ErrorHandle(deviceList->Locks.UsageCount < 1, Error, DeviceList);
+	ErrorHandle(!deviceList, Error, "DeviceList");
+	ErrorHandle(deviceList->Locks.UsageCount < 1, Error, "DeviceList");
 
 	return SpinLock_ReleaseEx(&deviceList->Locks.Acquire);
 

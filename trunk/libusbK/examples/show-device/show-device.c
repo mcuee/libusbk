@@ -7,8 +7,10 @@ static BOOL KUSB_API ShowDevicesCB(PKUSB_DEV_LIST DeviceList,
                                    PVOID MyContext)
 {
 	// print some information about the device.
-	printf("%s: %s (%s)\n",
-	       deviceInfo->DeviceInstance,
+	printf("%04X:%04X (%s): %s - %s\n",
+	       deviceInfo->Common.Vid,
+	       deviceInfo->Common.Pid,
+	       deviceInfo->Common.InstanceID,
 	       deviceInfo->DeviceDesc,
 	       deviceInfo->Mfg);
 
@@ -22,8 +24,8 @@ DWORD __cdecl main(int argc, char* argv[])
 	PKUSB_DEV_INFO deviceInfo = NULL;
 	DWORD errorCode = ERROR_SUCCESS;
 
-	// Initialize a new device list.  This populates the list
-	// with the usb devices libusbK can use.
+	// Initialize a new device list.  This populates the list with the
+	// usb devices libusbK can access.
 	if (!LstK_Init(&deviceList, NULL))
 	{
 		errorCode = GetLastError();
@@ -31,7 +33,6 @@ DWORD __cdecl main(int argc, char* argv[])
 		return errorCode;
 	}
 
-	// If DeviceCount = 0, no supported devices were found.
 	if (!deviceList->DeviceCount)
 	{
 		printf("No devices connected.\n");
@@ -42,36 +43,56 @@ DWORD __cdecl main(int argc, char* argv[])
 		return ERROR_DEVICE_NOT_CONNECTED;
 	}
 
+	/*
+	There are three (3) ways to search the device list:
+	- #1 LstK_FindByVidPid
+	- #2 LstK_Reset, LstK_MoveNext, and LstK_Current
+	- #3 LstK_Enumerate
+	*/
+
+	// #1
+	// Simple means of locating the fist device matching a vid/pid.
+	//
+	if (LstK_FindByVidPid(deviceList, EXAMPLE_VID, EXAMPLE_PID, &deviceInfo))
+		printf("LstK_FindByVidPid: Example device connected!\n");
+	else
+		printf("Example device not found.\n");
+
+	// #2
+	// Enumerates the device list using it's internal "current" position.
+	//
+	// Reset the device list position.
+	LstK_Reset(deviceList);
+	//
+	errorCode = ERROR_NO_MATCH;
+	//
+	// Call LstK_MoveNext after a LstK_Reset to advance to the first
+	// element.
+	while(LstK_MoveNext(deviceList, &deviceInfo))
+	{
+		if (deviceInfo->Common.Vid == EXAMPLE_VID &&
+		        deviceInfo->Common.Pid == EXAMPLE_PID)
+		{
+			errorCode = ERROR_SUCCESS;
+			break;
+		}
+	}
+	//
+	// Report the connection state
+	if (deviceInfo)
+		printf("LstK_MoveNext: Example device connected!\n");
+	else
+		printf("Example device not found.\n");
+
+	// #3
+	// Enumerates the device list using the user supplied callback
+	// function, ShowDevicesCB(). LstK_Enumerate calls this function for
+	// each device info element until ShowDevicesCB(0 returns FALSE.
+	//
 	// Show all devices using the enumerate function.
 	LstK_Enumerate(deviceList, ShowDevicesCB, NULL);
 
-	// You can also use the the reset, next and current functions for the same tasks.
-
-	// Reset the device list position.
-	LstK_Reset(deviceList);
-
-	// Always start with a call LstK_Next after LstK_Reset to advance to the first element.
-	while(LstK_Next(deviceList, &deviceInfo))
-	{
-		// NOTE: LstK_Next will only return FALSE once;  If it is called after a FALSE
-		//       return, it behaves as if it were reset and starts from the beginning.
-
-		if (Match_DeviceID(deviceInfo, EXAMPLE_HWID) == 0)
-			break;
-	}
-
-	// Report the connection state of the example device
-	if (deviceInfo)
-	{
-		printf("Example device connected!\n");
-	}
-	else
-	{
-		printf("Example device not found.\n");
-		errorCode = ERROR_NO_MATCH;
-	}
-
-	// Always free the device list if LstK_Init returns TRUE
+	// Free the device list
 	LstK_Free(&deviceList);
 
 	// return the win32 error code.

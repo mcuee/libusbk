@@ -12,6 +12,8 @@ KUSB_INTERFACE_HANDLE_INTERNAL InternalHandlePool[KUSB_MAX_INTERFACE_HANDLES];
 volatile long SharedDevicePos = -1;
 KUSB_SHARED_DEVICE SharedDevicePool[KUSB_MAX_INTERFACE_HANDLES];
 
+PCANCEL_IO_EX Opt_CancelIoEx = NULL;
+
 PKUSB_SHARED_DEVICE GetSharedDevicePoolHandle(LPCSTR DevicePath)
 {
 	int count;
@@ -113,7 +115,17 @@ recheck:
 			Mem_Zero(&InternalHandlePool, sizeof(InternalHandlePool));
 			Mem_Zero(&SharedDevicePool, sizeof(SharedDevicePool));
 
+			Opt_CancelIoEx = (PCANCEL_IO_EX)GetProcAddress(GetModuleHandleA("kernel32"), "CancelIoEx");
+			OvlK_CreateDefaultPool();
 			LibInitialized = TRUE;
+
+			USBDBG(
+			    "Memory Usage:\r\n"
+			    "\tInternalHandlePool : %u bytes (%u each)\r\n"
+			    "\tSharedDevicePool   : %u bytes (%u each)\r\n",
+			    sizeof(InternalHandlePool), sizeof(InternalHandlePool[0]),
+			    sizeof(SharedDevicePool), sizeof(SharedDevicePool[0])
+			);
 		}
 		else
 		{

@@ -8,7 +8,6 @@ BOOL Examples_GetTestDevice( __deref_out PKUSB_DEV_LIST* DeviceList,
 	ULONG vidArg = EXAMPLE_VID;
 	ULONG pidArg = EXAMPLE_PID;
 	int argPos;
-	char exampleDeviceID[24];
 	PKUSB_DEV_LIST deviceList = NULL;
 	PKUSB_DEV_INFO deviceInfo = NULL;
 
@@ -33,40 +32,47 @@ BOOL Examples_GetTestDevice( __deref_out PKUSB_DEV_LIST* DeviceList,
 	{
 		printf("No device not connected.\n");
 		SetLastError(ERROR_DEVICE_NOT_CONNECTED);
+
+		// If LstK_Init returns TRUE, the list must be freed.
 		LstK_Free(&deviceList);
+
 		return FALSE;
 	}
 
-	memset(exampleDeviceID, 0, sizeof(exampleDeviceID));
-	sprintf(exampleDeviceID, EXAMPLES_DEVICE_HWID_FORMAT, vidArg, pidArg);
-	printf("Looking for device %s..\n", exampleDeviceID);
+	printf("Looking for device vid/pid %04X/%04X..\n", vidArg, pidArg);
 
-	LstK_Reset(deviceList);
-	while(LstK_Next(deviceList, &deviceInfo))
-	{
-		if (Match_DeviceID(deviceInfo, exampleDeviceID) == 0)
-			break;
-	}
+	LstK_FindByVidPid(deviceList, vidArg, pidArg, &deviceInfo);
 
-	// Report the connection state of the example device
 	if (deviceInfo)
 	{
-		printf("Using device %s: %s (%s)\n",
-		       deviceInfo->DeviceInstance,
+		// This function returns the device list and the device info
+		// element which matched.  The caller is responsible for freeing
+		// this list when it is no longer needed.
+		*DeviceList = deviceList;
+		*DeviceInfo = deviceInfo;
+
+		// Report the connection state of the example device
+		printf("Using %04X:%04X (%s): %s - %s\n",
+		       deviceInfo->Common.Vid,
+		       deviceInfo->Common.Pid,
+		       deviceInfo->Common.InstanceID,
 		       deviceInfo->DeviceDesc,
 		       deviceInfo->Mfg);
 
-		*DeviceInfo = deviceInfo;
-		*DeviceList = deviceList;
 		return TRUE;
 	}
 	else
 	{
-		printf("Device not found.\n\n");
-		printf("USAGE: program.exe vid=hhhh pid=hhhh\n");
-		printf("       e.g. vid=04D8 pid=FA2E\n\n");
+		// Display some simple usage information for the example applications.
+		CHAR programPath[MAX_PATH] = {0};
+		PCHAR programExe = programPath;
+		GetModuleFileNameA(GetModuleHandleA(NULL), programPath, sizeof(programPath));
+		while(strpbrk(programExe, "\\/")) programExe = strpbrk(programExe, "\\/") + 1;
+		printf("Device vid/pid %04X/%04X not found.\n\n", vidArg, pidArg);
+		printf("USAGE: vid=hhhh pid=hhhh\n");
+		printf("       e.g: %s vid=%04X pid=%04X\n\n", programExe, vidArg, pidArg);
 
-		// Free the device list
+		// If LstK_Init returns TRUE, the list must be freed.
 		LstK_Free(&deviceList);
 
 		return FALSE;

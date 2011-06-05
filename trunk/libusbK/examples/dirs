@@ -1,3 +1,13 @@
 DIRS= \
+     config-interface \
+     config-pipe \
+     config-power \
+     load-driver-api \
      open-device \
-     show-device
+     show-device \
+     xfer-async-rw \
+     xfer-control \
+     xfer-stream-r \
+     xfer-stream-rw \
+     xfer-stream-w \
+     xfer-sync-rw
