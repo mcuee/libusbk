@@ -282,8 +282,7 @@ BOOL Bench_Open(__in PBENCHMARK_TEST_PARAM test)
 		if (!deviceInfo->UserContext.Byte[0])
 			continue;
 
-		memset(&K, 0, sizeof(K));
-		if (!DrvK_LoadDriverApi(&K, deviceInfo->DrvId))
+		if (!DrvK_LoadDriverApi(&K, deviceInfo->DrvId, sizeof(K)))
 		{
 			WinError(0);
 			CONWRN("could not load driver api %s.\n", GetDrvIdString(deviceInfo->DrvId));

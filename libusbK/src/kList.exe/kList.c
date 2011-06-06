@@ -357,7 +357,7 @@ int __cdecl main(int argc, char** argv)
 	}
 
 	printf("Loading driver api..\n");
-	if (!DrvK_LoadDriverApi(&K, deviceElement->DrvId))
+	if (!DrvK_LoadDriverApi(&K, deviceElement->DrvId, sizeof(K)))
 	{
 		ec = WinError(0);
 		goto Done;

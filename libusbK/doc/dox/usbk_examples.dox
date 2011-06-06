@@ -2,7 +2,7 @@
 /*!
 * \example show-device.c
 *
-* <B>Show Device example</B>:
+* \par show-device example:
 * -# Creates a usb device list.
 * -# Prints a single line description for each device list element.
 * -# Searches for the example device hardware id
@@ -20,15 +20,66 @@ Example device connected!
 /*!
 * \example open-device.c
 *
-* <B>Open Device example</B>:
+* \par open-device example:
 * -# Finds a device by vid/pid (use vid=hhhh, pid=hhhhh and the command line).
 * -# Opens the device.
-* -# Prints device information.
+* -# Prints pipe information.
 * -# Closes the device.
 * -# Destroys the usb device list created in step #1
 *
 \par Console Output
 \verbatim
-TODO:
+Looking for device vid/pid 04D8/FA2E..
+Using 04D8:FA2E (LUSBW1): Benchmark Device - Microchip Technology, Inc.
+Device opened successfully!
+Pipe Information:
+  PipeId=0x01 PipeType=0x02 Interval=0 MaximumPacketSize=32
+  PipeId=0x81 PipeType=0x02 Interval=0 MaximumPacketSize=32
+\endverbatim
+*/
+
+//! Configures device interface/alt settings.
+/*!
+* \example config-interface.c
+*
+* \par config-interface example:
+* -# Finds a device by vid/pid (use vid=hhhh, pid=hhhhh and the command line).
+* -# Opens the device.
+* -# Claims the specified interface. (re-define at top of example)
+* -# Finds the specified interface/alt setting. (re-define at top of example)
+* -# Finds the specified read and write pipes. (re-define at top of example)
+* -# Sets the specified alternate setting as the "active" interface.
+* -# Closes the device.
+* -# Destroys the usb device list created in step #1
+*
+\par Console Output
+\verbatim
+Looking for device vid/pid 04D8/FA2E..
+Using 04D8:FA2E (LUSBW1): Benchmark Device - Microchip Technology, Inc.
+Device opened successfully!
+Interface/alt setting number 00h/00h found!
+Read pipe 81h found!
+Write pipe 01h found!
+Alternate setting 00h selected!
+\endverbatim
+*/
+
+//! Loads a dynamic driver api for use with all drivers and opens the device.
+/*!
+* \example load-driver-api.c
+*
+* \par load-driver-api example:
+* -# Finds a device by vid/pid (use vid=hhhh, pid=hhhhh and the command line).
+* -# Loads a dynamic driver API set specific to the devices driver.
+* -# Opens the device.
+* -# Closes the device.
+* -# Destroys the usb device list created in step #1
+*
+\par Console Output
+\verbatim
+Looking for device vid/pid 04D8/FA2E..
+Using 04D8:FA2E (LUSBW1): Benchmark Device - Microchip Technology, Inc.
+libusbK driver api loaded!
+Device opened successfully!
 \endverbatim
 */
