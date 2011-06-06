@@ -28,7 +28,7 @@ DWORD __cdecl main(int argc, char* argv[])
 	printf("Pipe Information:\n");
 	while (UsbK_QueryPipe(handle, 0, pipeIndex++, &pipeInfo))
 	{
-		printf("\tPipeId=0x%02X PipeType=0x%02X Interval=%u MaximumPacketSize=%u\n",
+		printf("  PipeId=0x%02X PipeType=0x%02X Interval=%u MaximumPacketSize=%u\n",
 		       pipeInfo.PipeId, pipeInfo.PipeType, pipeInfo.Interval, pipeInfo.MaximumPacketSize);
 	}
 
@@ -43,3 +43,13 @@ Done:
 
 	return ec;
 }
+
+/*
+Console Output:
+  Looking for device vid/pid 04D8/FA2E..
+  Using 04D8:FA2E (LUSBW1): Benchmark Device - Microchip Technology, Inc.
+  Device opened successfully!
+  Pipe Information:
+    PipeId=0x01 PipeType=0x02 Interval=0 MaximumPacketSize=32
+    PipeId=0x81 PipeType=0x02 Interval=0 MaximumPacketSize=32
+*/

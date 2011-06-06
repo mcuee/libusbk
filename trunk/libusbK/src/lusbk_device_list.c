@@ -582,7 +582,7 @@ BOOL EnumKeyCB_InterfaceInstance(LPCSTR Name, PKUSB_ENUM_REGKEY_PARAMS RegEnumPa
 	isNewItem = InterfaceInstance_AddElement(RegEnumParams->DeviceList, &devItem, &newDevItem);
 	if (isNewItem)
 	{
-		Common_ParseDevID(&devItem);
+		Common_ParseDevID(newDevItem);
 		// new element added
 
 	}

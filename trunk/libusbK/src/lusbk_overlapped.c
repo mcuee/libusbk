@@ -140,6 +140,8 @@ KUSB_EXP POVERLAPPED_K KUSB_API OvlK_Acquire(
 	POVERLAPPED_K_INTERNAL next = NULL;
 	POVERLAPPED_K_POOL_USER pool = (POVERLAPPED_K_POOL_USER)Pool;
 
+	CheckLibInitialized();
+
 	if (!pool)
 		pool = (POVERLAPPED_K_POOL_USER)&DefaultPool;
 
@@ -379,7 +381,9 @@ KUSB_EXP PKUSB_USER_CONTEXT KUSB_API OvlK_GetPoolContext(
     __in_opt POVERLAPPED_K_POOL Pool)
 {
 	POVERLAPPED_K_POOL_USER pool = (POVERLAPPED_K_POOL_USER)Pool;
-	ErrorHandle(!pool, Error, "Pool");
+	CheckLibInitialized();
+	if (!pool)
+		pool = (POVERLAPPED_K_POOL_USER)&DefaultPool;
 
 	return &pool->UserContext;
 Error:

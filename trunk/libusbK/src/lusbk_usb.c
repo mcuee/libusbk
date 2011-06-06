@@ -42,17 +42,22 @@ KUSB_EXP BOOL KUSB_API DrvK_GetProcAddress(__out KPROC* ProcAddress, __in ULONG 
 
 KUSB_EXP BOOL KUSB_API DrvK_LoadDriverApi(
     __inout PKUSB_DRIVER_API DriverAPI,
-    __in ULONG DriverID)
+    __in ULONG DriverID,
+    __in ULONG SizeofDriverAPI)
 {
+
 #define CASE_FNID_LOAD(FunctionName)															\
 		case KUSB_FNID_##FunctionName:																\
-		if (DrvK_GetProcAddress((KPROC*)&DriverAPI->FunctionName, DriverID, fnIdIndex) == FALSE)	\
+		if (DrvK_GetProcAddress((KPROC*)&tempDriverAPI.FunctionName, DriverID, fnIdIndex) == FALSE)	\
 		{																							\
 			USBWRN("function id %u for driver id %u does not exist.\n",fnIdIndex,DriverID);			\
 		}																							\
 		break
 
+	KUSB_DRIVER_API tempDriverAPI;
 	int fnIdIndex;
+	Mem_Zero(&tempDriverAPI, sizeof(tempDriverAPI));
+
 	if (!IsHandleValid(DriverAPI))
 	{
 		SetLastError(ERROR_INVALID_HANDLE);
@@ -101,6 +106,7 @@ KUSB_EXP BOOL KUSB_API DrvK_LoadDriverApi(
 		}
 	}
 
+	memcpy(DriverAPI, &tempDriverAPI, SizeofDriverAPI);
 	return TRUE;
 }
 

@@ -69,8 +69,7 @@ BOOL Examples_GetTestDevice( __deref_out PKUSB_DEV_LIST* DeviceList,
 		GetModuleFileNameA(GetModuleHandleA(NULL), programPath, sizeof(programPath));
 		while(strpbrk(programExe, "\\/")) programExe = strpbrk(programExe, "\\/") + 1;
 		printf("Device vid/pid %04X/%04X not found.\n\n", vidArg, pidArg);
-		printf("USAGE: vid=hhhh pid=hhhh\n");
-		printf("       e.g: %s vid=%04X pid=%04X\n\n", programExe, vidArg, pidArg);
+		printf("USAGE: %s vid=%04X pid=%04X\n\n", programExe, vidArg, pidArg);
 
 		// If LstK_Init returns TRUE, the list must be freed.
 		LstK_Free(&deviceList);

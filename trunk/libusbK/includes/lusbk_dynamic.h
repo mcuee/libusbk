@@ -517,13 +517,17 @@ extern "C" {
 	* \param DriverID
 	* The driver id of the api set to retrieve. See \ref KUSB_DRVID
 	*
+	* \param SizeofDriverAPI
+	* Should always be set to the \b sizeof the driver api struct \ref KUSB_DRIVER_API
+	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get
 	* extended error information.
 	*
 	*/
 	KUSB_EXP BOOL KUSB_API DrvK_LoadDriverApi(
 	    __inout PKUSB_DRIVER_API DriverAPI,
-	    __in ULONG DriverID);
+	    __in ULONG DriverID,
+	    __in ULONG SizeofDriverAPI);
 
 	//! Initialize a driver api function.
 	/*!
