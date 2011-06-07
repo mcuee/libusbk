@@ -61,8 +61,7 @@ multi-all:
 .PHONY: load-driver-api
 load-driver-api: compile-and-assemble-examples
 load-driver-api: load-driver-api.exe
-
-load-driver-api.exe: $(INT_DIR)/load-driver-api.o $(INT_DIR)/examples.o
+load-driver-api.exe: $(INT_DIR)/load-driver-api_rc.o $(INT_DIR)/load-driver-api.o $(INT_DIR)/examples.o
 	$(CC) $(CFLAGS) -o $(OUT_DIR)/$@ $^ $(LIB_SEARCH) $(LDFLAGS)
 
 .PHONY: compile-and-assemble-examples
@@ -71,9 +70,10 @@ compile-and-assemble-examples:
 	$(MKDIR) $(INT_DIR)
 $(INT_DIR)/%.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
-$(INT_DIR)/%.o: ../examples.c
+$(INT_DIR)/examples.o: ../examples.c
 	$(CC) $(CFLAGS) -c $< -o $@
-
+$(INT_DIR)/load-driver-api_rc.o: ./load-driver-api_rc.rc
+	$(RC) $(RCFLAGS) $< -o $@
 # ---------------------------------------------------------------------
 
 # clean ---------------------------------------------------------------

@@ -61,8 +61,7 @@ multi-all:
 .PHONY: open-device
 open-device: compile-and-assemble-examples
 open-device: open-device.exe
-
-open-device.exe: $(INT_DIR)/open-device.o $(INT_DIR)/examples.o
+open-device.exe: $(INT_DIR)/open-device_rc.o $(INT_DIR)/open-device.o $(INT_DIR)/examples.o
 	$(CC) $(CFLAGS) -o $(OUT_DIR)/$@ $^ $(LIB_SEARCH) $(LDFLAGS)
 
 .PHONY: compile-and-assemble-examples
@@ -71,9 +70,10 @@ compile-and-assemble-examples:
 	$(MKDIR) $(INT_DIR)
 $(INT_DIR)/%.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
-$(INT_DIR)/%.o: ../examples.c
+$(INT_DIR)/examples.o: ../examples.c
 	$(CC) $(CFLAGS) -c $< -o $@
-
+$(INT_DIR)/open-device_rc.o: ./open-device_rc.rc
+	$(RC) $(RCFLAGS) $< -o $@
 # ---------------------------------------------------------------------
 
 # clean ---------------------------------------------------------------

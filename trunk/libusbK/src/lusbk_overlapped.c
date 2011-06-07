@@ -386,8 +386,6 @@ KUSB_EXP PKUSB_USER_CONTEXT KUSB_API OvlK_GetPoolContext(
 		pool = (POVERLAPPED_K_POOL_USER)&DefaultPool;
 
 	return &pool->UserContext;
-Error:
-	return NULL;
 }
 
 KUSB_EXP BOOL KUSB_API OvlK_Wait(

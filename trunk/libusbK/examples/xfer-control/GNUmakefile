@@ -61,8 +61,7 @@ multi-all:
 .PHONY: xfer-control
 xfer-control: compile-and-assemble-examples
 xfer-control: xfer-control.exe
-
-xfer-control.exe: $(INT_DIR)/xfer-control.o $(INT_DIR)/examples.o
+xfer-control.exe: $(INT_DIR)/xfer-control_rc.o $(INT_DIR)/xfer-control.o $(INT_DIR)/examples.o
 	$(CC) $(CFLAGS) -o $(OUT_DIR)/$@ $^ $(LIB_SEARCH) $(LDFLAGS)
 
 .PHONY: compile-and-assemble-examples
@@ -71,9 +70,10 @@ compile-and-assemble-examples:
 	$(MKDIR) $(INT_DIR)
 $(INT_DIR)/%.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
-$(INT_DIR)/%.o: ../examples.c
+$(INT_DIR)/examples.o: ../examples.c
 	$(CC) $(CFLAGS) -c $< -o $@
-
+$(INT_DIR)/xfer-control_rc.o: ./xfer-control_rc.rc
+	$(RC) $(RCFLAGS) $< -o $@
 # ---------------------------------------------------------------------
 
 # clean ---------------------------------------------------------------

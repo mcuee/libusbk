@@ -37,6 +37,7 @@
 # (- prefix means ignore errors)
 #
 CC		= gcc
+RC		= windres
 MAKE	= make
 RM		= -rm -fr
 MKDIR	= -@mkdir -p
@@ -53,11 +54,13 @@ ifeq ("$(ARCH)","amd64")
 override ARCH:=amd64
 ARCH_MSVC:=x64
 MACHINE:=-m64
+RC_PE_TARGET:=--target=pe-x86-64
 endif
 ifneq ("$(ARCH)","amd64")
 override ARCH:=x86
 ARCH_MSVC:=Win32
 MACHINE:=-m32
+RC_PE_TARGET:=--target=pe-i386
 endif
 
 # Location of the input bin directory.  e.g. the bin directory
@@ -118,3 +121,6 @@ CFLAGS:=$(MACHINE) $(INC_SEARCH) -mconsole -mwin32 -s -O2
 #
 LDFLAGS:= -Wl,--kill-at,--enable-stdcall-fixup $(STDC_LD_LIBS) -l$(USBK_LIB_NAME)
 
+# Flags passed to the resource compiler
+#
+RCFLAGS:=$(INC_SEARCH) $(RC_PE_TARGET)
