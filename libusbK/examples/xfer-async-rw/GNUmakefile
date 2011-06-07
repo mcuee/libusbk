@@ -61,8 +61,7 @@ multi-all:
 .PHONY: xfer-async-rw
 xfer-async-rw: compile-and-assemble-examples
 xfer-async-rw: xfer-async-rw.exe
-
-xfer-async-rw.exe: $(INT_DIR)/xfer-async-rw.o $(INT_DIR)/examples.o
+xfer-async-rw.exe: $(INT_DIR)/xfer-async-rw_rc.o $(INT_DIR)/xfer-async-rw.o $(INT_DIR)/examples.o
 	$(CC) $(CFLAGS) -o $(OUT_DIR)/$@ $^ $(LIB_SEARCH) $(LDFLAGS)
 
 .PHONY: compile-and-assemble-examples
@@ -71,9 +70,10 @@ compile-and-assemble-examples:
 	$(MKDIR) $(INT_DIR)
 $(INT_DIR)/%.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
-$(INT_DIR)/%.o: ../examples.c
+$(INT_DIR)/examples.o: ../examples.c
 	$(CC) $(CFLAGS) -c $< -o $@
-
+$(INT_DIR)/xfer-async-rw_rc.o: ./xfer-async-rw_rc.rc
+	$(RC) $(RCFLAGS) $< -o $@
 # ---------------------------------------------------------------------
 
 # clean ---------------------------------------------------------------

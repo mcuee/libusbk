@@ -61,8 +61,7 @@ multi-all:
 .PHONY: config-power
 config-power: compile-and-assemble-examples
 config-power: config-power.exe
-
-config-power.exe: $(INT_DIR)/config-power.o $(INT_DIR)/examples.o
+config-power.exe: $(INT_DIR)/config-power_rc.o $(INT_DIR)/config-power.o $(INT_DIR)/examples.o
 	$(CC) $(CFLAGS) -o $(OUT_DIR)/$@ $^ $(LIB_SEARCH) $(LDFLAGS)
 
 .PHONY: compile-and-assemble-examples
@@ -71,9 +70,10 @@ compile-and-assemble-examples:
 	$(MKDIR) $(INT_DIR)
 $(INT_DIR)/%.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
-$(INT_DIR)/%.o: ../examples.c
+$(INT_DIR)/examples.o: ../examples.c
 	$(CC) $(CFLAGS) -c $< -o $@
-
+$(INT_DIR)/config-power_rc.o: ./config-power_rc.rc
+	$(RC) $(RCFLAGS) $< -o $@
 # ---------------------------------------------------------------------
 
 # clean ---------------------------------------------------------------

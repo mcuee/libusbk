@@ -1,6 +1,5 @@
 # config-power WINDDK build "sources" file
 #
-
 #
 # Copyright (c) 2011 Travis Robinson <libusbdotnet@gmail.com>
 # All rights reserved.
@@ -25,13 +24,6 @@
 #
 
 TARGETNAME = config-power
-USBK_TARGET_LIB = ..\..\bin\lib\$(_BUILDARCH)\libusbK.lib
-
-WDK_OUTPUT_SUBDIR=$(_BUILDARCH)
-!IF "$(_BUILDARCH)"=="x86"
-WDK_OUTPUT_SUBDIR=i386
-!ENDIF
-
 TARGETTYPE = PROGRAM
 USE_MSVCRT = 1
 UMTYPE     = console
@@ -40,12 +32,35 @@ UMTYPE     = console
 MSC_WARNING_LEVEL=/W3
 !ENDIF
 
-C_DEFINES=$(C_DEFINES)
+# USBK_BIN_DIR should point to the "bin" directory of a libusbK release 
+# binary package. It is required to find library file libusbK.lib. 
+# (USBK_LIB_FILE) 
+#
+USBK_BIN_DIR  = ..\..\bin
 
+# Link to libusbK statically by changing "\lib\" below to "\lib\static\".
+#
+USBK_LIB_FILE = $(USBK_BIN_DIR)\lib\$(_BUILDARCH)\libusbK.lib
+
+# Project specific resource file.
+#
+PRJ_RC_FILE   = config-power_rc.rc
+
+# Project specific include directories.
+#
+INCLUDES      = .\;..\;..\..\includes\;
+
+# Project specific source files.
+#
+SOURCES       = $(PRJ_RC_FILE) config-power.c ..\examples.c
+
+# Project specific pre-processor defines.
+#
+# C_DEFINES     = /DEXAMPLE=VALUE
+
+# Project specific required libraries.
+#
 TARGETLIBS=$(SDK_LIB_PATH)\kernel32.lib \
            $(SDK_LIB_PATH)\advapi32.lib \
            $(SDK_LIB_PATH)\user32.lib \
-		   $(USBK_TARGET_LIB)
-		   
-INCLUDES	=.\;..\;..\..\includes\;
-SOURCES		=config-power.c ..\examples.c
+		   $(USBK_LIB_FILE)

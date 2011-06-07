@@ -61,8 +61,7 @@ multi-all:
 .PHONY: xfer-stream-w
 xfer-stream-w: compile-and-assemble-examples
 xfer-stream-w: xfer-stream-w.exe
-
-xfer-stream-w.exe: $(INT_DIR)/xfer-stream-w.o $(INT_DIR)/examples.o
+xfer-stream-w.exe: $(INT_DIR)/xfer-stream-w_rc.o $(INT_DIR)/xfer-stream-w.o $(INT_DIR)/examples.o
 	$(CC) $(CFLAGS) -o $(OUT_DIR)/$@ $^ $(LIB_SEARCH) $(LDFLAGS)
 
 .PHONY: compile-and-assemble-examples
@@ -71,9 +70,10 @@ compile-and-assemble-examples:
 	$(MKDIR) $(INT_DIR)
 $(INT_DIR)/%.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
-$(INT_DIR)/%.o: ../examples.c
+$(INT_DIR)/examples.o: ../examples.c
 	$(CC) $(CFLAGS) -c $< -o $@
-
+$(INT_DIR)/xfer-stream-w_rc.o: ./xfer-stream-w_rc.rc
+	$(RC) $(RCFLAGS) $< -o $@
 # ---------------------------------------------------------------------
 
 # clean ---------------------------------------------------------------

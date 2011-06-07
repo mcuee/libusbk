@@ -61,8 +61,7 @@ multi-all:
 .PHONY: config-interface
 config-interface: compile-and-assemble-examples
 config-interface: config-interface.exe
-
-config-interface.exe: $(INT_DIR)/config-interface.o $(INT_DIR)/examples.o
+config-interface.exe: $(INT_DIR)/config-interface_rc.o $(INT_DIR)/config-interface.o $(INT_DIR)/examples.o
 	$(CC) $(CFLAGS) -o $(OUT_DIR)/$@ $^ $(LIB_SEARCH) $(LDFLAGS)
 
 .PHONY: compile-and-assemble-examples
@@ -71,9 +70,10 @@ compile-and-assemble-examples:
 	$(MKDIR) $(INT_DIR)
 $(INT_DIR)/%.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
-$(INT_DIR)/%.o: ../examples.c
+$(INT_DIR)/examples.o: ../examples.c
 	$(CC) $(CFLAGS) -c $< -o $@
-
+$(INT_DIR)/config-interface_rc.o: ./config-interface_rc.rc
+	$(RC) $(RCFLAGS) $< -o $@
 # ---------------------------------------------------------------------
 
 # clean ---------------------------------------------------------------
