@@ -3,12 +3,4 @@
 
 = Introduction =
 
-This is a summary of the libusbk native API. For libusb-win32 API and libusb-1.0 API, please refer to their respective website for more information.
-
-
-= Details =
-
-Add your content here.  Format your content with:
-  * Text in *bold* or _italic_
-  * Headings, paragraphs, and lists
-  * Automatic links to other wiki pages
+Please refer to the libusbK-help.chm help file for the details.
