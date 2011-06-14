@@ -3,12 +3,12 @@
 
 == Introduction ==
 
-This is a simple howto of using libusbk.
+This is a simple howto of using libusbk. Please also refer to the libusbK-help.chm help file for more details. 
 
 
 == Details ==
 
-  * Install of driver libusbk0.sys
+  * Installation of driver libusbk0.sys
 
 Please download the libusbK-xxxx-setup.exe to install and/or update the existing installation.
 
@@ -24,4 +24,4 @@ The existing libusb-win32 based program should work without any changes after sw
 
   * Compatibility with libusb-1.0 API
 
-With the bundles libusb-1.0.dll file, your libusb-1.0 based program under Windows should work without any changes after switching from WinUSB.sys driver to libusbk.sys.
+With the bundled libusb-1.0.dll file, your libusb-1.0 based program under Windows should work without any changes after switching from WinUSB.sys driver to libusbk.sys.
