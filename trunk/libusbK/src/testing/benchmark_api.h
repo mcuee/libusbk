@@ -36,20 +36,20 @@ extern CONST LPSTR TestTypeStrings[4];
 
 typedef enum _BM_COMMAND
 {
-	BmSetTest = 0x0E,
-	BmGetTest = 0x0F,
-	BmSetVBuf = 0x10,
-	BmGetVBuf = 0x11,
+    BmSetTest = 0x0E,
+    BmGetTest = 0x0F,
+    BmSetVBuf = 0x10,
+    BmGetVBuf = 0x11,
 } BM_COMMAND, *PBM_COMMAND;
 
 // Tests supported by the official benchmark firmware.
 //
 typedef enum _BM_TEST_TYPE
 {
-	BmTestTypeNone	= 0x00,
-	BmTestTypeRead	= 0x01,
-	BmTestTypeWrite	= 0x02,
-	BmTestTypeLoop	= 0x03,
+    BmTestTypeNone	= 0x00,
+    BmTestTypeRead	= 0x01,
+    BmTestTypeWrite	= 0x02,
+    BmTestTypeLoop	= 0x03,
 } BM_TEST_TYPE, *PBM_TEST_TYPE;
 
 //! The DeviceInterfaceGUID used by the \see Bm_Open function.

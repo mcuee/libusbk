@@ -415,17 +415,15 @@ KUSB_EXP BOOL KUSB_API Hid_GetAltInterface (
 
 KUSB_EXP BOOL KUSB_API Hid_IsoReadPipe (
     __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in UCHAR PipeID,
+    __inout PKUSB_ISO_CONTEXT IsoContext,
     __out_opt PUCHAR Buffer,
     __in ULONG BufferLength,
-    __in ULONG IsoPacketSize,
     __in LPOVERLAPPED Overlapped)
 {
 	UNREFERENCED_PARAMETER(InterfaceHandle);
-	UNREFERENCED_PARAMETER(PipeID);
+	UNREFERENCED_PARAMETER(IsoContext);
 	UNREFERENCED_PARAMETER(Buffer);
 	UNREFERENCED_PARAMETER(BufferLength);
-	UNREFERENCED_PARAMETER(IsoPacketSize);
 	UNREFERENCED_PARAMETER(Overlapped);
 
 	SetLastError(ERROR_NOT_SUPPORTED);
@@ -434,17 +432,15 @@ KUSB_EXP BOOL KUSB_API Hid_IsoReadPipe (
 
 KUSB_EXP BOOL KUSB_API Hid_IsoWritePipe (
     __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in UCHAR PipeID,
+    __inout PKUSB_ISO_CONTEXT IsoContext,
     __in PUCHAR Buffer,
     __in ULONG BufferLength,
-    __in ULONG IsoPacketSize,
     __in LPOVERLAPPED Overlapped)
 {
 	UNREFERENCED_PARAMETER(InterfaceHandle);
-	UNREFERENCED_PARAMETER(PipeID);
+	UNREFERENCED_PARAMETER(IsoContext);
 	UNREFERENCED_PARAMETER(Buffer);
 	UNREFERENCED_PARAMETER(BufferLength);
-	UNREFERENCED_PARAMETER(IsoPacketSize);
 	UNREFERENCED_PARAMETER(Overlapped);
 
 	SetLastError(ERROR_NOT_SUPPORTED);

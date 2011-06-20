@@ -17,127 +17,127 @@
 //! Supported driver id enumeration.
 typedef enum _KUSB_DRVID
 {
-	//! Invalid driver ID
-	KUSB_DRVID_INVALID = -1L,
+    //! Invalid driver ID
+    KUSB_DRVID_INVALID = -1L,
 
-	//! libusbK.sys driver ID
-	KUSB_DRVID_LIBUSBK,
+    //! libusbK.sys driver ID
+    KUSB_DRVID_LIBUSBK,
 
-	//! libusb0.sys driver ID
-	KUSB_DRVID_LIBUSB0,
+    //! libusb0.sys driver ID
+    KUSB_DRVID_LIBUSB0,
 
-	//! WinUSB.sys driver ID
-	KUSB_DRVID_WINUSB,
+    //! WinUSB.sys driver ID
+    KUSB_DRVID_WINUSB,
 
-	//! libusb0.sys filter driver ID
-	KUSB_DRVID_LIBUSB0_FILTER,
+    //! libusb0.sys filter driver ID
+    KUSB_DRVID_LIBUSB0_FILTER,
 
-	//! Supported driver count
-	KUSB_DRVID_COUNT
+    //! Supported driver count
+    KUSB_DRVID_COUNT
 
 } KUSB_DRVID;
 
 //! Supported function id enumeration.
 typedef enum _KUSB_FNID
 {
-	//! Invalid function ID
-	KUSB_FNID_INVALID = -1L,
+    //! Invalid function ID
+    KUSB_FNID_INVALID = -1L,
 
-	//! \ref UsbK_Initialize function id
-	KUSB_FNID_Initialize,
+    //! \ref UsbK_Initialize function id
+    KUSB_FNID_Initialize,
 
-	//! \ref UsbK_Free function id
-	KUSB_FNID_Free,
+    //! \ref UsbK_Free function id
+    KUSB_FNID_Free,
 
-	//! \ref UsbK_GetAssociatedInterface function id
-	KUSB_FNID_GetAssociatedInterface,
+    //! \ref UsbK_GetAssociatedInterface function id
+    KUSB_FNID_GetAssociatedInterface,
 
-	//! \ref UsbK_GetDescriptor function id
-	KUSB_FNID_GetDescriptor,
+    //! \ref UsbK_GetDescriptor function id
+    KUSB_FNID_GetDescriptor,
 
-	//! \ref UsbK_QueryInterfaceSettings function id
-	KUSB_FNID_QueryInterfaceSettings,
+    //! \ref UsbK_QueryInterfaceSettings function id
+    KUSB_FNID_QueryInterfaceSettings,
 
-	//! \ref UsbK_QueryDeviceInformation function id
-	KUSB_FNID_QueryDeviceInformation,
+    //! \ref UsbK_QueryDeviceInformation function id
+    KUSB_FNID_QueryDeviceInformation,
 
-	//! \ref UsbK_SetCurrentAlternateSetting function id
-	KUSB_FNID_SetCurrentAlternateSetting,
+    //! \ref UsbK_SetCurrentAlternateSetting function id
+    KUSB_FNID_SetCurrentAlternateSetting,
 
-	//! \ref UsbK_GetCurrentAlternateSetting function id
-	KUSB_FNID_GetCurrentAlternateSetting,
+    //! \ref UsbK_GetCurrentAlternateSetting function id
+    KUSB_FNID_GetCurrentAlternateSetting,
 
-	//! \ref UsbK_QueryPipe function id
-	KUSB_FNID_QueryPipe,
+    //! \ref UsbK_QueryPipe function id
+    KUSB_FNID_QueryPipe,
 
-	//! \ref UsbK_SetPipePolicy function id
-	KUSB_FNID_SetPipePolicy,
+    //! \ref UsbK_SetPipePolicy function id
+    KUSB_FNID_SetPipePolicy,
 
-	//! \ref UsbK_GetPipePolicy function id
-	KUSB_FNID_GetPipePolicy,
+    //! \ref UsbK_GetPipePolicy function id
+    KUSB_FNID_GetPipePolicy,
 
-	//! \ref UsbK_ReadPipe function id
-	KUSB_FNID_ReadPipe,
+    //! \ref UsbK_ReadPipe function id
+    KUSB_FNID_ReadPipe,
 
-	//! \ref UsbK_WritePipe function id
-	KUSB_FNID_WritePipe,
+    //! \ref UsbK_WritePipe function id
+    KUSB_FNID_WritePipe,
 
-	//! \ref UsbK_ControlTransfer function id
-	KUSB_FNID_ControlTransfer,
+    //! \ref UsbK_ControlTransfer function id
+    KUSB_FNID_ControlTransfer,
 
-	//! \ref UsbK_ResetPipe function id
-	KUSB_FNID_ResetPipe,
+    //! \ref UsbK_ResetPipe function id
+    KUSB_FNID_ResetPipe,
 
-	//! \ref UsbK_AbortPipe function id
-	KUSB_FNID_AbortPipe,
+    //! \ref UsbK_AbortPipe function id
+    KUSB_FNID_AbortPipe,
 
-	//! \ref UsbK_FlushPipe function id
-	KUSB_FNID_FlushPipe,
+    //! \ref UsbK_FlushPipe function id
+    KUSB_FNID_FlushPipe,
 
-	//! \ref UsbK_SetPowerPolicy function id
-	KUSB_FNID_SetPowerPolicy,
+    //! \ref UsbK_SetPowerPolicy function id
+    KUSB_FNID_SetPowerPolicy,
 
-	//! \ref UsbK_GetPowerPolicy function id
-	KUSB_FNID_GetPowerPolicy,
+    //! \ref UsbK_GetPowerPolicy function id
+    KUSB_FNID_GetPowerPolicy,
 
-	//! \ref UsbK_GetOverlappedResult function id
-	KUSB_FNID_GetOverlappedResult,
+    //! \ref UsbK_GetOverlappedResult function id
+    KUSB_FNID_GetOverlappedResult,
 
-	//! \ref UsbK_ResetDevice function id
-	KUSB_FNID_ResetDevice,
+    //! \ref UsbK_ResetDevice function id
+    KUSB_FNID_ResetDevice,
 
-	//! \ref UsbK_Open function id
-	KUSB_FNID_Open,
+    //! \ref UsbK_Open function id
+    KUSB_FNID_Open,
 
-	//! \ref UsbK_Close function id
-	KUSB_FNID_Close,
+    //! \ref UsbK_Close function id
+    KUSB_FNID_Close,
 
-	//! \ref UsbK_SetConfiguration function id
-	KUSB_FNID_SetConfiguration,
+    //! \ref UsbK_SetConfiguration function id
+    KUSB_FNID_SetConfiguration,
 
-	//! \ref UsbK_GetConfiguration function id
-	KUSB_FNID_GetConfiguration,
+    //! \ref UsbK_GetConfiguration function id
+    KUSB_FNID_GetConfiguration,
 
-	//! \ref UsbK_ClaimInterface function id
-	KUSB_FNID_ClaimInterface,
+    //! \ref UsbK_ClaimInterface function id
+    KUSB_FNID_ClaimInterface,
 
-	//! \ref UsbK_ReleaseInterface function id
-	KUSB_FNID_ReleaseInterface,
+    //! \ref UsbK_ReleaseInterface function id
+    KUSB_FNID_ReleaseInterface,
 
-	//! \ref UsbK_SetAltInterface function id
-	KUSB_FNID_SetAltInterface,
+    //! \ref UsbK_SetAltInterface function id
+    KUSB_FNID_SetAltInterface,
 
-	//! \ref UsbK_GetAltInterface function id
-	KUSB_FNID_GetAltInterface,
+    //! \ref UsbK_GetAltInterface function id
+    KUSB_FNID_GetAltInterface,
 
-	//! \ref UsbK_IsoReadPipe function id
-	KUSB_FNID_IsoReadPipe,
+    //! \ref UsbK_IsoReadPipe function id
+    KUSB_FNID_IsoReadPipe,
 
-	//! \ref UsbK_IsoWritePipe function id
-	KUSB_FNID_IsoWritePipe,
+    //! \ref UsbK_IsoWritePipe function id
+    KUSB_FNID_IsoWritePipe,
 
-	//! Supported function count
-	KUSB_FNID_COUNT
+    //! Supported function count
+    KUSB_FNID_COUNT
 } KUSB_FNID;
 
 //! Driver api function set structure.
@@ -318,17 +318,17 @@ typedef struct _KUSB_DRIVER_API
 	*/
 	BOOL (KUSB_API* GetAltInterface)		(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR InterfaceNumberOrIndex, __in BOOL IsIndex, __out PUCHAR AltInterfaceNumber);
 	/*!
-	* \fn IsoReadPipe(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR PipeID, __out_opt PUCHAR Buffer, __in ULONG BufferLength, __in ULONG IsoPacketSize, __in LPOVERLAPPED Overlapped);
+	* \fn IsoReadPipe(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __inout PKUSB_ISO_CONTEXT IsoContext, __out_opt PUCHAR Buffer, __in ULONG BufferLength, __in LPOVERLAPPED Overlapped);
 	* \brief Driver specific function pointer to \ref UsbK_IsoReadPipe
 	* \memberof KUSB_DRIVER_API
 	*/
-	BOOL (KUSB_API* IsoReadPipe)			(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR PipeID, __out_opt PUCHAR Buffer, __in ULONG BufferLength, __in ULONG IsoPacketSize, __in LPOVERLAPPED Overlapped);
+	BOOL (KUSB_API* IsoReadPipe)			(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __inout PKUSB_ISO_CONTEXT IsoContext, __out_opt PUCHAR Buffer, __in ULONG BufferLength, __in LPOVERLAPPED Overlapped);
 	/*!
-	* \fn IsoWritePipe(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR PipeID, __in PUCHAR Buffer, __in ULONG BufferLength, __in ULONG IsoPacketSize, __in LPOVERLAPPED Overlapped);
+	* \fn IsoWritePipe(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __inout PKUSB_ISO_CONTEXT IsoContext, __in PUCHAR Buffer, __in ULONG BufferLength, __in LPOVERLAPPED Overlapped);
 	* \brief Driver specific function pointer to \ref UsbK_IsoWritePipe
 	* \memberof KUSB_DRIVER_API
 	*/
-	BOOL (KUSB_API* IsoWritePipe)			(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR PipeID, __in PUCHAR Buffer, __in ULONG BufferLength, __in ULONG IsoPacketSize, __in LPOVERLAPPED Overlapped);
+	BOOL (KUSB_API* IsoWritePipe)			(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __inout PKUSB_ISO_CONTEXT IsoContext, __in PUCHAR Buffer, __in ULONG BufferLength, __in LPOVERLAPPED Overlapped);
 
 } KUSB_DRIVER_API;
 //! Pointer to a \ref KUSB_DRIVER_API structure
@@ -490,18 +490,16 @@ typedef BOOL KUSB_API KUSB_GetAltInterface (
 
 typedef BOOL KUSB_API KUSB_IsoReadPipe (
     __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in UCHAR PipeID,
+    __inout PKUSB_ISO_CONTEXT IsoContext,
     __out_opt PUCHAR Buffer,
     __in ULONG BufferLength,
-    __in ULONG IsoPacketSize,
     __in LPOVERLAPPED Overlapped);
 
 typedef BOOL KUSB_API KUSB_IsoWritePipe (
     __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in UCHAR PipeID,
+    __inout PKUSB_ISO_CONTEXT IsoContext,
     __in PUCHAR Buffer,
     __in ULONG BufferLength,
-    __in ULONG IsoPacketSize,
     __in LPOVERLAPPED Overlapped);
 
 #ifdef __cplusplus

@@ -1,17 +1,18 @@
 /*! \file drv_api.h
 */
+#include "lusbk_usbio.h"
 
 #ifndef __LIBUSBK_KUSB_DRIVER_API_H__
 #define __LIBUSBK_KUSB_DRIVER_API_H__
 
 enum
 {
-	LIBUSB_DEBUG_OFF,
-	LIBUSB_DEBUG_ERR,
-	LIBUSB_DEBUG_WRN,
-	LIBUSB_DEBUG_MSG,
+    LIBUSB_DEBUG_OFF,
+    LIBUSB_DEBUG_ERR,
+    LIBUSB_DEBUG_WRN,
+    LIBUSB_DEBUG_MSG,
 
-	LIBUSB_DEBUG_MAX = 0xff,
+    LIBUSB_DEBUG_MAX = 0xff,
 };
 
 
@@ -149,6 +150,11 @@ enum
 #define LIBUSBK_IOCTL_GET_INTERFACE CTL_CODE(FILE_DEVICE_UNKNOWN,\
         0x911, METHOD_BUFFERED, FILE_ANY_ACCESS)
 
+#define LIBUSBK_IOCTL_ISOEX_WRITE CTL_CODE(FILE_DEVICE_UNKNOWN,\
+        0x912, METHOD_IN_DIRECT, FILE_ANY_ACCESS)
+
+#define LIBUSBK_IOCTL_ISOEX_READ CTL_CODE(FILE_DEVICE_UNKNOWN,\
+        0x913, METHOD_OUT_DIRECT, FILE_ANY_ACCESS)
 
 /////////////////////////////////////////////////////////////////////////////
 
@@ -156,9 +162,9 @@ enum
 
 enum LIBUSB0_TRANSFER_FLAGS
 {
-	TRANSFER_FLAGS_SHORT_NOT_OK = 1 << 0,
-	TRANSFER_FLAGS_ISO_SET_START_FRAME = 1 << 30,
-	TRANSFER_FLAGS_ISO_ADD_LATENCY = 1 << 31,
+    TRANSFER_FLAGS_SHORT_NOT_OK = 1 << 0,
+    TRANSFER_FLAGS_ISO_SET_START_FRAME = 1 << 30,
+    TRANSFER_FLAGS_ISO_ADD_LATENCY = 1 << 31,
 };
 
 #pragma warning(disable:4201)
@@ -206,11 +212,18 @@ typedef struct
 			unsigned int endpoint;
 			unsigned int packet_size;
 
-			// TODO: max_transfer_size, short transfer not ok, use iso_start_frame
 			unsigned int unused; // max_transfer_size is deprecated; (see pipe policies)
 			unsigned int transfer_flags;
 			unsigned int iso_start_frame_latency;
 		} endpoint;
+
+		struct
+		{
+			UCHAR PipeID;
+			ULONG IsoContextSize;
+			PKUSB_ISO_CONTEXT IsoContext;
+		} IsoEx;
+
 		struct
 		{
 			unsigned int type;

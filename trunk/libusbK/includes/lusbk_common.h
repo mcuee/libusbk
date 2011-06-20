@@ -224,37 +224,37 @@ typedef LIBUSBK_INTERFACE_HANDLE* PLIBUSBK_INTERFACE_HANDLE;
 //! bmRequest.Dir
 enum BMREQUEST_DIR_ENUM
 {
-	BMREQUEST_HOST_TO_DEVICE = 0,
-	BMREQUEST_DEVICE_TO_HOST = 1,
+    BMREQUEST_HOST_TO_DEVICE = 0,
+    BMREQUEST_DEVICE_TO_HOST = 1,
 };
 
 //! bmRequest.Type
 enum BMREQUEST_TYPE_ENUM
 {
-	//! Standard request. See \ref USB_REQUEST_ENUM
-	BMREQUEST_STANDARD = 0,
+    //! Standard request. See \ref USB_REQUEST_ENUM
+    BMREQUEST_STANDARD = 0,
 
-	//! Class-specific request.
-	BMREQUEST_CLASS = 1,
+    //! Class-specific request.
+    BMREQUEST_CLASS = 1,
 
-	//! Vendor-specific request
-	BMREQUEST_VENDOR = 2,
+    //! Vendor-specific request
+    BMREQUEST_VENDOR = 2,
 };
 
 //! bmRequest.Recipient
 enum BMREQUEST_RECIPIENT_ENUM
 {
-	//! Request is for a device.
-	BMREQUEST_TO_DEVICE = 0,
+    //! Request is for a device.
+    BMREQUEST_TO_DEVICE = 0,
 
-	//! Request is for an interface of a device.
-	BMREQUEST_TO_INTERFACE = 1,
+    //! Request is for an interface of a device.
+    BMREQUEST_TO_INTERFACE = 1,
 
-	//! Request is for an endpoint of a device.
-	BMREQUEST_TO_ENDPOINT = 2,
+    //! Request is for an endpoint of a device.
+    BMREQUEST_TO_ENDPOINT = 2,
 
-	//! Request is for a vendor-specific purpose.
-	BMREQUEST_TO_OTHER = 3,
+    //! Request is for a vendor-specific purpose.
+    BMREQUEST_TO_OTHER = 3,
 };
 
 //! Maximum length (in bytes) of a usb string. USB strings are always stored in wide-char format.
@@ -263,42 +263,42 @@ enum BMREQUEST_RECIPIENT_ENUM
 //! Values for the bits returned by the \ref USB_REQUEST_GET_STATUS request.
 enum USB_GETSTATUS_ENUM
 {
-	//! Device is self powered
-	USB_GETSTATUS_SELF_POWERED = 0x01,
+    //! Device is self powered
+    USB_GETSTATUS_SELF_POWERED = 0x01,
 
-	//! Device can wake the system from a low power/sleeping state.
-	USB_GETSTATUS_REMOTE_WAKEUP_ENABLED = 0x02
+    //! Device can wake the system from a low power/sleeping state.
+    USB_GETSTATUS_REMOTE_WAKEUP_ENABLED = 0x02
 };
 
 //! Standard USB descriptor types. For more information, see section 9-5 of the USB 3.0 specifications.
 enum USB_DESCRIPTOR_TYPE_ENUM
 {
-	//! Device descriptor type.
-	USB_DEVICE_DESCRIPTOR_TYPE = 0x01,
+    //! Device descriptor type.
+    USB_DEVICE_DESCRIPTOR_TYPE = 0x01,
 
-	//! Configuration descriptor type.
-	USB_CONFIGURATION_DESCRIPTOR_TYPE = 0x02,
+    //! Configuration descriptor type.
+    USB_CONFIGURATION_DESCRIPTOR_TYPE = 0x02,
 
-	//! String descriptor type.
-	USB_STRING_DESCRIPTOR_TYPE = 0x03,
+    //! String descriptor type.
+    USB_STRING_DESCRIPTOR_TYPE = 0x03,
 
-	//! Interface descriptor type.
-	USB_INTERFACE_DESCRIPTOR_TYPE = 0x04,
+    //! Interface descriptor type.
+    USB_INTERFACE_DESCRIPTOR_TYPE = 0x04,
 
-	//! Endpoint descriptor type.
-	USB_ENDPOINT_DESCRIPTOR_TYPE = 0x05,
+    //! Endpoint descriptor type.
+    USB_ENDPOINT_DESCRIPTOR_TYPE = 0x05,
 
-	//! Device qualifier descriptor type.
-	USB_DEVICE_QUALIFIER_DESCRIPTOR_TYPE = 0x06,
+    //! Device qualifier descriptor type.
+    USB_DEVICE_QUALIFIER_DESCRIPTOR_TYPE = 0x06,
 
-	//! Config power descriptor type.
-	USB_CONFIG_POWER_DESCRIPTOR_TYPE = 0x07,
+    //! Config power descriptor type.
+    USB_CONFIG_POWER_DESCRIPTOR_TYPE = 0x07,
 
-	//! Interface power descriptor type.
-	USB_INTERFACE_POWER_DESCRIPTOR_TYPE = 0x08,
+    //! Interface power descriptor type.
+    USB_INTERFACE_POWER_DESCRIPTOR_TYPE = 0x08,
 
-	//! Interface association descriptor type.
-	USB_INTERFACE_ASSOCIATION_DESCRIPTOR_TYPE = 0x0B,
+    //! Interface association descriptor type.
+    USB_INTERFACE_ASSOCIATION_DESCRIPTOR_TYPE = 0x0B,
 };
 
 //! Makes the \ref KUSB_SETUP_PACKET::_wValue for a \ref USB_REQUEST_GET_DESCRIPTOR or \ref USB_REQUEST_SET_DESCRIPTOR request.
@@ -323,17 +323,17 @@ enum USB_DESCRIPTOR_TYPE_ENUM
 //! Values used in the \c bmAttributes field of a \ref USB_ENDPOINT_DESCRIPTOR
 typedef enum _USBD_PIPE_TYPE
 {
-	//! Indicates a control endpoint
-	UsbdPipeTypeControl,
+    //! Indicates a control endpoint
+    UsbdPipeTypeControl,
 
-	//! Indicates an isochronous endpoint
-	UsbdPipeTypeIsochronous,
+    //! Indicates an isochronous endpoint
+    UsbdPipeTypeIsochronous,
 
-	//! Indicates a bulk endpoint
-	UsbdPipeTypeBulk,
+    //! Indicates a bulk endpoint
+    UsbdPipeTypeBulk,
 
-	//! Indicates an interrupt endpoint
-	UsbdPipeTypeInterrupt,
+    //! Indicates an interrupt endpoint
+    UsbdPipeTypeInterrupt,
 } USBD_PIPE_TYPE;
 
 //! Config power mask for the \c bmAttributes field of a \ref USB_CONFIGURATION_DESCRIPTOR
@@ -342,14 +342,14 @@ typedef enum _USBD_PIPE_TYPE
 //! Values used in the \c bmAttributes field of a \ref USB_CONFIGURATION_DESCRIPTOR
 enum USB_CONFIG_BM_ATTRIBUTE_ENUM
 {
-	//! The device is powered by it's host.
-	USB_CONFIG_BUS_POWERED = 0x80,
+    //! The device is powered by it's host.
+    USB_CONFIG_BUS_POWERED = 0x80,
 
-	//! The device has an external power source.
-	USB_CONFIG_SELF_POWERED = 0x40,
+    //! The device has an external power source.
+    USB_CONFIG_SELF_POWERED = 0x40,
 
-	//! The device is capable of waking the the host from a low power/sleeping state.
-	USB_CONFIG_REMOTE_WAKEUP = 0x20,
+    //! The device is capable of waking the the host from a low power/sleeping state.
+    USB_CONFIG_REMOTE_WAKEUP = 0x20,
 };
 
 //! Endpoint direction mask for the \c bEndpointAddress field of a \ref USB_ENDPOINT_DESCRIPTOR
@@ -377,38 +377,38 @@ enum USB_CONFIG_BM_ATTRIBUTE_ENUM
 */
 enum USB_REQUEST_ENUM
 {
-	//! Request status of the specific recipient
-	USB_REQUEST_GET_STATUS = 0x00,
+    //! Request status of the specific recipient
+    USB_REQUEST_GET_STATUS = 0x00,
 
-	//! Clear or disable a specific feature
-	USB_REQUEST_CLEAR_FEATURE = 0x01,
+    //! Clear or disable a specific feature
+    USB_REQUEST_CLEAR_FEATURE = 0x01,
 
-	//! Set or enable a specific feature
-	USB_REQUEST_SET_FEATURE = 0x03,
+    //! Set or enable a specific feature
+    USB_REQUEST_SET_FEATURE = 0x03,
 
-	//! Set device address for all future accesses
-	USB_REQUEST_SET_ADDRESS = 0x05,
+    //! Set device address for all future accesses
+    USB_REQUEST_SET_ADDRESS = 0x05,
 
-	//! Get the specified descriptor
-	USB_REQUEST_GET_DESCRIPTOR = 0x06,
+    //! Get the specified descriptor
+    USB_REQUEST_GET_DESCRIPTOR = 0x06,
 
-	//! Update existing descriptors or add new descriptors
-	USB_REQUEST_SET_DESCRIPTOR = 0x07,
+    //! Update existing descriptors or add new descriptors
+    USB_REQUEST_SET_DESCRIPTOR = 0x07,
 
-	//! Get the current device configuration value
-	USB_REQUEST_GET_CONFIGURATION = 0x08,
+    //! Get the current device configuration value
+    USB_REQUEST_GET_CONFIGURATION = 0x08,
 
-	//! Set device configuration
-	USB_REQUEST_SET_CONFIGURATION = 0x09,
+    //! Set device configuration
+    USB_REQUEST_SET_CONFIGURATION = 0x09,
 
-	//! Return the selected alternate setting for the specified interface
-	USB_REQUEST_GET_INTERFACE = 0x0A,
+    //! Return the selected alternate setting for the specified interface
+    USB_REQUEST_GET_INTERFACE = 0x0A,
 
-	//! Select an alternate interface for the specified interface
-	USB_REQUEST_SET_INTERFACE = 0x0B,
+    //! Select an alternate interface for the specified interface
+    USB_REQUEST_SET_INTERFACE = 0x0B,
 
-	//! Set then report an endpoint's synchronization frame
-	USB_REQUEST_SYNC_FRAME = 0x0C,
+    //! Set then report an endpoint's synchronization frame
+    USB_REQUEST_SYNC_FRAME = 0x0C,
 };
 
 //! USB defined class codes
@@ -418,32 +418,32 @@ enum USB_REQUEST_ENUM
 */
 enum USB_DEVICE_CLASS_ENUM
 {
-	//! Reserved class
-	USB_DEVICE_CLASS_RESERVED = 0x00,
+    //! Reserved class
+    USB_DEVICE_CLASS_RESERVED = 0x00,
 
-	//! Audio class
-	USB_DEVICE_CLASS_AUDIO = 0x01,
+    //! Audio class
+    USB_DEVICE_CLASS_AUDIO = 0x01,
 
-	//! Communications class
-	USB_DEVICE_CLASS_COMMUNICATIONS = 0x02,
+    //! Communications class
+    USB_DEVICE_CLASS_COMMUNICATIONS = 0x02,
 
-	//! Human Interface Device class
-	USB_DEVICE_CLASS_HUMAN_INTERFACE = 0x03,
+    //! Human Interface Device class
+    USB_DEVICE_CLASS_HUMAN_INTERFACE = 0x03,
 
-	//! Imaging class
-	USB_DEVICE_CLASS_IMAGING = 0x06,
+    //! Imaging class
+    USB_DEVICE_CLASS_IMAGING = 0x06,
 
-	//! Printer class
-	USB_DEVICE_CLASS_PRINTER = 0x07,
+    //! Printer class
+    USB_DEVICE_CLASS_PRINTER = 0x07,
 
-	//! Mass storage class
-	USB_DEVICE_CLASS_STORAGE = 0x08,
+    //! Mass storage class
+    USB_DEVICE_CLASS_STORAGE = 0x08,
 
-	//! Hub class
-	USB_DEVICE_CLASS_HUB = 0x09,
+    //! Hub class
+    USB_DEVICE_CLASS_HUB = 0x09,
 
-	//! vendor-specific class
-	USB_DEVICE_CLASS_VENDOR_SPECIFIC = 0xFF,
+    //! vendor-specific class
+    USB_DEVICE_CLASS_VENDOR_SPECIFIC = 0xFF,
 };
 
 //! A structure representing the standard USB device descriptor.

@@ -280,24 +280,22 @@ KUSB_EXP BOOL KUSB_API WinUsb_GetAltInterface (
 
 KUSB_EXP BOOL KUSB_API WinUsb_IsoReadPipe (
     __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in UCHAR PipeID,
+    __inout PKUSB_ISO_CONTEXT IsoContext,
     __out_opt PUCHAR Buffer,
     __in ULONG BufferLength,
-    __in ULONG IsoPacketSize,
     __in LPOVERLAPPED Overlapped)
 {
-	return UsbK_IsoReadPipe (InterfaceHandle, PipeID, Buffer, BufferLength, IsoPacketSize, Overlapped);
+	return UsbK_IsoReadPipe (InterfaceHandle, IsoContext, Buffer, BufferLength, Overlapped);
 }
 
 KUSB_EXP BOOL KUSB_API WinUsb_IsoWritePipe (
     __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in UCHAR PipeID,
+    __inout PKUSB_ISO_CONTEXT IsoContext,
     __in PUCHAR Buffer,
     __in ULONG BufferLength,
-    __in ULONG IsoPacketSize,
     __in LPOVERLAPPED Overlapped)
 {
-	return UsbK_IsoWritePipe (InterfaceHandle, PipeID, Buffer, BufferLength, IsoPacketSize, Overlapped);
+	return UsbK_IsoWritePipe (InterfaceHandle, IsoContext, Buffer, BufferLength, Overlapped);
 }
 
 #endif // EXCLUDE_WINUSB_WRAPPER

@@ -75,6 +75,17 @@ VOID NONPAGABLE PipeQueue_OnIoControl(__in WDFQUEUE Queue,
 		USBERR("invalid pipeType=%u\n", requestContext->PipeContext->PipeInformation.PipeType);
 		break;
 
+	case LIBUSBK_IOCTL_ISOEX_READ:
+	case LIBUSBK_IOCTL_ISOEX_WRITE:
+		if (requestContext->PipeContext->PipeInformation.PipeType == WdfUsbPipeTypeIsochronous)
+		{
+			XferIsoEx(Queue, Request, InputBufferLength, OutputBufferLength);
+			return;
+		}
+		status = STATUS_INVALID_PARAMETER;
+		USBERR("invalid pipeType=%u\n", requestContext->PipeContext->PipeInformation.PipeType);
+		break;
+
 	case LIBUSB_IOCTL_SET_FEATURE:
 	case LIBUSB_IOCTL_CLEAR_FEATURE:
 	case LIBUSB_IOCTL_GET_DESCRIPTOR:

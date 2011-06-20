@@ -117,7 +117,7 @@ VOID Xfer (
 		goto Exit;
 	}
 
-	status = SubmitAsyncRequest(requestContext, Request, XferComplete, &sendOptions);
+	status = SubmitAsyncRequest(requestContext, Request, XferComplete, &sendOptions, NULL);
 	if (!NT_SUCCESS(status) || !queueLocked)
 	{
 		WdfWaitLockRelease(requestContext->PipeContext->PipeLock);
@@ -252,7 +252,7 @@ Continue:
 	if (!NT_SUCCESS((status = UrbFormatBulkRequestContext(Request, requestContext, NULL,  NULL))))
 		goto Exit;
 
-	status = SubmitAsyncRequest(requestContext, Request, XferComplete, NULL);
+	status = SubmitAsyncRequest(requestContext, Request, XferComplete, NULL, NULL);
 	if (NT_SUCCESS(status))
 		return;
 

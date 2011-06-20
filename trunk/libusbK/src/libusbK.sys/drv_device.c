@@ -134,12 +134,13 @@ Return Value:
 #if !defined(BUFFERED_READ_WRITE)
 	//
 	// I/O type is Buffered by default. We want to do direct I/O for Reads
-	// and Writes so set it explicitly. Please note that this sample
-	// can do isoch transfer only if the io type is directio.
-	//
+	// and Writes so set it explicitly.
 	WdfDeviceInitSetIoType(DeviceInit, WdfDeviceIoDirect);
 
 #endif
+
+
+	WdfDeviceInitSetIoInCallerContextCallback(DeviceInit, Request_PreIoInitialize);
 
 	//
 	// Now specify the size of device extension where we track per device
@@ -309,7 +310,7 @@ Return Value:
 
 --*/
 {
-	NTSTATUS                    status;
+	NTSTATUS                    status = STATUS_SUCCESS;
 	PDEVICE_CONTEXT             deviceContext;
 	WDF_USB_DEVICE_INFORMATION  info;
 
@@ -318,9 +319,11 @@ Return Value:
 
 	USBMSG("begins\n");
 
-	PAGED_CODE();
-
 	deviceContext = GetDeviceContext(Device);
+
+	// Hardware is already prepared
+	if (deviceContext->WdfUsbTargetDevice)
+		return STATUS_SUCCESS;
 
 	//
 	// Read the device descriptor, configuration descriptor
@@ -573,6 +576,7 @@ Return Value:
 		                                  &deviceContext->WdfUsbTargetDevice);
 		if (!NT_SUCCESS(status))
 		{
+			USBERR("WdfUsbTargetDeviceCreate failed. status=%08Xh\n", status);
 			return status;
 		}
 	}
@@ -632,6 +636,7 @@ Return Value:
 
 	if (status != STATUS_BUFFER_TOO_SMALL || size == 0)
 	{
+		USBERR("WdfUsbTargetDeviceRetrieveConfigDescriptor failed. status=%08Xh\n", status);
 		return status;
 	}
 
@@ -652,14 +657,17 @@ Return Value:
 	                         &configurationDescriptor);
 	if (!NT_SUCCESS(status))
 	{
+		USBERR("WdfMemoryCreate failed. size=%u status=%08Xh\n", size, status);
 		return status;
 	}
 
 	status = WdfUsbTargetDeviceRetrieveConfigDescriptor(deviceContext->WdfUsbTargetDevice,
 	         configurationDescriptor,
 	         &size);
+
 	if (!NT_SUCCESS(status))
 	{
+		USBERR("WdfUsbTargetDeviceRetrieveConfigDescriptor failed. status=%08Xh\n", status);
 		return status;
 	}
 
@@ -689,10 +697,12 @@ NTSTATUS Device_ConfigureInterfaces(WDFDEVICE Device)
 
 	if (deviceContext->InterfaceCount == 1)
 	{
+		USBDBG("Using single interface configuration..\n");
 		WDF_USB_DEVICE_SELECT_CONFIG_PARAMS_INIT_SINGLE_INTERFACE(&params);
 	}
 	else
 	{
+		USBDBG("Using multiple interface configuration..\n");
 		settingPairs = ExAllocatePoolWithTag(
 		                   PagedPool,
 		                   sizeof(WDF_USB_INTERFACE_SETTING_PAIR) * deviceContext->InterfaceCount,
@@ -700,7 +710,11 @@ NTSTATUS Device_ConfigureInterfaces(WDFDEVICE Device)
 
 		if (settingPairs == NULL)
 		{
-			return STATUS_INSUFFICIENT_RESOURCES;
+			status = STATUS_INSUFFICIENT_RESOURCES;
+			USBERR("ExAllocatePoolWithTag failed. size=%u status=%08Xh\n",
+			       sizeof(WDF_USB_INTERFACE_SETTING_PAIR) * deviceContext->InterfaceCount,
+			       status);
+			return status;
 		}
 
 		for (interfaceIndex = 0; interfaceIndex < deviceContext->InterfaceCount; interfaceIndex++)
@@ -708,7 +722,10 @@ NTSTATUS Device_ConfigureInterfaces(WDFDEVICE Device)
 			settingPairs[interfaceIndex].UsbInterface =
 			    WdfUsbTargetDeviceGetInterface(deviceContext->WdfUsbTargetDevice, interfaceIndex);
 
-
+			if (settingPairs[interfaceIndex].UsbInterface == WDF_NO_HANDLE)
+			{
+				USBDBG("WdfUsbTargetDeviceGetInterface failed. interfaceIndex=%u\n", interfaceIndex);
+			}
 			// Select alternate setting zero on all interfaces.
 			settingPairs[interfaceIndex].SettingIndex = 0;
 		}
@@ -718,7 +735,7 @@ NTSTATUS Device_ConfigureInterfaces(WDFDEVICE Device)
 	status = WdfUsbTargetDeviceSelectConfig(deviceContext->WdfUsbTargetDevice, NULL, &params);
 	if (!NT_SUCCESS(status))
 	{
-		USBERR("WdfUsbTargetDeviceSelectConfig failed status=%Xh", status);
+		USBERR("WdfUsbTargetDeviceSelectConfig failed. status=%Xh", status);
 		goto Error;
 	}
 	else
@@ -741,6 +758,7 @@ NTSTATUS Device_ConfigureInterfaces(WDFDEVICE Device)
 			status = Interface_InitContext(deviceContext, interfaceContext);
 			if (!NT_SUCCESS(status))
 			{
+				USBERR("Interface_InitContext failed. status=%Xh", status);
 				deviceContext->InterfaceCount = interfaceIndex;
 				goto Error;
 			}
@@ -748,6 +766,7 @@ NTSTATUS Device_ConfigureInterfaces(WDFDEVICE Device)
 			status = Interface_Start(deviceContext, interfaceContext);
 			if (!NT_SUCCESS(status))
 			{
+				USBERR("Interface_Start failed. status=%Xh", status);
 				deviceContext->InterfaceCount = interfaceIndex;
 				goto Error;
 			}

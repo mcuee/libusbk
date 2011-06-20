@@ -64,6 +64,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tasks", "tasks", "{9ECC0BBA
 		make_tasks\post_build_libusbK_sys.bat = make_tasks\post_build_libusbK_sys.bat
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "xfer-stream-r", "examples\xfer-stream-r\xfer-stream-r.vcproj", "{AC19FF1F-EC67-2731-19E2-E7B6B877A111}"
+	ProjectSection(ProjectDependencies) = postProject
+		{F2114C97-2F90-44B2-86AF-E5AE662458BF} = {F2114C97-2F90-44B2-86AF-E5AE662458BF}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -112,6 +117,14 @@ Global
 		{046C67B6-9D81-473F-8FD4-D67C9EB18B99}.Release|Win32.Build.0 = Release|Win32
 		{046C67B6-9D81-473F-8FD4-D67C9EB18B99}.Release|x64.ActiveCfg = Release|x64
 		{046C67B6-9D81-473F-8FD4-D67C9EB18B99}.Release|x64.Build.0 = Release|x64
+		{AC19FF1F-EC67-2731-19E2-E7B6B877A111}.Debug|Win32.ActiveCfg = Debug|Win32
+		{AC19FF1F-EC67-2731-19E2-E7B6B877A111}.Debug|Win32.Build.0 = Debug|Win32
+		{AC19FF1F-EC67-2731-19E2-E7B6B877A111}.Debug|x64.ActiveCfg = Debug|x64
+		{AC19FF1F-EC67-2731-19E2-E7B6B877A111}.Debug|x64.Build.0 = Debug|x64
+		{AC19FF1F-EC67-2731-19E2-E7B6B877A111}.Release|Win32.ActiveCfg = Release|Win32
+		{AC19FF1F-EC67-2731-19E2-E7B6B877A111}.Release|Win32.Build.0 = Release|Win32
+		{AC19FF1F-EC67-2731-19E2-E7B6B877A111}.Release|x64.ActiveCfg = Release|x64
+		{AC19FF1F-EC67-2731-19E2-E7B6B877A111}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

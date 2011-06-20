@@ -1080,10 +1080,8 @@ extern "C" {
 	* - \ref UsbK_Initialize
 	* - \ref UsbK_GetAssociatedInterface
 	*
-	* \param PipeID
-	* An 8-bit value that consists of a 7-bit address and a direction bit.
-	* This parameter corresponds to the bEndpointAddress field in the endpoint
-	* descriptor.
+	* \param IsoContext
+	* Pointer to an isochronous transfer context created with \ref UsbK_IsoCreateContext
 	*
 	* \param Buffer
 	* A caller-allocated buffer that receives the data that is read.
@@ -1091,9 +1089,6 @@ extern "C" {
 	* \param BufferLength
 	* The maximum number of bytes to read. This number must be less than or
 	* equal to the size, in bytes, of Buffer.
-	*
-	* \param IsoPacketSize
-	* Data size in bytes for each iso packet.
 	*
 	* \param Overlapped
 	* A \b required pointer to an overlapped structure for asynchronous
@@ -1107,10 +1102,9 @@ extern "C" {
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_IsoReadPipe (
 	    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-	    __in UCHAR PipeID,
+	    __inout PKUSB_ISO_CONTEXT IsoContext,
 	    __out_opt PUCHAR Buffer,
 	    __in ULONG BufferLength,
-	    __in ULONG IsoPacketSize,
 	    __in LPOVERLAPPED Overlapped);
 
 //! Writes to an isochronous pipe.
@@ -1122,10 +1116,8 @@ extern "C" {
 	* - \ref UsbK_Initialize
 	* - \ref UsbK_GetAssociatedInterface
 	*
-	* \param PipeID
-	* An 8-bit value that consists of a 7-bit address and a direction bit.
-	* This parameter corresponds to the bEndpointAddress field in the endpoint
-	* descriptor.
+	* \param IsoContext
+	* Pointer to an isochronous transfer context created with \ref UsbK_IsoCreateContext
 	*
 	* \param Buffer
 	* A caller-allocated buffer that receives the data that is read.
@@ -1133,9 +1125,6 @@ extern "C" {
 	* \param BufferLength
 	* The maximum number of bytes to write. This number must be less than or
 	* equal to the size, in bytes, of Buffer.
-	*
-	* \param IsoPacketSize
-	* Data size in bytes for each iso packet.
 	*
 	* \param Overlapped
 	* An optional pointer to an overlapped structure for asynchronous
@@ -1149,10 +1138,9 @@ extern "C" {
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_IsoWritePipe (
 	    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-	    __in UCHAR PipeID,
+	    __inout PKUSB_ISO_CONTEXT IsoContext,
 	    __in PUCHAR Buffer,
 	    __in ULONG BufferLength,
-	    __in ULONG IsoPacketSize,
 	    __in LPOVERLAPPED Overlapped);
 
 //! Retrieves the results of an overlapped operation on the specified libusbK handle.

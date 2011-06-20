@@ -104,6 +104,31 @@ typedef struct _LIBUSBK_BKND_CONTEXT
 		goto mJump;																								\
 	}
 
+#define OVLK_ISO_CHECK_SUBMIT(mJump, mOverlapped, mIsoContext, mIsoContextSize, mBuffer, mBufferLength, mDeviceHandle, mIoCtl)	\
+	if (mOverlapped && mOverlapped == mOverlapped->Pointer)														\
+	{																											\
+		POVERLAPPED_K_INFO ovlkInfo = OvlK_GetInfo(mOverlapped);												\
+		libusb_request* request = (libusb_request*)ovlkInfo->BackendContext;									\
+		mOverlapped->Pointer = NULL;																			\
+																												\
+		Mem_Zero(request, sizeof(*request));																	\
+		request->IsoEx.PipeID = mIsoContext->PipeID;															\
+		request->IsoEx.IsoContext = mIsoContext;																\
+		request->IsoEx.IsoContextSize = mIsoContextSize;														\
+		ovlkInfo->DataBuffer = mBuffer;																			\
+		ovlkInfo->DataBufferSize = mBufferLength;																\
+		ovlkInfo->DeviceHandle = mDeviceHandle;																	\
+		ovlkInfo->PipeID = mIsoContext->PipeID;																	\
+		ovlkInfo->Cancel = k_CancelOverlappedK;																	\
+																												\
+		success = Ioctl_Async(ovlkInfo->DeviceHandle,															\
+		                      mIoCtl,																			\
+		                      request, sizeof(*request),														\
+		                      mBuffer, mBufferLength,															\
+		                      mOverlapped);																		\
+		goto mJump;																								\
+	}
+
 #define OVLK_CHECK_SUBMIT_CONTROL(mJump, mOverlapped, mSetupPacket, mBuffer, mBufferLength, mDeviceHandle, mIoCtl)	\
 	if (mOverlapped && mOverlapped == mOverlapped->Pointer)														\
 	{																											\
@@ -1515,12 +1540,12 @@ Error:
 
 KUSB_EXP BOOL KUSB_API UsbK_IsoReadPipe (
     __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in UCHAR PipeID,
+    __inout PKUSB_ISO_CONTEXT IsoContext,
     __out_opt PUCHAR Buffer,
     __in ULONG BufferLength,
-    __in ULONG IsoPacketSize,
     __in LPOVERLAPPED Overlapped)
 {
+	ULONG IsoContextSize;
 	LUSBKFN_CTX_PIPE_PREFIX();
 
 	AcquireSyncLockRead(&handle->Instance.Lock);
@@ -1531,23 +1556,25 @@ KUSB_EXP BOOL KUSB_API UsbK_IsoReadPipe (
 		success = LusbwError(ERROR_INVALID_PARAMETER);
 		goto Done;
 	}
+	IsoContextSize = sizeof(KUSB_ISO_CONTEXT) + (IsoContext->NumberOfPackets * sizeof(KUSB_ISO_PACKET));
 
-	OVLK_CHECK_SUBMIT(
+	OVLK_ISO_CHECK_SUBMIT(
 	    Done,
 	    Overlapped,
-	    PipeID,
+	    IsoContext,
+	    IsoContextSize,
 	    Buffer,
 	    BufferLength,
-	    DeviceHandleByPipeID(PipeID),
-	    IsoPacketSize,
-	    LIBUSB_IOCTL_ISOCHRONOUS_READ) else
+	    DeviceHandleByPipeID(IsoContext->PipeID),
+	    LIBUSBK_IOCTL_ISOEX_READ) else
 	{
 		libusb_request request;
 		Mem_Zero(&request, sizeof(request));
-		request.endpoint.endpoint = PipeID;
-		request.endpoint.packet_size = IsoPacketSize;
+		request.IsoEx.IsoContext = IsoContext;
+		request.IsoEx.IsoContextSize = IsoContextSize;
+		request.IsoEx.PipeID = IsoContext->PipeID;
 
-		success = Ioctl_Async(DeviceHandleByPipeID(PipeID), LIBUSB_IOCTL_ISOCHRONOUS_READ,
+		success = Ioctl_Async(DeviceHandleByPipeID(IsoContext->PipeID), LIBUSBK_IOCTL_ISOEX_READ,
 		                      &request, sizeof(request),
 		                      Buffer, BufferLength,
 		                      Overlapped);
@@ -1560,12 +1587,12 @@ Done:
 
 KUSB_EXP BOOL KUSB_API UsbK_IsoWritePipe (
     __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in UCHAR PipeID,
+    __inout PKUSB_ISO_CONTEXT IsoContext,
     __in PUCHAR Buffer,
     __in ULONG BufferLength,
-    __in ULONG IsoPacketSize,
     __in LPOVERLAPPED Overlapped)
 {
+	ULONG IsoContextSize;
 	LUSBKFN_CTX_PIPE_PREFIX();
 
 	AcquireSyncLockRead(&handle->Instance.Lock);
@@ -1577,24 +1604,25 @@ KUSB_EXP BOOL KUSB_API UsbK_IsoWritePipe (
 		goto Done;
 	}
 
-	OVLK_CHECK_SUBMIT(
+	IsoContextSize = sizeof(KUSB_ISO_CONTEXT) + (IsoContext->NumberOfPackets * sizeof(KUSB_ISO_PACKET));
+
+	OVLK_ISO_CHECK_SUBMIT(
 	    Done,
 	    Overlapped,
-	    PipeID,
+	    IsoContext,
+	    IsoContextSize,
 	    Buffer,
 	    BufferLength,
-	    DeviceHandleByPipeID(PipeID),
-	    IsoPacketSize,
-	    LIBUSB_IOCTL_ISOCHRONOUS_WRITE) else
+	    DeviceHandleByPipeID(IsoContext->PipeID),
+	    LIBUSBK_IOCTL_ISOEX_WRITE) else
 	{
-
 		libusb_request request;
 		Mem_Zero(&request, sizeof(request));
-		request.endpoint.endpoint = PipeID;
-		request.endpoint.packet_size = IsoPacketSize;
+		request.IsoEx.IsoContext = IsoContext;
+		request.IsoEx.IsoContextSize = IsoContextSize;
+		request.IsoEx.PipeID = IsoContext->PipeID;
 
-		success = Ioctl_Async(DeviceHandleByPipeID(PipeID),
-		                      LIBUSB_IOCTL_ISOCHRONOUS_WRITE,
+		success = Ioctl_Async(DeviceHandleByPipeID(IsoContext->PipeID), LIBUSBK_IOCTL_ISOEX_WRITE,
 		                      &request, sizeof(request),
 		                      Buffer, BufferLength,
 		                      Overlapped);

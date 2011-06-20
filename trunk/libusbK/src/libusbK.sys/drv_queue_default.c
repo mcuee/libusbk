@@ -108,6 +108,10 @@ VOID DefaultQueue_OnIoControl(__in WDFQUEUE Queue,
 		return;
 	}
 	// All io control request must send the libusb_request struct.
+	libusbRequest = (libusb_request*)requestContext->InputBuffer;
+	inputBufferLen = (size_t)requestContext->InputBufferLength;
+
+	/*
 	status = WdfRequestRetrieveInputBuffer(Request, sizeof(libusb_request), &libusbRequest, &inputBufferLen);
 	if(!NT_SUCCESS(status))
 	{
@@ -115,6 +119,7 @@ VOID DefaultQueue_OnIoControl(__in WDFQUEUE Queue,
 		WdfRequestCompleteWithInformation(Request, status, 0);
 		return;
 	}
+	*/
 
 	// Stores the libusb_request in the WdfRequest context space.
 	// If this is a DIRECT transfer, gets the transfer MDL. If there isn't one, OriginalTransferMDL is set to NULL.
@@ -138,12 +143,20 @@ VOID DefaultQueue_OnIoControl(__in WDFQUEUE Queue,
 	{
 	case LIBUSB_IOCTL_ISOCHRONOUS_READ:
 	case LIBUSB_IOCTL_INTERRUPT_OR_BULK_READ:
-		ForwardToPipeQueue(Request, deviceContext, requestContext, libusbRequest, WdfRequestTypeRead);
+		ForwardToPipeQueue(Request, deviceContext, requestContext, (UCHAR)libusbRequest->endpoint.endpoint, WdfRequestTypeRead);
+		return;
+
+	case LIBUSBK_IOCTL_ISOEX_READ:
+		ForwardToPipeQueue(Request, deviceContext, requestContext, libusbRequest->IsoEx.PipeID, WdfRequestTypeRead);
 		return;
 
 	case LIBUSB_IOCTL_ISOCHRONOUS_WRITE:
 	case LIBUSB_IOCTL_INTERRUPT_OR_BULK_WRITE:
-		ForwardToPipeQueue(Request, deviceContext, requestContext, libusbRequest, WdfRequestTypeWrite);
+		ForwardToPipeQueue(Request, deviceContext, requestContext, (UCHAR)libusbRequest->endpoint.endpoint, WdfRequestTypeWrite);
+		return;
+
+	case LIBUSBK_IOCTL_ISOEX_WRITE:
+		ForwardToPipeQueue(Request, deviceContext, requestContext, libusbRequest->IsoEx.PipeID, WdfRequestTypeWrite);
 		return;
 
 	case LIBUSB_IOCTL_CONTROL_WRITE:

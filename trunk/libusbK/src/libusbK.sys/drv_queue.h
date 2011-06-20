@@ -87,11 +87,11 @@ Exit:
 FORCEINLINE VOID ForwardToPipeQueue(__in WDFREQUEST Request,
                                     __in PDEVICE_CONTEXT deviceContext,
                                     __in PREQUEST_CONTEXT requestContext,
-                                    __in libusb_request* libusbRequest,
+                                    __in UCHAR PipeID,
                                     __in WDF_REQUEST_TYPE requestType)
 {
 	NTSTATUS status;
-	requestContext->PipeContext = GetPipeContextByID(deviceContext, (UCHAR)libusbRequest->endpoint.endpoint);
+	requestContext->PipeContext = GetPipeContextByID(deviceContext, PipeID);
 	VALIDATE_REQUEST_CONTEXT(requestContext, status);
 	if (!NT_SUCCESS(status))
 	{
