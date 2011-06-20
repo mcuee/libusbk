@@ -288,6 +288,12 @@ typedef struct _REQUEST_CONTEXT
 	ULONG             IoControlCode;
 	libusb_request	  IoControlRequest;
 	UCHAR             QueueLocked;
+	PVOID			  InputBuffer;
+	ULONG			  InputBufferLength;
+	struct
+	{
+		WDFMEMORY	ContextMemory;
+	} Iso;
 } REQUEST_CONTEXT, *PREQUEST_CONTEXT;
 
 C_ASSERT(sizeof(REQUEST_CONTEXT) <= 256);

@@ -17,6 +17,11 @@ binary distributions.
 ********************************************************************!*/
 
 #include "drv_common.h"
+
+static VOID XferIsoExComplete(__in WDFREQUEST Request,
+                              __in WDFIOTARGET Target,
+                              __in PWDF_REQUEST_COMPLETION_PARAMS CompletionParams,
+                              __in PKUSB_ISO_CONTEXT IsoContext);
 //
 // Required for doing ISOCH transfer. This context is associated with every
 // subrequest created by the driver to do ISOCH transfer.
@@ -1597,3 +1602,200 @@ Return Value:
 	// Leave this function here for now in case we want to add anything in the future
 }
 
+
+VOID XferIsoEx(__in WDFQUEUE Queue,
+               __in WDFREQUEST Request,
+               __in size_t InputBufferLength,
+               __in size_t OutputBufferLength)
+{
+	NTSTATUS status = STATUS_NOT_SUPPORTED;
+	PDEVICE_CONTEXT deviceContext;
+	PREQUEST_CONTEXT requestContext;
+	PKUSB_ISO_CONTEXT isoContext;
+	size_t isoContextSize;
+	ULONG isoMinPacketInterval;
+	ULONG isoMaxPackets;
+	ULONG isoNumActualPackets;
+	WDF_OBJECT_ATTRIBUTES attributes;
+	PURB urb;
+	ULONG urbSize;
+	USBD_PIPE_HANDLE usbdPipeHandle;
+	ULONG posPacket;
+	ULONG nextOffset;
+	WDF_REQUEST_SEND_OPTIONS sendOptions;
+
+	UNREFERENCED_PARAMETER(InputBufferLength);
+	UNREFERENCED_PARAMETER(OutputBufferLength);
+
+	USBDBG("begin");
+
+	// Local vars pre-initialization //////////////////////////////////
+	requestContext = GetRequestContext(Request);
+	deviceContext = GetDeviceContext(WdfIoQueueGetDevice(Queue));
+
+	USBDBG("ContextMemory=%p\n", requestContext->Iso.ContextMemory);
+
+	if (!requestContext->Iso.ContextMemory)
+	{
+		status = STATUS_INVALID_DEVICE_REQUEST;
+		USBERR("NULL ISO context.\n");
+		goto Exit;
+	}
+
+	isoContext = (PKUSB_ISO_CONTEXT)WdfMemoryGetBuffer(requestContext->Iso.ContextMemory, &isoContextSize);
+	if (!isoContext)
+	{
+		status = STATUS_INVALID_DEVICE_REQUEST;
+		USBERR("WdfMemoryGetBuffer failed. Invalid ISO context.\n");
+		goto Exit;
+	}
+
+	usbdPipeHandle = WdfUsbTargetPipeWdmGetPipeHandle(requestContext->PipeContext->Pipe);
+	if (!usbdPipeHandle)
+	{
+		status = STATUS_INVALID_DEVICE_REQUEST;
+		USBERR("WdfUsbTargetPipeWdmGetPipeHandle failed. usbdPipeHandle=NULL\n");
+		goto Exit;
+	}
+
+	if (IsHighSpeedDevice(deviceContext))
+	{
+		isoMinPacketInterval = 8;
+		isoMaxPackets = 1024;
+	}
+	else
+	{
+		isoMinPacketInterval = 1;
+		isoMaxPackets = 1023;
+	}
+
+#if (NTDDI_VERSION < NTDDI_VISTA)
+	if (!isoContext->StartFrame)
+	{
+		isoMaxPackets = 255 - (255 % isoMinPacketInterval);
+	}
+#endif
+
+	if (isoContext->NumberOfPackets > isoMaxPackets)
+	{
+		status = STATUS_INVALID_DEVICE_REQUEST;
+		USBERR("Too many iso packets. NumberOfPackets=%u MaxPackets=%u\n",
+		       isoContext->NumberOfPackets, isoMaxPackets);
+		goto Exit;
+	}
+	isoNumActualPackets = ((isoContext->NumberOfPackets + (isoMinPacketInterval - 1)) * isoMinPacketInterval) / isoMinPacketInterval;
+	if (!isoNumActualPackets)
+		isoNumActualPackets = isoMinPacketInterval;
+
+	urbSize = GET_ISO_URB_SIZE(isoNumActualPackets);
+	///////////////////////////////////////////////////////////////////
+
+	// Allocate URB memory 	///////////////////////////////////////////
+	WDF_OBJECT_ATTRIBUTES_INIT(&attributes);
+	attributes.ParentObject = Request;
+	status = WdfMemoryCreate(&attributes, NonPagedPool, POOL_TAG, urbSize, &requestContext->UrbMemory, &urb);
+	if (!NT_SUCCESS(status))
+	{
+		USBERR("WdfMemoryCreate failed. size=%u status=%08Xh\n", urbSize, status);
+		goto Exit;
+	}
+	///////////////////////////////////////////////////////////////////
+
+	// Init URB ///////////////////////////////////////////////////////
+	RtlZeroMemory(urb, urbSize);
+	urb->UrbIsochronousTransfer.Hdr.Length = (USHORT) urbSize;
+	urb->UrbIsochronousTransfer.Hdr.Function = URB_FUNCTION_ISOCH_TRANSFER;
+	urb->UrbIsochronousTransfer.PipeHandle = usbdPipeHandle;
+
+	urb->UrbIsochronousTransfer.TransferBufferLength = requestContext->Length;
+	urb->UrbIsochronousTransfer.TransferBufferMDL = requestContext->OriginalTransferMDL;
+	urb->UrbIsochronousTransfer.StartFrame = isoContext->StartFrame;
+
+	if(requestContext->RequestType == WdfRequestTypeRead)
+		urb->UrbIsochronousTransfer.TransferFlags = USBD_TRANSFER_DIRECTION_IN;
+	else
+		urb->UrbIsochronousTransfer.TransferFlags = USBD_TRANSFER_DIRECTION_OUT;
+
+	if (!urb->UrbIsochronousTransfer.StartFrame)
+		urb->UrbIsochronousTransfer.TransferFlags |= USBD_START_ISO_TRANSFER_ASAP;
+
+	urb->UrbIsochronousTransfer.NumberOfPackets = isoNumActualPackets;
+	///////////////////////////////////////////////////////////////////
+
+	// Init URB iso packets ///////////////////////////////////////////
+	nextOffset = 0;
+	for (posPacket = 0; posPacket < isoNumActualPackets; posPacket++)
+	{
+		if (posPacket < isoContext->NumberOfPackets)
+			nextOffset = isoContext->IsoPackets[posPacket].Offset;
+
+		urb->UrbIsochronousTransfer.IsoPacket[posPacket].Offset = nextOffset;
+	}
+	///////////////////////////////////////////////////////////////////
+
+	// Assign the new urb to the request and prepare it for WdfRequestSend.
+	status = WdfUsbTargetPipeFormatRequestForUrb(requestContext->PipeContext->Pipe, Request, requestContext->UrbMemory, NULL);
+	if (!NT_SUCCESS(status))
+	{
+		USBERR("WdfUsbTargetPipeFormatRequestForUrb failed. status=%Xh\n", status);
+		goto Exit;
+	}
+
+	WDF_REQUEST_SEND_OPTIONS_INIT(&sendOptions, 0);
+	status = SetRequestTimeout(requestContext, Request, &sendOptions);
+	if (!NT_SUCCESS(status))
+	{
+		USBERR("SetRequestTimeout failed. status=%Xh\n", status);
+		goto Exit;
+	}
+
+	status = SubmitAsyncRequest(requestContext, Request, XferIsoExComplete, &sendOptions, isoContext);
+	if (NT_SUCCESS(status))
+		return;
+
+	USBERR("SubmitAsyncRequest failed. status=%Xh\n", status);
+
+Exit:
+	if (!NT_SUCCESS(status))
+	{
+		WdfRequestCompleteWithInformation(Request, status, 0);
+	}
+	USBDBG("end");
+}
+
+static VOID XferIsoExComplete(__in WDFREQUEST Request,
+                              __in WDFIOTARGET Target,
+                              __in PWDF_REQUEST_COMPLETION_PARAMS CompletionParams,
+                              __in PKUSB_ISO_CONTEXT IsoContext)
+{
+	PURB urb;
+	NTSTATUS status;
+	PREQUEST_CONTEXT requestContext;
+	ULONG posPacket;
+
+	UNREFERENCED_PARAMETER(Target);
+
+	requestContext = GetRequestContext(Request);
+
+	status = CompletionParams->IoStatus.Status;
+	urb = WdfMemoryGetBuffer(requestContext->UrbMemory, NULL);
+
+	IsoContext->ErrorCount = urb->UrbIsochronousTransfer.ErrorCount;
+	IsoContext->StartFrame = urb->UrbIsochronousTransfer.StartFrame;
+
+	for (posPacket = 0; posPacket < IsoContext->NumberOfPackets; posPacket++)
+	{
+		IsoContext->IsoPackets[posPacket].Length = urb->UrbIsochronousTransfer.IsoPacket[posPacket].Length;
+		IsoContext->IsoPackets[posPacket].Status = urb->UrbIsochronousTransfer.IsoPacket[posPacket].Status;
+	}
+
+	if (NT_SUCCESS(status))
+	{
+		requestContext->TotalTransferred += urb->UrbIsochronousTransfer.TransferBufferLength;
+	}
+
+	USBE_SUCCESS(NT_SUCCESS(status), "transferred=%d start-frame=%08Xh packet-errors=%d status=%08Xh\n",
+	             requestContext->TotalTransferred, IsoContext->StartFrame, IsoContext->ErrorCount, status);
+
+	WdfRequestCompleteWithInformation(Request, status, requestContext->TotalTransferred);
+}

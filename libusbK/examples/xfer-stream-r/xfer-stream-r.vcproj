@@ -66,10 +66,10 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib libusbK.lib"
+				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib"
 				Version="3.0.0.0"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="..\lib\x86;..\..\bin\lib\x86"
+				AdditionalLibraryDirectories=""
 				IgnoreAllDefaultLibraries="true"
 				GenerateDebugInformation="true"
 				SubSystem="1"
@@ -145,7 +145,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib libusbK.lib"
+				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib"
 				Version="3.0.0.0"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="..\lib\amd64;..\..\bin\lib\amd64"
@@ -224,7 +224,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib libusbK.lib"
+				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib"
 				Version="3.0.0.0"
 				AdditionalLibraryDirectories="..\lib\x86;..\..\bin\lib\x86"
 				IgnoreAllDefaultLibraries="true"
@@ -302,7 +302,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib libusbK.lib"
+				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib"
 				Version="3.0.0.0"
 				AdditionalLibraryDirectories="..\lib\amd64;..\..\bin\lib\amd64"
 				IgnoreAllDefaultLibraries="true"
@@ -341,14 +341,14 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\xfer-stream-r.c"
-				>
-			</File>
-			<File
 				RelativePath="..\examples.c"
 				>
 			</File>
-			</Filter>
+			<File
+				RelativePath=".\xfer-stream-r.c"
+				>
+			</File>
+		</Filter>
 		<Filter
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"

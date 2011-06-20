@@ -1400,11 +1400,11 @@ HWND CreateTrackingToolTip(HWND hDlg, TCHAR* pText)
 // These are used to flag end users about the driver they are going to replace
 enum driver_type
 {
-	DT_SYSTEM,
-	DT_LIBUSB,
-	DT_UNKNOWN,
-	DT_NONE,
-	NB_DRIVER_TYPES,
+    DT_SYSTEM,
+    DT_LIBUSB,
+    DT_UNKNOWN,
+    DT_NONE,
+    NB_DRIVER_TYPES,
 };
 
 // Retrieve the driver type according to its service string

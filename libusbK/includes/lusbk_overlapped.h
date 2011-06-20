@@ -52,26 +52,26 @@ typedef OVERLAPPED_K_CANCEL_CB* POVERLAPPED_K_CANCEL_CB;
 */
 typedef enum _OVERLAPPEDK_WAIT_FLAGS
 {
-	//! Do not perform any additional actions upon exiting \ref OvlK_Wait.
-	WAIT_FLAGS_NONE							= 0,
+    //! Do not perform any additional actions upon exiting \ref OvlK_Wait.
+    WAIT_FLAGS_NONE							= 0,
 
-	//! If the i/o operation completes successfully, release the OverlappedK back to it's pool.
-	WAIT_FLAGS_RELEASE_ON_SUCCESS			= 0x0001,
+    //! If the i/o operation completes successfully, release the OverlappedK back to it's pool.
+    WAIT_FLAGS_RELEASE_ON_SUCCESS			= 0x0001,
 
-	//! If the i/o operation fails, release the OverlappedK back to it's pool.
-	WAIT_FLAGS_RELEASE_ON_FAIL				= 0x0002,
+    //! If the i/o operation fails, release the OverlappedK back to it's pool.
+    WAIT_FLAGS_RELEASE_ON_FAIL				= 0x0002,
 
-	//! If the i/o operation fails or completes successfully, release the OverlappedK back to its pool. Perform no actions if it times-out.
-	WAIT_FLAGS_RELEASE_ON_SUCCESS_FAIL		= 0x0003,
+    //! If the i/o operation fails or completes successfully, release the OverlappedK back to its pool. Perform no actions if it times-out.
+    WAIT_FLAGS_RELEASE_ON_SUCCESS_FAIL		= 0x0003,
 
-	//! If the i/o operation times-out cancel it, but do not release the OverlappedK back to its pool.
-	WAIT_FLAGS_CANCEL_ON_TIMEOUT			= 0x0004,
+    //! If the i/o operation times-out cancel it, but do not release the OverlappedK back to its pool.
+    WAIT_FLAGS_CANCEL_ON_TIMEOUT			= 0x0004,
 
-	//! If the i/o operation times-out, cancel it and release the OverlappedK back to its pool.
-	WAIT_FLAGS_RELEASE_ON_TIMEOUT			= WAIT_FLAGS_CANCEL_ON_TIMEOUT | 0x0008,
+    //! If the i/o operation times-out, cancel it and release the OverlappedK back to its pool.
+    WAIT_FLAGS_RELEASE_ON_TIMEOUT			= WAIT_FLAGS_CANCEL_ON_TIMEOUT | 0x0008,
 
-	//! Always release the OverlappedK back to its pool.  If the operation timed-out, cancel it before releasing back to its pool.
-	WAIT_FLAGS_RELEASE_ALWAYS				= WAIT_FLAGS_RELEASE_ON_SUCCESS_FAIL | WAIT_FLAGS_RELEASE_ON_TIMEOUT,
+    //! Always release the OverlappedK back to its pool.  If the operation timed-out, cancel it before releasing back to its pool.
+    WAIT_FLAGS_RELEASE_ALWAYS				= WAIT_FLAGS_RELEASE_ON_SUCCESS_FAIL | WAIT_FLAGS_RELEASE_ON_TIMEOUT,
 
 } OVERLAPPEDK_WAIT_FLAGS;
 

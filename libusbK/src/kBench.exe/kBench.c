@@ -58,28 +58,28 @@ KUSB_DRIVER_API K;
 //
 typedef enum _BENCHMARK_DEVICE_COMMAND
 {
-	SET_TEST = 0x0E,
-	GET_TEST = 0x0F,
+    SET_TEST = 0x0E,
+    GET_TEST = 0x0F,
 } BENCHMARK_DEVICE_COMMAND, *PBENCHMARK_DEVICE_COMMAND;
 
 // Tests supported by the official benchmark firmware.
 //
 typedef enum _BENCHMARK_DEVICE_TEST_TYPE
 {
-	TestTypeNone	= 0x00,
-	TestTypeRead	= 0x01,
-	TestTypeWrite	= 0x02,
-	TestTypeLoop	= TestTypeRead | TestTypeWrite,
+    TestTypeNone	= 0x00,
+    TestTypeRead	= 0x01,
+    TestTypeWrite	= 0x02,
+    TestTypeLoop	= TestTypeRead | TestTypeWrite,
 } BENCHMARK_DEVICE_TEST_TYPE, *PBENCHMARK_DEVICE_TEST_TYPE;
 
 // This software was mainly created for testing the libusb-win32 kernel & user driver.
 typedef enum _BENCHMARK_TRANSFER_MODE
 {
-	// Tests for the libusb-win32 sync transfer function.
-	TRANSFER_MODE_SYNC,
+    // Tests for the libusb-win32 sync transfer function.
+    TRANSFER_MODE_SYNC,
 
-	// Test for async function, iso transfers, and queued transfers
-	TRANSFER_MODE_ASYNC,
+    // Test for async function, iso transfers, and queued transfers
+    TRANSFER_MODE_ASYNC,
 } BENCHMARK_TRANSFER_MODE;
 
 // Holds all of the information about a test.

@@ -248,7 +248,9 @@ NTSTATUS Request_InitContext(__inout PREQUEST_CONTEXT requestContext,
 		if (ioControlCode == LIBUSB_IOCTL_INTERRUPT_OR_BULK_READ ||
 		        ioControlCode == LIBUSB_IOCTL_INTERRUPT_OR_BULK_WRITE ||
 		        ioControlCode == LIBUSB_IOCTL_ISOCHRONOUS_READ ||
-		        ioControlCode == LIBUSB_IOCTL_ISOCHRONOUS_WRITE)
+		        ioControlCode == LIBUSB_IOCTL_ISOCHRONOUS_WRITE ||
+		        ioControlCode == LIBUSBK_IOCTL_ISOEX_WRITE ||
+		        ioControlCode == LIBUSBK_IOCTL_ISOEX_READ)
 		{
 
 			status = GetTransferMdl(request, actualRequestType, &requestContext->OriginalTransferMDL);
@@ -260,4 +262,79 @@ NTSTATUS Request_InitContext(__inout PREQUEST_CONTEXT requestContext,
 		}
 	}
 	return status;
+}
+
+
+VOID Request_PreIoInitialize(__in WDFDEVICE Device,
+                             __in WDFREQUEST Request)
+{
+	NTSTATUS  status = STATUS_SUCCESS;
+	WDF_REQUEST_PARAMETERS  params;
+	PREQUEST_CONTEXT requestContext;
+	libusb_request* libusbRequest;
+	size_t libusbRequestSize;
+
+	// get the request parameters
+	WDF_REQUEST_PARAMETERS_INIT(&params);
+	WdfRequestGetParameters(Request, &params);
+
+	// If this is not a DeviceIoControl then there is nothing to do.
+	if (params.Type != WdfRequestTypeDeviceControl) goto Done;
+
+	// get the request context
+	requestContext = GetRequestContext(Request);
+	if (!requestContext)
+	{
+		status = STATUS_INVALID_DEVICE_REQUEST;
+		USBERR("NULL request context status=%08Xh\n", status);
+		goto Done;
+	}
+
+	// All io control request must send the libusb_request struct.
+	status = WdfRequestRetrieveInputBuffer(Request, sizeof(libusb_request), &libusbRequest, &libusbRequestSize);
+	if(!NT_SUCCESS(status))
+	{
+		USBERR("WdfRequestRetrieveInputBuffer failed. status=%08Xh\n", status);
+		goto Done;
+	}
+
+	requestContext->InputBuffer = libusbRequest;
+	requestContext->InputBufferLength = (ULONG)libusbRequestSize;
+
+	switch(params.Parameters.DeviceIoControl.IoControlCode)
+	{
+	case LIBUSBK_IOCTL_ISOEX_READ:
+	case LIBUSBK_IOCTL_ISOEX_WRITE:
+		// Lock the iso context for read. This allows the iso information to be used when submitting.
+		/*
+		status = WdfRequestProbeAndLockUserBufferForRead(Request, libusbRequest->IsoEx.IsoContext, libusbRequest->IsoEx.IsoContextSize, &requestContext->Iso.InContextMemory);
+		if(!NT_SUCCESS(status))
+		{
+			USBERR("WdfRequestProbeAndLockUserBufferForRead failed. status=%08Xh\n", status);
+			goto Done;
+		}
+		*/
+
+		// Lock the iso context for write. This allows the iso information to be updated upon compeletion.
+		status = WdfRequestProbeAndLockUserBufferForWrite(Request, libusbRequest->IsoEx.IsoContext, libusbRequest->IsoEx.IsoContextSize, &requestContext->Iso.ContextMemory);
+		if(!NT_SUCCESS(status))
+		{
+			USBERR("WdfRequestProbeAndLockUserBufferForWrite failed. status=%08Xh\n", status);
+			goto Done;
+		}
+
+		break;
+	}
+
+Done:
+	if(NT_SUCCESS(status))
+	{
+		status = WdfDeviceEnqueueRequest(Device, Request);
+		if(NT_SUCCESS(status)) return;
+
+		USBERR("WdfDeviceEnqueueRequest failed. status=%08Xh\n", status);
+	}
+
+	WdfRequestComplete(Request, status);
+	return;
 }

@@ -81,11 +81,69 @@ typedef struct _WINUSB_SETUP_PACKET
 	USHORT  Length;
 
 } WINUSB_SETUP_PACKET;
-
 //! pointer to a \c WINUSB_SETUP_PACKET structure
 typedef WINUSB_SETUP_PACKET* PWINUSB_SETUP_PACKET;
-
 C_ASSERT(sizeof(WINUSB_SETUP_PACKET) == 8);
+
+//! Structure describing an isochronous transfer packet.
+typedef struct _KUSB_ISO_PACKET
+{
+	//! Specifies the offset, in bytes, of the buffer for this packet from the beginning of the entire isochronous transfer data buffer.
+	ULONG Offset;
+
+	//! Set by the host controller to indicate the actual number of bytes received by the device for isochronous IN transfers. Length not used for isochronous OUT transfers.
+	ULONG Length;
+
+	//! Contains the USBD status, on return from the host controller driver, of this transfer packet.
+	/*!
+	* See MSDN for USBD status codes: <A href="http://msdn.microsoft.com/en-us/library/ff539136%28VS.85%29.aspx">USBD status code reference</A>
+	*/
+	ULONG Status;
+
+} KUSB_ISO_PACKET;
+//! pointer to a \c KUSB_ISO_PACKET structure
+typedef KUSB_ISO_PACKET* PKUSB_ISO_PACKET;
+
+#pragma warning(disable:4200)
+
+//! Structure describing a user defined isochronous transfer.
+typedef struct _KUSB_ISO_CONTEXT
+{
+	//! An 8-bit value that consists of a 7-bit address and a direction bit.
+	/*
+	* This parameter corresponds to the bEndpointAddress field in the endpoint
+	* descriptor.
+	*/
+	UCHAR PipeID;
+
+	//! Specifies the frame number that the transfer should begin on (0 for ASAP).
+	/*!
+	* This variable must be within a system-defined range of the current
+	* frame. The range is specified by the constant
+	* \ref USBD_ISO_START_FRAME_RANGE.
+	*
+	* If 0 was specified (start ASAP), this member contains the frame number that the
+	* transfer began on when the request is returned by the host controller
+	* driver. Otherwise, this member must contain the frame number that this
+	* transfer begins on.
+	*
+	*/
+	ULONG StartFrame;
+
+	//! Contains the number of packets that completed with an error condition on return from the host controller driver.
+	ULONG ErrorCount;
+
+	//! Specifies the number of packets that are described by the variable-length array member \c IsoPacket.
+	ULONG NumberOfPackets;
+
+	//! Contains a variable-length array of \c KUSB_ISO_PACKET structures that describe the isochronous transfer packets to be transferred on the USB bus.
+	KUSB_ISO_PACKET IsoPackets[0];
+
+} KUSB_ISO_CONTEXT;
+//! pointer to a \c KUSB_ISO_CONTEXT structure
+typedef KUSB_ISO_CONTEXT* PKUSB_ISO_CONTEXT;
+
+#pragma warning(default:4200)
 
 #include <poppack.h>
 

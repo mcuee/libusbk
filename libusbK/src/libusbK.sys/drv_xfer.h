@@ -32,6 +32,11 @@ VOID XferIsoHS(__in WDFQUEUE Queue,
                __in WDFREQUEST Request,
                __in ULONG Length);
 
+VOID XferIsoEx(__in WDFQUEUE Queue,
+               __in WDFREQUEST Request,
+               __in size_t InputBufferLength,
+               __in size_t OutputBufferLength);
+
 FORCEINLINE NTSTATUS SetRequestTimeout(__in PREQUEST_CONTEXT requestContext,
                                        __in WDFREQUEST wdfRequest,
                                        __inout PWDF_REQUEST_SEND_OPTIONS wdfSendOptions)
@@ -58,10 +63,11 @@ FORCEINLINE NTSTATUS SubmitAsyncRequest(
     __in PREQUEST_CONTEXT requestContext,
     __in WDFREQUEST wdfRequest,
     __in EVT_WDF_REQUEST_COMPLETION_ROUTINE completionRoutine,
-    __in PWDF_REQUEST_SEND_OPTIONS wdfSendOptions)
+    __in PWDF_REQUEST_SEND_OPTIONS wdfSendOptions,
+    __in_opt WDFCONTEXT completionContext)
 {
 	NTSTATUS status = STATUS_SUCCESS;
-	WdfRequestSetCompletionRoutine(wdfRequest, completionRoutine, NULL);
+	WdfRequestSetCompletionRoutine(wdfRequest, completionRoutine, completionContext);
 	if (!WdfRequestSend(wdfRequest, WdfUsbTargetPipeGetIoTarget(requestContext->PipeContext->Pipe), wdfSendOptions))
 	{
 		status = WdfRequestGetStatus(wdfRequest);

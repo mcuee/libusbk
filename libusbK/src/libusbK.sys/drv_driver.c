@@ -61,7 +61,7 @@ Return Value:
 	WDF_DRIVER_CONFIG       config;
 	NTSTATUS                status;
 
-	USBMSG("v%s built-on: %s %s\n", RC_VERSION_STR, __DATE__, __TIME__);
+	DbgPrint("[%s](%s) v%s built-on: %s %s\n", __FUNCTION__, RC_FILENAME_STR, RC_VERSION_STR, __DATE__, __TIME__);
 
 	//
 	// Initiialize driver config to control the attributes that
@@ -106,5 +106,5 @@ VOID DriverExit(__in WDFDRIVER Driver)
 
 	PAGED_CODE();
 
-	USBMSG(" v%s built-on: %s %s\n", RC_VERSION_STR, __DATE__, __TIME__);
+	DbgPrint("[%s](%s) v%s built-on: %s %s\n", __FUNCTION__, RC_FILENAME_STR, RC_VERSION_STR, __DATE__, __TIME__);
 }
