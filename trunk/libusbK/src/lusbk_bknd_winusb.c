@@ -1202,6 +1202,16 @@ BOOL KUSB_API WUsb_IsoWritePipe (
 	return FALSE;
 }
 
+BOOL KUSB_API WUsb_GetCurrentFrameNumber (
+    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __out PULONG FrameNumber)
+{
+	UNREFERENCED_PARAMETER(InterfaceHandle);
+	UNREFERENCED_PARAMETER(FrameNumber);
+
+	SetLastError(ERROR_NOT_SUPPORTED);
+	return FALSE;
+}
 
 BOOL GetProcAddress_WUsb(__out KPROC* ProcAddress, __in ULONG FunctionID)
 {
@@ -1311,6 +1321,9 @@ BOOL GetProcAddress_WUsb(__out KPROC* ProcAddress, __in ULONG FunctionID)
 		break;
 	case KUSB_FNID_IsoWritePipe:
 		*ProcAddress = (KPROC)WUsb_IsoWritePipe;
+		break;
+	case KUSB_FNID_GetCurrentFrameNumber:
+		*ProcAddress = (KPROC)WUsb_GetCurrentFrameNumber;
 		break;
 
 

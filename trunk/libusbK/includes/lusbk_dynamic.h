@@ -136,6 +136,9 @@ typedef enum _KUSB_FNID
     //! \ref UsbK_IsoWritePipe function id
     KUSB_FNID_IsoWritePipe,
 
+    //! \ref UsbK_GetCurrentFrameNumber function id
+    KUSB_FNID_GetCurrentFrameNumber,
+
     //! Supported function count
     KUSB_FNID_COUNT
 } KUSB_FNID;
@@ -329,6 +332,12 @@ typedef struct _KUSB_DRIVER_API
 	* \memberof KUSB_DRIVER_API
 	*/
 	BOOL (KUSB_API* IsoWritePipe)			(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __inout PKUSB_ISO_CONTEXT IsoContext, __in PUCHAR Buffer, __in ULONG BufferLength, __in LPOVERLAPPED Overlapped);
+	/*!
+	* \fn IsoWritePipe(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __inout PKUSB_ISO_CONTEXT IsoContext, __in PUCHAR Buffer, __in ULONG BufferLength, __in LPOVERLAPPED Overlapped);
+	* \brief Driver specific function pointer to \ref UsbK_IsoWritePipe
+	* \memberof KUSB_DRIVER_API
+	*/
+	BOOL (KUSB_API* GetCurrentFrameNumber)	(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __out PULONG FrameNumber);
 
 } KUSB_DRIVER_API;
 //! Pointer to a \ref KUSB_DRIVER_API structure
@@ -501,6 +510,10 @@ typedef BOOL KUSB_API KUSB_IsoWritePipe (
     __in PUCHAR Buffer,
     __in ULONG BufferLength,
     __in LPOVERLAPPED Overlapped);
+
+typedef BOOL KUSB_API KUSB_GetCurrentFrameNumber (
+    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __out PULONG FrameNumber);
 
 #ifdef __cplusplus
 extern "C" {

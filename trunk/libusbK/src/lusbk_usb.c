@@ -99,6 +99,7 @@ KUSB_EXP BOOL KUSB_API DrvK_LoadDriverApi(
 			CASE_FNID_LOAD(GetAltInterface);
 			CASE_FNID_LOAD(IsoReadPipe);
 			CASE_FNID_LOAD(IsoWritePipe);
+			CASE_FNID_LOAD(GetCurrentFrameNumber);
 
 		default:
 			USBERR("undeclared api function %u!\n", fnIdIndex);

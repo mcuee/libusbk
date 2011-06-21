@@ -1081,7 +1081,7 @@ extern "C" {
 	* - \ref UsbK_GetAssociatedInterface
 	*
 	* \param IsoContext
-	* Pointer to an isochronous transfer context created with \ref UsbK_IsoCreateContext
+	* Pointer to an isochronous transfer context created with \ref IsoK_Create
 	*
 	* \param Buffer
 	* A caller-allocated buffer that receives the data that is read.
@@ -1099,6 +1099,15 @@ extern "C" {
 	* the operation is complete.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
+	*
+	* \par Overlapped I/O considerations
+	* If an \c Overlapped parameter is specified and the transfer is submitted
+	* successfully, the function returns \b FALSE and sets last error to \c
+	* ERROR_IO_PENDING. When using overlapped I/O, users may ignore the return
+	* results of this function and instead use the return results from one of
+	* the \ref ovlk wait functions or from \ref UsbK_GetOverlappedResult.
+	*
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_IsoReadPipe (
 	    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
@@ -1117,7 +1126,7 @@ extern "C" {
 	* - \ref UsbK_GetAssociatedInterface
 	*
 	* \param IsoContext
-	* Pointer to an isochronous transfer context created with \ref UsbK_IsoCreateContext
+	* Pointer to an isochronous transfer context created with \ref IsoK_Create. See remarks below.
 	*
 	* \param Buffer
 	* A caller-allocated buffer that receives the data that is read.
@@ -1135,6 +1144,9 @@ extern "C" {
 	* the operation is complete.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
+	* \remarks
+	*
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_IsoWritePipe (
 	    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
@@ -1142,6 +1154,24 @@ extern "C" {
 	    __in PUCHAR Buffer,
 	    __in ULONG BufferLength,
 	    __in LPOVERLAPPED Overlapped);
+
+//! Retrieves the current USB frame number.
+	/*!
+	* \param InterfaceHandle
+	* A libusbK interface handle which is returned by:
+	* - \ref UsbK_Open
+	* - \ref UsbK_Initialize
+	* - \ref UsbK_GetAssociatedInterface
+	*
+	* \param FrameNumber
+	* A pointer to a location that receives the current 32-bit frame number on
+	* the USB bus (from the host controller driver).
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*/
+	KUSB_EXP BOOL KUSB_API UsbK_GetCurrentFrameNumber (
+	    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+	    __out PULONG FrameNumber);
 
 //! Retrieves the results of an overlapped operation on the specified libusbK handle.
 	/*!
@@ -1217,6 +1247,51 @@ extern "C" {
 	    __in LPOVERLAPPED lpOverlapped,
 	    __out LPDWORD lpNumberOfBytesTransferred,
 	    __in BOOL bWait);
+
+	/*! @} */
+
+	/*! \addtogroup isok
+	*  @{
+	*/
+
+//! Creates an isochronous transfer context.
+	KUSB_EXP BOOL KUSB_API IsoK_Create (
+	    __deref_out PKUSB_ISO_CONTEXT* IsoContext,
+	    __in ULONG NumberOfPackets,
+	    __in_opt UCHAR PipeID,
+	    __in_opt ULONG StartFrame);
+
+//! Destroys an isochronous transfer context.
+	KUSB_EXP BOOL KUSB_API IsoK_Destroy(
+	    __deref_inout PKUSB_ISO_CONTEXT* IsoContext);
+
+//! Convenience function for setting all packets of an isochronous transfer context to the same packet size.
+	KUSB_EXP BOOL KUSB_API IsoK_InitPackets(
+	    __inout PKUSB_ISO_CONTEXT IsoContext,
+	    __in ULONG PacketSize);
+
+//! Convenience function for setting fields of a \ref KUSB_ISO_PACKET.
+	KUSB_EXP BOOL KUSB_API IsoK_SetPacket(
+	    __in PKUSB_ISO_CONTEXT IsoContext,
+	    __in ULONG PacketIndex,
+	    __in PKUSB_ISO_PACKET IsoPacket);
+
+//! Convenience function for returning fields of a \ref KUSB_ISO_PACKET.
+	KUSB_EXP BOOL KUSB_API IsoK_GetPacket(
+	    __in PKUSB_ISO_CONTEXT IsoContext,
+	    __in ULONG PacketIndex,
+	    __out PKUSB_ISO_PACKET IsoPacket);
+
+//! Convenience function for enumerating iso packets of an isochronous transfer context.
+	KUSB_EXP BOOL KUSB_API IsoK_EnumPackets(
+	    __in PKUSB_ISO_CONTEXT IsoContext,
+	    __in ISO_ENUM_PACKETS_CB* EnumPackets,
+	    __in_opt ULONG StartPacketIndex,
+	    __in_opt PVOID UserContext);
+
+//! Convenience function for re-using an isochronous transfer context for a subsequent request.
+	KUSB_EXP BOOL KUSB_API IsoK_Reuse(
+	    __inout PKUSB_ISO_CONTEXT IsoContext);
 
 	/*! @} */
 

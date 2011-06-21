@@ -38,4 +38,5 @@ SOURCES=lusbk_dllmain.c \
 		..\lusbk_overlapped.c \
 		..\lusbk_stack_collection.c \
 		..\lusbk_usb.c \
+		..\lusbk_usb_iso.c \
 		..\lusbk_wrapper_winusb.c

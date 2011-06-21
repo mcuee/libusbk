@@ -2,7 +2,7 @@ LIBRARY
 EXPORTS
 	DrvK_GetProcAddress
 	DrvK_LoadDriverApi
-	
+
 	LstK_Init
 	LstK_Free
 	LstK_Enumerate
@@ -12,7 +12,7 @@ EXPORTS
 	LstK_FindByVidPid
 	LstK_Lock
 	LstK_Unlock
-	
+
 	OvlK_Acquire
 	OvlK_Release
 	OvlK_CreatePool
@@ -28,7 +28,7 @@ EXPORTS
 	OvlK_WaitAndRelease
 	OvlK_IsComplete
 	OvlK_ReUse
-	
+
 	UsbK_Initialize
 	UsbK_Free
 	UsbK_GetAssociatedInterface
@@ -60,7 +60,16 @@ EXPORTS
 	UsbK_GetAltInterface
 	UsbK_IsoReadPipe
 	UsbK_IsoWritePipe
-		
+	UsbK_GetCurrentFrameNumber
+
+	IsoK_Create
+	IsoK_Destroy
+	IsoK_InitPackets
+	IsoK_SetPacket
+	IsoK_GetPacket
+	IsoK_EnumPackets
+	IsoK_Reuse
+
 	WinUsb_Initialize
 	WinUsb_Free
 	WinUsb_GetAssociatedInterface
@@ -92,3 +101,4 @@ EXPORTS
 	WinUsb_GetAltInterface
 	WinUsb_IsoReadPipe
 	WinUsb_IsoWritePipe
+	WinUsb_GetCurrentFrameNumber

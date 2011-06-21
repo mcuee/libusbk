@@ -26,6 +26,7 @@
 
 // Example configuration:
 #define EP_RX					0x81
+#define EP_TX					0x02
 #define EP_PACKET_SIZE			64
 #define ISO_PACKETS_PER_XFER	32
 
@@ -100,9 +101,10 @@ DWORD __cdecl main(int argc, char* argv[])
 	UCHAR dataBuffer[ISO_CALC_DATABUFFER_SIZE(ISO_PACKETS_PER_XFER, EP_PACKET_SIZE)];
 	ULONG transferred = 0;
 	PKUSB_ISO_CONTEXT isoCtx = NULL;
-	POVERLAPPED_K ovRead = NULL;
+	POVERLAPPED_K ovlkHandle = NULL;
 	BENCHMARK_DEVICE_TEST_TYPE testType = TestTypeRead;
 	ULONG posPacket;
+	ULONG currentFrameNumber;
 
 	/*!
 	Find the test device. Uses "vid=hhhh pid=hhhh" arguments supplied on the
@@ -122,7 +124,7 @@ DWORD __cdecl main(int argc, char* argv[])
 	}
 	printf("Device opened successfully!\n");
 
-	success = Bench_Configure(handle, SET_TEST,0,&testType);
+	success = Bench_Configure(handle, SET_TEST, 0, &testType);
 	if (!success)
 	{
 		errorCode = GetLastError();
@@ -133,14 +135,32 @@ DWORD __cdecl main(int argc, char* argv[])
 	isoCtx = malloc(ISO_CALC_CONTEXT_SIZE(ISO_PACKETS_PER_XFER));
 	memset(isoCtx, 0, ISO_CALC_CONTEXT_SIZE(ISO_PACKETS_PER_XFER));
 	isoCtx->NumberOfPackets = ISO_PACKETS_PER_XFER;
-	isoCtx->PipeID = EP_RX;
+
+	if (testType == TestTypeRead)
+		isoCtx->PipeID = EP_RX;
+	else
+		isoCtx->PipeID = EP_TX;
 
 	IsoInitPackets(isoCtx, EP_PACKET_SIZE);
 
-	ovRead = OvlK_Acquire(NULL);
+	ovlkHandle = OvlK_Acquire(NULL);
 	UsbK_ResetPipe(handle, isoCtx->PipeID);
-	UsbK_IsoReadPipe(handle, isoCtx, dataBuffer, sizeof(dataBuffer), ovRead);
-	success = OvlK_WaitAndRelease(ovRead, 1000, &transferred);
+
+	success = UsbK_GetCurrentFrameNumber(handle, &currentFrameNumber);
+	if (!success)
+	{
+		errorCode = GetLastError();
+		printf("UsbK_GetCurrentFrameNumber failed. Win32Error=%u (0x%08X)\n", errorCode, errorCode);
+		goto Done;
+	}
+
+	isoCtx->StartFrame = currentFrameNumber + 8 + (currentFrameNumber % 8);
+	if (testType == TestTypeRead)
+		UsbK_IsoReadPipe(handle, isoCtx, dataBuffer, sizeof(dataBuffer), ovlkHandle);
+	else
+		UsbK_IsoWritePipe(handle, isoCtx, dataBuffer, sizeof(dataBuffer), ovlkHandle);
+
+	success = OvlK_WaitAndRelease(ovlkHandle, 1000, &transferred);
 	if (!success)
 	{
 		errorCode = GetLastError();
@@ -148,22 +168,21 @@ DWORD __cdecl main(int argc, char* argv[])
 		goto Done;
 	}
 
-	printf("ISO StartFrame=%08Xh ErrorCount=%u Transferred=%u\n",
-		isoCtx->StartFrame, isoCtx->ErrorCount, transferred);
+	printf("ISO StartFrame=%08Xh ErrorCount=%u TransferCounter=%u Transferred=%u\n",
+	       isoCtx->StartFrame, isoCtx->ErrorCount, isoCtx->TransferCounter, transferred);
 
-	for (posPacket=0; posPacket < isoCtx->NumberOfPackets; posPacket++)
+	for (posPacket = 0; posPacket < isoCtx->NumberOfPackets; posPacket++)
 	{
 		PKUSB_ISO_PACKET isoPacket = &isoCtx->IsoPackets[posPacket];
 		ULONG posData = isoPacket->Offset;
-		ULONG posDataMax =  posPacket+1 < isoCtx->NumberOfPackets ? isoCtx->IsoPackets[posPacket+1].Offset : sizeof(dataBuffer);
+		ULONG posDataMax =  posPacket + 1 < isoCtx->NumberOfPackets ? isoCtx->IsoPackets[posPacket + 1].Offset : sizeof(dataBuffer);
 
-		printf("IsoPacket[%d]\n",posPacket);
-		printf("  Length=%u Status=%08Xh\n", isoPacket->Length, isoPacket->Status);
+		printf("  IsoPacket[%d] Length=%u Status=%08Xh\n", posPacket, isoPacket->Length, isoPacket->Status);
 		printf("  Data:");
 
 		for (; posData < posDataMax; posData++)
 		{
-			printf("%02Xh ",dataBuffer[posData]);
+			printf("%02Xh ", dataBuffer[posData]);
 			if ((posData & 0xF) == 0xF) printf("\n       ");
 		}
 		printf("\n");
@@ -179,6 +198,11 @@ Done:
 	Free the device list. If deviceList is invalid (NULL), has no effect.
 	*/
 	LstK_Free(&deviceList);
+	/*!
+	Free the iso context.
+	*/
+	if (isoCtx)
+		free(isoCtx);
 
 	return errorCode;
 }

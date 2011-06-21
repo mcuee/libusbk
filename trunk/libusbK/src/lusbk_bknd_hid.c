@@ -447,6 +447,16 @@ KUSB_EXP BOOL KUSB_API Hid_IsoWritePipe (
 	return FALSE;
 }
 
+KUSB_EXP BOOL KUSB_API Hid_GetCurrentFrameNumber (
+    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __out PULONG FrameNumber)
+{
+	UNREFERENCED_PARAMETER(InterfaceHandle);
+	UNREFERENCED_PARAMETER(FrameNumber);
+
+	SetLastError(ERROR_NOT_SUPPORTED);
+	return FALSE;
+}
 
 BOOL GetProcAddress_Hid(__out KPROC* ProcAddress, __in ULONG FunctionID)
 {
@@ -546,6 +556,9 @@ BOOL GetProcAddress_Hid(__out KPROC* ProcAddress, __in ULONG FunctionID)
 		break;
 	case KUSB_FNID_IsoWritePipe:
 		*ProcAddress = (KPROC)Hid_IsoWritePipe;
+		break;
+	case KUSB_FNID_GetCurrentFrameNumber:
+		*ProcAddress = (KPROC)Hid_GetCurrentFrameNumber;
 		break;
 
 

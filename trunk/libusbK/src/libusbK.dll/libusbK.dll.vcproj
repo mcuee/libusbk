@@ -380,6 +380,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\lusbk_usb_iso.c"
+				>
+			</File>
+			<File
 				RelativePath="..\lusbk_wrapper_winusb.c"
 				>
 			</File>

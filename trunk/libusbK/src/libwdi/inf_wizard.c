@@ -1055,6 +1055,11 @@ static void device_list_init(HWND list)
 	lvc.iSubItem = 3;
 	lvc.pszText = "MI";
 	ignored = ListView_InsertColumn(list, 4, &lvc);
+
+	lvc.cx = 40;
+	lvc.iSubItem = 4;
+	lvc.pszText = "Driver";
+	ignored = ListView_InsertColumn(list, 5, &lvc);
 }
 
 static void device_list_refresh(HWND list)
@@ -1067,7 +1072,7 @@ static void device_list_refresh(HWND list)
 
 	memset(&options, 0, sizeof(options));
 	options.list_all = TRUE;
-	options.list_hubs = FALSE;
+	options.list_hubs = TRUE;
 	options.trim_whitespaces = TRUE;
 
 	device_list_clean(list);
@@ -1124,6 +1129,7 @@ static void device_list_add(HWND list, device_context_t* device)
 	ListView_SetItemText(list, 0, 1, pid);
 	ListView_SetItemTextU(list, 0, 2, device->description);
 	ListView_SetItemText(list, 0, 3, mi);
+	ListView_SetItemText(list, 0, 4, device->wdi->driver ? device->wdi->driver : "(None)");
 }
 
 static void device_list_clean(HWND list)
