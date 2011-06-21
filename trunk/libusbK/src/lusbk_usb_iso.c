@@ -18,7 +18,7 @@ binary distributions.
 
 #include "lusbk_private.h"
 
-KUSB_EXP BOOL KUSB_API IsoK_Create (
+KUSB_EXP BOOL KUSB_API IsoK_Init (
     __deref_out PKUSB_ISO_CONTEXT* IsoContext,
     __in ULONG NumberOfPackets,
     __in_opt UCHAR PipeID,
@@ -49,7 +49,7 @@ Error:
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API IsoK_Destroy(
+KUSB_EXP BOOL KUSB_API IsoK_Free(
     __deref_inout PKUSB_ISO_CONTEXT* IsoContext)
 {
 	ErrorHandle(!IsHandleValid(IsoContext), Error, "IsoContext");
@@ -62,7 +62,7 @@ Error:
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API IsoK_InitPackets(
+KUSB_EXP BOOL KUSB_API IsoK_SetPackets(
     __inout PKUSB_ISO_CONTEXT IsoContext,
     __in ULONG PacketSize)
 {

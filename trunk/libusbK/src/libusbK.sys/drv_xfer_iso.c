@@ -1674,13 +1674,6 @@ VOID XferIsoEx(__in WDFQUEUE Queue,
 		isoMaxPackets = 1023;
 	}
 
-#if (NTDDI_VERSION < NTDDI_VISTA)
-	if (!isoContext->StartFrame)
-	{
-		isoMaxPackets = 255 - (255 % isoMinPacketInterval);
-	}
-#endif
-
 	if (isoContext->NumberOfPackets > isoMaxPackets)
 	{
 		status = STATUS_INVALID_DEVICE_REQUEST;
@@ -1689,8 +1682,14 @@ VOID XferIsoEx(__in WDFQUEUE Queue,
 		goto Exit;
 	}
 	isoNumActualPackets = ((isoContext->NumberOfPackets + (isoMinPacketInterval - 1)) * isoMinPacketInterval) / isoMinPacketInterval;
-	if (!isoNumActualPackets)
+	if (isoNumActualPackets < isoMinPacketInterval)
 		isoNumActualPackets = isoMinPacketInterval;
+
+	if (isoNumActualPackets != isoContext->NumberOfPackets)
+	{
+		USBWRN("Added ISO packet descriptor padding. NumberOfPackets=%u ActualPackets=%u\n",
+		       isoContext->NumberOfPackets, isoNumActualPackets);
+	}
 
 	urbSize = GET_ISO_URB_SIZE(isoNumActualPackets);
 	///////////////////////////////////////////////////////////////////
@@ -1716,10 +1715,12 @@ VOID XferIsoEx(__in WDFQUEUE Queue,
 	urb->UrbIsochronousTransfer.TransferBufferMDL = requestContext->OriginalTransferMDL;
 	urb->UrbIsochronousTransfer.StartFrame = isoContext->StartFrame;
 
+	urb->UrbIsochronousTransfer.TransferFlags = USBD_SHORT_TRANSFER_OK;
+
 	if(requestContext->RequestType == WdfRequestTypeRead)
-		urb->UrbIsochronousTransfer.TransferFlags = USBD_TRANSFER_DIRECTION_IN;
+		urb->UrbIsochronousTransfer.TransferFlags |= USBD_TRANSFER_DIRECTION_IN;
 	else
-		urb->UrbIsochronousTransfer.TransferFlags = USBD_TRANSFER_DIRECTION_OUT;
+		urb->UrbIsochronousTransfer.TransferFlags |= USBD_TRANSFER_DIRECTION_OUT;
 
 	if (!urb->UrbIsochronousTransfer.StartFrame)
 		urb->UrbIsochronousTransfer.TransferFlags |= USBD_START_ISO_TRANSFER_ASAP;
@@ -1794,10 +1795,7 @@ static VOID XferIsoExComplete(__in WDFREQUEST Request,
 	{
 		IsoContext->IsoPackets[posPacket].Length = urb->UrbIsochronousTransfer.IsoPacket[posPacket].Length;
 		IsoContext->IsoPackets[posPacket].Status = urb->UrbIsochronousTransfer.IsoPacket[posPacket].Status;
-		if (USBD_SUCCESS(((USBD_STATUS)urb->UrbIsochronousTransfer.IsoPacket[posPacket].Status)))
-		{
-			requestContext->TotalTransferred += urb->UrbIsochronousTransfer.IsoPacket[posPacket].Length;
-		}
+		requestContext->TotalTransferred += urb->UrbIsochronousTransfer.IsoPacket[posPacket].Length;
 	}
 
 	// http://msdn.microsoft.com/en-us/library/ff539084%28v=vs.85%29.aspx

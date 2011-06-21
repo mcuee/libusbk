@@ -809,6 +809,7 @@ KUSB_EXP BOOL KUSB_API LstK_Init(__deref_out PKUSB_DEV_LIST* DeviceList,
 	ErrorHandle(!deviceList, Done, "DeviceList");
 
 	memset(&defInitParams, 0, sizeof(defInitParams));
+
 	if (!initParams)
 		initParams = &defInitParams;
 
@@ -824,7 +825,7 @@ KUSB_EXP BOOL KUSB_API LstK_Init(__deref_out PKUSB_DEV_LIST* DeviceList,
 	// e.g. HKLM\SYSTEM\CurrentControlSet\Control\DeviceClasses\{20343a29-6da1-4db8-8a3c-16e774057bf5}
 	if (EnumRegKey(&enumParams))
 	{
-		if (deviceList->head && InitParams)
+		if (deviceList->head)
 		{
 			ApplyFilter(initParams, deviceList);
 			ApplyCompositeDevicesMode(initParams, deviceList);
