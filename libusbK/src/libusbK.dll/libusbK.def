@@ -62,9 +62,9 @@ EXPORTS
 	UsbK_IsoWritePipe
 	UsbK_GetCurrentFrameNumber
 
-	IsoK_Create
-	IsoK_Destroy
-	IsoK_InitPackets
+	IsoK_Init
+	IsoK_Free
+	IsoK_SetPackets
 	IsoK_SetPacket
 	IsoK_GetPacket
 	IsoK_EnumPackets

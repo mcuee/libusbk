@@ -143,6 +143,10 @@ typedef enum _KUSB_FNID
     KUSB_FNID_COUNT
 } KUSB_FNID;
 
+typedef BOOL KUSB_API KUSB_Initialize (
+    __in HANDLE DeviceHandle,
+    __out PLIBUSBK_INTERFACE_HANDLE InterfaceHandle);
+
 //! Driver api function set structure.
 typedef struct _KUSB_DRIVER_API
 {
@@ -343,9 +347,7 @@ typedef struct _KUSB_DRIVER_API
 //! Pointer to a \ref KUSB_DRIVER_API structure
 typedef KUSB_DRIVER_API* PKUSB_DRIVER_API;
 
-typedef BOOL KUSB_API KUSB_Initialize (
-    __in HANDLE DeviceHandle,
-    __out PLIBUSBK_INTERFACE_HANDLE InterfaceHandle);
+
 
 typedef BOOL KUSB_API KUSB_Free (
     __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle);

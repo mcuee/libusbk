@@ -1081,7 +1081,7 @@ extern "C" {
 	* - \ref UsbK_GetAssociatedInterface
 	*
 	* \param IsoContext
-	* Pointer to an isochronous transfer context created with \ref IsoK_Create
+	* Pointer to an isochronous transfer context created with \ref IsoK_Init
 	*
 	* \param Buffer
 	* A caller-allocated buffer that receives the data that is read.
@@ -1126,7 +1126,7 @@ extern "C" {
 	* - \ref UsbK_GetAssociatedInterface
 	*
 	* \param IsoContext
-	* Pointer to an isochronous transfer context created with \ref IsoK_Create. See remarks below.
+	* Pointer to an isochronous transfer context created with \ref IsoK_Init. See remarks below.
 	*
 	* \param Buffer
 	* A caller-allocated buffer that receives the data that is read.
@@ -1254,42 +1254,99 @@ extern "C" {
 	*  @{
 	*/
 
-//! Creates an isochronous transfer context.
-	KUSB_EXP BOOL KUSB_API IsoK_Create (
+//! Creates a new isochronous transfer context.
+	/*!
+	* \param IsoContext
+	*
+	* \param NumberOfPackets
+	*
+	* \param PipeID
+	*
+	* \param StartFrame
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*/
+	KUSB_EXP BOOL KUSB_API IsoK_Init (
 	    __deref_out PKUSB_ISO_CONTEXT* IsoContext,
 	    __in ULONG NumberOfPackets,
 	    __in_opt UCHAR PipeID,
 	    __in_opt ULONG StartFrame);
 
 //! Destroys an isochronous transfer context.
-	KUSB_EXP BOOL KUSB_API IsoK_Destroy(
+	/*!
+	* \param IsoContext
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*/
+	KUSB_EXP BOOL KUSB_API IsoK_Free(
 	    __deref_inout PKUSB_ISO_CONTEXT* IsoContext);
 
-//! Convenience function for setting all packets of an isochronous transfer context to the same packet size.
-	KUSB_EXP BOOL KUSB_API IsoK_InitPackets(
+//! Convenience function for setting the offset of all iso packets of an isochronous transfer context.
+	/*!
+	* \param IsoContext
+	*
+	* \param PacketSize
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*/
+	KUSB_EXP BOOL KUSB_API IsoK_SetPackets(
 	    __inout PKUSB_ISO_CONTEXT IsoContext,
 	    __in ULONG PacketSize);
 
-//! Convenience function for setting fields of a \ref KUSB_ISO_PACKET.
+//! Convenience function for setting all fields of a \ref KUSB_ISO_PACKET.
+	/*!
+	* \param IsoContext
+	*
+	* \param PacketIndex
+	*
+	* \param IsoPacket
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*/
 	KUSB_EXP BOOL KUSB_API IsoK_SetPacket(
 	    __in PKUSB_ISO_CONTEXT IsoContext,
 	    __in ULONG PacketIndex,
 	    __in PKUSB_ISO_PACKET IsoPacket);
 
-//! Convenience function for returning fields of a \ref KUSB_ISO_PACKET.
+//! Convenience function for returning allfields of a \ref KUSB_ISO_PACKET.
+	/*!
+	* \param IsoContext
+	*
+	* \param PacketIndex
+	*
+	* \param IsoPacket
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*/
 	KUSB_EXP BOOL KUSB_API IsoK_GetPacket(
 	    __in PKUSB_ISO_CONTEXT IsoContext,
 	    __in ULONG PacketIndex,
 	    __out PKUSB_ISO_PACKET IsoPacket);
 
 //! Convenience function for enumerating iso packets of an isochronous transfer context.
+	/*!
+	* \param IsoContext
+	*
+	* \param EnumPackets
+	*
+	* \param StartPacketIndex
+	*
+	* \param UserContext
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*/
 	KUSB_EXP BOOL KUSB_API IsoK_EnumPackets(
 	    __in PKUSB_ISO_CONTEXT IsoContext,
 	    __in ISO_ENUM_PACKETS_CB* EnumPackets,
 	    __in_opt ULONG StartPacketIndex,
 	    __in_opt PVOID UserContext);
 
-//! Convenience function for re-using an isochronous transfer context for a subsequent request.
+//! Convenience function for re-using an isochronous transfer context in a subsequent request.
+	/*!
+	* \param IsoContext
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*/
 	KUSB_EXP BOOL KUSB_API IsoK_Reuse(
 	    __inout PKUSB_ISO_CONTEXT IsoContext);
 

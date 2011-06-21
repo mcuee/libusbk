@@ -31,7 +31,6 @@
 * through one of the libusbK \ref usbk transfer functions. e.g. \ref
 * UsbK_ReadPipe and \ref UsbK_WritePipe
 *
-
 */
 typedef LPOVERLAPPED POVERLAPPED_K;
 
@@ -115,30 +114,32 @@ typedef struct _OVERLAPPED_K_INFO
 extern "C" {
 #endif
 
-//! Gets a pre-allocated K overlapped structure from the specified/default pool.
+//! Gets a pre-allocated \c OverlappedK structure from the specified/default pool.
 	/*!
 	*
 	* \param Pool
-	* The overlapped pool used to retrieve the next free K overlapped. \note
-	* To acquire an OverlappedK from the \b default pool, pass \c NULL for the
+	* The overlapped pool used to retrieve the next available \c OverlappedK,
+	* or NULL for the default pool.
+	*
 	* \c Pool parameter.
 	*
 	* \returns On success, the next unused overlappedK available in the pool.
 	* Otherwise NULL. Use \c GetLastError() to get extended error information.
 	*
-	* After calling \ref OvlK_Acquire or \ref OvlK_ReUse the OverlappedK is
-	* ready for use. Simply pass it into one of the \c UsbK core transfer
-	* functions such as \ref UsbK_ReadPipe or \ref UsbK_WritePipe.
+	* After calling \ref OvlK_Acquire or \ref OvlK_ReUse the \c OverlappedK is
+	* ready to be used in an I/O operation. See one of the \c UsbK core
+	* transfer functions such as \ref UsbK_ReadPipe or \ref UsbK_WritePipe for
+	* more information.
 	*
-	* If the refurbished list (a re-usable \c OverlappedK list) is not empty,
-	* the \ref OvlK_Acquire function will choose an overlapped from the
-	* refurbished list first.
+	* If the pools internal refurbished list (a re-usable list of \c
+	* OverlappedK structures) is not empty, the \ref OvlK_Acquire function
+	* will choose an overlapped from the refurbished list.
 	*
 	*/
 	KUSB_EXP POVERLAPPED_K KUSB_API OvlK_Acquire(
 	    __in_opt POVERLAPPED_K_POOL Pool);
 
-//! Returns a used overlapped to it's parent pool.
+//! Returns an \c OverlappedK structure to it's pool.
 	/*!
 	*
 	* \param OverlappedK
@@ -148,15 +149,12 @@ extern "C" {
 	* extended error information.
 	*
 	* When an overlapped is returned to pool, it resources are \b not freed.
-	* Instead, it is added to an internal list of refurbishable OverlappedKs.
-	* This list is maintained in its \ref POVERLAPPED_K_POOL see also \ref
-	* OvlK_Acquire
+	* Instead, it is added to an internal refurbished list (a re-usable list of \c
+	* OverlappedK structures).
 	*
 	* \warning
-	* Only call this function if the OverlappedK is not in-use. This does not
-	* include an OverlappedK which has timed-out (unless it has also been
-	* cancelled).
-	*
+	* This function must not be called when the OverlappedK is in-use. If
+	* unsure, consider using \ref OvlK_WaitAndRelease instead.
 	*/
 	KUSB_EXP BOOL KUSB_API OvlK_Release(
 	    __in POVERLAPPED_K OverlappedK);
@@ -173,13 +171,13 @@ extern "C" {
 	* \returns On success, the newly created overlapped pool.  Otherwise NULL.
 	* Use \c GetLastError() to get extended error information.
 	*
-	* Additional pools may increase performance for multithreaded
-	* applications.
-	* \n
-	* All pools are thread safe and use a high speed spin lock to secure
-	* access to internal data at certain points of operation. Creating a pool
-	* for each thread guarantees no lock collisions.(when one thread must wait
-	* for another)
+	* \note
+	* Additional pools are generally not neccessary, but may increase
+	* performance for multithreaded applications.
+	*
+	* \c OverlappedK pools use a high-speed spin-lock to achieve thread
+	* safety. Some of the \c OvlK function hold this spin-lock for a short
+	* period to protect internal data.
 	*
 	*/
 	KUSB_EXP POVERLAPPED_K_POOL KUSB_API OvlK_CreatePool(
@@ -198,7 +196,7 @@ extern "C" {
 	*
 	* \warning
 	* A pool should not be destroyed until all OverlappedKs acquired from it
-	* are no longer in-use. For more information see \ref OvlK_Release.
+	* are no longer in-use. For more information see \ref OvlK_WaitAndRelease or \ref OvlK_Release.
 	*
 	*/
 	KUSB_EXP BOOL KUSB_API OvlK_DestroyPool(
