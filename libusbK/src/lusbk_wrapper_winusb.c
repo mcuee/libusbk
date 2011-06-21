@@ -298,4 +298,11 @@ KUSB_EXP BOOL KUSB_API WinUsb_IsoWritePipe (
 	return UsbK_IsoWritePipe (InterfaceHandle, IsoContext, Buffer, BufferLength, Overlapped);
 }
 
+KUSB_EXP BOOL KUSB_API WinUsb_GetCurrentFrameNumber (
+    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __out PULONG FrameNumber)
+{
+	return UsbK_GetCurrentFrameNumber (InterfaceHandle, FrameNumber);
+}
+
 #endif // EXCLUDE_WINUSB_WRAPPER

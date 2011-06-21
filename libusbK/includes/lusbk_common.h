@@ -219,6 +219,9 @@ typedef LIBUSBK_INTERFACE_HANDLE* PLIBUSBK_INTERFACE_HANDLE;
 
 #ifndef   __USB_H__
 
+//! Maximum value that can be added to the current start frame.
+#define USBD_ISO_START_FRAME_RANGE 1024
+
 #include <PSHPACK1.H>
 
 //! bmRequest.Dir

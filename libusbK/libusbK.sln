@@ -48,8 +48,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "kList.exe", "src\kList.exe\
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "doc", "doc", "{C1227A3C-7AF9-46F7-BFE7-3CE1C3DB7672}"
 	ProjectSection(SolutionItems) = preProject
-		doc\usbk_conceptual_documentation.h = doc\usbk_conceptual_documentation.h
+		doc\dox\usbk_conceptual_documentation.dox = doc\dox\usbk_conceptual_documentation.dox
+		doc\dox\usbk_examples.dox = doc\dox\usbk_examples.dox
 		doc\usbk_layout.xml = doc\usbk_layout.xml
+		doc\dox\usbk_mainpage.dox = doc\dox\usbk_mainpage.dox
+		doc\dox\usbk_pipe_power_management.dox = doc\dox\usbk_pipe_power_management.dox
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tasks", "tasks", "{9ECC0BBA-7145-44E1-9CE0-9201242F1B29}"

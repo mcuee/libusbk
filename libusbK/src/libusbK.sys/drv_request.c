@@ -315,7 +315,7 @@ VOID Request_PreIoInitialize(__in WDFDEVICE Device,
 		}
 		*/
 
-		// Lock the iso context for write. This allows the iso information to be updated upon compeletion.
+		// Lock the iso context for write. This allows the iso information to be updated upon completion.
 		status = WdfRequestProbeAndLockUserBufferForWrite(Request, libusbRequest->IsoEx.IsoContext, libusbRequest->IsoEx.IsoContextSize, &requestContext->Iso.ContextMemory);
 		if(!NT_SUCCESS(status))
 		{

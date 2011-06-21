@@ -1550,12 +1550,9 @@ KUSB_EXP BOOL KUSB_API UsbK_IsoReadPipe (
 
 	AcquireSyncLockRead(&handle->Instance.Lock);
 
-	if (!IsHandleValid(Overlapped))
-	{
-		USBERR("isochronous transfers require an 'Overlapped' parameter.\n");
-		success = LusbwError(ERROR_INVALID_PARAMETER);
-		goto Done;
-	}
+	ErrorParam(!IsHandleValid(Overlapped), Error, "Overlapped");
+	ErrorParam(!IsHandleValid(IsoContext), Error, "IsoContext");
+
 	IsoContextSize = sizeof(KUSB_ISO_CONTEXT) + (IsoContext->NumberOfPackets * sizeof(KUSB_ISO_PACKET));
 
 	OVLK_ISO_CHECK_SUBMIT(
@@ -1583,6 +1580,9 @@ KUSB_EXP BOOL KUSB_API UsbK_IsoReadPipe (
 Done:
 	ReleaseSyncLockRead(&handle->Instance.Lock);
 	return success;
+Error:
+	ReleaseSyncLockRead(&handle->Instance.Lock);
+	return FALSE;
 }
 
 KUSB_EXP BOOL KUSB_API UsbK_IsoWritePipe (
@@ -1597,12 +1597,8 @@ KUSB_EXP BOOL KUSB_API UsbK_IsoWritePipe (
 
 	AcquireSyncLockRead(&handle->Instance.Lock);
 
-	if (!IsHandleValid(Overlapped))
-	{
-		USBERR("isochronous transfers require an 'Overlapped' parameter.\n");
-		success = LusbwError(ERROR_INVALID_PARAMETER);
-		goto Done;
-	}
+	ErrorParam(!IsHandleValid(Overlapped), Error, "Overlapped");
+	ErrorParam(!IsHandleValid(IsoContext), Error, "IsoContext");
 
 	IsoContextSize = sizeof(KUSB_ISO_CONTEXT) + (IsoContext->NumberOfPackets * sizeof(KUSB_ISO_PACKET));
 
@@ -1629,6 +1625,33 @@ KUSB_EXP BOOL KUSB_API UsbK_IsoWritePipe (
 	}
 
 Done:
+	ReleaseSyncLockRead(&handle->Instance.Lock);
+	return success;
+Error:
+	ReleaseSyncLockRead(&handle->Instance.Lock);
+	return FALSE;
+}
+
+KUSB_EXP BOOL KUSB_API UsbK_GetCurrentFrameNumber (
+    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __out PULONG FrameNumber)
+{
+	libusb_request request;
+	UCHAR PipeID = 0;
+	LUSBKFN_CTX_PIPE_PREFIX();
+
+	AcquireSyncLockRead(&handle->Instance.Lock);
+
+	Mem_Zero(&request, sizeof(request));
+
+	success = Ioctl_Sync(DeviceHandleByPipeID(PipeID), LIBUSBK_IOCTL_GET_CURRENTFRAME_NUMBER,
+	                     &request, sizeof(request),
+	                     &request, sizeof(request),
+	                     NULL);
+	if (success)
+	{
+		*FrameNumber = *((PULONG)&request);
+	}
 	ReleaseSyncLockRead(&handle->Instance.Lock);
 	return success;
 }
@@ -1753,6 +1776,9 @@ BOOL GetProcAddress_UsbK(__out KPROC* ProcAddress, __in ULONG FunctionID)
 		break;
 	case KUSB_FNID_IsoWritePipe:
 		*ProcAddress = (KPROC)UsbK_IsoWritePipe;
+		break;
+	case KUSB_FNID_GetCurrentFrameNumber:
+		*ProcAddress = (KPROC)UsbK_GetCurrentFrameNumber;
 		break;
 
 	default:

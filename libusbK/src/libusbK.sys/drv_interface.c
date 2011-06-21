@@ -138,6 +138,10 @@ NTSTATUS Interface_InitContext(__in PDEVICE_CONTEXT deviceContext,
 			Policy_InitPipe(pipeContext);
 		}
 
+		// reset the transfer counter
+		pipeContext->TransferCounter = 0;
+
+
 		// set the pipe context by index in the interface context
 		interfaceContext->PipeContextByIndex[pipeIndex] = pipeContext;
 

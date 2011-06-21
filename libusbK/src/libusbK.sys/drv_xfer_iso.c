@@ -1622,6 +1622,7 @@ VOID XferIsoEx(__in WDFQUEUE Queue,
 	USBD_PIPE_HANDLE usbdPipeHandle;
 	ULONG posPacket;
 	ULONG nextOffset;
+	ULONG transferCounter;
 	WDF_REQUEST_SEND_OPTIONS sendOptions;
 
 	UNREFERENCED_PARAMETER(InputBufferLength);
@@ -1634,6 +1635,8 @@ VOID XferIsoEx(__in WDFQUEUE Queue,
 	deviceContext = GetDeviceContext(WdfIoQueueGetDevice(Queue));
 
 	USBDBG("ContextMemory=%p\n", requestContext->Iso.ContextMemory);
+
+	transferCounter = (ULONG)InterlockedIncrement(&requestContext->PipeContext->TransferCounter);
 
 	if (!requestContext->Iso.ContextMemory)
 	{
@@ -1649,6 +1652,8 @@ VOID XferIsoEx(__in WDFQUEUE Queue,
 		USBERR("WdfMemoryGetBuffer failed. Invalid ISO context.\n");
 		goto Exit;
 	}
+
+	isoContext->TransferCounter = transferCounter;
 
 	usbdPipeHandle = WdfUsbTargetPipeWdmGetPipeHandle(requestContext->PipeContext->Pipe);
 	if (!usbdPipeHandle)
@@ -1780,16 +1785,30 @@ static VOID XferIsoExComplete(__in WDFREQUEST Request,
 	status = CompletionParams->IoStatus.Status;
 	urb = WdfMemoryGetBuffer(requestContext->UrbMemory, NULL);
 
+	// update the iso context
 	IsoContext->ErrorCount = urb->UrbIsochronousTransfer.ErrorCount;
 	IsoContext->StartFrame = urb->UrbIsochronousTransfer.StartFrame;
 
+	// update the iso packet status & lengths
 	for (posPacket = 0; posPacket < IsoContext->NumberOfPackets; posPacket++)
 	{
 		IsoContext->IsoPackets[posPacket].Length = urb->UrbIsochronousTransfer.IsoPacket[posPacket].Length;
 		IsoContext->IsoPackets[posPacket].Status = urb->UrbIsochronousTransfer.IsoPacket[posPacket].Status;
+		if (USBD_SUCCESS(((USBD_STATUS)urb->UrbIsochronousTransfer.IsoPacket[posPacket].Status)))
+		{
+			requestContext->TotalTransferred += urb->UrbIsochronousTransfer.IsoPacket[posPacket].Length;
+		}
 	}
 
-	if (NT_SUCCESS(status))
+	// http://msdn.microsoft.com/en-us/library/ff539084%28v=vs.85%29.aspx
+	// The Length parameter should only update for DeviceToHost (IN) transfers, but
+	// this is not always the case.
+	// * If the host is updating packet lengths, they are used to calculate
+	//   TotalTransferred. (above)
+	// * If the host is Not updating the packet lengths, the URB
+	//   TransferBufferLength is used to calculate TotalTransferred. (below)
+	//
+	if (NT_SUCCESS(status) && !requestContext->TotalTransferred)
 	{
 		requestContext->TotalTransferred += urb->UrbIsochronousTransfer.TransferBufferLength;
 	}

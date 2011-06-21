@@ -584,6 +584,15 @@ VOID DefaultQueue_OnIoControl(__in WDFQUEUE Queue,
 			status = Pipe_Start(deviceContext, requestContext->PipeContext);
 
 		break;
+	case LIBUSBK_IOCTL_GET_CURRENTFRAME_NUMBER:
+		GET_OUT_BUFFER(sizeof(ULONG), &outputBuffer, &outputBufferLen, "get_currentframe");
+		status = WdfUsbTargetDeviceRetrieveCurrentFrameNumber(deviceContext->WdfUsbTargetDevice, (PULONG)outputBuffer);
+		if (NT_SUCCESS(status))
+		{
+			length = sizeof(ULONG);
+		}
+
+		break;
 
 	default :
 

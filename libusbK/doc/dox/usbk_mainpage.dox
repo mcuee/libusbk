@@ -56,6 +56,14 @@
 
 /*! @} */
 
+/*! \addtogroup isok Isochronous context management API
+* \brief \ref isok structs, typedefs, enums, defines, and functions for isochronous context management.
+*
+*  @{
+*/
+
+/*! @} */
+
 /*! \addtogroup drvk Dynamic Driver API
 * \brief \ref drvk \copybrief lusbk_dynamic.h
 *
