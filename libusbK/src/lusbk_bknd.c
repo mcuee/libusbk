@@ -1,3 +1,20 @@
+/*!********************************************************************
+libusbK - Multi-driver USB library.
+Copyright (C) 2011 All Rights Reserved.
+libusb-win32.sourceforge.net
+
+Development : Travis Lee Robinson  (libusbdotnet@gmail.com)
+Testing     : Xiaofan Chen         (xiaofanc@gmail.com)
+
+At the discretion of the user of this library, this software may be
+licensed under the terms of the GNU Public License v3 or a BSD-Style
+license as outlined in the following files:
+* LICENSE-gpl3.txt
+* LICENSE-bsd.txt
+
+License files are located in a license folder at the root of source and
+binary distributions.
+********************************************************************!*/
 #include "lusbk_bknd.h"
 
 BOOL LibInitialized = FALSE;
@@ -6,7 +23,6 @@ volatile long LibInitializedLockCount = 0;
 // 8k
 volatile long HandleListPos = -1;
 KUSB_INTERFACE_HANDLE_INTERNAL InternalHandlePool[KUSB_MAX_INTERFACE_HANDLES];
-
 
 // 4k
 volatile long SharedDevicePos = -1;

@@ -23,17 +23,30 @@
 #
 */
 #include "examples.h"
-
-BOOL Examples_GetTestDevice( __deref_out PKUSB_DEV_LIST* DeviceList,
-                             __deref_out PKUSB_DEV_INFO* DeviceInfo,
+BOOL Examples_GetTestDevice( __deref_out PKLST_HANDLE* DeviceList,
+                             __deref_out PKLST_DEV_INFO* DeviceInfo,
                              __in int argc,
                              __in char* argv[])
 {
+	return Examples_GetTestDeviceEx(DeviceList,
+	                                DeviceInfo,
+	                                argc,
+	                                argv,
+	                                NULL);
+
+}
+BOOL Examples_GetTestDeviceEx( __deref_out PKLST_HANDLE* DeviceList,
+                               __deref_out PKLST_DEV_INFO* DeviceInfo,
+                               __in int argc,
+                               __in char* argv[],
+                               __in_opt PKLST_INIT_PARAMS InitParams)
+{
 	ULONG vidArg = EXAMPLE_VID;
 	ULONG pidArg = EXAMPLE_PID;
+	ULONG deviceCount = 0;
 	int argPos;
-	PKUSB_DEV_LIST deviceList = NULL;
-	PKUSB_DEV_INFO deviceInfo = NULL;
+	PKLST_HANDLE deviceList = NULL;
+	PKLST_DEV_INFO deviceInfo = NULL;
 
 	// init
 	*DeviceList = NULL;
@@ -47,12 +60,14 @@ BOOL Examples_GetTestDevice( __deref_out PKUSB_DEV_LIST* DeviceList,
 	}
 
 	// Get the device list
-	if (!LstK_Init(&deviceList, NULL))
+	if (!LstK_Init(&deviceList, InitParams))
 	{
 		printf("Error initializing device list.\n");
 		return FALSE;
 	}
-	if (!deviceList->DeviceCount)
+
+	LstK_Count(deviceList, &deviceCount);
+	if (!deviceCount)
 	{
 		printf("No device not connected.\n");
 		SetLastError(ERROR_DEVICE_NOT_CONNECTED);

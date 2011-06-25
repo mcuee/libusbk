@@ -21,7 +21,7 @@ binary distributions.
 static VOID XferIsoExComplete(__in WDFREQUEST Request,
                               __in WDFIOTARGET Target,
                               __in PWDF_REQUEST_COMPLETION_PARAMS CompletionParams,
-                              __in PKUSB_ISO_CONTEXT IsoContext);
+                              __in PKISO_CONTEXT IsoContext);
 //
 // Required for doing ISOCH transfer. This context is associated with every
 // subrequest created by the driver to do ISOCH transfer.
@@ -1611,17 +1611,15 @@ VOID XferIsoEx(__in WDFQUEUE Queue,
 	NTSTATUS status = STATUS_NOT_SUPPORTED;
 	PDEVICE_CONTEXT deviceContext;
 	PREQUEST_CONTEXT requestContext;
-	PKUSB_ISO_CONTEXT isoContext;
+	PKISO_CONTEXT isoContext;
 	size_t isoContextSize;
-	ULONG isoMinPacketInterval;
-	ULONG isoMaxPackets;
-	ULONG isoNumActualPackets;
 	WDF_OBJECT_ATTRIBUTES attributes;
 	PURB urb;
 	ULONG urbSize;
 	USBD_PIPE_HANDLE usbdPipeHandle;
 	ULONG posPacket;
 	ULONG nextOffset;
+	ULONG nextLength;
 	ULONG transferCounter;
 	WDF_REQUEST_SEND_OPTIONS sendOptions;
 
@@ -1645,7 +1643,7 @@ VOID XferIsoEx(__in WDFQUEUE Queue,
 		goto Exit;
 	}
 
-	isoContext = (PKUSB_ISO_CONTEXT)WdfMemoryGetBuffer(requestContext->Iso.ContextMemory, &isoContextSize);
+	isoContext = (PKISO_CONTEXT)WdfMemoryGetBuffer(requestContext->Iso.ContextMemory, &isoContextSize);
 	if (!isoContext)
 	{
 		status = STATUS_INVALID_DEVICE_REQUEST;
@@ -1663,35 +1661,21 @@ VOID XferIsoEx(__in WDFQUEUE Queue,
 		goto Exit;
 	}
 
-	if (IsHighSpeedDevice(deviceContext))
-	{
-		isoMinPacketInterval = 8;
-		isoMaxPackets = 1024;
-	}
-	else
-	{
-		isoMinPacketInterval = 1;
-		isoMaxPackets = 1023;
-	}
-
-	if (isoContext->NumberOfPackets > isoMaxPackets)
+	if (!isoContext->NumberOfPackets || isoContext->NumberOfPackets & 0xFFFF8000)
 	{
 		status = STATUS_INVALID_DEVICE_REQUEST;
-		USBERR("Too many iso packets. NumberOfPackets=%u MaxPackets=%u\n",
-		       isoContext->NumberOfPackets, isoMaxPackets);
+		USBERR("Invalid NumberOfPackets. NumberOfPackets=%u.\n", isoContext->NumberOfPackets);
 		goto Exit;
 	}
-	isoNumActualPackets = ((isoContext->NumberOfPackets + (isoMinPacketInterval - 1)) * isoMinPacketInterval) / isoMinPacketInterval;
-	if (isoNumActualPackets < isoMinPacketInterval)
-		isoNumActualPackets = isoMinPacketInterval;
 
-	if (isoNumActualPackets != isoContext->NumberOfPackets)
+	if (IsHighSpeedDevice(deviceContext) && (isoContext->NumberOfPackets % 8))
 	{
-		USBWRN("Added ISO packet descriptor padding. NumberOfPackets=%u ActualPackets=%u\n",
-		       isoContext->NumberOfPackets, isoNumActualPackets);
+		status = STATUS_INVALID_DEVICE_REQUEST;
+		USBERR("Invalid NumberOfPackets. NumberOfPackets=%u.\n", isoContext->NumberOfPackets);
+		goto Exit;
 	}
 
-	urbSize = GET_ISO_URB_SIZE(isoNumActualPackets);
+	urbSize = GET_ISO_URB_SIZE(isoContext->NumberOfPackets);
 	///////////////////////////////////////////////////////////////////
 
 	// Allocate URB memory 	///////////////////////////////////////////
@@ -1715,8 +1699,6 @@ VOID XferIsoEx(__in WDFQUEUE Queue,
 	urb->UrbIsochronousTransfer.TransferBufferMDL = requestContext->OriginalTransferMDL;
 	urb->UrbIsochronousTransfer.StartFrame = isoContext->StartFrame;
 
-	urb->UrbIsochronousTransfer.TransferFlags = USBD_SHORT_TRANSFER_OK;
-
 	if(requestContext->RequestType == WdfRequestTypeRead)
 		urb->UrbIsochronousTransfer.TransferFlags |= USBD_TRANSFER_DIRECTION_IN;
 	else
@@ -1725,17 +1707,56 @@ VOID XferIsoEx(__in WDFQUEUE Queue,
 	if (!urb->UrbIsochronousTransfer.StartFrame)
 		urb->UrbIsochronousTransfer.TransferFlags |= USBD_START_ISO_TRANSFER_ASAP;
 
-	urb->UrbIsochronousTransfer.NumberOfPackets = isoNumActualPackets;
+	urb->UrbIsochronousTransfer.NumberOfPackets = isoContext->NumberOfPackets;
 	///////////////////////////////////////////////////////////////////
 
 	// Init URB iso packets ///////////////////////////////////////////
 	nextOffset = 0;
-	for (posPacket = 0; posPacket < isoNumActualPackets; posPacket++)
+	nextLength = 0;
+	if(requestContext->RequestType == WdfRequestTypeRead)
 	{
-		if (posPacket < isoContext->NumberOfPackets)
-			nextOffset = isoContext->IsoPackets[posPacket].Offset;
+		// DeviceToHost packet setup
+		for (posPacket = 0; posPacket < isoContext->NumberOfPackets; posPacket++)
+		{
+			ULONG offset = isoContext->IsoPackets[posPacket].Offset;
+			isoContext->IsoPackets[posPacket].Status = 0;
 
-		urb->UrbIsochronousTransfer.IsoPacket[posPacket].Offset = nextOffset;
+			if (offset < nextOffset || offset >= requestContext->Length)
+			{
+				status = STATUS_INVALID_DEVICE_REQUEST;
+				USBERR("Invalid packet offset. IsoPackets[%u].Offset=%u.\n",
+				       posPacket, offset);
+				goto Exit;
+			}
+
+			nextOffset = offset;
+
+			urb->UrbIsochronousTransfer.IsoPacket[posPacket].Offset = nextOffset;
+			urb->UrbIsochronousTransfer.IsoPacket[posPacket].Length = 0;
+		}
+	}
+	else
+	{
+		// HostToDevice packet setup
+		for (posPacket = 0; posPacket < isoContext->NumberOfPackets; posPacket++)
+		{
+			ULONG offset = isoContext->IsoPackets[posPacket].Offset;
+			isoContext->IsoPackets[posPacket].Status = 0;
+
+			if (offset < nextOffset || offset >= requestContext->Length)
+			{
+				status = STATUS_INVALID_DEVICE_REQUEST;
+				USBERR("Invalid packet offset. IsoPackets[%u].Offset=%u.\n",
+				       posPacket, offset);
+				goto Exit;
+			}
+
+			nextLength = offset - nextOffset;
+			nextOffset = offset;
+
+			urb->UrbIsochronousTransfer.IsoPacket[posPacket].Offset = nextOffset;
+			urb->UrbIsochronousTransfer.IsoPacket[posPacket].Length = nextLength;
+		}
 	}
 	///////////////////////////////////////////////////////////////////
 
@@ -1772,7 +1793,7 @@ Exit:
 static VOID XferIsoExComplete(__in WDFREQUEST Request,
                               __in WDFIOTARGET Target,
                               __in PWDF_REQUEST_COMPLETION_PARAMS CompletionParams,
-                              __in PKUSB_ISO_CONTEXT IsoContext)
+                              __in PKISO_CONTEXT IsoContext)
 {
 	PURB urb;
 	NTSTATUS status;

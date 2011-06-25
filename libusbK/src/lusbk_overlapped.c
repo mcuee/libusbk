@@ -34,82 +34,82 @@ binary distributions.
 
 #define ReturnOnFreeOverlapped(OverlappedKPtr,ReturnValue)							\
 {																					\
-	if (IncUsageLock(((POVERLAPPED_K_INTERNAL)(OverlappedKPtr))) < 2)				\
+	if (IncUsageLock(((PKOVL_OVERLAPPED_INTERNAL)(OverlappedKPtr))) < 2)				\
 	{																				\
-		DecUsageLock(((POVERLAPPED_K_INTERNAL)(OverlappedKPtr)));					\
+		DecUsageLock(((PKOVL_OVERLAPPED_INTERNAL)(OverlappedKPtr)));					\
 		LusbwError(ERROR_ACCESS_DENIED);											\
 		return ReturnValue;															\
 	}																				\
-	DecUsageLock(((POVERLAPPED_K_INTERNAL)(OverlappedKPtr)));						\
+	DecUsageLock(((PKOVL_OVERLAPPED_INTERNAL)(OverlappedKPtr)));						\
 }
 
 #define LockOnInUseOverlapped(OverlappedKPtr,ReturnValue)							\
-	if (IncUsageLock(((POVERLAPPED_K_INTERNAL)(OverlappedKPtr))) < 2)				\
+	if (IncUsageLock(((PKOVL_OVERLAPPED_INTERNAL)(OverlappedKPtr))) < 2)				\
 	{																				\
-		DecUsageLock(((POVERLAPPED_K_INTERNAL)(OverlappedKPtr)));					\
+		DecUsageLock(((PKOVL_OVERLAPPED_INTERNAL)(OverlappedKPtr)));					\
 		LusbwError(ERROR_ACCESS_DENIED);											\
 		return ReturnValue;															\
 	}
 
-#define CALC_POOL_SIZE(OverlappedCount) sizeof(OVERLAPPED_K_POOL_USER)+(sizeof(OVERLAPPED_K_INTERNAL)*OverlappedCount)
+#define CALC_POOL_SIZE(OverlappedCount) sizeof(KOVL_OVERLAPPED_POOL_USER)+(sizeof(KOVL_OVERLAPPED_INTERNAL)*OverlappedCount)
 
-typedef struct _OVERLAPPED_K_EL
+typedef struct _KOVL_OVERLAPPED_EL
 {
-	POVERLAPPED_K Overlapped;
-	struct _OVERLAPPED_K_EL* next;
-	struct _OVERLAPPED_K_EL* prev;
+	PKOVL_OVERLAPPED Overlapped;
+	struct _KOVL_OVERLAPPED_EL* next;
+	struct _KOVL_OVERLAPPED_EL* prev;
 
-} OVERLAPPED_K_EL, *POVERLAPPED_K_EL;
+} KOVL_OVERLAPPED_EL, *PKOVL_OVERLAPPED_EL;
 
-typedef struct _OVERLAPPED_K_INTERNAL
+typedef struct _KOVL_OVERLAPPED_INTERNAL
 {
 	OVERLAPPED Overlapped;
 
 	KUSB_USER_CONTEXT UserContext;
 
-	OVERLAPPED_K_INFO Private;
+	KOVL_OVERLAPPED_INFO Private;
 
-	OVERLAPPED_K_EL ReUseLink;
+	KOVL_OVERLAPPED_EL ReUseLink;
 
 	volatile long UsageCount;
 	volatile long IsReUsableLock;
 
-	POVERLAPPED_K_POOL Pool;
+	PKOVL_OVERLAPPED_POOL Pool;
 
-} OVERLAPPED_K_INTERNAL, *POVERLAPPED_K_INTERNAL;
+} KOVL_OVERLAPPED_INTERNAL, *PKOVL_OVERLAPPED_INTERNAL;
 
-typedef struct _OVERLAPPED_K_POOL_PRIVATE
+typedef struct _KOVL_OVERLAPPED_POOL_PRIVATE
 {
 	ULONG MaxCount;
 	ULONG PoolSize;
-	POVERLAPPED_K_EL ReUseList;
+	PKOVL_OVERLAPPED_EL ReUseList;
 	volatile long NextPosition;
 	volatile long BusyCount;
-} OVERLAPPED_K_POOL_PRIVATE, *POVERLAPPED_K_POOL_PRIVATE;
+} KOVL_OVERLAPPED_POOL_PRIVATE, *PKOVL_OVERLAPPED_POOL_PRIVATE;
 
 #pragma warning(disable:4200)
-typedef struct _OVERLAPPED_K_POOL_USER
+typedef struct _KOVL_OVERLAPPED_POOL_USER
 {
 	KUSB_USER_CONTEXT UserContext;
-	OVERLAPPED_K_POOL_PRIVATE Private;
-	OVERLAPPED_K_INTERNAL OverlappedKs[0];
-} OVERLAPPED_K_POOL_USER, *POVERLAPPED_K_POOL_USER;
+	KOVL_OVERLAPPED_POOL_PRIVATE Private;
+	KOVL_OVERLAPPED_INTERNAL OverlappedKs[0];
+} KOVL_OVERLAPPED_POOL_USER, *PKOVL_OVERLAPPED_POOL_USER;
 #pragma warning(default:4200)
 
-typedef struct _OVERLAPPED_K_POOL_DEFAULT
+typedef struct _KOVL_OVERLAPPED_POOL_DEFAULT
 {
 	KUSB_USER_CONTEXT UserContext;
-	OVERLAPPED_K_POOL_PRIVATE Private;
-	OVERLAPPED_K_INTERNAL OverlappedKs[DEFAULT_POOL_MAX_COUNT];
-} OVERLAPPED_K_POOL_DEFAULT, *POVERLAPPED_K_POOL_DEFAULT;
-C_ASSERT(sizeof(OVERLAPPED_K_POOL_DEFAULT) == CALC_POOL_SIZE(DEFAULT_POOL_MAX_COUNT));
+	KOVL_OVERLAPPED_POOL_PRIVATE Private;
+	KOVL_OVERLAPPED_INTERNAL OverlappedKs[KOVL_MAX_DEFAULT_POOL_COUNT];
+} KOVL_OVERLAPPED_POOL_DEFAULT, *PKOVL_OVERLAPPED_POOL_DEFAULT;
+C_ASSERT(sizeof(KOVL_OVERLAPPED_POOL_DEFAULT) == CALC_POOL_SIZE(KOVL_MAX_DEFAULT_POOL_COUNT));
 
 static volatile BOOL IsDefaultPoolInitialized = FALSE;
 static volatile long DefaultPoolInitCount = 0;
-static OVERLAPPED_K_POOL_DEFAULT DefaultPool;
+static KOVL_OVERLAPPED_POOL_DEFAULT DefaultPool;
 
 BOOL k_InitPool(
-    __in POVERLAPPED_K_POOL_USER Pool,
+    __in PKOVL_OVERLAPPED_POOL_USER Pool,
     __in ULONG PoolSize,
     __in USHORT MaxOverlappedCount)
 {
@@ -122,7 +122,7 @@ BOOL k_InitPool(
 	for (overlappedPos = 0; overlappedPos < MaxOverlappedCount; overlappedPos++)
 	{
 		Pool->OverlappedKs[overlappedPos].Pool = Pool;
-		Pool->OverlappedKs[overlappedPos].ReUseLink.Overlapped = (POVERLAPPED_K)&Pool->OverlappedKs[overlappedPos];
+		Pool->OverlappedKs[overlappedPos].ReUseLink.Overlapped = (PKOVL_OVERLAPPED)&Pool->OverlappedKs[overlappedPos];
 		Pool->OverlappedKs[overlappedPos].IsReUsableLock = 0;
 	}
 
@@ -133,22 +133,22 @@ BOOL k_InitPool(
 
 
 
-KUSB_EXP POVERLAPPED_K KUSB_API OvlK_Acquire(
-    __in_opt POVERLAPPED_K_POOL Pool)
+KUSB_EXP PKOVL_OVERLAPPED KUSB_API OvlK_Acquire(
+    __in_opt PKOVL_OVERLAPPED_POOL Pool)
 {
 	ULONG count = 0;
-	POVERLAPPED_K_INTERNAL next = NULL;
-	POVERLAPPED_K_POOL_USER pool = (POVERLAPPED_K_POOL_USER)Pool;
+	PKOVL_OVERLAPPED_INTERNAL next = NULL;
+	PKOVL_OVERLAPPED_POOL_USER pool = (PKOVL_OVERLAPPED_POOL_USER)Pool;
 
 	CheckLibInitialized();
 
 	if (!pool)
-		pool = (POVERLAPPED_K_POOL_USER)&DefaultPool;
+		pool = (PKOVL_OVERLAPPED_POOL_USER)&DefaultPool;
 
 Retry:
 	if (pool->Private.ReUseList)
 	{
-		POVERLAPPED_K_EL oldest;
+		PKOVL_OVERLAPPED_EL oldest;
 
 		// ACQUIRE the POOL lock
 		SpinLock_Acquire(&pool->Private.BusyCount, TRUE);
@@ -156,7 +156,7 @@ Retry:
 		if ((oldest = pool->Private.ReUseList) != NULL)
 		{
 			// We can use a refurbished one.
-			next = (POVERLAPPED_K_INTERNAL)oldest->Overlapped;
+			next = (PKOVL_OVERLAPPED_INTERNAL)oldest->Overlapped;
 			if (next)
 			{
 				DL_DELETE(pool->Private.ReUseList, oldest);
@@ -205,19 +205,19 @@ Retry:
 
 
 Success:
-	OvlK_ReUse((POVERLAPPED_K)next);
-	return (POVERLAPPED_K)next;
+	OvlK_ReUse((PKOVL_OVERLAPPED)next);
+	return (PKOVL_OVERLAPPED)next;
 }
 
 KUSB_EXP BOOL KUSB_API OvlK_Release(
-    __in POVERLAPPED_K OverlappedK)
+    __in PKOVL_OVERLAPPED OverlappedK)
 {
-	POVERLAPPED_K_INTERNAL overlapped = (POVERLAPPED_K_INTERNAL)OverlappedK;
-	POVERLAPPED_K_POOL_USER pool;
+	PKOVL_OVERLAPPED_INTERNAL overlapped = (PKOVL_OVERLAPPED_INTERNAL)OverlappedK;
+	PKOVL_OVERLAPPED_POOL_USER pool;
 
 	ErrorHandle(!overlapped, Error, "OverlappedK");
 
-	pool = (POVERLAPPED_K_POOL_USER)overlapped->Pool;
+	pool = (PKOVL_OVERLAPPED_POOL_USER)overlapped->Pool;
 
 	// increment the usgae lock, but decrement, fail, and return if it's new count < 2
 	LockOnInUseOverlapped(overlapped, FALSE);
@@ -245,13 +245,13 @@ Error:
 }
 
 KUSB_EXP BOOL KUSB_API OvlK_DestroyPool(
-    __in POVERLAPPED_K_POOL Pool)
+    __in PKOVL_OVERLAPPED_POOL Pool)
 {
-	POVERLAPPED_K_POOL_USER pool = (POVERLAPPED_K_POOL_USER)Pool;
+	PKOVL_OVERLAPPED_POOL_USER pool = (PKOVL_OVERLAPPED_POOL_USER)Pool;
 	ULONG pos;
 	ErrorHandle(!Pool, Error, "Pool");
 
-	if (pool == (POVERLAPPED_K_POOL_USER)&DefaultPool)
+	if (pool == (PKOVL_OVERLAPPED_POOL_USER)&DefaultPool)
 		IsDefaultPoolInitialized = FALSE;
 
 	// ACQUIRE the POOL lock
@@ -268,7 +268,7 @@ KUSB_EXP BOOL KUSB_API OvlK_DestroyPool(
 		}
 	}
 
-	if (pool != (POVERLAPPED_K_POOL_USER)&DefaultPool)
+	if (pool != (PKOVL_OVERLAPPED_POOL_USER)&DefaultPool)
 	{
 		Mem_Free(&pool);
 	}
@@ -288,10 +288,10 @@ KUSB_EXP BOOL KUSB_API OvlK_DestroyDefaultPool()
 	return OvlK_DestroyPool(&DefaultPool);
 }
 
-KUSB_EXP POVERLAPPED_K_POOL KUSB_API OvlK_CreatePool(
+KUSB_EXP PKOVL_OVERLAPPED_POOL KUSB_API OvlK_CreatePool(
     __in USHORT MaxOverlappedCount)
 {
-	POVERLAPPED_K_POOL_USER pool = NULL;
+	PKOVL_OVERLAPPED_POOL_USER pool = NULL;
 	ULONG poolSize;
 	BOOL success = TRUE;
 
@@ -316,7 +316,7 @@ Error:
 }
 
 
-KUSB_EXP POVERLAPPED_K_POOL KUSB_API OvlK_CreateDefaultPool()
+KUSB_EXP PKOVL_OVERLAPPED_POOL KUSB_API OvlK_CreateDefaultPool()
 {
 	long lockCount;
 	while(!IsDefaultPoolInitialized)
@@ -324,7 +324,7 @@ KUSB_EXP POVERLAPPED_K_POOL KUSB_API OvlK_CreateDefaultPool()
 		if ((lockCount = IncLock(DefaultPoolInitCount)) == 1)
 		{
 			// init default pool.
-			k_InitPool((POVERLAPPED_K_POOL_USER)&DefaultPool, sizeof(DefaultPool), DEFAULT_POOL_MAX_COUNT);
+			k_InitPool((PKOVL_OVERLAPPED_POOL_USER)&DefaultPool, sizeof(DefaultPool), KOVL_MAX_DEFAULT_POOL_COUNT);
 			IsDefaultPoolInitialized = TRUE;
 			USBDBG(
 			    "Memory Usage:\r\n"
@@ -345,9 +345,9 @@ KUSB_EXP POVERLAPPED_K_POOL KUSB_API OvlK_CreateDefaultPool()
 }
 
 KUSB_EXP HANDLE KUSB_API OvlK_GetEventHandle(
-    __in POVERLAPPED_K OverlappedK)
+    __in PKOVL_OVERLAPPED OverlappedK)
 {
-	POVERLAPPED_K_INTERNAL overlapped = (POVERLAPPED_K_INTERNAL)OverlappedK;
+	PKOVL_OVERLAPPED_INTERNAL overlapped = (PKOVL_OVERLAPPED_INTERNAL)OverlappedK;
 	ErrorHandle(!overlapped, Error, "OverlappedK");
 
 	return overlapped->Overlapped.hEvent;
@@ -355,10 +355,10 @@ Error:
 	return FALSE;
 }
 
-KUSB_EXP POVERLAPPED_K_INFO KUSB_API OvlK_GetInfo(
-    __in POVERLAPPED_K OverlappedK)
+KUSB_EXP PKOVL_OVERLAPPED_INFO KUSB_API OvlK_GetInfo(
+    __in PKOVL_OVERLAPPED OverlappedK)
 {
-	POVERLAPPED_K_INTERNAL overlapped = (POVERLAPPED_K_INTERNAL)OverlappedK;
+	PKOVL_OVERLAPPED_INTERNAL overlapped = (PKOVL_OVERLAPPED_INTERNAL)OverlappedK;
 	ErrorHandle(!overlapped, Error, "OverlappedK");
 
 	return &overlapped->Private;
@@ -367,9 +367,9 @@ Error:
 }
 
 KUSB_EXP PKUSB_USER_CONTEXT KUSB_API OvlK_GetContext(
-    __in POVERLAPPED_K OverlappedK)
+    __in PKOVL_OVERLAPPED OverlappedK)
 {
-	POVERLAPPED_K_INTERNAL overlapped = (POVERLAPPED_K_INTERNAL)OverlappedK;
+	PKOVL_OVERLAPPED_INTERNAL overlapped = (PKOVL_OVERLAPPED_INTERNAL)OverlappedK;
 	ErrorHandle(!overlapped, Error, "OverlappedK");
 
 	return &overlapped->UserContext;
@@ -378,23 +378,23 @@ Error:
 }
 
 KUSB_EXP PKUSB_USER_CONTEXT KUSB_API OvlK_GetPoolContext(
-    __in_opt POVERLAPPED_K_POOL Pool)
+    __in_opt PKOVL_OVERLAPPED_POOL Pool)
 {
-	POVERLAPPED_K_POOL_USER pool = (POVERLAPPED_K_POOL_USER)Pool;
+	PKOVL_OVERLAPPED_POOL_USER pool = (PKOVL_OVERLAPPED_POOL_USER)Pool;
 	CheckLibInitialized();
 	if (!pool)
-		pool = (POVERLAPPED_K_POOL_USER)&DefaultPool;
+		pool = (PKOVL_OVERLAPPED_POOL_USER)&DefaultPool;
 
 	return &pool->UserContext;
 }
 
 KUSB_EXP BOOL KUSB_API OvlK_Wait(
-    __in POVERLAPPED_K OverlappedK,
+    __in PKOVL_OVERLAPPED OverlappedK,
     __in_opt DWORD TimeoutMS,
-    __in_opt OVERLAPPEDK_WAIT_FLAGS WaitFlags,
+    __in_opt KOVL_WAIT_FLAGS WaitFlags,
     __out PULONG TransferredLength)
 {
-	POVERLAPPED_K_INTERNAL overlapped = (POVERLAPPED_K_INTERNAL)OverlappedK;
+	PKOVL_OVERLAPPED_INTERNAL overlapped = (PKOVL_OVERLAPPED_INTERNAL)OverlappedK;
 	DWORD wait;
 	DWORD errorCode = ERROR_SUCCESS;
 	BOOL success;
@@ -455,7 +455,7 @@ Error:
 }
 
 KUSB_EXP BOOL KUSB_API OvlK_WaitOrCancel(
-    __in POVERLAPPED_K OverlappedK,
+    __in PKOVL_OVERLAPPED OverlappedK,
     __in_opt DWORD TimeoutMS,
     __out PULONG TransferredLength)
 {
@@ -463,7 +463,7 @@ KUSB_EXP BOOL KUSB_API OvlK_WaitOrCancel(
 }
 
 KUSB_EXP BOOL KUSB_API OvlK_WaitAndRelease(
-    __in POVERLAPPED_K OverlappedK,
+    __in PKOVL_OVERLAPPED OverlappedK,
     __in_opt DWORD TimeoutMS,
     __out PULONG TransferredLength)
 {
@@ -471,23 +471,23 @@ KUSB_EXP BOOL KUSB_API OvlK_WaitAndRelease(
 }
 
 KUSB_EXP BOOL KUSB_API OvlK_IsComplete(
-    __in POVERLAPPED_K OverlappedK)
+    __in PKOVL_OVERLAPPED OverlappedK)
 {
-	return WaitForSingleObject(((POVERLAPPED_K_INTERNAL)OverlappedK)->Overlapped.hEvent, 0) != WAIT_TIMEOUT;
+	return WaitForSingleObject(((PKOVL_OVERLAPPED_INTERNAL)OverlappedK)->Overlapped.hEvent, 0) != WAIT_TIMEOUT;
 }
 
 KUSB_EXP BOOL KUSB_API KUSB_API OvlK_ReUse(
-    __in POVERLAPPED_K OverlappedK)
+    __in PKOVL_OVERLAPPED OverlappedK)
 {
-	POVERLAPPED_K_INTERNAL overlapped = (POVERLAPPED_K_INTERNAL)OverlappedK;
-	POVERLAPPED_K_POOL_USER pool;
+	PKOVL_OVERLAPPED_INTERNAL overlapped = (PKOVL_OVERLAPPED_INTERNAL)OverlappedK;
+	PKOVL_OVERLAPPED_POOL_USER pool;
 
 	ErrorHandle(!overlapped, Error, "OverlappedK");
 
 	// make sure this this overlapped is in-use.
 	LockOnInUseOverlapped(overlapped, FALSE);
 
-	pool = (POVERLAPPED_K_POOL_USER)overlapped->Pool;
+	pool = (PKOVL_OVERLAPPED_POOL_USER)overlapped->Pool;
 
 	// create/reuse the event
 	if (!IsHandleValid(overlapped->Overlapped.hEvent))

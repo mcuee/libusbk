@@ -363,4 +363,6 @@ The libusbK library documentation is divided into the following sections:
   <HR>
 - \copybrief ovlk
   <HR>
+- \copybrief isok
+  <HR>
 */

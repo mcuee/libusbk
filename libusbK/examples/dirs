@@ -2,11 +2,14 @@ DIRS= \
      config-interface \
      config-pipe \
      config-power \
+     hot-plug-monitor \
      load-driver-api \
      open-device \
      show-device \
      xfer-async-rw \
      xfer-control \
+     xfer-iso \
+     xfer-queued-iso \
      xfer-stream-r \
      xfer-stream-rw \
      xfer-stream-w \

@@ -9,6 +9,7 @@
 #include <objbase.h>
 #include "lusbk_common.h"
 #include "lusbk_device_list.h"
+#include "lusbk_usb_iso.h"
 
 /*! \addtogroup drvk
 * @{
@@ -277,11 +278,11 @@ typedef struct _KUSB_DRIVER_API
 	*/
 	BOOL (KUSB_API* ResetDevice)			(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle);
 	/*!
-	* \fn Open(__in PKUSB_DEV_INFO DeviceListItem, __out PLIBUSBK_INTERFACE_HANDLE InterfaceHandle);
+	* \fn Open(__in PKLST_DEV_INFO DeviceListItem, __out PLIBUSBK_INTERFACE_HANDLE InterfaceHandle);
 	* \brief Driver specific function pointer to \ref UsbK_Open
 	* \memberof KUSB_DRIVER_API
 	*/
-	BOOL (KUSB_API* Open)					(__in PKUSB_DEV_INFO DeviceListItem, __out PLIBUSBK_INTERFACE_HANDLE InterfaceHandle);
+	BOOL (KUSB_API* Open)					(__in PKLST_DEV_INFO DeviceListItem, __out PLIBUSBK_INTERFACE_HANDLE InterfaceHandle);
 	/*!
 	* \fn Close(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle);
 	* \brief Driver specific function pointer to \ref UsbK_Close
@@ -325,19 +326,19 @@ typedef struct _KUSB_DRIVER_API
 	*/
 	BOOL (KUSB_API* GetAltInterface)		(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR InterfaceNumberOrIndex, __in BOOL IsIndex, __out PUCHAR AltInterfaceNumber);
 	/*!
-	* \fn IsoReadPipe(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __inout PKUSB_ISO_CONTEXT IsoContext, __out_opt PUCHAR Buffer, __in ULONG BufferLength, __in LPOVERLAPPED Overlapped);
+	* \fn IsoReadPipe(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __inout PKISO_CONTEXT IsoContext, __out_opt PUCHAR Buffer, __in ULONG BufferLength, __in LPOVERLAPPED Overlapped);
 	* \brief Driver specific function pointer to \ref UsbK_IsoReadPipe
 	* \memberof KUSB_DRIVER_API
 	*/
-	BOOL (KUSB_API* IsoReadPipe)			(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __inout PKUSB_ISO_CONTEXT IsoContext, __out_opt PUCHAR Buffer, __in ULONG BufferLength, __in LPOVERLAPPED Overlapped);
+	BOOL (KUSB_API* IsoReadPipe)			(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __inout PKISO_CONTEXT IsoContext, __out_opt PUCHAR Buffer, __in ULONG BufferLength, __in LPOVERLAPPED Overlapped);
 	/*!
-	* \fn IsoWritePipe(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __inout PKUSB_ISO_CONTEXT IsoContext, __in PUCHAR Buffer, __in ULONG BufferLength, __in LPOVERLAPPED Overlapped);
+	* \fn IsoWritePipe(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __inout PKISO_CONTEXT IsoContext, __in PUCHAR Buffer, __in ULONG BufferLength, __in LPOVERLAPPED Overlapped);
 	* \brief Driver specific function pointer to \ref UsbK_IsoWritePipe
 	* \memberof KUSB_DRIVER_API
 	*/
-	BOOL (KUSB_API* IsoWritePipe)			(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __inout PKUSB_ISO_CONTEXT IsoContext, __in PUCHAR Buffer, __in ULONG BufferLength, __in LPOVERLAPPED Overlapped);
+	BOOL (KUSB_API* IsoWritePipe)			(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __inout PKISO_CONTEXT IsoContext, __in PUCHAR Buffer, __in ULONG BufferLength, __in LPOVERLAPPED Overlapped);
 	/*!
-	* \fn IsoWritePipe(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __inout PKUSB_ISO_CONTEXT IsoContext, __in PUCHAR Buffer, __in ULONG BufferLength, __in LPOVERLAPPED Overlapped);
+	* \fn IsoWritePipe(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __inout PKISO_CONTEXT IsoContext, __in PUCHAR Buffer, __in ULONG BufferLength, __in LPOVERLAPPED Overlapped);
 	* \brief Driver specific function pointer to \ref UsbK_IsoWritePipe
 	* \memberof KUSB_DRIVER_API
 	*/
@@ -463,7 +464,7 @@ typedef BOOL KUSB_API KUSB_ResetDevice (
     __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle);
 
 typedef BOOL KUSB_API KUSB_Open (
-    __in PKUSB_DEV_INFO DeviceListItem,
+    __in PKLST_DEV_INFO DeviceListItem,
     __out PLIBUSBK_INTERFACE_HANDLE InterfaceHandle);
 
 typedef BOOL KUSB_API KUSB_Close (
@@ -501,14 +502,14 @@ typedef BOOL KUSB_API KUSB_GetAltInterface (
 
 typedef BOOL KUSB_API KUSB_IsoReadPipe (
     __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __inout PKUSB_ISO_CONTEXT IsoContext,
+    __inout PKISO_CONTEXT IsoContext,
     __out_opt PUCHAR Buffer,
     __in ULONG BufferLength,
     __in LPOVERLAPPED Overlapped);
 
 typedef BOOL KUSB_API KUSB_IsoWritePipe (
     __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __inout PKUSB_ISO_CONTEXT IsoContext,
+    __inout PKISO_CONTEXT IsoContext,
     __in PUCHAR Buffer,
     __in ULONG BufferLength,
     __in LPOVERLAPPED Overlapped);

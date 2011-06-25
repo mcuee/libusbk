@@ -19,16 +19,16 @@ binary distributions.
 #include "lusbk_private.h"
 
 KUSB_EXP BOOL KUSB_API IsoK_Init (
-    __deref_out PKUSB_ISO_CONTEXT* IsoContext,
+    __deref_out PKISO_CONTEXT* IsoContext,
     __in ULONG NumberOfPackets,
     __in_opt UCHAR PipeID,
     __in_opt ULONG StartFrame)
 {
-	PKUSB_ISO_CONTEXT isoCtx = NULL;
+	PKISO_CONTEXT isoCtx = NULL;
 
 	ErrorHandle(!IsHandleValid(IsoContext), Error, "IsoContext");
 
-	isoCtx = Mem_Alloc(sizeof(KUSB_ISO_CONTEXT) + sizeof(KUSB_ISO_PACKET) * NumberOfPackets);
+	isoCtx = Mem_Alloc(sizeof(KISO_CONTEXT) + sizeof(KISO_PACKET) * NumberOfPackets);
 	if (!isoCtx)
 	{
 		ErrorMemory(!IsHandleValid(isoCtx), Error);
@@ -50,7 +50,7 @@ Error:
 }
 
 KUSB_EXP BOOL KUSB_API IsoK_Free(
-    __deref_inout PKUSB_ISO_CONTEXT* IsoContext)
+    __deref_inout PKISO_CONTEXT* IsoContext)
 {
 	ErrorHandle(!IsHandleValid(IsoContext), Error, "IsoContext");
 	ErrorHandle(!IsHandleValid(*IsoContext), Error, "IsoContext");
@@ -63,7 +63,7 @@ Error:
 }
 
 KUSB_EXP BOOL KUSB_API IsoK_SetPackets(
-    __inout PKUSB_ISO_CONTEXT IsoContext,
+    __inout PKISO_CONTEXT IsoContext,
     __in ULONG PacketSize)
 {
 	ULONG packetIndex;
@@ -84,9 +84,9 @@ Error:
 
 
 KUSB_EXP BOOL KUSB_API IsoK_SetPacket(
-    __in PKUSB_ISO_CONTEXT IsoContext,
+    __in PKISO_CONTEXT IsoContext,
     __in ULONG PacketIndex,
-    __in PKUSB_ISO_PACKET IsoPacket)
+    __in PKISO_PACKET IsoPacket)
 {
 	ErrorHandle(!IsHandleValid(IsoContext), Error, "IsoContext");
 	ErrorParam(PacketIndex >= IsoContext->NumberOfPackets, Error, "PacketIndex");
@@ -101,9 +101,9 @@ Error:
 
 
 KUSB_EXP BOOL KUSB_API IsoK_GetPacket(
-    __in PKUSB_ISO_CONTEXT IsoContext,
+    __in PKISO_CONTEXT IsoContext,
     __in ULONG PacketIndex,
-    __out PKUSB_ISO_PACKET IsoPacket)
+    __out PKISO_PACKET IsoPacket)
 {
 	ErrorHandle(!IsHandleValid(IsoContext), Error, "IsoContext");
 	ErrorParam(PacketIndex >= IsoContext->NumberOfPackets, Error, "PacketIndex");
@@ -117,8 +117,8 @@ Error:
 
 
 KUSB_EXP BOOL KUSB_API IsoK_EnumPackets(
-    __in PKUSB_ISO_CONTEXT IsoContext,
-    __in ISO_ENUM_PACKETS_CB* EnumPackets,
+    __in PKISO_CONTEXT IsoContext,
+    __in PKISO_PACKETS_ENUM_CB EnumPackets,
     __in_opt ULONG StartPacketIndex,
     __in_opt PVOID UserContext)
 {
@@ -138,8 +138,8 @@ Error:
 }
 
 
-KUSB_EXP BOOL KUSB_API IsoK_Reuse(
-    __inout PKUSB_ISO_CONTEXT IsoContext)
+KUSB_EXP BOOL KUSB_API IsoK_ReUse(
+    __inout PKISO_CONTEXT IsoContext)
 {
 	ULONG packetIndex;
 

@@ -108,8 +108,8 @@ typedef struct _BENCHMARK_TEST_PARAM
 
 	// Internal value use during the test.
 	//
-	PKUSB_DEV_LIST DeviceList;
-	PKUSB_DEV_INFO SelectedDeviceProfile;
+	PKLST_HANDLE DeviceList;
+	PKLST_DEV_INFO SelectedDeviceProfile;
 	HANDLE DeviceHandle;
 	LIBUSBK_INTERFACE_HANDLE InterfaceHandle;
 	USB_DEVICE_DESCRIPTOR DeviceDescriptor;
@@ -271,7 +271,7 @@ BOOL Bench_Open(__in PBENCHMARK_TEST_PARAM test)
 	UCHAR altSetting;
 	LIBUSBK_INTERFACE_HANDLE associatedHandle;
 	ULONG transferred;
-	PKUSB_DEV_INFO deviceInfo;
+	PKLST_DEV_INFO deviceInfo;
 
 	test->SelectedDeviceProfile = NULL;
 
@@ -1363,7 +1363,7 @@ void ResetRunningStatus(PBENCHMARK_TRANSFER_PARAM transferParam)
 int GetTestDeviceFromArgs(PBENCHMARK_TEST_PARAM test)
 {
 	CHAR id[MAX_PATH];
-	PKUSB_DEV_INFO deviceInfo = NULL;
+	PKLST_DEV_INFO deviceInfo = NULL;
 
 	LstK_Reset(test->DeviceList);
 
@@ -1398,7 +1398,7 @@ int GetTestDeviceFromList(PBENCHMARK_TEST_PARAM test)
 {
 	UCHAR selection;
 	UCHAR count = 0;
-	PKUSB_DEV_INFO deviceInfo = NULL;
+	PKLST_DEV_INFO deviceInfo = NULL;
 
 	LstK_Reset(test->DeviceList);
 
@@ -1459,9 +1459,10 @@ int __cdecl main(int argc, char** argv)
 	BENCHMARK_TEST_PARAM Test;
 	PBENCHMARK_TRANSFER_PARAM ReadTest	= NULL;
 	PBENCHMARK_TRANSFER_PARAM WriteTest	= NULL;
-	KUSB_DEV_LIST_INIT_PARAMS searchParams = {0};
+	KLST_INIT_PARAMS searchParams = {0};
 	int key;
 	LONG ec;
+	ULONG count;
 
 
 	if (argc == 1)
@@ -1492,7 +1493,10 @@ int __cdecl main(int argc, char** argv)
 		CONERR("failed getting device list ec=%08Xh\n", ec);
 		goto Done;
 	}
-	if (!Test.DeviceList->DeviceCount)
+
+	count = 0;
+	LstK_Count(Test.DeviceList, &count);
+	if (!count)
 	{
 		CONERR("device list empty.\n");
 		goto Done;
@@ -1500,11 +1504,11 @@ int __cdecl main(int argc, char** argv)
 
 	if (Test.ListDevicesOnly)
 	{
-		CONMSG("CurrentProcessId=%u Count=%d\n", GetCurrentProcessId(), Test.DeviceList->DeviceCount);
+		CONMSG("CurrentProcessId=%u Count=%d\n", GetCurrentProcessId(), count);
 	}
 	else
 	{
-		CONMSG("device-count=%u\n", Test.DeviceList->DeviceCount);
+		CONMSG("device-count=%u\n", count);
 	}
 
 	if (Test.UseList)

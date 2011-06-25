@@ -1,6 +1,7 @@
 /*! \file drv_api.h
 */
 #include "lusbk_usbio.h"
+#include "lusbk_usb_iso.h"
 
 #ifndef __LIBUSBK_KUSB_DRIVER_API_H__
 #define __LIBUSBK_KUSB_DRIVER_API_H__
@@ -224,7 +225,7 @@ typedef struct
 		{
 			UCHAR PipeID;
 			ULONG IsoContextSize;
-			PKUSB_ISO_CONTEXT IsoContext;
+			PKISO_CONTEXT IsoContext;
 		} IsoEx;
 
 		struct

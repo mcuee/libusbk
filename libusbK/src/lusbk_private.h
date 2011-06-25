@@ -223,6 +223,7 @@ FORCEINLINE PVOID Mem_Max(__in_opt PVOID memory, __in size_t size)
 FORCEINLINE PVOID Mem_Alloc(__in size_t size)
 {
 	PVOID memory = malloc(size);
+	if (!memory) LusbwError(ERROR_NOT_ENOUGH_MEMORY);
 	return Mem_Zero(memory, size) ? memory : INVALID_HANDLE_VALUE;
 }
 

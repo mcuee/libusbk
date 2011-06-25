@@ -56,7 +56,7 @@ MY_XFER_EL represents a user defined doubly linked transfer context list.
 typedef struct _MY_XFER_EL
 {
 	// Stores the overlappedK pointer from OvlK_Acquire
-	POVERLAPPED_K Ovl;
+	PKOVL_OVERLAPPED Ovl;
 
 	// Physical data buffer.
 	UCHAR Buffer[XFER_LENGTH];
@@ -203,8 +203,8 @@ VOID Xfer_Recycle(MY_XFER_EL** WaitList, MY_XFER_EL** AvailList)
 
 DWORD __cdecl main(int argc, char* argv[])
 {
-	PKUSB_DEV_LIST deviceList = NULL;
-	PKUSB_DEV_INFO deviceInfo = NULL;
+	PKLST_HANDLE deviceList = NULL;
+	PKLST_DEV_INFO deviceInfo = NULL;
 	LIBUSBK_INTERFACE_HANDLE handle = NULL;
 	int i;
 

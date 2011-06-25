@@ -316,7 +316,7 @@ KUSB_EXP BOOL KUSB_API Hid_ResetDevice (
 }
 
 KUSB_EXP BOOL KUSB_API Hid_Open (
-    __in PKUSB_DEV_INFO DeviceListItem,
+    __in PKLST_DEV_INFO DeviceListItem,
     __out PLIBUSBK_INTERFACE_HANDLE InterfaceHandle)
 {
 	UNREFERENCED_PARAMETER(DeviceListItem);
@@ -415,7 +415,7 @@ KUSB_EXP BOOL KUSB_API Hid_GetAltInterface (
 
 KUSB_EXP BOOL KUSB_API Hid_IsoReadPipe (
     __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __inout PKUSB_ISO_CONTEXT IsoContext,
+    __inout PKISO_CONTEXT IsoContext,
     __out_opt PUCHAR Buffer,
     __in ULONG BufferLength,
     __in LPOVERLAPPED Overlapped)
@@ -432,7 +432,7 @@ KUSB_EXP BOOL KUSB_API Hid_IsoReadPipe (
 
 KUSB_EXP BOOL KUSB_API Hid_IsoWritePipe (
     __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __inout PKUSB_ISO_CONTEXT IsoContext,
+    __inout PKISO_CONTEXT IsoContext,
     __in PUCHAR Buffer,
     __in ULONG BufferLength,
     __in LPOVERLAPPED Overlapped)
