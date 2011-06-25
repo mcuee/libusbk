@@ -56,7 +56,7 @@
 
 /*! @} */
 
-/*! \addtogroup isok Isochronous context management API
+/*! \addtogroup isok Isochronous Management API
 * \brief \ref isok structs, typedefs, enums, defines, and functions for isochronous context management.
 *
 *  @{

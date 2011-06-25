@@ -99,7 +99,7 @@ typedef struct _WINUSB_API
 #define OVLK_CHECK(mOverlapped, mPipeID, mBuffer, mBufferLength, mDeviceHandle, mInterfaceHandle)				\
 	if (mOverlapped && mOverlapped == mOverlapped->Pointer)														\
 	{																											\
-		POVERLAPPED_K_INFO ovlkInfo = OvlK_GetInfo(mOverlapped);												\
+		PKOVL_OVERLAPPED_INFO ovlkInfo = OvlK_GetInfo(mOverlapped);												\
 		mOverlapped->Pointer = NULL;																			\
 																												\
 		ovlkInfo->DataBuffer = mBuffer;																			\
@@ -113,7 +113,7 @@ typedef struct _WINUSB_API
 #define OVLK_CHECK_CONTROL(mOverlapped, mBuffer, mBufferLength, mDeviceHandle, mInterfaceHandle)				\
 	if (mOverlapped && mOverlapped == mOverlapped->Pointer)														\
 	{																											\
-		POVERLAPPED_K_INFO ovlkInfo = OvlK_GetInfo(mOverlapped);												\
+		PKOVL_OVERLAPPED_INFO ovlkInfo = OvlK_GetInfo(mOverlapped);												\
 		mOverlapped->Pointer = NULL;																			\
 																												\
 		ovlkInfo->DataBuffer = mBuffer;																			\
@@ -388,10 +388,10 @@ BOOL w_ClaimOrReleaseInterface(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
 	return LusbwError(action);
 }
 
-static BOOL KUSB_API w_CancelOverlappedK(__in POVERLAPPED_K Overlapped)
+static BOOL KUSB_API w_CancelOverlappedK(__in PKOVL_OVERLAPPED Overlapped)
 {
 	BOOL success;
-	POVERLAPPED_K_INFO ovInfo = OvlK_GetInfo(Overlapped);
+	PKOVL_OVERLAPPED_INFO ovInfo = OvlK_GetInfo(Overlapped);
 	if (Opt_CancelIoEx)
 	{
 		success = Opt_CancelIoEx(ovInfo->DeviceHandle, Overlapped);
@@ -404,10 +404,10 @@ static BOOL KUSB_API w_CancelOverlappedK(__in POVERLAPPED_K Overlapped)
 	return success;
 }
 
-static BOOL KUSB_API w_CancelOverlappedK_Control(__in POVERLAPPED_K Overlapped)
+static BOOL KUSB_API w_CancelOverlappedK_Control(__in PKOVL_OVERLAPPED Overlapped)
 {
 	BOOL success;
-	POVERLAPPED_K_INFO ovInfo = OvlK_GetInfo(Overlapped);
+	PKOVL_OVERLAPPED_INFO ovInfo = OvlK_GetInfo(Overlapped);
 	if (Opt_CancelIoEx)
 	{
 		success = Opt_CancelIoEx(ovInfo->DeviceHandle, Overlapped);
@@ -961,8 +961,8 @@ KUSB_EXP BOOL KUSB_API WUsb_GetOverlappedResult (
 	return UsbK_GetOverlappedResult(InterfaceHandle, lpOverlapped, lpNumberOfBytesTransferred, bWait);
 }
 
-BOOL KUSB_API w_AddDeviceToStackCB(__in PKUSB_DEV_LIST List,
-                                   __in PKUSB_DEV_INFO Item,
+BOOL KUSB_API w_AddDeviceToStackCB(__in PKLST_HANDLE List,
+                                   __in PKLST_DEV_INFO Item,
                                    __in PWINUSB_BKND_CONTEXT BackendContext)
 {
 	BOOL success;
@@ -985,7 +985,7 @@ BOOL KUSB_API w_AddDeviceToStackCB(__in PKUSB_DEV_LIST List,
 }
 
 KUSB_EXP BOOL KUSB_API WUsb_Open(
-    __in PKUSB_DEV_INFO DeviceListItem,
+    __in PKLST_DEV_INFO DeviceListItem,
     __out PLIBUSBK_INTERFACE_HANDLE InterfaceHandle)
 {
 	BOOL success;
@@ -1170,7 +1170,7 @@ BOOL KUSB_API WUsb_ResetDevice (
 
 BOOL KUSB_API WUsb_IsoReadPipe (
     __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __inout PKUSB_ISO_CONTEXT IsoContext,
+    __inout PKISO_CONTEXT IsoContext,
     __out_opt PUCHAR Buffer,
     __in ULONG BufferLength,
     __in LPOVERLAPPED Overlapped)
@@ -1187,7 +1187,7 @@ BOOL KUSB_API WUsb_IsoReadPipe (
 
 BOOL KUSB_API WUsb_IsoWritePipe (
     __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __inout PKUSB_ISO_CONTEXT IsoContext,
+    __inout PKISO_CONTEXT IsoContext,
     __in PUCHAR Buffer,
     __in ULONG BufferLength,
     __in LPOVERLAPPED Overlapped)

@@ -12,10 +12,12 @@
 #include <objbase.h>
 #include "lusbk_common.h"
 #include "lusbk_usbio.h"
+#include "lusbk_usb_iso.h"
 #include "lusbk_dynamic.h"
 #include "lusbk_linked_list.h"
 #include "lusbk_device_list.h"
 #include "lusbk_overlapped.h"
+#include "lusbk_hot_plug.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,14 +45,14 @@ extern "C" {
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*
 	* \ref UsbK_Open performs the same tasks as \ref UsbK_Initialize with the following exceptions:
-	* - Uses a \ref KUSB_DEV_INFO instead of a file handle created with the Windows CreateFile() API function.
+	* - Uses a \ref KLST_DEV_INFO instead of a file handle created with the Windows CreateFile() API function.
 	* - File handles are managed internally and are closed when the last \ref LIBUSBK_INTERFACE_HANDLE is
 	*   closed with \ref UsbK_Close.
 	* - If \c DeviceListItem is a composite device, multiple device file handles are managed as one.
 	*
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_Open (
-	    __in PKUSB_DEV_INFO DeviceListItem,
+	    __in PKLST_DEV_INFO DeviceListItem,
 	    __out PLIBUSBK_INTERFACE_HANDLE InterfaceHandle);
 
 //! Closes a libusbK interface handle opened by \ref UsbK_Open or \ref UsbK_Initialize. This is a perferred method.
@@ -951,7 +953,7 @@ extern "C" {
 	*
 	* \param Overlapped
 	* An optional pointer to an overlapped structure for asynchronous
-	* operations. This can be a \ref POVERLAPPED_K or a pointer to a standard
+	* operations. This can be a \ref PKOVL_OVERLAPPED or a pointer to a standard
 	* windows OVERLAPPED structure. If this parameter is specified, \c
 	* UsbK_ReadPipe returns immediately rather than waiting synchronously for
 	* the operation to complete before returning. An event is signaled when
@@ -994,7 +996,7 @@ extern "C" {
 	*
 	* \param Overlapped
 	* An optional pointer to an overlapped structure for asynchronous
-	* operations. This can be a \ref POVERLAPPED_K or a pointer to a standard
+	* operations. This can be a \ref PKOVL_OVERLAPPED or a pointer to a standard
 	* windows OVERLAPPED structure. If this parameter is specified, \c
 	* UsbK_WritePipe returns immediately rather than waiting synchronously for
 	* the operation to complete before returning. An event is signaled when
@@ -1092,7 +1094,7 @@ extern "C" {
 	*
 	* \param Overlapped
 	* A \b required pointer to an overlapped structure for asynchronous
-	* operations. This can be a \ref POVERLAPPED_K or a pointer to a standard
+	* operations. This can be a \ref PKOVL_OVERLAPPED or a pointer to a standard
 	* windows OVERLAPPED structure. If this parameter is specified, \c
 	* UsbK_IsoReadPipe returns immediately rather than waiting synchronously for
 	* the operation to complete before returning. An event is signaled when
@@ -1111,7 +1113,7 @@ extern "C" {
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_IsoReadPipe (
 	    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-	    __inout PKUSB_ISO_CONTEXT IsoContext,
+	    __inout PKISO_CONTEXT IsoContext,
 	    __out_opt PUCHAR Buffer,
 	    __in ULONG BufferLength,
 	    __in LPOVERLAPPED Overlapped);
@@ -1137,7 +1139,7 @@ extern "C" {
 	*
 	* \param Overlapped
 	* An optional pointer to an overlapped structure for asynchronous
-	* operations. This can be a \ref POVERLAPPED_K or a pointer to a standard
+	* operations. This can be a \ref PKOVL_OVERLAPPED or a pointer to a standard
 	* windows OVERLAPPED structure. If this parameter is specified, \c
 	* UsbK_IsoWritePipe returns immediately rather than waiting synchronously for
 	* the operation to complete before returning. An event is signaled when
@@ -1150,7 +1152,7 @@ extern "C" {
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_IsoWritePipe (
 	    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-	    __inout PKUSB_ISO_CONTEXT IsoContext,
+	    __inout PKISO_CONTEXT IsoContext,
 	    __in PUCHAR Buffer,
 	    __in ULONG BufferLength,
 	    __in LPOVERLAPPED Overlapped);
@@ -1247,108 +1249,6 @@ extern "C" {
 	    __in LPOVERLAPPED lpOverlapped,
 	    __out LPDWORD lpNumberOfBytesTransferred,
 	    __in BOOL bWait);
-
-	/*! @} */
-
-	/*! \addtogroup isok
-	*  @{
-	*/
-
-//! Creates a new isochronous transfer context.
-	/*!
-	* \param IsoContext
-	*
-	* \param NumberOfPackets
-	*
-	* \param PipeID
-	*
-	* \param StartFrame
-	*
-	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
-	*/
-	KUSB_EXP BOOL KUSB_API IsoK_Init (
-	    __deref_out PKUSB_ISO_CONTEXT* IsoContext,
-	    __in ULONG NumberOfPackets,
-	    __in_opt UCHAR PipeID,
-	    __in_opt ULONG StartFrame);
-
-//! Destroys an isochronous transfer context.
-	/*!
-	* \param IsoContext
-	*
-	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
-	*/
-	KUSB_EXP BOOL KUSB_API IsoK_Free(
-	    __deref_inout PKUSB_ISO_CONTEXT* IsoContext);
-
-//! Convenience function for setting the offset of all iso packets of an isochronous transfer context.
-	/*!
-	* \param IsoContext
-	*
-	* \param PacketSize
-	*
-	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
-	*/
-	KUSB_EXP BOOL KUSB_API IsoK_SetPackets(
-	    __inout PKUSB_ISO_CONTEXT IsoContext,
-	    __in ULONG PacketSize);
-
-//! Convenience function for setting all fields of a \ref KUSB_ISO_PACKET.
-	/*!
-	* \param IsoContext
-	*
-	* \param PacketIndex
-	*
-	* \param IsoPacket
-	*
-	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
-	*/
-	KUSB_EXP BOOL KUSB_API IsoK_SetPacket(
-	    __in PKUSB_ISO_CONTEXT IsoContext,
-	    __in ULONG PacketIndex,
-	    __in PKUSB_ISO_PACKET IsoPacket);
-
-//! Convenience function for returning allfields of a \ref KUSB_ISO_PACKET.
-	/*!
-	* \param IsoContext
-	*
-	* \param PacketIndex
-	*
-	* \param IsoPacket
-	*
-	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
-	*/
-	KUSB_EXP BOOL KUSB_API IsoK_GetPacket(
-	    __in PKUSB_ISO_CONTEXT IsoContext,
-	    __in ULONG PacketIndex,
-	    __out PKUSB_ISO_PACKET IsoPacket);
-
-//! Convenience function for enumerating iso packets of an isochronous transfer context.
-	/*!
-	* \param IsoContext
-	*
-	* \param EnumPackets
-	*
-	* \param StartPacketIndex
-	*
-	* \param UserContext
-	*
-	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
-	*/
-	KUSB_EXP BOOL KUSB_API IsoK_EnumPackets(
-	    __in PKUSB_ISO_CONTEXT IsoContext,
-	    __in ISO_ENUM_PACKETS_CB* EnumPackets,
-	    __in_opt ULONG StartPacketIndex,
-	    __in_opt PVOID UserContext);
-
-//! Convenience function for re-using an isochronous transfer context in a subsequent request.
-	/*!
-	* \param IsoContext
-	*
-	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
-	*/
-	KUSB_EXP BOOL KUSB_API IsoK_Reuse(
-	    __inout PKUSB_ISO_CONTEXT IsoContext);
 
 	/*! @} */
 

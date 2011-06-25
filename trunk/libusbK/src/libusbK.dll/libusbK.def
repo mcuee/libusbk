@@ -12,6 +12,13 @@ EXPORTS
 	LstK_FindByVidPid
 	LstK_Lock
 	LstK_Unlock
+	LstK_Count
+	LstK_Sync
+	LstK_Clone
+	LstK_CloneDevInfo
+	LstK_RemoveDevInfo
+	LstK_AddDevInfo
+	LstK_FreeDevInfo	
 
 	OvlK_Acquire
 	OvlK_Release
@@ -68,7 +75,11 @@ EXPORTS
 	IsoK_SetPacket
 	IsoK_GetPacket
 	IsoK_EnumPackets
-	IsoK_Reuse
+	IsoK_ReUse
+	
+	HotK_Init
+	HotK_Free
+	HotK_FreeAll
 
 	WinUsb_Initialize
 	WinUsb_Free

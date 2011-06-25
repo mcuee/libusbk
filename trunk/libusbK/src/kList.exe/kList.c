@@ -78,7 +78,7 @@ LONG WinError(__in_opt DWORD errorCode);
 BOOL OpenDeviceFileHandle(__in LPCSTR deviceFileName,
                           __out HANDLE* fileHandle);
 
-BOOL GetDescriptorReport(__in PKUSB_DEV_INFO deviceElement,
+BOOL GetDescriptorReport(__in PKLST_DEV_INFO deviceElement,
                          __in BOOL detailed);
 
 BOOL GetRealConfigDescriptor(__in UCHAR Index,
@@ -283,23 +283,29 @@ void ShowCopyright(void);
 int __cdecl main(int argc, char** argv)
 {
 	LONG ec = ERROR_SUCCESS;
-	PKUSB_DEV_LIST deviceList = NULL;
-	PKUSB_DEV_INFO deviceElement;
+	PKLST_HANDLE deviceList = NULL;
+	PKLST_DEV_INFO deviceElement;
 	LONG devicePos = 0;
 	LONG_PTR selection;
+	ULONG count = 0;
+	KLST_INIT_PARAMS initParams;
 
 	UNREFERENCED_PARAMETER(argc);
 	UNREFERENCED_PARAMETER(argv);
 
 	UsbIdsText = LoadResourceUsbIds();
 
-	if (!LstK_Init(&deviceList, NULL))
+	memset(&initParams, 0, sizeof(initParams));
+	initParams.ShowDisconnectedDevices = TRUE;
+	if (!LstK_Init(&deviceList, &initParams))
 	{
 		printf("failed getting device list.\n");
 		ec = WinError(0);
 		return ec;
 	}
-	if (deviceList->DeviceCount == 0)
+
+	LstK_Count(deviceList, &count);
+	if (count == 0)
 	{
 		printf("No devices found.\n");
 		ec = -1;
@@ -308,9 +314,13 @@ int __cdecl main(int argc, char** argv)
 
 	while(LstK_MoveNext(deviceList, &deviceElement))
 	{
-		printf("%2d. %-21s: %s\n", devicePos + 1, "Driver", GetDrvIdString(deviceElement->DrvId));
-		PrintfDeviceElement(DeviceDesc);
-		PrintfDeviceElement(Mfg);
+		printf("%2d. %s (%s) [%s]\n",
+		       devicePos + 1,
+		       deviceElement->DeviceDesc,
+		       deviceElement->Mfg,
+		       deviceElement->Connected ? "Connected" : "Not Connected");
+
+		PrintfDeviceElement(Service);
 		PrintfDeviceElement(ClassGUID);
 		PrintfDeviceElement(DeviceInstance);
 		PrintfDeviceElement(DeviceInterfaceGUID);
@@ -412,7 +422,7 @@ BOOL OpenDeviceFileHandle(__in LPCSTR deviceFileName, __out HANDLE* fileHandle)
 	return TRUE;
 }
 
-BOOL GetDescriptorReport(__in PKUSB_DEV_INFO deviceElement, __in BOOL detailed)
+BOOL GetDescriptorReport(__in PKLST_DEV_INFO deviceElement, __in BOOL detailed)
 {
 	HANDLE fileHandle = NULL;
 	ULONG length;

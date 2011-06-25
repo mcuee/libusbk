@@ -51,6 +51,9 @@ all: load-driver-api
 all: config-interface
 all: config-pipe
 all: config-power
+all: hot-plug-monitor
+all: xfer-iso
+all: xfer-queued-iso
 
 # make the show-device example for the specified "arch" (default is x86)
 #
@@ -112,6 +115,21 @@ config-pipe:
 .PHONY: config-power
 config-power:
 	$(MAKE) --no-print-directory --directory=./config-power $(subst w -- ,,$(MAKEFLAGS)) all
+# make the hot-plug-monitor example for the specified "arch" (default is x86)
+#
+.PHONY: hot-plug-monitor
+hot-plug-monitor:
+	$(MAKE) --no-print-directory --directory=./hot-plug-monitor $(subst w -- ,,$(MAKEFLAGS)) all
+# make the xfer-iso example for the specified "arch" (default is x86)
+#
+.PHONY: xfer-iso
+xfer-iso:
+	$(MAKE) --no-print-directory --directory=./xfer-iso $(subst w -- ,,$(MAKEFLAGS)) all
+# make the xfer-queued-iso example for the specified "arch" (default is x86)
+#
+.PHONY: xfer-queued-iso
+xfer-queued-iso:
+	$(MAKE) --no-print-directory --directory=./xfer-queued-iso $(subst w -- ,,$(MAKEFLAGS)) all
 
 # make all examples for x86 and amd64 archs. ("arch" argument not used)
 #
@@ -136,4 +154,7 @@ clean:
 	$(MAKE) --directory=./config-interface $(MAKEFLAGS) clean
 	$(MAKE) --directory=./config-pipe $(MAKEFLAGS) clean
 	$(MAKE) --directory=./config-power $(MAKEFLAGS) clean
+	$(MAKE) --directory=./hot-plug-monitor $(MAKEFLAGS) clean
+	$(MAKE) --directory=./xfer-iso $(MAKEFLAGS) clean
+	$(MAKE) --directory=./xfer-queued-iso $(MAKEFLAGS) clean
 	$(RM) ./_ReSharper*

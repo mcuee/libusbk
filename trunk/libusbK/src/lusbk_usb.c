@@ -21,7 +21,7 @@ binary distributions.
 // Default loggging level
 ULONG DebugLevel = 4;
 
-KUSB_EXP BOOL KUSB_API DrvK_GetProcAddress(__out KPROC* ProcAddress, __in ULONG DriverID, __in ULONG FunctionID)
+KUSB_EXP BOOL KUSB_API DrvK_GetProcAddress(__out KPROC* ProcAddress, __in KUSB_DRVID DriverID, __in KUSB_FNID FunctionID)
 {
 	CheckLibInitialized();
 

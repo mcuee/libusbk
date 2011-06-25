@@ -10,7 +10,7 @@
 #include <objbase.h>
 
 
-#define DEFAULT_POOL_MAX_COUNT (0x100)
+#define KOVL_MAX_DEFAULT_POOL_COUNT (0x100)
 
 /*! \addtogroup ovlk
  *  @{
@@ -27,12 +27,12 @@
 * structure as thier first member. This makes them compatible with windows
 * api function which take a \ref LPOVERLAPPED as a parameter. However,
 * in-order to make use of the OverlappedK functions (such as \ref
-* OvlK_Wait and \ref OvlK_IsComplete) the \ref POVERLAPPED_K must pass
+* OvlK_Wait and \ref OvlK_IsComplete) the \ref PKOVL_OVERLAPPED must pass
 * through one of the libusbK \ref usbk transfer functions. e.g. \ref
 * UsbK_ReadPipe and \ref UsbK_WritePipe
 *
 */
-typedef LPOVERLAPPED POVERLAPPED_K;
+typedef LPOVERLAPPED PKOVL_OVERLAPPED;
 
 
 //! pointer to an OverlappedK pool structure.
@@ -40,16 +40,16 @@ typedef LPOVERLAPPED POVERLAPPED_K;
 * An OverlappedK pool encompasses an array of OverlappedK structures.
 *
 */
-typedef VOID* POVERLAPPED_K_POOL;
+typedef VOID* PKOVL_OVERLAPPED_POOL;
 
-typedef BOOL KUSB_API OVERLAPPED_K_CANCEL_CB (__in POVERLAPPED_K Overlapped);
-typedef OVERLAPPED_K_CANCEL_CB* POVERLAPPED_K_CANCEL_CB;
+typedef BOOL KUSB_API KOVL_OVERLAPPED_CANCEL_CB (__in PKOVL_OVERLAPPED Overlapped);
+typedef KOVL_OVERLAPPED_CANCEL_CB* PKOVL_OVERLAPPED_CANCEL_CB;
 
 //! \c WaitFlags used by \ref OvlK_Wait.
 /*!
  *
 */
-typedef enum _OVERLAPPEDK_WAIT_FLAGS
+typedef enum _KOVL_WAIT_FLAGS
 {
     //! Do not perform any additional actions upon exiting \ref OvlK_Wait.
     WAIT_FLAGS_NONE							= 0,
@@ -72,9 +72,9 @@ typedef enum _OVERLAPPEDK_WAIT_FLAGS
     //! Always release the OverlappedK back to its pool.  If the operation timed-out, cancel it before releasing back to its pool.
     WAIT_FLAGS_RELEASE_ALWAYS				= WAIT_FLAGS_RELEASE_ON_SUCCESS_FAIL | WAIT_FLAGS_RELEASE_ON_TIMEOUT,
 
-} OVERLAPPEDK_WAIT_FLAGS;
+} KOVL_WAIT_FLAGS;
 
-//! Structure representing internal \ref POVERLAPPED_K information.
+//! Structure representing internal \ref PKOVL_OVERLAPPED information.
 /*
 *
 * \sa OvlK_GetInfo
@@ -85,7 +85,7 @@ typedef enum _OVERLAPPEDK_WAIT_FLAGS
 * or \ref UsbK_WritePipe
 *
 */
-typedef struct _OVERLAPPED_K_INFO
+typedef struct _KOVL_OVERLAPPED_INFO
 {
 	//! Device file handle.
 	HANDLE DeviceHandle;
@@ -106,9 +106,9 @@ typedef struct _OVERLAPPED_K_INFO
 	UCHAR BackendContext[KUSB_CONTEXT_SIZE];
 
 	//! Callback function used to abort the i/o operation. (for internal use only).
-	POVERLAPPED_K_CANCEL_CB Cancel;
+	PKOVL_OVERLAPPED_CANCEL_CB Cancel;
 
-}* POVERLAPPED_K_INFO, OVERLAPPED_K_INFO;
+}* PKOVL_OVERLAPPED_INFO, KOVL_OVERLAPPED_INFO;
 
 #ifdef __cplusplus
 extern "C" {
@@ -136,8 +136,8 @@ extern "C" {
 	* will choose an overlapped from the refurbished list.
 	*
 	*/
-	KUSB_EXP POVERLAPPED_K KUSB_API OvlK_Acquire(
-	    __in_opt POVERLAPPED_K_POOL Pool);
+	KUSB_EXP PKOVL_OVERLAPPED KUSB_API OvlK_Acquire(
+	    __in_opt PKOVL_OVERLAPPED_POOL Pool);
 
 //! Returns an \c OverlappedK structure to it's pool.
 	/*!
@@ -157,7 +157,7 @@ extern "C" {
 	* unsure, consider using \ref OvlK_WaitAndRelease instead.
 	*/
 	KUSB_EXP BOOL KUSB_API OvlK_Release(
-	    __in POVERLAPPED_K OverlappedK);
+	    __in PKOVL_OVERLAPPED OverlappedK);
 
 
 //! Creates a new overlapped pool.
@@ -180,7 +180,7 @@ extern "C" {
 	* period to protect internal data.
 	*
 	*/
-	KUSB_EXP POVERLAPPED_K_POOL KUSB_API OvlK_CreatePool(
+	KUSB_EXP PKOVL_OVERLAPPED_POOL KUSB_API OvlK_CreatePool(
 	    __in USHORT MaxOverlappedCount);
 
 //! Destroys the specified pool and all resources it created.
@@ -200,7 +200,7 @@ extern "C" {
 	*
 	*/
 	KUSB_EXP BOOL KUSB_API OvlK_DestroyPool(
-	    __in POVERLAPPED_K_POOL Pool);
+	    __in PKOVL_OVERLAPPED_POOL Pool);
 
 //! creates the default overlapped pool.
 	/*!
@@ -217,7 +217,7 @@ extern "C" {
 	* It is generally not neccessary to create the default pool.
 	*
 	*/
-	KUSB_EXP POVERLAPPED_K_POOL KUSB_API OvlK_CreateDefaultPool();
+	KUSB_EXP PKOVL_OVERLAPPED_POOL KUSB_API OvlK_CreateDefaultPool();
 
 //! Frees the default overlapped pool and resources it is currently using.
 	/*!
@@ -253,7 +253,7 @@ extern "C" {
 	*
 	*/
 	KUSB_EXP HANDLE KUSB_API OvlK_GetEventHandle(
-	    __in POVERLAPPED_K OverlappedK);
+	    __in PKOVL_OVERLAPPED OverlappedK);
 
 //! Returns detailed overlappedK information.
 	/*!
@@ -267,10 +267,10 @@ extern "C" {
 	*
 	* \c OvlK_GetInfo is used by the various backends to configure \c
 	* OverlappedK internal information. Not all fields in \ref
-	* OVERLAPPED_K_INFO are applicable to \b all backends.
+	* KOVL_OVERLAPPED_INFO are applicable to \b all backends.
 	*/
-	KUSB_EXP POVERLAPPED_K_INFO KUSB_API OvlK_GetInfo(
-	    __in POVERLAPPED_K OverlappedK);
+	KUSB_EXP PKOVL_OVERLAPPED_INFO KUSB_API OvlK_GetInfo(
+	    __in PKOVL_OVERLAPPED OverlappedK);
 
 //! Returns the overlappedK context space.
 	/*!
@@ -285,7 +285,7 @@ extern "C" {
 	* (up to 32 byes of storage)
 	*/
 	KUSB_EXP PKUSB_USER_CONTEXT KUSB_API OvlK_GetContext(
-	    __in POVERLAPPED_K OverlappedK);
+	    __in PKOVL_OVERLAPPED OverlappedK);
 
 //! Returns the pool context space.
 	/*!
@@ -306,7 +306,7 @@ extern "C" {
 	* released.
 	*/
 	KUSB_EXP PKUSB_USER_CONTEXT KUSB_API OvlK_GetPoolContext(
-	    __in_opt POVERLAPPED_K_POOL Pool);
+	    __in_opt PKOVL_OVERLAPPED_POOL Pool);
 
 //! Waits for an OverlappedK i/o operation to complete.
 	/*!
@@ -318,7 +318,7 @@ extern "C" {
 	* Number of milliseconds to wait for overlapped completion.
 	*
 	* \param WaitFlags
-	* See /ref OVERLAPPEDK_WAIT_FLAGS
+	* See /ref KOVL_WAIT_FLAGS
 	*
 	* \param TransferredLength
 	* On success, returns the number of bytes transferred by this overlappedK.
@@ -332,9 +332,9 @@ extern "C" {
 	* OverlappedK.
 	*/
 	KUSB_EXP BOOL KUSB_API OvlK_Wait(
-	    __in POVERLAPPED_K OverlappedK,
+	    __in PKOVL_OVERLAPPED OverlappedK,
 	    __in_opt DWORD TimeoutMS,
-	    __in_opt OVERLAPPEDK_WAIT_FLAGS WaitFlags,
+	    __in_opt KOVL_WAIT_FLAGS WaitFlags,
 	    __out PULONG TransferredLength);
 
 //! Waits for an OverlappedK i/o operation to complete; cancels if it fails to complete within the specified time.
@@ -365,7 +365,7 @@ extern "C" {
 	*
 	*/
 	KUSB_EXP BOOL KUSB_API OvlK_WaitOrCancel(
-	    __in POVERLAPPED_K OverlappedK,
+	    __in PKOVL_OVERLAPPED OverlappedK,
 	    __in_opt DWORD TimeoutMS,
 	    __out PULONG TransferredLength);
 
@@ -400,7 +400,7 @@ extern "C" {
 	*
 	*/
 	KUSB_EXP BOOL KUSB_API OvlK_WaitAndRelease(
-	    __in POVERLAPPED_K OverlappedK,
+	    __in PKOVL_OVERLAPPED OverlappedK,
 	    __in_opt DWORD TimeoutMS,
 	    __out PULONG TransferredLength);
 
@@ -419,7 +419,7 @@ extern "C" {
 	* \c OvlK_IsComplete quickly checks if the \c OverlappedK i/o operation has completed.
 	*/
 	KUSB_EXP BOOL KUSB_API OvlK_IsComplete(
-	    __in POVERLAPPED_K OverlappedK);
+	    __in PKOVL_OVERLAPPED OverlappedK);
 
 //! Initializes an overlappedK for re-use. The overlappedK is not return to its pool.
 	/*!
@@ -444,7 +444,7 @@ extern "C" {
 	*
 	*/
 	KUSB_EXP BOOL KUSB_API KUSB_API OvlK_ReUse(
-	    __in POVERLAPPED_K OverlappedK);
+	    __in PKOVL_OVERLAPPED OverlappedK);
 
 	/*! @} */
 

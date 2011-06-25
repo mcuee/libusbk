@@ -26,8 +26,8 @@
 
 DWORD __cdecl main(int argc, char* argv[])
 {
-	PKUSB_DEV_LIST deviceList = NULL;
-	PKUSB_DEV_INFO deviceInfo = NULL;
+	PKLST_HANDLE deviceList = NULL;
+	PKLST_DEV_INFO deviceInfo = NULL;
 	LIBUSBK_INTERFACE_HANDLE handle = NULL;
 	DWORD ec = ERROR_SUCCESS;
 	UCHAR pipeIndex = 0;

@@ -318,6 +318,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\lusbk_handles.c"
+				>
+			</File>
+			<File
+				RelativePath="..\lusbk_hot_plug.c"
+				>
+			</File>
+			<File
 				RelativePath="..\lusbk_ioctl.c"
 				>
 			</File>
@@ -368,6 +376,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\lusbk_handles.h"
+				>
+			</File>
+			<File
 				RelativePath="..\lusbk_private.h"
 				>
 			</File>
@@ -402,6 +414,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\includes\lusbk_hot_plug.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\includes\lusbk_linked_list.h"
 				>
 			</File>
@@ -411,6 +427,10 @@
 			</File>
 			<File
 				RelativePath="..\..\includes\lusbk_usb.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\includes\lusbk_usb_iso.h"
 				>
 			</File>
 			<File
