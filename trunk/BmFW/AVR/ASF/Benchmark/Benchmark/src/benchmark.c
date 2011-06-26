@@ -385,3 +385,28 @@ bool Bm_VendorRequestHandler(void)
 
 	return false;
 }
+
+void user_callback_sof_action(void)
+{
+	#if (BM_EP_TYPE==EP_TYPE_ISO)
+	// -ISO
+		#if defined(USB_DEVICE_HS_SUPPORT)
+		// High-Speed ISO
+		// TODO:
+		#else
+		// Full-Speed ISO
+		// TODO:
+		#endif
+	#elif (BM_EP_TYPE==EP_TYPE_INT)
+		#if defined(USB_DEVICE_HS_SUPPORT)
+		// High-Speed INT
+		// TODO:
+		#else
+		// Full-Speed INT
+		// TODO:
+		#endif
+	#else
+	// -BULK
+	/* nothing to do */
+	#endif
+}

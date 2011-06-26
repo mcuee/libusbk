@@ -91,14 +91,23 @@
 	#define BM_EP_INTERVAL		4
 #elif (BM_EP_TYPE==EP_TYPE_ISO)
 	#define BM_EP_ATTRIBUTES	BM_EP_TYPE|EP_ISO_SYNC_NS|EP_ISO_USAGE_DE
-	#define BM_EP_INTERVAL		4
+	#define BM_EP_INTERVAL		3			/* User Assignable */
 #endif
 
 //! Benchmark TX/RX endpoint packet size.
 #ifdef USB_DEVICE_HS_SUPPORT
-#define BM_EP_MAX_PACKET_SIZE       512
+#define BM_EP_MAX_PACKET_SIZE       256		/* User Assignable */
 #else
-#define BM_EP_MAX_PACKET_SIZE       64
+#define BM_EP_MAX_PACKET_SIZE       64		/* User Assignable */
+#endif
+
+//! Number of packets per transfer. (should not modify)
+#if defined(USB_DEVICE_HS_SUPPORT) && (BM_EP_TYPE==EP_TYPE_ISO)
+#define BM_BUFFER_MULTIPLIER		(8 >> (BM_EP_INTERVAL-1))
+#elif defined(USB_DEVICE_HS_SUPPORT)
+#define BM_BUFFER_MULTIPLIER		8
+#else
+#define BM_BUFFER_MULTIPLIER		4
 #endif
 
 //! Number of buffers to use per endpoint. (should not modify)
@@ -107,8 +116,8 @@
 //! Configured endpoint bank size. (should not modify)
 #define BM_BANK_SIZE	512
 
-//! Size of each buffer. Must be a multiple of the configured BANK size.
-#define BM_BUFFER_SIZE	MAKE_INTERVAL_SIZE(BM_EP_MAX_PACKET_SIZE,16,BM_BANK_SIZE)
+//! Size of each buffer. Must be a multiple of the configured BANK size. (should not modify)
+#define BM_BUFFER_SIZE	MAKE_INTERVAL_SIZE(BM_EP_MAX_PACKET_SIZE,BM_BUFFER_MULTIPLIER,BM_BANK_SIZE)
 
 //! Benchmark vendor control request handler.
 extern bool Bm_VendorRequestHandler(void);
