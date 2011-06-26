@@ -54,9 +54,9 @@
 #define  USB_DEVICE_PRODUCT_ID            0x2315
 #define  USB_DEVICE_MAJOR_VERSION         1
 #define  USB_DEVICE_MINOR_VERSION         0
-#define  USB_DEVICE_POWER                 50 // Consumption on Vbus line (mA)
+#define  USB_DEVICE_POWER                 100 // Consumption on Vbus line (mA)
 
-#define  USB_DEVICE_ATTR                  (USB_CONFIG_ATTR_BUS_POWERED)
+#define  USB_DEVICE_ATTR                  (USB_CONFIG_ATTR_SELF_POWERED)
 //#define  USB_DEVICE_ATTR (USB_CONFIG_ATTR_BUS_POWERED)
 //#define  USB_DEVICE_ATTR (USB_CONFIG_ATTR_REMOTE_WAKEUP|USB_CONFIG_ATTR_SELF_POWERED)
 //#define  USB_DEVICE_ATTR (USB_CONFIG_ATTR_REMOTE_WAKEUP|USB_CONFIG_ATTR_BUS_POWERED)
@@ -68,7 +68,7 @@
 
 //! To authorize the High speed
 #if (UC3A3||UC3A4)
-// #define  USB_DEVICE_HS_SUPPORT
+#define  USB_DEVICE_HS_SUPPORT
 #endif
 
 //! Control endpoint size. (Endpoint 0)
@@ -81,7 +81,8 @@
 extern void user_callback_vbus_event(bool b_high);
 #define  UDC_VBUS_EVENT(b_vbus_high) user_callback_vbus_event(b_vbus_high)
 
-// #define  UDC_SOF_EVENT()                  user_callback_sof_action()
+extern void user_callback_sof_action(void);
+#define  UDC_SOF_EVENT()                  user_callback_sof_action()
 // #define  UDC_SUSPEND_EVENT()              user_callback_suspend_action()
 // #define  UDC_RESUME_EVENT()               user_callback_resume_action()
 
