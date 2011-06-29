@@ -37,12 +37,14 @@ THE POSSIBILITY OF SUCH DAMAGE.
 #define ENTER_CRITICAL_SECTION() flags = cpu_irq_save()
 #define LEAVE_CRITICAL_SECTION() cpu_irq_restore(flags)
 
+#define EP_TX_INDEX (0)
+#define EP_RX_INDEX (1)
 
 /** BMARK MACROS ****************************************************/
 #define mSetWritePacketID(BufferPtr, BufferSize, FillCount, NextPacketKey)	\
 	if ((BufferSize)>0)														\
 	{																		\
-		if (FillCount < ((BM_BUFFER_COUNT*2)*(BM_BUFFER_SIZE/BM_EP_MAX_PACKET_SIZE)))	\
+		if (FillCount < ((BM_BANK_COUNT*2)*(BM_MAX_TRANSFER_SIZE/BM_EP_MAX_PACKET_SIZE)))	\
 		{																	\
 			FillCount++;													\
 			Bm_FillBuffer(BufferPtr,BufferSize);							\
@@ -51,7 +53,7 @@ THE POSSIBILITY OF SUCH DAMAGE.
 	}
 
 #define Bm_SubmitTransfer(ep,shortPacketEn,buffer,bufferLength,callbackFn) udd_ep_run(ep,shortPacketEn,buffer,bufferLength,callbackFn)
-#define Bm_SubmitRead(ep,xferEL,callbackFn) Bm_SubmitTransfer(ep,true,(xferEL)->Buffer,sizeof((xferEL)->Buffer),callbackFn)
+#define Bm_SubmitRead(ep,xferEL,callbackFn) Bm_SubmitTransfer(ep,false,(xferEL)->Buffer,BM_MAX_TRANSFER_SIZE,callbackFn)
 #define Bm_SubmitWrite(ep,xferEL,callbackFn) Bm_SubmitTransfer(ep,false,(xferEL)->Buffer,(xferEL)->Transferred,callbackFn)
 
 #define Bm_XferMove(fromList, toList,  moveEL) do {		\
@@ -61,27 +63,43 @@ THE POSSIBILITY OF SUCH DAMAGE.
 
 #define Bm_IsNewTest() (Bm_TestType != Bm_PrevTestType)
 
-typedef struct _BM_XFER_EL
+typedef struct _BM_XFER_BUFFER
 {
 	COMPILER_WORD_ALIGNED uint8_t Buffer[BM_BUFFER_SIZE];
 	uint16_t Transferred;
+	
+}BM_XFER_BUFFER;
 
-	struct _BM_XFER_EL* next;
-	struct _BM_XFER_EL* prev;
+typedef struct _BM_XFER_QUEUE_EL
+{
+	BM_XFER_BUFFER* Buffer;
+	struct _BM_XFER_QUEUE_EL* next;
+	struct _BM_XFER_QUEUE_EL* prev;
+}BM_XFER_QUEUE_EL;
 
-} BM_XFER_EL;
+typedef struct _BM_XFER_EP
+{
+	BM_XFER_QUEUE_EL* Queued;
+	volatile bool Busy;
+	volatile uint8_t SofPeriod;
+	
+	udd_callback_trans_t OnXferComplete;
+} BM_XFER_EP;
 
-typedef void (*Bm_RunTestDelegate) (void);
+typedef struct _BM_TEST_CONTEXT
+{
+	BM_XFER_BUFFER Buffers[BM_BANK_COUNT*BM_EP_COUNT];
+	BM_XFER_QUEUE_EL BufferElements[BM_BANK_COUNT*BM_EP_COUNT];
 
-static volatile Bm_RunTestDelegate Bm_RunTest = NULL;
+	BM_XFER_EP Rx;
+	BM_XFER_EP Tx;
 
-COMPILER_WORD_ALIGNED static BM_XFER_EL Bm_XferArray[2][BM_BUFFER_COUNT];
+} BM_TEST_CONTEXT;
 
-static BM_XFER_EL* Bm_XfersReadyForTx;
-static BM_XFER_EL* Bm_XfersReadyForRx;
+volatile Bm_RunTestDelegate Bm_SofEvent = NULL;
+volatile Bm_RunTestDelegate Bm_RunTest = NULL;
 
-static volatile bool Bm_IsJobPendingTx = false;
-static volatile bool Bm_IsJobPendingRx = false;
+static BM_TEST_CONTEXT bm;
 
 static volatile uint8_t Bm_TestType = TEST_LOOP;
 static volatile uint8_t Bm_PrevTestType = TEST_NONE;
@@ -105,7 +123,10 @@ static void Bm_RunTest_Read(void);
 static void Bm_RunTest_Write(void);
 
 static void Bm_FillBuffer(uint8_t* pBuffer, uint16_t size);
-static void Bm_InitXferArray(BM_XFER_EL** Bank1_AddListRef, BM_XFER_EL** Bank2_AddListRef);
+static void Bm_InitXferBuffers(BM_XFER_QUEUE_EL** Bank1_AddListRef, BM_XFER_QUEUE_EL** Bank2_AddListRef);
+
+static void Bm_Sof_Handler_HS(void);
+static void Bm_Sof_Handler_FS(void);
 
 static void Bm_FillBuffer(uint8_t* pBuffer, uint16_t size)
 {
@@ -121,141 +142,135 @@ static void Bm_FillBuffer(uint8_t* pBuffer, uint16_t size)
 
 static void Bm_XferLoopCompleteTx(udd_ep_status_t status, iram_size_t nb_transfered)
 {
-	BM_XFER_EL* moveEL;
-	
+	BM_XFER_QUEUE_EL* moveEL = bm.Tx.Queued;
+
 	if (++Bm_Led_Counter==0)
 		LED1_TGL();
-		
+
 	if (status)
 	{
-		Bm_IsJobPendingTx = false;
+		
+		bm.Tx.Busy = false;
 		return;
 	}
 
-	moveEL = Bm_XfersReadyForTx;
-	moveEL->Transferred = (uint16_t)nb_transfered;
-	Bm_XferMove(Bm_XfersReadyForTx, Bm_XfersReadyForRx, moveEL);
-
-	if (Bm_XfersReadyForTx)
-	{
-		Bm_IsJobPendingTx = Bm_SubmitWrite(BM_EP_TX, Bm_XfersReadyForTx, Bm_XferLoopCompleteTx);
-	}
-	else
-	{
-		Bm_IsJobPendingTx = false;
-	}
+	bm.Tx.Queued->Buffer->Transferred=nb_transfered;
+	Bm_XferMove(bm.Tx.Queued, bm.Rx.Queued, moveEL);
+	
+	bm.Tx.Busy = false;
 }
 
 static void Bm_XferLoopCompleteRx(udd_ep_status_t status, iram_size_t nb_transfered)
 {
-	BM_XFER_EL* moveEL;
-
-	if (++Bm_Led_Counter==0)
-		LED1_TGL();
-
-	if (status)
-	{
-		Bm_IsJobPendingRx = false;
-		return;
-	}
-
-	moveEL = Bm_XfersReadyForRx;
-	moveEL->Transferred = (uint16_t)nb_transfered;
-	Bm_XferMove(Bm_XfersReadyForRx, Bm_XfersReadyForTx, moveEL);
-
-	if (Bm_XfersReadyForRx)
-	{
-		Bm_IsJobPendingRx = Bm_SubmitRead(BM_EP_RX, Bm_XfersReadyForRx, Bm_XferLoopCompleteRx);
-	}
-	else
-	{
-		Bm_IsJobPendingRx = false;
-	}
-}
-
-static void Bm_XferCompleteRx(udd_ep_status_t status, iram_size_t nb_transfered)
-{
-	BM_XFER_EL* moveEL;
-
-	if (++Bm_Led_Counter==0)
-		LED1_TGL();
-
-	if (status)
-	{
-		Bm_IsJobPendingRx = false;
-		return;
-	}
-
-	moveEL = Bm_XfersReadyForRx;
-	moveEL->Transferred = (uint16_t)nb_transfered;
-	Bm_XferMove(Bm_XfersReadyForRx, Bm_XfersReadyForRx, moveEL);
-
-	Bm_IsJobPendingRx = Bm_SubmitRead(BM_EP_RX, Bm_XfersReadyForRx, Bm_XferCompleteRx);
-}
-
-static void Bm_XferCompleteTx(udd_ep_status_t status, iram_size_t nb_transfered)
-{
-	BM_XFER_EL* moveEL;
-	int i;
-	uint8_t* buffer;
+	BM_XFER_QUEUE_EL* moveEL = bm.Rx.Queued;
 	
 	if (++Bm_Led_Counter==0)
 		LED1_TGL();
 
 	if (status)
 	{
-		Bm_IsJobPendingTx = false;
+		bm.Rx.Busy = false;
 		return;
 	}
 
-	moveEL = Bm_XfersReadyForTx;
-	moveEL->Transferred = (uint16_t)nb_transfered;
-	Bm_XferMove(Bm_XfersReadyForTx, Bm_XfersReadyForTx, moveEL);
+	moveEL->Buffer->Transferred=nb_transfered;
+	Bm_XferMove(bm.Rx.Queued, bm.Tx.Queued, moveEL);
+	
+	bm.Rx.Busy = false;
+}
 
-	Bm_XfersReadyForTx->Transferred = sizeof(Bm_XfersReadyForTx->Buffer);
-	for(i=0; i < sizeof(Bm_XfersReadyForTx->Buffer); i+=BM_EP_MAX_PACKET_SIZE)
+static void Bm_XferCompleteRx(udd_ep_status_t status, iram_size_t nb_transfered)
+{
+	BM_XFER_QUEUE_EL* moveEL = bm.Rx.Queued;
+
+	if (++Bm_Led_Counter==0)
+		LED1_TGL();
+
+	if (status)
 	{
-		buffer=&Bm_XfersReadyForTx->Buffer[i];
-		mSetWritePacketID(buffer, BM_EP_MAX_PACKET_SIZE, Bm_FillCount, Bm_NextPacketKey);
+		bm.Rx.Busy = false;
+		return;
 	}
-	Bm_IsJobPendingTx = Bm_SubmitWrite(BM_EP_TX, Bm_XfersReadyForTx, Bm_XferCompleteTx);
 
-	//Bm_IsJobPendingTx = false;
+	bm.Rx.Queued->Buffer->Transferred=nb_transfered;
+	Bm_XferMove(bm.Rx.Queued, bm.Rx.Queued, moveEL);
+	
+	bm.Rx.Busy = false;
+}
+
+static void Bm_XferCompleteTx(udd_ep_status_t status, iram_size_t nb_transfered)
+{
+	BM_XFER_QUEUE_EL* moveEL = bm.Tx.Queued;
+
+	if (++Bm_Led_Counter==0)
+		LED1_TGL();
+
+	if (status)
+	{
+		bm.Tx.Busy = false;
+		return;
+	}
+
+	bm.Tx.Queued->Buffer->Transferred=nb_transfered;
+	Bm_XferMove(bm.Tx.Queued, bm.Tx.Queued, moveEL);
+	
+	bm.Tx.Busy = false;
 }
 
 static void Bm_RunTest_Loop(void)
 {
-	if (!Bm_IsJobPendingRx && Bm_XfersReadyForRx)
+	if (!bm.Rx.Busy && bm.Rx.Queued)
 	{
-		Bm_IsJobPendingRx = Bm_SubmitRead(BM_EP_RX, Bm_XfersReadyForRx, Bm_XferLoopCompleteRx);
+		#if (BM_EP_TYPE==EP_TYPE_ISO)
+		if (!bm.Rx.SofPeriod)
+		#endif
+		bm.Rx.Busy = Bm_SubmitRead(BM_EP_RX, bm.Rx.Queued->Buffer, Bm_XferLoopCompleteRx);
 	}
-	if (!Bm_IsJobPendingTx && Bm_XfersReadyForTx)
+	if (!bm.Tx.Busy &&  bm.Tx.Queued)
 	{
-		Bm_IsJobPendingTx = Bm_SubmitWrite(BM_EP_TX, Bm_XfersReadyForTx, Bm_XferLoopCompleteTx);
+		#if (BM_EP_TYPE==EP_TYPE_ISO)
+		if (!bm.Tx.SofPeriod)
+		#endif
+		bm.Tx.Busy = Bm_SubmitWrite(BM_EP_TX, bm.Tx.Queued->Buffer, Bm_XferLoopCompleteTx);
 	}
 }
 
 static void Bm_RunTest_Read(void)
 {
-	if (!Bm_IsJobPendingRx)
+	if (!bm.Rx.Busy && bm.Rx.Queued)
 	{
-		Bm_IsJobPendingRx = Bm_SubmitRead(BM_EP_RX, Bm_XfersReadyForRx, Bm_XferCompleteRx);
+		#if (BM_EP_TYPE==EP_TYPE_ISO)
+		if (!bm.Rx.SofPeriod)
+		#endif
+		bm.Rx.Busy = Bm_SubmitRead(BM_EP_RX, bm.Rx.Queued->Buffer, Bm_XferCompleteRx);
+	}
+}
+
+void Bm_InitWritePackets(BM_XFER_QUEUE_EL* QueueEL);
+void Bm_InitWritePackets(BM_XFER_QUEUE_EL* QueueEL)
+{
+	int i;
+	for(i=0; i < BM_MAX_TRANSFER_SIZE; i+=BM_EP_MAX_PACKET_SIZE)
+	{
+		mSetWritePacketID((&QueueEL->Buffer->Buffer[i]), BM_EP_MAX_PACKET_SIZE, Bm_FillCount, Bm_NextPacketKey);
 	}
 }
 
 static void Bm_RunTest_Write(void)
 {
-	if (!Bm_IsJobPendingTx)
+
+	if (!bm.Tx.Busy && bm.Tx.Queued)
 	{
-		int i;
-		uint8_t* buffer;
-		Bm_XfersReadyForTx->Transferred = sizeof(Bm_XfersReadyForTx->Buffer);
-		for(i=0; i < sizeof(Bm_XfersReadyForTx->Buffer); i+=BM_EP_MAX_PACKET_SIZE)
-		{
-			buffer=&Bm_XfersReadyForTx->Buffer[i];
-			mSetWritePacketID(buffer, BM_EP_MAX_PACKET_SIZE, Bm_FillCount, Bm_NextPacketKey);
+		#if (BM_EP_TYPE==EP_TYPE_ISO)
+		if (!bm.Tx.SofPeriod) {
+		#endif
+		
+		Bm_InitWritePackets(bm.Tx.Queued);
+		bm.Tx.Busy = Bm_SubmitWrite(BM_EP_TX, bm.Tx.Queued->Buffer, Bm_XferCompleteTx);
+		
+		#if (BM_EP_TYPE==EP_TYPE_ISO)
 		}
-		Bm_IsJobPendingTx = Bm_SubmitWrite(BM_EP_TX, Bm_XfersReadyForTx, Bm_XferCompleteTx);
+		#endif
 	}
 }
 
@@ -267,82 +282,117 @@ void RunApplication(void)
 	{
 		if (Bm_IsNewTest())
 		{
-			if (Bm_IsJobPendingRx)
+			if (bm.Rx.Busy)
 			{
 				udd_ep_abort(BM_EP_RX);
+				continue;
 			}
-			else if (Bm_IsJobPendingTx)
+			else if (bm.Tx.Busy)
 			{
 				udd_ep_abort(BM_EP_TX);
+				continue;
 			}
 			else
 			{
 				Bm_Init();
+				continue;
 			}
 		}
-		else
-		{
-			if (Bm_RunTest)
-			{
-				Bm_RunTest();
-			}
-		}
+		
+		#if (BM_EP_TYPE != EP_TYPE_ISO)
+			if (Bm_RunTest) Bm_RunTest();
+		#endif
 	}
 }
 
-static void Bm_InitXferArray(BM_XFER_EL** Bank1_AddListRef, BM_XFER_EL** Bank2_AddListRef)
+static void Bm_InitXferBuffers(BM_XFER_QUEUE_EL** Bank1_AddListRef, BM_XFER_QUEUE_EL** Bank2_AddListRef)
 {
-	int i;
+	int i,j;
 
-	for(i = 0; i < BM_BUFFER_COUNT; i++)
+	for(i = 0; i < (BM_BANK_COUNT); i++)
 	{
-		Bm_XferArray[0][i].Transferred=BM_BUFFER_SIZE;
-		Bm_XferArray[1][i].Transferred=BM_BUFFER_SIZE;
-		
-		Bm_XferArray[0][i].next=NULL;
-		Bm_XferArray[1][i].next=NULL;
-		
-		Bm_XferArray[0][i].prev=NULL;
-		Bm_XferArray[1][i].prev=NULL;
-
-		DL_APPEND(*Bank1_AddListRef, &Bm_XferArray[0][i]);
-		DL_APPEND(*Bank2_AddListRef, &Bm_XferArray[1][i]);
-	}
+		for(j = 0; j < (BM_EP_COUNT); j++)
+		{
+			bm.Buffers[i*j].Transferred=BM_MAX_TRANSFER_SIZE;
+			bm.BufferElements[i*j].Buffer=&bm.Buffers[i*j];
+			bm.BufferElements[i*j].next=NULL;
+			bm.BufferElements[i*j].prev=NULL;
+			Bm_InitWritePackets(&bm.BufferElements[i*j]);
+			if (j & (BM_EP_COUNT-1))
+			{
+				DL_APPEND(*Bank2_AddListRef, &bm.BufferElements[i*j]);
+			}
+			else
+			{
+				DL_APPEND(*Bank1_AddListRef, &bm.BufferElements[i*j]);
+			}
+		}
+	}	
 }
 
 static void Bm_Init(void)
 {
 	Bm_FillCount = 0;
-	Bm_NextPacketKey = 0;
-	Bm_XfersReadyForTx = NULL;
-	Bm_XfersReadyForRx = NULL;
 	Bm_Led_Counter = 0;
 	LED1_OFF();
+	
+	memset(&bm.Rx,0,sizeof(bm.Rx));
+	memset(&bm.Tx,0,sizeof(bm.Tx));
+	
+#if (BM_EP_TYPE==EP_TYPE_ISO)
+	Bm_SofEvent = udd_is_high_speed() ? Bm_Sof_Handler_HS : Bm_Sof_Handler_FS;
+	#ifdef BM_MANAGE_SOF_PERIOD
+		bm.Rx.SofPeriod = BM_EP_POLLCOUNT-1;
+		bm.Tx.SofPeriod = BM_EP_POLLCOUNT-1;
+	#endif
+#endif
+	
 	
 	switch (Bm_TestType)
 	{
 	case TEST_NONE:
-		Bm_InitXferArray(&Bm_XfersReadyForRx, &Bm_XfersReadyForRx);
-		Bm_RunTest = Bm_RunTest_Read;
+		Bm_InitXferBuffers(&bm.Rx.Queued, &bm.Rx.Queued);
+		Bm_RunTest = NULL;
 		break;
 	case TEST_PCREAD:
-		Bm_InitXferArray(&Bm_XfersReadyForTx, &Bm_XfersReadyForTx);
+		Bm_InitXferBuffers(&bm.Tx.Queued, &bm.Tx.Queued);
 		Bm_RunTest = Bm_RunTest_Write;
 		break;
 	case TEST_PCWRITE:
-		Bm_InitXferArray(&Bm_XfersReadyForRx, &Bm_XfersReadyForRx);
+		Bm_InitXferBuffers(&bm.Rx.Queued, &bm.Rx.Queued);
 		Bm_RunTest = Bm_RunTest_Read;
 		break;
 	default:
-		Bm_InitXferArray(&Bm_XfersReadyForRx, &Bm_XfersReadyForRx);
+		Bm_InitXferBuffers(&bm.Rx.Queued, &bm.Rx.Queued);
 		Bm_TestType = TEST_LOOP;
 		Bm_RunTest = Bm_RunTest_Loop;
 		break;
 	}
+	
+	Bm_NextPacketKey = 0;
+
 	Bm_PrevTestType = Bm_TestType;
 }
+#if (BM_EP_TYPE==EP_TYPE_ISO)
 
-bool Bm_VendorRequestHandler(void)
+static void Bm_Sof_Handler_HS(void)
+{
+	Bm_Sof_Handler_FS();
+}
+
+static void Bm_Sof_Handler_FS(void)
+{
+	if (!Bm_RunTest) return;
+	#ifdef BM_MANAGE_SOF_PERIOD
+	if ((++bm.Rx.SofPeriod) >= BM_EP_POLLCOUNT) bm.Rx.SofPeriod = 0;
+	if ((++bm.Tx.SofPeriod) >= BM_EP_POLLCOUNT) bm.Tx.SofPeriod = 0;
+	#endif
+	Bm_RunTest();
+}
+
+#endif
+
+bool Bm_Vendor_Handler(void)
 {
 	static uint8_t testType;
 
@@ -386,27 +436,3 @@ bool Bm_VendorRequestHandler(void)
 	return false;
 }
 
-void user_callback_sof_action(void)
-{
-	#if (BM_EP_TYPE==EP_TYPE_ISO)
-	// -ISO
-		#if defined(USB_DEVICE_HS_SUPPORT)
-		// High-Speed ISO
-		// TODO:
-		#else
-		// Full-Speed ISO
-		// TODO:
-		#endif
-	#elif (BM_EP_TYPE==EP_TYPE_INT)
-		#if defined(USB_DEVICE_HS_SUPPORT)
-		// High-Speed INT
-		// TODO:
-		#else
-		// Full-Speed INT
-		// TODO:
-		#endif
-	#else
-	// -BULK
-	/* nothing to do */
-	#endif
-}

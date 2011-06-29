@@ -78,11 +78,6 @@
 #define  USB_DEVICE_MAX_EP			2
 
 //! USB Device Callbacks definitions (Optional)
-extern void user_callback_vbus_event(bool b_high);
-#define  UDC_VBUS_EVENT(b_vbus_high) user_callback_vbus_event(b_vbus_high)
-
-extern void user_callback_sof_action(void);
-#define  UDC_SOF_EVENT()                  user_callback_sof_action()
 // #define  UDC_SUSPEND_EVENT()              user_callback_suspend_action()
 // #define  UDC_RESUME_EVENT()               user_callback_resume_action()
 

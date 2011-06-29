@@ -375,6 +375,9 @@
     <Compile Include="src\benchmark.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="src\config\conf_bm_iso.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="src\config\conf_board.h">
       <SubType>compile</SubType>
     </Compile>
