@@ -16,18 +16,18 @@ volatile uint8_t g_IsUsbAttached = 0;
 
 extern void RunApplication(void);
 
-void user_callback_vbus_event(bool b_high)
+void Bm_VBus_Handler(bool bIsAttached)
 {
-	if (b_high)
+	if (bIsAttached)
 	{
-		// Attach USB Device
+		// USB device connected.
 		udc_attach ();
 		g_IsUsbAttached=1;
 		LED0_ON();
 	}
 	else
 	{
-		// VBUS not present
+		// USB device dis-connected.
 		LED0_OFF();
 		g_IsUsbAttached=0;
 		udc_detach ();
@@ -59,7 +59,7 @@ restart:
 	// automatically via an interrupt.
 	if (! udc_include_vbus_monitoring ())
 	{
-		user_callback_vbus_event (true);
+		Bm_VBus_Handler (true);
 	}
 	
 	while(!g_IsUsbAttached && ++counter!=0);
