@@ -1328,7 +1328,7 @@ Error:
 	return success;
 }
 
-BOOL KUSB_API k_AddDeviceToStackCB(__in PKLST_HANDLE List,
+BOOL KUSB_API k_AddDeviceToStackCB(__in KLST_HANDLE List,
                                    __in PKLST_DEV_INFO Item,
                                    __in PLIBUSBK_BKND_CONTEXT BackendContext)
 {

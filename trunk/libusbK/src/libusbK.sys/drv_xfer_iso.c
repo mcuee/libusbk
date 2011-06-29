@@ -281,18 +281,11 @@ VOID XferIsoFS (
 		subUrb->UrbIsochronousTransfer.Hdr.Length = (USHORT) siz;
 		subUrb->UrbIsochronousTransfer.Hdr.Function = URB_FUNCTION_ISOCH_TRANSFER;
 		subUrb->UrbIsochronousTransfer.PipeHandle = usbdPipeHandle;
+
 		if(requestContext->RequestType == WdfRequestTypeRead)
-		{
-
-			subUrb->UrbIsochronousTransfer.TransferFlags =
-			    USBD_TRANSFER_DIRECTION_IN;
-		}
+			subUrb->UrbIsochronousTransfer.TransferFlags = USBD_TRANSFER_DIRECTION_IN;
 		else
-		{
-
-			subUrb->UrbIsochronousTransfer.TransferFlags =
-			    USBD_TRANSFER_DIRECTION_OUT;
-		}
+			subUrb->UrbIsochronousTransfer.TransferFlags = USBD_TRANSFER_DIRECTION_OUT;
 
 		subUrb->UrbIsochronousTransfer.TransferBufferLength = stageSize;
 		subUrb->UrbIsochronousTransfer.TransferBufferMDL = subMdl;

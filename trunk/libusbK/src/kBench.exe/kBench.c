@@ -108,7 +108,7 @@ typedef struct _BENCHMARK_TEST_PARAM
 
 	// Internal value use during the test.
 	//
-	PKLST_HANDLE DeviceList;
+	KLST_HANDLE DeviceList;
 	PKLST_DEV_INFO SelectedDeviceProfile;
 	HANDLE DeviceHandle;
 	LIBUSBK_INTERFACE_HANDLE InterfaceHandle;
@@ -1375,7 +1375,7 @@ int GetTestDeviceFromArgs(PBENCHMARK_TEST_PARAM test)
 		PCHAR chID;
 
 		memset(id, 0, sizeof(id));
-		strcpy_s(id, MAX_PATH - 1, deviceInfo->DeviceInstance);
+		strcpy_s(id, MAX_PATH - 1, deviceInfo->InstanceID);
 		_strlwr_s(id, MAX_PATH);
 
 		if ( (chID = strstr(id, "vid_")) != NULL)
@@ -1407,7 +1407,7 @@ int GetTestDeviceFromList(PBENCHMARK_TEST_PARAM test)
 		while (LstK_MoveNext(test->DeviceList, &deviceInfo))
 		{
 			count++;
-			CONMSG("%02u. %s (%s) [%s]\n", count, deviceInfo->DeviceDesc, deviceInfo->DeviceInstance, GetDrvIdString(deviceInfo->DrvId));
+			CONMSG("%02u. %s (%s) [%s]\n", count, deviceInfo->DeviceDesc, deviceInfo->InstanceID, GetDrvIdString(deviceInfo->DrvId));
 		}
 
 		return ERROR_SUCCESS;
@@ -1416,7 +1416,7 @@ int GetTestDeviceFromList(PBENCHMARK_TEST_PARAM test)
 	{
 		while (LstK_MoveNext(test->DeviceList, &deviceInfo) && count < 9)
 		{
-			CONMSG("%u. %s (%s) [%s]\n", count + 1, deviceInfo->DeviceDesc, deviceInfo->DeviceInstance, GetDrvIdString(deviceInfo->DrvId));
+			CONMSG("%u. %s (%s) [%s]\n", count + 1, deviceInfo->DeviceDesc, deviceInfo->InstanceID, GetDrvIdString(deviceInfo->DrvId));
 			deviceInfo->UserContext.Byte[0] = FALSE;
 			count++;
 		}
@@ -1528,7 +1528,7 @@ int __cdecl main(int argc, char** argv)
 	if (!Bench_Open(&Test))
 		goto Done;
 
-	CONMSG("opened %s (%s)..\n", Test.SelectedDeviceProfile->DeviceDesc, Test.SelectedDeviceProfile->DeviceInstance);
+	CONMSG("opened %s (%s)..\n", Test.SelectedDeviceProfile->DeviceDesc, Test.SelectedDeviceProfile->InstanceID);
 
 	// If "NoTestSelect" appears in the command line then don't send the control
 	// messages for selecting the test type.

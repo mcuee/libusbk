@@ -25,33 +25,50 @@ typedef enum _KHOT_PLUG_TYPE
 
 #include <pshpack1.h>
 
+#define HOTK_PLUG_EVENT VOID
+
 typedef struct _KHOT_PARAMS
 {
-	VOID (KUSB_API* OnHotPlugEvent)(KHOT_HANDLE, struct _KHOT_PARAMS*, PCKLST_DEV_INFO, KHOT_PLUG_TYPE);
-	CHAR DevInstIdPatternMatch[MAX_PATH];
 	PVOID Context;
 
-	KLST_DEV_INFO Match;
-	PCKLST_DEV_INFO Found;
+	HOTK_PLUG_EVENT (KUSB_API* OnHotPlug)(
+	    KHOT_HANDLE HotHandle,
+	    struct _KHOT_PARAMS* HotParams,
+	    PCKLST_DEV_INFO DeviceInfo,
+	    KHOT_PLUG_TYPE PlugType);
+
+	HWND UserHwnd;
+	UINT UserMessage;
+
+	struct
+	{
+		CHAR InstanceID[MAX_PATH];
+		CHAR DeviceInterfaceGUID[MAX_PATH];
+		CHAR DevicePath[MAX_PATH];
+	} PatternMatch;
 
 	union
 	{
-		ULONG _value;
+		ULONG Value;
 		struct
 		{
 			unsigned PlugAllOnInit: 1;
-			unsigned AllowDupeMatch: 1;
+			unsigned AllowDupeInstanceIDs: 1;
+			unsigned PostUserMessage: 1;
 		};
 	} Flags;
+
+	PCKLST_DEV_INFO DeviceInfo;
+
 } KHOT_PARAMS;
 typedef KHOT_PARAMS* PKHOT_PARAMS;
 
-typedef VOID KUSB_API KHOT_PLUG_CB(
-    __in KHOT_HANDLE Handle,
-    __in PKHOT_PARAMS Params,
-    __in PKLST_DEV_INFO DeviceInfo,
-    __in KHOT_PLUG_TYPE NotificationType);
-typedef KHOT_PLUG_CB* PKHOT_PLUG_CB;
+typedef VOID KUSB_API KHOT_PLUG_EVENT(
+    KHOT_HANDLE HotHandle,
+    PKHOT_PARAMS HotParams,
+    PCKLST_DEV_INFO DeviceInfo,
+    KHOT_PLUG_TYPE PlugType);
+typedef KHOT_PLUG_EVENT* PKHOT_PLUG_EVENT;
 
 #include <poppack.h>
 

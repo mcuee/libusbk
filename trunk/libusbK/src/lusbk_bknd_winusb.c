@@ -961,7 +961,7 @@ KUSB_EXP BOOL KUSB_API WUsb_GetOverlappedResult (
 	return UsbK_GetOverlappedResult(InterfaceHandle, lpOverlapped, lpNumberOfBytesTransferred, bWait);
 }
 
-BOOL KUSB_API w_AddDeviceToStackCB(__in PKLST_HANDLE List,
+BOOL KUSB_API w_AddDeviceToStackCB(__in KLST_HANDLE List,
                                    __in PKLST_DEV_INFO Item,
                                    __in PWINUSB_BKND_CONTEXT BackendContext)
 {
