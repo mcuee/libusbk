@@ -34,13 +34,18 @@ VOID KUSB_API OnHotPlug(
 
 	printf(
 	    "\n"
-	    "UsbK device %s: %s\n"
-	    "  %s (%s) [%s]\n\n",
-	    NotificationType == SYNC_FLAG_ADDED ? "arrival" : "removal",
-	    DeviceInfo->InstanceID,
+		"[%s] %s (%s) [%s]\n"
+		"  InstanceID          : %s\n"
+		"  DeviceInterfaceGUID : %s\n"
+		"  DevicePath          : %s\n"
+		"\n",
+	    NotificationType == SYNC_FLAG_ADDED ? "ARRIVAL" : "REMOVAL",
 	    DeviceInfo->DeviceDesc,
 	    DeviceInfo->Mfg,
-	    DeviceInfo->Service);
+	    DeviceInfo->Service,
+		DeviceInfo->InstanceID,
+		DeviceInfo->DeviceInterfaceGUID,
+		DeviceInfo->DevicePath);
 }
 
 DWORD __cdecl main(int argc, char* argv[])
