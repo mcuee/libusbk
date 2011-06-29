@@ -203,7 +203,7 @@ VOID Xfer_Recycle(MY_XFER_EL** WaitList, MY_XFER_EL** AvailList)
 
 DWORD __cdecl main(int argc, char* argv[])
 {
-	PKLST_HANDLE deviceList = NULL;
+	KLST_HANDLE deviceList = NULL;
 	PKLST_DEV_INFO deviceInfo = NULL;
 	LIBUSBK_INTERFACE_HANDLE handle = NULL;
 	int i;

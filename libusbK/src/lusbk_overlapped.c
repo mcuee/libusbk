@@ -24,9 +24,6 @@ binary distributions.
 // warning C4127: conditional expression is constant.
 #pragma warning(disable: 4127)
 
-#define IncLock(LockField) InterlockedIncrement(&LockField)
-#define DecLock(LockField) InterlockedDecrement(&LockField)
-
 #define IncUsageLock(LockParentPtr) IncLock(LockParentPtr->UsageCount)
 #define DecUsageLock(LockParentPtr) DecLock(LockParentPtr->UsageCount)
 

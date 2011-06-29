@@ -23,7 +23,7 @@
 #
 */
 #include "examples.h"
-BOOL Examples_GetTestDevice( __deref_out PKLST_HANDLE* DeviceList,
+BOOL Examples_GetTestDevice( __deref_out KLST_HANDLE* DeviceList,
                              __deref_out PKLST_DEV_INFO* DeviceInfo,
                              __in int argc,
                              __in char* argv[])
@@ -35,7 +35,7 @@ BOOL Examples_GetTestDevice( __deref_out PKLST_HANDLE* DeviceList,
 	                                NULL);
 
 }
-BOOL Examples_GetTestDeviceEx( __deref_out PKLST_HANDLE* DeviceList,
+BOOL Examples_GetTestDeviceEx( __deref_out KLST_HANDLE* DeviceList,
                                __deref_out PKLST_DEV_INFO* DeviceInfo,
                                __in int argc,
                                __in char* argv[],
@@ -45,7 +45,7 @@ BOOL Examples_GetTestDeviceEx( __deref_out PKLST_HANDLE* DeviceList,
 	ULONG pidArg = EXAMPLE_PID;
 	ULONG deviceCount = 0;
 	int argPos;
-	PKLST_HANDLE deviceList = NULL;
+	KLST_HANDLE deviceList = NULL;
 	PKLST_DEV_INFO deviceInfo = NULL;
 
 	// init

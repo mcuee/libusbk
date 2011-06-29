@@ -41,11 +41,11 @@
 * \returns
 * TRUE if a devices was found, otherwise FALSE.
 */
-BOOL Examples_GetTestDevice( __deref_out PKLST_HANDLE* DeviceList,
+BOOL Examples_GetTestDevice( __deref_out KLST_HANDLE* DeviceList,
                              __deref_out PKLST_DEV_INFO* DeviceInfo,
                              __in int argc,
                              __in char* argv[]);
-BOOL Examples_GetTestDeviceEx( __deref_out PKLST_HANDLE* DeviceList,
+BOOL Examples_GetTestDeviceEx( __deref_out KLST_HANDLE* DeviceList,
                                __deref_out PKLST_DEV_INFO* DeviceInfo,
                                __in int argc,
                                __in char* argv[],

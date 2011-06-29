@@ -516,10 +516,23 @@ do {                                                                            
 * \param val
 * Value to compare with the field member.
 */
-#define DL_SEARCH_SCALAR LL_SEARCH_SCALAR
+#define DL_SEARCH_SCALAR(head,out,field,val) LL_SEARCH_SCALAR(head,out,field,val)
 
-
-#define DL_SEARCH LL_SEARCH
+//! Searches for an element using a user-defined compare function such as memcmp or strcmp.
+/*!
+* \param head
+* First element of the list.
+*
+* \param out
+* First matching element that matched (user-defined compare function returned 0).
+*
+* \param elt
+* Matching criteria (passed as a second paramater to the user-defined compare function)
+*
+* \param cmp
+* User-defined compare function or macro.
+*/
+#define DL_SEARCH(head,out,elt,cmp) LL_SEARCH(head,out,elt,cmp)
 
 /******************************************************************************
  * circular doubly linked list macros                                         *

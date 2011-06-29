@@ -27,7 +27,7 @@
 // Example configuration:
 #define EP_RX					0x81
 #define EP_TX					0x02
-#define EP_PACKET_SIZE			64
+#define EP_PACKET_SIZE			512
 #define ISO_PACKETS_PER_XFER	32
 
 #define ISO_CALC_CONTEXT_SIZE(mNumOfIsoPackets) (sizeof(KISO_CONTEXT)+(sizeof(KISO_PACKET)*(mNumOfIsoPackets)))
@@ -81,7 +81,7 @@ BOOL Bench_Configure(__in LIBUSBK_INTERFACE_HANDLE handle,
 
 DWORD __cdecl main(int argc, char* argv[])
 {
-	PKLST_HANDLE deviceList = NULL;
+	KLST_HANDLE deviceList = NULL;
 	PKLST_DEV_INFO deviceInfo = NULL;
 	LIBUSBK_INTERFACE_HANDLE handle = NULL;
 	DWORD errorCode = ERROR_SUCCESS;
@@ -164,6 +164,9 @@ DWORD __cdecl main(int argc, char* argv[])
 		ULONG posData = isoPacket->Offset;
 		ULONG posDataMax =  posPacket + 1 < isoCtx->NumberOfPackets ? isoCtx->IsoPackets[posPacket + 1].Offset : sizeof(dataBuffer);
 
+		//if (isoPacket->Length==EP_PACKET_SIZE)
+		//	continue;
+
 		printf("  IsoPacket[%d] Length=%u Status=%08Xh\n", posPacket, isoPacket->Length, isoPacket->Status);
 		printf("  Data:");
 
@@ -188,8 +191,7 @@ Done:
 	/*!
 	Free the iso context.
 	*/
-	if (isoCtx)
-		free(isoCtx);
+	IsoK_Free(&isoCtx);
 
 	return errorCode;
 }

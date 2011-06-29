@@ -26,7 +26,7 @@
 
 // This function is called by the LstK_Enumerate function for each
 // device until it returns FALSE.
-static BOOL KUSB_API ShowDevicesCB(PKLST_HANDLE DeviceList,
+static BOOL KUSB_API ShowDevicesCB(KLST_HANDLE DeviceList,
                                    PKLST_DEV_INFO deviceInfo,
                                    PVOID MyContext)
 {
@@ -44,7 +44,7 @@ static BOOL KUSB_API ShowDevicesCB(PKLST_HANDLE DeviceList,
 
 DWORD __cdecl main(int argc, char* argv[])
 {
-	PKLST_HANDLE deviceList = NULL;
+	KLST_HANDLE deviceList = NULL;
 	PKLST_DEV_INFO deviceInfo = NULL;
 	DWORD errorCode = ERROR_SUCCESS;
 	ULONG count = 0;

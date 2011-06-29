@@ -283,7 +283,7 @@ void ShowCopyright(void);
 int __cdecl main(int argc, char** argv)
 {
 	LONG ec = ERROR_SUCCESS;
-	PKLST_HANDLE deviceList = NULL;
+	KLST_HANDLE deviceList = NULL;
 	PKLST_DEV_INFO deviceElement;
 	LONG devicePos = 0;
 	LONG_PTR selection;
@@ -322,7 +322,7 @@ int __cdecl main(int argc, char** argv)
 
 		PrintfDeviceElement(Service);
 		PrintfDeviceElement(ClassGUID);
-		PrintfDeviceElement(DeviceInstance);
+		PrintfDeviceElement(InstanceID);
 		PrintfDeviceElement(DeviceInterfaceGUID);
 		PrintfDeviceElement(SymbolicLink);
 		PrintfDeviceElement(DevicePath);
