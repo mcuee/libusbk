@@ -18,15 +18,14 @@
 //!  Allocated length for all strings in a \ref KLST_DEV_INFO structure.
 #define KLST_STRING_MAX_LEN 256
 
-typedef enum _KLST_SYNC_FLAGS
+typedef enum _KLST_SYNC_FLAG
 {
     SYNC_FLAG_NONE			= 0,
     SYNC_FLAG_UNCHANGED		= 1 << 0,
     SYNC_FLAG_ADDED			= 1 << 1,
     SYNC_FLAG_REMOVED		= 1 << 2,
-    SYNC_FLAG_CONNECTED		= 1 << 3,
-    SYNC_FLAG_MASK			= (SYNC_FLAG_CONNECTED - 1) | SYNC_FLAG_CONNECTED,
-} KLST_SYNC_FLAGS;
+    SYNC_FLAG_MASK			= (SYNC_FLAG_REMOVED - 1) | SYNC_FLAG_REMOVED,
+} KLST_SYNC_FLAG;
 
 typedef struct _KLST_SYNC_PARAMS
 {
@@ -126,15 +125,14 @@ typedef struct _KLST_DEV_INFO
 	{
 		struct
 		{
-			USHORT SyncFlags;
-			USHORT UserFlags;
+			KLST_SYNC_FLAG SyncFlags;
+			ULONG UserFlags;
 		};
 		struct
 		{
+			unsigned Unchanged: 1;
 			unsigned Added: 1;
 			unsigned Removed: 1;
-			unsigned Connected: 1;
-			unsigned Unchanged: 1;
 		};
 	} SyncResults;
 

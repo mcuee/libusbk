@@ -306,8 +306,7 @@ static BOOL KUSB_API lstk_DevEnum_SyncRemoved(
 		if (slaveDevInfo->Public.Connected != masterDevInfo->Public.Connected)
 		{
 			// Connected/Disconnected.
-			masterDevInfo->Public.SyncResults.Connected = slaveDevInfo->Public.Connected;
-			masterDevInfo->Public.Connected = masterDevInfo->Public.SyncResults.Connected;
+			masterDevInfo->Public.Connected = slaveDevInfo->Public.Connected;
 			if (slaveDevInfo->Public.Connected)
 				masterDevInfo->Public.SyncResults.Added = 1;
 			else
@@ -327,7 +326,6 @@ static BOOL KUSB_API lstk_DevEnum_SyncRemoved(
 		// This element exists in the master list only.
 		if (masterDevInfo->Public.Connected)
 		{
-			masterDevInfo->Public.SyncResults.Connected = 0;
 			masterDevInfo->Public.SyncResults.Removed = 1;
 			masterDevInfo->Public.Connected = FALSE;
 		}
@@ -362,8 +360,11 @@ static BOOL KUSB_API lstk_DevEnum_SyncAdded(
 		if (slaveDevInfo->Public.Connected != masterDevInfo->Public.Connected)
 		{
 			// Connected/Disconnected.
-			masterDevInfo->Public.SyncResults.Connected = slaveDevInfo->Public.Connected;
-			masterDevInfo->Public.Connected = masterDevInfo->Public.SyncResults.Connected;
+			masterDevInfo->Public.Connected = slaveDevInfo->Public.Connected;
+			if (slaveDevInfo->Public.Connected)
+				masterDevInfo->Public.SyncResults.Added = 1;
+			else
+				masterDevInfo->Public.SyncResults.Removed = 1;
 		}
 		else
 		{

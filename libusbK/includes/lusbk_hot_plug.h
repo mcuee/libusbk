@@ -14,18 +14,12 @@
 * @{
 */
 
-typedef PVOID KHOT_HANDLE;
-typedef enum _KHOT_PLUG_TYPE
-{
-    KHOT_PLUG_INVALID = 0,
-    KHOT_PLUG_UNCHANGED = 1 << 0,
-    KHOT_PLUG_ARRIVAL = 1 << 1,
-    KHOT_PLUG_REMOVAL = 1 << 2,
-} KHOT_PLUG_TYPE;
 
 #include <pshpack1.h>
 
 #define HOTK_PLUG_EVENT VOID
+
+typedef PVOID KHOT_HANDLE;
 
 typedef struct _KHOT_PARAMS
 {
@@ -35,16 +29,16 @@ typedef struct _KHOT_PARAMS
 	    KHOT_HANDLE HotHandle,
 	    struct _KHOT_PARAMS* HotParams,
 	    PCKLST_DEV_INFO DeviceInfo,
-	    KHOT_PLUG_TYPE PlugType);
+	    KLST_SYNC_FLAG PlugType);
 
 	HWND UserHwnd;
 	UINT UserMessage;
 
 	struct
 	{
-		CHAR InstanceID[MAX_PATH];
-		CHAR DeviceInterfaceGUID[MAX_PATH];
-		CHAR DevicePath[MAX_PATH];
+		CHAR InstanceID[KLST_STRING_MAX_LEN];
+		CHAR DeviceInterfaceGUID[KLST_STRING_MAX_LEN];
+		CHAR DevicePath[KLST_STRING_MAX_LEN];
 	} PatternMatch;
 
 	union
@@ -58,7 +52,7 @@ typedef struct _KHOT_PARAMS
 		};
 	} Flags;
 
-	PCKLST_DEV_INFO DeviceInfo;
+	PCKLST_DEV_INFO MatchedInfo;
 
 } KHOT_PARAMS;
 typedef KHOT_PARAMS* PKHOT_PARAMS;
@@ -67,7 +61,7 @@ typedef VOID KUSB_API KHOT_PLUG_EVENT(
     KHOT_HANDLE HotHandle,
     PKHOT_PARAMS HotParams,
     PCKLST_DEV_INFO DeviceInfo,
-    KHOT_PLUG_TYPE PlugType);
+    KLST_SYNC_FLAG PlugType);
 typedef KHOT_PLUG_EVENT* PKHOT_PLUG_EVENT;
 
 #include <poppack.h>
