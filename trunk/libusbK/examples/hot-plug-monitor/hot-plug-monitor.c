@@ -28,7 +28,7 @@ VOID KUSB_API OnHotPlug(
     __in KHOT_HANDLE Handle,
     __in PKHOT_PARAMS Params,
     __in PCKLST_DEV_INFO DeviceInfo,
-    __in KHOT_PLUG_TYPE NotificationType)
+    __in KLST_SYNC_FLAG NotificationType)
 {
 	UNREFERENCED_PARAMETER(Handle);
 
@@ -36,7 +36,7 @@ VOID KUSB_API OnHotPlug(
 	    "\n"
 	    "UsbK device %s: %s\n"
 	    "  %s (%s) [%s]\n\n",
-	    NotificationType == KHOT_PLUG_ARRIVAL ? "arrival" : "removal",
+	    NotificationType == SYNC_FLAG_ADDED ? "arrival" : "removal",
 	    DeviceInfo->InstanceID,
 	    DeviceInfo->DeviceDesc,
 	    DeviceInfo->Mfg,

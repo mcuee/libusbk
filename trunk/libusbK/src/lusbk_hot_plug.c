@@ -124,7 +124,6 @@ static BOOL KUSB_API hotk_DevEnum_UpdateForRemoval(KLST_HANDLE DeviceList, PKLST
 	if (!DeviceInfo->Connected) return TRUE;
 	if (MatchInstanceID(DeviceInfo->SymbolicLink, Context->dbcc_name))
 	{
-		DeviceInfo->SyncResults.Connected = 0;
 		DeviceInfo->SyncResults.Removed = 1;
 		DeviceInfo->Connected = FALSE;
 
@@ -277,10 +276,7 @@ static BOOL KUSB_API hotk_DevEnum_PlugWaiters(KLST_HANDLE DeviceList, PKLST_DEV_
 			continue;
 
 		if (Context->HotHandle)
-		{
-			DeviceInfo->SyncResults.Connected = 1;
 			DeviceInfo->SyncResults.Added = 1;
-		}
 
 		// Nothing to do for this element.
 		if (DeviceInfo->SyncResults.SyncFlags == SYNC_FLAG_NONE)
@@ -304,34 +300,34 @@ static BOOL KUSB_API hotk_DevEnum_PlugWaiters(KLST_HANDLE DeviceList, PKLST_DEV_
 				DL_APPEND(Context->DevInstList, devInstEL);
 			}
 
-			if (DeviceInfo->SyncResults.Added || DeviceInfo->SyncResults.Connected)
+			if (DeviceInfo->SyncResults.Added)
 			{
-				hotHandle->Public.DeviceInfo = DeviceInfo;
+				hotHandle->Public.MatchedInfo = DeviceInfo;
 
 				if (hotHandle->Public.OnHotPlug)
-					hotHandle->Public.OnHotPlug(hotHandle, &hotHandle->Public, DeviceInfo, KHOT_PLUG_ARRIVAL);
+					hotHandle->Public.OnHotPlug(hotHandle, &hotHandle->Public, DeviceInfo, SYNC_FLAG_ADDED);
 
 				if (hotHandle->Public.UserHwnd && hotHandle->Public.UserMessage >= WM_USER)
 				{
 					if (hotHandle->Public.Flags.PostUserMessage)
-						PostMessageA(hotHandle->Public.UserHwnd, hotHandle->Public.UserMessage, (WPARAM)&hotHandle->Public, (LPARAM)KHOT_PLUG_ARRIVAL);
+						PostMessageA(hotHandle->Public.UserHwnd, hotHandle->Public.UserMessage, (WPARAM)&hotHandle->Public, (LPARAM)SYNC_FLAG_ADDED);
 					else
-						SendMessageA(hotHandle->Public.UserHwnd, hotHandle->Public.UserMessage, (WPARAM)&hotHandle->Public, (LPARAM)KHOT_PLUG_ARRIVAL);
+						SendMessageA(hotHandle->Public.UserHwnd, hotHandle->Public.UserMessage, (WPARAM)&hotHandle->Public, (LPARAM)SYNC_FLAG_ADDED);
 				}
 			}
 			else if (DeviceInfo->SyncResults.Removed)
 			{
-				hotHandle->Public.DeviceInfo = DeviceInfo;
+				hotHandle->Public.MatchedInfo = DeviceInfo;
 
 				if (hotHandle->Public.OnHotPlug)
-					hotHandle->Public.OnHotPlug(hotHandle, &hotHandle->Public, DeviceInfo, KHOT_PLUG_REMOVAL);
+					hotHandle->Public.OnHotPlug(hotHandle, &hotHandle->Public, DeviceInfo, SYNC_FLAG_REMOVED);
 
 				if (hotHandle->Public.UserHwnd && hotHandle->Public.UserMessage >= WM_USER)
 				{
 					if (hotHandle->Public.Flags.PostUserMessage)
-						PostMessageA(hotHandle->Public.UserHwnd, hotHandle->Public.UserMessage, (WPARAM)&hotHandle->Public, (LPARAM)KHOT_PLUG_REMOVAL);
+						PostMessageA(hotHandle->Public.UserHwnd, hotHandle->Public.UserMessage, (WPARAM)&hotHandle->Public, (LPARAM)SYNC_FLAG_REMOVED);
 					else
-						SendMessageA(hotHandle->Public.UserHwnd, hotHandle->Public.UserMessage, (WPARAM)&hotHandle->Public, (LPARAM)KHOT_PLUG_REMOVAL);
+						SendMessageA(hotHandle->Public.UserHwnd, hotHandle->Public.UserMessage, (WPARAM)&hotHandle->Public, (LPARAM)SYNC_FLAG_REMOVED);
 				}
 			}
 		}
