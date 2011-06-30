@@ -15,10 +15,10 @@ EXPORTS
 	LstK_Count
 	LstK_Sync
 	LstK_Clone
-	LstK_CloneDevInfo
-	LstK_RemoveDevInfo
-	LstK_AddDevInfo
-	LstK_FreeDevInfo	
+	LstK_CloneInfo
+	LstK_DetachInfo
+	LstK_AttachInfo
+	LstK_FreeInfo	
 
 	OvlK_Acquire
 	OvlK_Release

@@ -23,6 +23,8 @@ binary distributions.
 
 #pragma warning(disable:4127)
 
+#define DEFER_THRU_TIMER
+
 #define IDT_KHOT_DBT_DEVNODES_CHANGED		0xA
 #define IDT_KHOT_DBT_DEVICEARRIVAL			0xB
 #define IDT_KHOT_DBT_DEVICEREMOVAL			0xC
@@ -138,7 +140,7 @@ static BOOL KUSB_API hotk_DevEnum_ClearSyncResults(KLST_HANDLE DeviceList, PKLST
 	UNREFERENCED_PARAMETER(DeviceList);
 	UNREFERENCED_PARAMETER(Context);
 
-	DeviceInfo->SyncResults.SyncFlags = SYNC_FLAG_NONE;
+	DeviceInfo->SyncResults.SyncFlags = SYNC_FLAG_UNCHANGED;
 
 	return TRUE;
 }
@@ -197,7 +199,7 @@ static BOOL hotk_IsHotMatch(PKHOT_HANDLE_INTERNAL HotHandle, PKLST_DEV_INFO Devi
 
 	return isMatch;
 }
-#define hotk_CmpBroadcastGuid(BroadcastEL, DevIntfGUID) memcpy(&BroadcastEL->InterfaceGUID,&DevIntfGUID,sizeof(GUID))
+#define hotk_CmpBroadcastGuid(BroadcastEL, DevIntfGUID) memcmp(&BroadcastEL->InterfaceGUID,&DevIntfGUID,sizeof(GUID))
 
 static BOOL KUSB_API hotk_DevEnum_RegisterForBroadcast(KLST_HANDLE DeviceList, PKLST_DEV_INFO DeviceInfo, PKHOT_HANDLE_INTERNAL Context)
 {
@@ -248,6 +250,7 @@ Error:
 static BOOL hotk_RegisterForBroadcast(PKHOT_HANDLE_INTERNAL HotHandle)
 {
 
+#ifdef DEFER_THRU_TIMER
 	if (HotHandle)
 		return LstK_Enumerate(g_HotNotifierList.DeviceList, hotk_DevEnum_RegisterForBroadcast, HotHandle);
 
@@ -257,6 +260,7 @@ static BOOL hotk_RegisterForBroadcast(PKHOT_HANDLE_INTERNAL HotHandle)
 	{
 		LstK_Enumerate(g_HotNotifierList.DeviceList, hotk_DevEnum_RegisterForBroadcast, HotHandle);
 	}
+#endif
 
 	return TRUE;
 }
@@ -380,6 +384,12 @@ static LRESULT CALLBACK hotk_WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
 
 			HOTWND_LOCK_ACQUIRE();
 
+			// re/sync the device list
+			LstK_Sync(g_HotNotifierList.DeviceList, NULL, NULL);
+
+			// notify hot handle waiters
+			hotk_NotifyWaiters(NULL, TRUE);
+
 			// dev broadcast re-registration
 			hotk_RegisterForBroadcast(NULL);
 
@@ -408,11 +418,17 @@ static LRESULT CALLBACK hotk_WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
 
 		switch(wParam)
 		{
+
+#ifdef DEFER_THRU_TIMER
 		case DBT_DEVICEARRIVAL:
 			if (!devInterface || devInterface->dbcc_devicetype != DBT_DEVTYP_DEVICEINTERFACE)
 				break;
 			// 1 second minimum DEVICEARRIVAL delay.
+			HOTWND_LOCK_ACQUIRE();
+
 			SetTimer(hwnd, IDT_KHOT_DBT_DEVICEARRIVAL, g_HotNotifierList.MaxRefreshMS, (TIMERPROC) NULL);
+
+			HOTWND_LOCK_RELEASE();
 			break;
 
 		case DBT_DEVICEREMOVECOMPLETE:
@@ -427,16 +443,28 @@ static LRESULT CALLBACK hotk_WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
 			}
 
 			HOTWND_LOCK_ACQUIRE();
+
 			LstK_Enumerate(g_HotNotifierList.DeviceList, hotk_DevEnum_UpdateForRemoval, devInterface);
+			SetTimer(hwnd, IDT_KHOT_DBT_DEVICEREMOVAL, 1, (TIMERPROC) NULL);
+
 			HOTWND_LOCK_RELEASE();
 
-			// 100 ms delay.
-			SetTimer(hwnd, IDT_KHOT_DBT_DEVICEREMOVAL, 100, (TIMERPROC) NULL);
 
 			break;
+#endif
 		case DBT_DEVNODES_CHANGED:
 			// 2 second minimum DEVNODES_CHANGED delay.
+			HOTWND_LOCK_ACQUIRE();
+#ifdef DEFER_THRU_TIMER
 			SetTimer(hwnd, IDT_KHOT_DBT_DEVNODES_CHANGED, 2000, (TIMERPROC) NULL);
+#else
+			hotk_RegisterForBroadcast(NULL);
+			// re/sync the device list
+			LstK_Sync(g_HotNotifierList.DeviceList, NULL, NULL);
+			// notify hot handle waiters
+			hotk_NotifyWaiters(NULL, TRUE);
+#endif
+			HOTWND_LOCK_RELEASE();
 			break;
 		default:
 			break;
