@@ -58,7 +58,7 @@ DWORD __cdecl main(int argc, char* argv[])
 	memset(&hotParams, 0, sizeof(hotParams));
 	hotParams.OnHotPlug = OnHotPlug;
 	hotParams.Flags.PlugAllOnInit = 1;
-	hotParams.Flags.AllowDupeInstanceIDs=1;
+	hotParams.Flags.AllowDupeInstanceIDs = 1;
 	strcpy(hotParams.PatternMatch.InstanceID, "*");
 
 	printf("Initialize a HotK device notification event monitor..\n");
