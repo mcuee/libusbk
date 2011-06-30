@@ -310,7 +310,6 @@ extern "C" {
 	/*!
 	*
 	* \param DeviceList
-	* The \c DeviceList to retrieve a current \ref KLST_DEV_INFO for.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*/
@@ -397,19 +396,19 @@ extern "C" {
 	    __in KLST_HANDLE SrcList,
 	    __out KLST_HANDLE* DstList);
 
-	KUSB_EXP BOOL KUSB_API LstK_CloneDevInfo(
+	KUSB_EXP BOOL KUSB_API LstK_CloneInfo(
 	    __in PKLST_DEV_INFO SrcInfo,
 	    __deref_inout PKLST_DEV_INFO* DstInfo);
 
-	KUSB_EXP BOOL KUSB_API LstK_RemoveDevInfo(
+	KUSB_EXP BOOL KUSB_API LstK_DetachInfo(
 	    __inout KLST_HANDLE DeviceList,
 	    __in PKLST_DEV_INFO DeviceInfo);
 
-	KUSB_EXP BOOL KUSB_API LstK_AddDevInfo(
+	KUSB_EXP BOOL KUSB_API LstK_AttachInfo(
 	    __inout KLST_HANDLE DeviceList,
 	    __in PKLST_DEV_INFO DeviceInfo);
 
-	KUSB_EXP BOOL KUSB_API LstK_FreeDevInfo(
+	KUSB_EXP BOOL KUSB_API LstK_FreeInfo(
 	    __deref_inout PKLST_DEV_INFO* DeviceInfo);
 
 #ifdef __cplusplus

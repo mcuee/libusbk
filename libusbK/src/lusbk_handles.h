@@ -55,7 +55,7 @@ typedef struct _KOBJ_BASE
 		volatile long Ref;
 	} Count;
 
-	BOOL Disposing;
+	volatile long Disposing;
 
 } KOBJ_BASE, *PKOBJ_BASE;
 

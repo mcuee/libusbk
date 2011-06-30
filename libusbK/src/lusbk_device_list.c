@@ -40,7 +40,7 @@ binary distributions.
 #define LSTK_INCREF(deviceListInternal,ErrorJumpStatement) ErrorHandle(!PoolHandle_Inc_LstK(deviceListInternal), ErrorJumpStatement, "IncRef-DeviceList")
 #define LSTK_DECREF(deviceListInternal) PoolHandle_Dec_LstK(deviceListInternal)
 
-#define lstk_DL_MatchDevicePath(PatternEL, MatchEL) DL_MatchPattern((PatternEL)->Public.DevicePath, (MatchEL)->Public.DevicePath)
+#define lstk_DL_MatchSymbolicLink(PatternEL, MatchEL) DL_MatchPattern((PatternEL)->Public.SymbolicLink, (MatchEL)->Public.SymbolicLink)
 
 typedef struct _KUSB_ENUM_REGKEY_PARAMS
 {
@@ -299,10 +299,11 @@ static BOOL KUSB_API lstk_DevEnum_SyncRemoved(
 	// Skip elements already processed by previous sync operations.
 	if (masterDevInfo->Public.SyncResults.SyncFlags != SYNC_FLAG_NONE) return TRUE;
 
-	DL_SEARCH(Context->Slave->head, slaveDevInfo, masterDevInfo, lstk_DL_MatchDevicePath);
+	DL_SEARCH(Context->Slave->head, slaveDevInfo, masterDevInfo, lstk_DL_MatchSymbolicLink);
 	if (slaveDevInfo)
 	{
 		// This element exists in the slave and master list.
+		memcpy(masterDevInfo->Public.DevicePath, slaveDevInfo->Public.DevicePath, KLST_STRING_MAX_LEN);
 		if (slaveDevInfo->Public.Connected != masterDevInfo->Public.Connected)
 		{
 			// Connected/Disconnected.
@@ -334,8 +335,8 @@ static BOOL KUSB_API lstk_DevEnum_SyncRemoved(
 			masterDevInfo->Public.SyncResults.Unchanged = 1;
 		}
 
-		// LstK_RemoveDevInfo(DeviceList, DeviceInfo);
-		// LstK_FreeDevInfo(&DeviceInfo);
+		// LstK_DetachInfo(DeviceList, DeviceInfo);
+		// LstK_FreeInfo(&DeviceInfo);
 	}
 
 	return TRUE;
@@ -351,11 +352,12 @@ static BOOL KUSB_API lstk_DevEnum_SyncAdded(
 
 	UNREFERENCED_PARAMETER(DeviceList);
 
-	DL_SEARCH(Context->Master->head, masterDevInfo, slaveDevInfo, lstk_DL_MatchDevicePath);
+	DL_SEARCH(Context->Master->head, masterDevInfo, slaveDevInfo, lstk_DL_MatchSymbolicLink);
 	if (masterDevInfo)
 	{
 		// Skip elements already processed by previous sync operations.
 		if (masterDevInfo->Public.SyncResults.SyncFlags != SYNC_FLAG_NONE) return TRUE;
+		memcpy(masterDevInfo->Public.DevicePath, slaveDevInfo->Public.DevicePath, KLST_STRING_MAX_LEN);
 
 		if (slaveDevInfo->Public.Connected != masterDevInfo->Public.Connected)
 		{
@@ -379,7 +381,10 @@ static BOOL KUSB_API lstk_DevEnum_SyncAdded(
 		ErrorNoSet(!IsHandleValid(masterDevInfo), Error, "->Mem_Alloc");
 		memcpy(masterDevInfo, slaveDevInfo, sizeof(KLST_DEV_INFO_EL));
 
-		masterDevInfo->Public.SyncResults.SyncFlags = SYNC_FLAG_ADDED;
+		if (slaveDevInfo->Public.Connected)
+			masterDevInfo->Public.SyncResults.SyncFlags = SYNC_FLAG_ADDED;
+		else
+			masterDevInfo->Public.SyncResults.SyncFlags = SYNC_FLAG_UNCHANGED;
 
 		DL_APPEND(Context->Master->head, masterDevInfo);
 	}
@@ -802,8 +807,8 @@ static BOOL KUSB_API lstk_DevEnum_Free(
 {
 	UNREFERENCED_PARAMETER(Context);
 
-	LstK_RemoveDevInfo(DeviceList, DeviceInfo);
-	LstK_FreeDevInfo(&DeviceInfo);
+	LstK_DetachInfo(DeviceList, DeviceInfo);
+	LstK_FreeInfo(&DeviceInfo);
 
 	return TRUE;
 }
@@ -1092,7 +1097,7 @@ KUSB_EXP BOOL KUSB_API LstK_Clone(__in KLST_HANDLE src, __out KLST_HANDLE* dst)
 	DL_FOREACH(deviceList->head, infoEL)
 	{
 		newInfoEL = NULL;
-		LstK_CloneDevInfo((PKLST_DEV_INFO)infoEL, (PKLST_DEV_INFO*)&newInfoEL);
+		LstK_CloneInfo((PKLST_DEV_INFO)infoEL, (PKLST_DEV_INFO*)&newInfoEL);
 		if (!IsHandleValid(newInfoEL))
 		{
 			LSTK_DECREF(deviceList);
@@ -1163,7 +1168,7 @@ Error_IncRefSlave:
 
 }
 
-KUSB_EXP BOOL KUSB_API LstK_CloneDevInfo(
+KUSB_EXP BOOL KUSB_API LstK_CloneInfo(
     __in PKLST_DEV_INFO SrcInfo,
     __deref_inout PKLST_DEV_INFO* DstInfo)
 {
@@ -1196,7 +1201,7 @@ Error:
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API LstK_RemoveDevInfo(
+KUSB_EXP BOOL KUSB_API LstK_DetachInfo(
     __inout KLST_HANDLE DeviceList,
     __in PKLST_DEV_INFO DeviceInfo)
 {
@@ -1217,7 +1222,7 @@ Error:
 
 }
 
-KUSB_EXP BOOL KUSB_API LstK_AddDevInfo(
+KUSB_EXP BOOL KUSB_API LstK_AttachInfo(
     __inout KLST_HANDLE DeviceList,
     __in PKLST_DEV_INFO DeviceInfo)
 {
@@ -1237,7 +1242,7 @@ Error:
 
 }
 
-KUSB_EXP BOOL KUSB_API LstK_FreeDevInfo(
+KUSB_EXP BOOL KUSB_API LstK_FreeInfo(
     __deref_inout PKLST_DEV_INFO* DeviceInfo)
 {
 	PKLST_DEV_INFO_EL deviceInfo = (PKLST_DEV_INFO_EL) * DeviceInfo;
