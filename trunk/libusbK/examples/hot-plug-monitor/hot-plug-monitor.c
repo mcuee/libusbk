@@ -34,18 +34,18 @@ VOID KUSB_API OnHotPlug(
 
 	printf(
 	    "\n"
-		"[%s] %s (%s) [%s]\n"
-		"  InstanceID          : %s\n"
-		"  DeviceInterfaceGUID : %s\n"
-		"  DevicePath          : %s\n"
-		"\n",
+	    "[%s] %s (%s) [%s]\n"
+	    "  InstanceID          : %s\n"
+	    "  DeviceInterfaceGUID : %s\n"
+	    "  DevicePath          : %s\n"
+	    "  \n",
 	    NotificationType == SYNC_FLAG_ADDED ? "ARRIVAL" : "REMOVAL",
 	    DeviceInfo->DeviceDesc,
 	    DeviceInfo->Mfg,
 	    DeviceInfo->Service,
-		DeviceInfo->InstanceID,
-		DeviceInfo->DeviceInterfaceGUID,
-		DeviceInfo->DevicePath);
+	    DeviceInfo->InstanceID,
+	    DeviceInfo->DeviceInterfaceGUID,
+	    DeviceInfo->DevicePath);
 }
 
 DWORD __cdecl main(int argc, char* argv[])
@@ -85,7 +85,6 @@ DWORD __cdecl main(int argc, char* argv[])
 
 		Sleep(100);
 		SwitchToThread();
-
 	}
 
 	if (!HotK_Free(&hotHandle))
