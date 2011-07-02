@@ -1,4 +1,4 @@
-PACKAGE = 3.0.2.17; NUL; NUL;
+PACKAGE = 3.0.2.18; NUL; NUL;
 libusbK.sys = PACKAGE; .\common_version_h.in; .\src\libusbK.sys\lusbk_version.h;
 libusbK.lib = PACKAGE; .\common_version_h.in; .\src\libusbK.lib\lusbk_version.h;
 libusbK.dll = PACKAGE; .\common_version_h.in; .\src\libusbK.dll\lusbk_version.h;
