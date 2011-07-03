@@ -1006,19 +1006,11 @@ KUSB_EXP BOOL KUSB_API WUsb_Open(
 	W_CTX(backendContext, interfaceHandle);
 	ErrorHandle(!backendContext, Error, "backendContext");
 
-	if (DeviceListItem->CompositeList)
-	{
-		LstK_Enumerate(DeviceListItem->CompositeList, w_AddDeviceToStackCB, backendContext);
-	}
-	else
-	{
-
-		success = UsbStack_AddDevice(
-		              &backendContext->UsbStack,
-		              DeviceListItem->DevicePath,
-		              NULL,
-		              backendContext);
-	}
+	success = UsbStack_AddDevice(
+	              &backendContext->UsbStack,
+	              DeviceListItem->DevicePath,
+	              NULL,
+	              backendContext);
 
 	ErrorNoSet(!backendContext->UsbStack.DeviceCount, Error, "failed opening %s device. ErrorCode=%d",
 	           DeviceListItem->DeviceDesc, GetLastError());

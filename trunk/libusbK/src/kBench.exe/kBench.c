@@ -123,7 +123,7 @@ typedef struct _BENCHMARK_TEST_PARAM
 
 	BYTE* VerifyBuffer;		// Stores the verify test pattern for 1 packet.
 	WORD VerifyBufferSize;	// Size of VerifyBuffer
-	BOOL UseCompositeDeviceList;
+	BOOL Use_UsbK_Open;
 	BOOL ListDevicesOnly;
 	ULONG DeviceSpeed;
 
@@ -293,7 +293,7 @@ BOOL Bench_Open(__in PBENCHMARK_TEST_PARAM test)
 			CONWRN("could not load driver api %s.\n", GetDrvIdString(deviceInfo->DrvId));
 			continue;
 		}
-		if (!test->UseCompositeDeviceList)
+		if (!test->Use_UsbK_Open)
 		{
 			test->DeviceHandle = CreateFileA(deviceInfo->DevicePath,
 			                                 GENERIC_READ | GENERIC_WRITE,
@@ -346,7 +346,7 @@ BOOL Bench_Open(__in PBENCHMARK_TEST_PARAM test)
 			K.Free(test->InterfaceHandle);
 			test->InterfaceHandle = NULL;
 
-			if (!test->UseCompositeDeviceList)
+			if (!test->Use_UsbK_Open)
 			{
 				CloseHandle(test->DeviceHandle);
 				test->DeviceHandle = NULL;
@@ -1018,7 +1018,7 @@ int ParseBenchmarkArgs(PBENCHMARK_TEST_PARAM testParams, int argc, char** argv)
 		}
 		else if (!_stricmp(arg, "composite"))
 		{
-			testParams->UseCompositeDeviceList = TRUE;
+			testParams->Use_UsbK_Open = TRUE;
 		}
 		else
 		{
@@ -1488,10 +1488,6 @@ int __cdecl main(int argc, char** argv)
 	// to update/modify the running statistics.
 	//
 	InitializeCriticalSection(&DisplayCriticalSection);
-	if (Test.UseCompositeDeviceList)
-	{
-		searchParams.EnableCompositeDeviceMode = TRUE;
-	}
 
 	if (!LstK_Init(&Test.DeviceList, &searchParams))
 	{
@@ -1721,7 +1717,7 @@ Done:
 		K.Free(Test.InterfaceHandle);
 		Test.InterfaceHandle = NULL;
 	}
-	if (!Test.UseCompositeDeviceList)
+	if (!Test.Use_UsbK_Open)
 	{
 		if (Test.DeviceHandle)
 		{

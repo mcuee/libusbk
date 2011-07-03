@@ -136,9 +136,6 @@ typedef struct _KLST_DEV_INFO
 		};
 	} SyncResults;
 
-	//! see \ref KLST_INIT_PARAMS::EnableCompositeDeviceMode
-	struct _KLST_DEV_LIST* CompositeList;
-
 } KLST_DEV_INFO;
 //! pointer to a \ref KLST_DEV_INFO
 typedef KLST_DEV_INFO* PKLST_DEV_INFO;
@@ -156,14 +153,6 @@ typedef struct _KLST_INIT_PARAMS
 {
 	//! Enable listings for the raw device interface GUID.{A5DCBF10-6530-11D2-901F-00C04FB951ED}
 	BOOL EnableRawDeviceInterfaceGuid;
-
-	//! Enable composite device list mode
-	/*!
-	* When \c EnableCompositeDeviceMode is TRUE, composite devices are merged into a single \ref KLST_DEV_INFO and
-	* \ref KLST_DEV_INFO::CompositeList is populated with the individual composite device elements.
-	*
-	*/
-	BOOL EnableCompositeDeviceMode;
 
 	BOOL ShowDisconnectedDevices;
 

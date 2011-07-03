@@ -418,7 +418,6 @@ BOOL InterfaceInstance_AddElement(PKLST_HANDLE_INTERNAL DeviceList,
 	memcpy(newEntry, DevItemToAdd, sizeof(*newEntry));
 	newEntry->next = NULL;
 	newEntry->prev = NULL;
-	newEntry->Public.CompositeList = NULL;
 
 	DL_APPEND(DeviceList->head, newEntry);
 	*DevItemAdded = newEntry;
@@ -703,101 +702,6 @@ VOID ApplyFilter(__in PKLST_INIT_PARAMS InitParams,
 	}
 }
 
-BOOL CreateCompositeParent(__in LPCSTR InstanceID,
-                           __inout PKLST_DEV_INFO_EL* compositeDevice)
-{
-	PKLST_DEV_INFO_EL devComposite;
-	*compositeDevice = devComposite = Mem_Alloc(sizeof(KLST_DEV_INFO_EL));
-	if (!devComposite)
-		return LusbwError(ERROR_NOT_ENOUGH_MEMORY);
-
-	strcpy_s(devComposite->Public.InstanceID, sizeof(devComposite->Public.InstanceID) - 1, InstanceID);
-	_strupr_s(devComposite->Public.InstanceID, sizeof(devComposite->Public.InstanceID) - 1);
-
-	strcpy_s(devComposite->Public.DeviceDesc, sizeof(devComposite->Public.DeviceDesc) - 1, "USB Composite Device");
-	strcpy_s(devComposite->Public.Service, sizeof(devComposite->Public.Service) - 1, "usbccgp");
-
-	Common_ParseDevID(devComposite);
-
-	return TRUE;
-}
-
-
-VOID ApplyCompositeDevicesMode(__in PKLST_INIT_PARAMS InitParams,
-                               __inout PKLST_HANDLE_INTERNAL DeviceList)
-{
-	PKLST_DEV_INFO_EL compositeDeviceElement;
-	PKLST_DEV_INFO_EL devEL, devEL_t0, devCompositeEL, devCompositeEL_t0;
-	PKLST_DEV_INFO_EL root = DeviceList->head;
-	PKLST_DEV_INFO_EL compositeRoot = NULL;
-	CHAR deviceInstance[KLST_STRING_MAX_LEN];
-	PKLST_HANDLE_INTERNAL newCompositeList;
-
-	if (!InitParams->EnableCompositeDeviceMode)
-		return;
-
-	DL_FOREACH_SAFE(root, devEL, devEL_t0)
-	{
-		PCHAR mi;
-		strcpy_s(deviceInstance, sizeof(deviceInstance) - 1, devEL->Public.InstanceID);
-		_strupr_s(deviceInstance, sizeof(deviceInstance) - 1);
-		mi = strstr(deviceInstance, "&MI_");
-		if (mi)
-		{
-			mi[0] = '\0';
-			// this is a composite device
-			if (CreateCompositeParent(deviceInstance, &compositeDeviceElement))
-			{
-				compositeDeviceElement->Public.DrvId = devEL->Public.DrvId;
-				DL_FOREACH_SAFE(compositeRoot, devCompositeEL, devCompositeEL_t0)
-				{
-					if (devCompositeEL->Public.DrvId == compositeDeviceElement->Public.DrvId &&
-					        strncmp(devCompositeEL->Public.InstanceID, compositeDeviceElement->Public.InstanceID, strlen(devCompositeEL->Public.InstanceID)) == 0)
-					{
-						// We already have a composite parent for this one.
-						break;
-					}
-				}
-
-				if (!devCompositeEL)
-				{
-					// this is a new composite parent.
-					DL_APPEND(compositeRoot, compositeDeviceElement);
-					devCompositeEL = compositeDeviceElement;
-				}
-				else
-				{
-					Mem_Free(&compositeDeviceElement);
-				}
-
-				if (!devCompositeEL->Public.CompositeList)
-				{
-					newCompositeList = (PKLST_HANDLE_INTERNAL) Mem_Alloc(sizeof(KLST_HANDLE_INTERNAL));
-					devCompositeEL->Public.CompositeList = (KLST_HANDLE)newCompositeList;
-				}
-				else
-				{
-					newCompositeList = (PKLST_HANDLE_INTERNAL)devCompositeEL->Public.CompositeList;
-				}
-
-				if (newCompositeList)
-				{
-					DL_DELETE(root, devEL);
-					DL_APPEND(newCompositeList->head, devEL);
-				}
-			}
-		}
-	}
-
-	DL_FOREACH_SAFE(compositeRoot, devCompositeEL, devCompositeEL_t0)
-	{
-		DL_DELETE(compositeRoot, devCompositeEL);
-		DL_APPEND(root, devCompositeEL);
-	}
-
-	DeviceList->head = root;
-}
-
 #define IsLstKHandle(PublicListHandle)	ALLK_VALID_HANDLE(PublicListHandle,LstK)
 
 static BOOL KUSB_API lstk_DevEnum_Free(
@@ -834,10 +738,6 @@ KUSB_EXP BOOL KUSB_API LstK_Count(
 	DL_FOREACH(deviceList->head, nextItem)
 	{
 		deviceCount++;
-		if (nextItem->Public.CompositeList)
-		{
-			LstK_Count((PKLST_HANDLE_INTERNAL)&nextItem->Public.CompositeList, Count);
-		}
 	}
 	*Count = deviceCount;
 
@@ -895,7 +795,6 @@ KUSB_EXP BOOL KUSB_API LstK_Init(__deref_out KLST_HANDLE* DeviceList,
 		if (deviceList->head)
 		{
 			ApplyFilter(initParams, deviceList);
-			ApplyCompositeDevicesMode(initParams, deviceList);
 		}
 
 		success = TRUE;
@@ -1173,7 +1072,6 @@ KUSB_EXP BOOL KUSB_API LstK_CloneInfo(
     __deref_inout PKLST_DEV_INFO* DstInfo)
 {
 	PKLST_DEV_INFO_EL dstInfo = NULL;
-	BOOL success;
 
 	ErrorParam(!IsHandleValid(SrcInfo), Error, "SrcInfo");
 	ErrorParam(!IsHandleValid(DstInfo), Error, "DstInfo");
@@ -1182,15 +1080,8 @@ KUSB_EXP BOOL KUSB_API LstK_CloneInfo(
 	ErrorMemory(!IsHandleValid(dstInfo), Error);
 
 	memcpy(dstInfo, SrcInfo, sizeof(KLST_DEV_INFO_EL));
-	dstInfo->Public.CompositeList = NULL;
 	dstInfo->next = NULL;
 	dstInfo->prev = NULL;
-
-	if (SrcInfo->CompositeList)
-	{
-		success = LstK_Clone(SrcInfo->CompositeList, &dstInfo->Public.CompositeList);
-		ErrorNoSet(success, Error, "->LstK_Clone");
-	}
 
 	*DstInfo = (PKLST_DEV_INFO)dstInfo;
 	return TRUE;
@@ -1248,9 +1139,6 @@ KUSB_EXP BOOL KUSB_API LstK_FreeInfo(
 	PKLST_DEV_INFO_EL deviceInfo = (PKLST_DEV_INFO_EL) * DeviceInfo;
 	ErrorParam(!IsHandleValid(DeviceInfo), Error, "DeviceInfo");
 	ErrorParam(!IsHandleValid(deviceInfo), Error, "DeviceInfo");
-
-	if (deviceInfo->Public.CompositeList)
-		LstK_Free(&deviceInfo->Public.CompositeList);
 
 	Mem_Free(DeviceInfo);
 	return TRUE;
