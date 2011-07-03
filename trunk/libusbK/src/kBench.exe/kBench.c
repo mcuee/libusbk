@@ -51,6 +51,9 @@ binary distributions.
 static LPCSTR DrvIdNames[8] = {"libusbK", "libusb0", "WinUSB", "libusb0 filter", "Unknown", "Unknown", "Unknown"};
 #define GetDrvIdString(DrvId)	(DrvIdNames[((((LONG)(DrvId))<0) || ((LONG)(DrvId)) >= KUSB_DRVID_COUNT)?KUSB_DRVID_COUNT:(DrvId)])
 
+static LPCSTR DevSpeedStrings[4] = {"Unknown", "Low/Full", "Unknown", "High"};
+#define GetDevSpeedString(DevSpeed)	(DevSpeedStrings[(DevSpeed) & 0x3])
+
 KUSB_DRIVER_API K;
 
 // Custom vendor requests that must be implemented in the benchmark firmware.
@@ -122,6 +125,8 @@ typedef struct _BENCHMARK_TEST_PARAM
 	WORD VerifyBufferSize;	// Size of VerifyBuffer
 	BOOL UseCompositeDeviceList;
 	BOOL ListDevicesOnly;
+	ULONG DeviceSpeed;
+
 } BENCHMARK_TEST_PARAM, *PBENCHMARK_TEST_PARAM;
 
 // The benchmark transfer context used for asynchronous transfers.  see TransferAsync().
@@ -1307,6 +1312,7 @@ void ShowTestInfo(PBENCHMARK_TEST_PARAM test)
 	CONMSG("\tDriver          : %s\n", GetDrvIdString(test->SelectedDeviceProfile->DrvId));
 	CONMSG("\tVid / Pid       : %04Xh / %04Xh\n", test->DeviceDescriptor.idVendor,  test->DeviceDescriptor.idProduct);
 	CONMSG("\tDevicePath      : %s\n", test->SelectedDeviceProfile->DevicePath);
+	CONMSG("\tDevice Speed    : %s\n", GetDevSpeedString(test->DeviceSpeed));
 	CONMSG("\tInterface #     : %02Xh\n", test->InterfaceDescriptor.bInterfaceNumber);
 	CONMSG("\tAlt Interface # : %02Xh\n", test->InterfaceDescriptor.bAlternateSetting);
 	CONMSG("\tNum Endpoints   : %u\n", test->InterfaceDescriptor.bNumEndpoints);
@@ -1462,7 +1468,7 @@ int __cdecl main(int argc, char** argv)
 	KLST_INIT_PARAMS searchParams = {0};
 	int key;
 	LONG ec;
-	ULONG count;
+	ULONG count, length;
 
 
 	if (argc == 1)
@@ -1573,6 +1579,10 @@ int __cdecl main(int argc, char** argv)
 				goto Done;
 		}
 	}
+
+	// Get the device speed.
+	length = sizeof(Test.DeviceSpeed);
+	K.QueryDeviceInformation(Test.InterfaceHandle, DEVICE_SPEED, &length, &Test.DeviceSpeed);
 
 	ShowTestInfo(&Test);
 	ShowTransferInfo(ReadTest);
