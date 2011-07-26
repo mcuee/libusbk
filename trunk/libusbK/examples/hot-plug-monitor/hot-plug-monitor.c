@@ -24,10 +24,17 @@
 */
 #include "examples.h"
 
+#ifndef UNIT_TEST_LOOP_COUNT
+#define UNIT_TEST_LOOP_COUNT 2
+static int gLoop = 0;
+#else
+extern int gLoop;
+#endif
+
 VOID KUSB_API OnHotPlug(
     __in KHOT_HANDLE Handle,
-    __in PKHOT_PARAMS Params,
-    __in PCKLST_DEV_INFO DeviceInfo,
+    __in KHOT_PARAMS* Params,
+    __in KLST_DEVINFO_HANDLE DeviceInfo,
     __in KLST_SYNC_FLAG NotificationType)
 {
 	UNREFERENCED_PARAMETER(Handle);
@@ -55,44 +62,46 @@ DWORD __cdecl main(int argc, char* argv[])
 	KHOT_PARAMS hotParams;
 	CHAR chKey;
 
-	memset(&hotParams, 0, sizeof(hotParams));
-	hotParams.OnHotPlug = OnHotPlug;
-	hotParams.Flags.PlugAllOnInit = 1;
-	hotParams.Flags.AllowDupeInstanceIDs = 1;
-	strcpy(hotParams.PatternMatch.InstanceID, "*");
-
-	printf("Initialize a HotK device notification event monitor..\n");
-	printf("Looking for devices with instances IDs matching the pattern '%s'..\n", hotParams.PatternMatch.InstanceID);
-	printf("Press 'q' to exit..\n\n");
-
-	if (!HotK_Init(&hotHandle, &hotParams))
+	for (gLoop = 0; gLoop < UNIT_TEST_LOOP_COUNT; gLoop++)
 	{
-		errorCode = GetLastError();
-		printf("HotK_Init failed. Win32Error=%u (0x%08X)\n", errorCode, errorCode);
-		goto Done;
-	}
+		memset(&hotParams, 0, sizeof(hotParams));
+		hotParams.OnHotPlug = OnHotPlug;
+		hotParams.Flags.PlugAllOnInit = 1;
+		hotParams.Flags.AllowDupeInstanceIDs = 1;
+		strcpy(hotParams.PatternMatch.InstanceID, "*");
 
-	for(;;)
-	{
-		if (_kbhit())
+		printf("Initialize a HotK device notification event monitor..\n");
+		printf("Looking for devices with instances IDs matching the pattern '%s'..\n", hotParams.PatternMatch.InstanceID);
+		printf("Press 'q' to exit..\n\n");
+		if (!HotK_Init(&hotHandle, &hotParams))
 		{
-			chKey = _getch();
-			if (chKey == 'q' || chKey == 'Q')
-				break;
-
-			chKey = '\0';
-			continue;
+			errorCode = GetLastError();
+			printf("HotK_Init failed. Win32Error=%u (0x%08X)\n", errorCode, errorCode);
+			goto Done;
 		}
 
-		Sleep(100);
-		SwitchToThread();
-	}
+		for(;;)
+		{
+			if (_kbhit())
+			{
+				chKey = _getch();
+				if (chKey == 'q' || chKey == 'Q')
+					break;
 
-	if (!HotK_Free(&hotHandle))
-	{
-		errorCode = GetLastError();
-		printf("HotK_Free failed. Win32Error=%u (0x%08X)\n", errorCode, errorCode);
-		goto Done;
+				chKey = '\0';
+				continue;
+			}
+
+			Sleep(100);
+			SwitchToThread();
+		}
+
+		if (!HotK_Free(hotHandle))
+		{
+			errorCode = GetLastError();
+			printf("HotK_Free failed. Win32Error=%u (0x%08X)\n", errorCode, errorCode);
+			goto Done;
+		}
 	}
 
 Done:

@@ -56,7 +56,7 @@ MY_XFER_EL represents a user defined doubly linked transfer context list.
 typedef struct _MY_XFER_EL
 {
 	// Stores the overlappedK pointer from OvlK_Acquire
-	PKOVL_OVERLAPPED Ovl;
+	KOVL_HANDLE Ovl;
 
 	// Physical data buffer.
 	UCHAR Buffer[XFER_LENGTH];
@@ -111,7 +111,7 @@ Moves the head MY_XFER_EL element in AvailList to the tail of
 WaitList and starts an asynchronous transfer operation using
 the moved element.
 */
-BOOL Xfer_Submit(LIBUSBK_INTERFACE_HANDLE handle,
+BOOL Xfer_Submit(KUSB_HANDLE handle,
                  MY_XFER_EL** AvailList,
                  MY_XFER_EL** WaitList,
                  UCHAR PipeID)
@@ -120,7 +120,8 @@ BOOL Xfer_Submit(LIBUSBK_INTERFACE_HANDLE handle,
 
 	DL_DELETE(*AvailList, move);
 	DL_APPEND(*WaitList, move);
-	move->Ovl =  OvlK_Acquire(NULL);
+
+	if (!OvlK_Acquire(move->Ovl, gPool)) return FALSE;
 
 	if (USB_ENDPOINT_DIRECTION_IN(PipeID))
 	{
@@ -204,8 +205,8 @@ VOID Xfer_Recycle(MY_XFER_EL** WaitList, MY_XFER_EL** AvailList)
 DWORD __cdecl main(int argc, char* argv[])
 {
 	KLST_HANDLE deviceList = NULL;
-	PKLST_DEV_INFO deviceInfo = NULL;
-	LIBUSBK_INTERFACE_HANDLE handle = NULL;
+	KLST_DEVINFO_HANDLE deviceInfo = NULL;
+	KUSB_HANDLE handle = NULL;
 	int i;
 
 	/*
@@ -317,7 +318,7 @@ Done:
 
 	// Free the device list
 	// If deviceList is invalid (NULL), has no effect
-	LstK_Free(&deviceList);
+	LstK_Free(deviceList);
 
 	return g_ErrorCode;
 }

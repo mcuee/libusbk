@@ -21,9 +21,9 @@ The following usb kernel drivers are supported by the libusbK library:
 - \b libusbK.sys
 - \b libusb0.sys
   - Using the api functions exported by the libusbK library (functions beginning with with \b UsbK_)
-  - Using dynamically loaded functions based on the devices driver type. see \ref drvk
+  - Using dynamically loaded functions based on the devices driver type. see \ref libk
 - \b WinUSB.sys
-  - Using dynamically loaded functions based on the devices driver type. see \ref drvk
+  - Using dynamically loaded functions based on the devices driver type. see \ref libk
 
 \par
 \subsection usbk_winusb_compat WinUSB Compatibility Layer
@@ -36,7 +36,7 @@ Developers can make use of this functionality in two ways:
   - The \c WinUsb_ prefixed functions must \b not be used for devices installed with the WinUSB.sys driver.
   - The \c WinUsb_ prefixed functions are identical to the exported \c UsbK_ prefixed functions, thus \b must
     be installed with either the \c libusbK.sys or \c libusb0.sys driver.
-- Using the \ref drvk
+- Using the \ref libk
   - This option allows users to target any of the \ref usbk_drivers
     but requires small modifications to the applications source code.
 
@@ -359,7 +359,7 @@ The libusbK library documentation is divided into the following sections:
   <HR>
 - \copybrief lstk
   <HR>
-- \copybrief drvk
+- \copybrief libk
   <HR>
 - \copybrief ovlk
   <HR>

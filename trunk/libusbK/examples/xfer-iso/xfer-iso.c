@@ -52,7 +52,7 @@ typedef enum _BENCHMARK_DEVICE_TEST_TYPE
     TestTypeLoop	= TestTypeRead | TestTypeWrite,
 } BENCHMARK_DEVICE_TEST_TYPE, *PBENCHMARK_DEVICE_TEST_TYPE;
 
-BOOL Bench_Configure(__in LIBUSBK_INTERFACE_HANDLE handle,
+BOOL Bench_Configure(__in KUSB_HANDLE handle,
                      __in BENCHMARK_DEVICE_COMMAND command,
                      __in UCHAR intf,
                      __deref_inout PBENCHMARK_DEVICE_TEST_TYPE testType)
@@ -60,14 +60,14 @@ BOOL Bench_Configure(__in LIBUSBK_INTERFACE_HANDLE handle,
 	UCHAR buffer[1];
 	DWORD transferred = 0;
 	WINUSB_SETUP_PACKET Pkt;
-	PKUSB_SETUP_PACKET defPkt = (PKUSB_SETUP_PACKET)&Pkt;
+	KUSB_SETUP_PACKET* defPkt = (KUSB_SETUP_PACKET*)&Pkt;
 
 	memset(&Pkt, 0, sizeof(Pkt));
-	defPkt->bmRequestType.BM.Dir = BMREQUEST_DEVICE_TO_HOST;
-	defPkt->bmRequestType.BM.Type = BMREQUEST_VENDOR;
-	defPkt->bRequest = (UCHAR)command;
-	defPkt->wValue.W = (UCHAR) * testType;
-	defPkt->wIndex.W = intf;
+	defPkt->BmRequest.Dir = BMREQUEST_DEVICE_TO_HOST;
+	defPkt->BmRequest.Type = BMREQUEST_VENDOR;
+	defPkt->Request = (UCHAR)command;
+	defPkt->Value = (UCHAR) * testType;
+	defPkt->Index = intf;
 	defPkt->wLength = 1;
 
 	if (UsbK_ControlTransfer(handle, Pkt, buffer, 1, &transferred, NULL))
@@ -82,15 +82,15 @@ BOOL Bench_Configure(__in LIBUSBK_INTERFACE_HANDLE handle,
 DWORD __cdecl main(int argc, char* argv[])
 {
 	KLST_HANDLE deviceList = NULL;
-	PKLST_DEV_INFO deviceInfo = NULL;
-	LIBUSBK_INTERFACE_HANDLE handle = NULL;
+	KLST_DEVINFO_HANDLE deviceInfo = NULL;
+	KUSB_HANDLE handle = NULL;
 	DWORD errorCode = ERROR_SUCCESS;
 
 	BOOL success;
 	UCHAR dataBuffer[ISO_CALC_DATABUFFER_SIZE(ISO_PACKETS_PER_XFER, EP_PACKET_SIZE)];
 	ULONG transferred = 0;
 	PKISO_CONTEXT isoCtx = NULL;
-	PKOVL_OVERLAPPED ovlkHandle = NULL;
+	KOVL_HANDLE ovlkHandle = NULL;
 	BENCHMARK_DEVICE_TEST_TYPE testType = TestTypeRead;
 	ULONG posPacket;
 	ULONG currentFrameNumber;
@@ -126,7 +126,7 @@ DWORD __cdecl main(int argc, char* argv[])
 	IsoK_Init(&isoCtx, ISO_PACKETS_PER_XFER, testType == TestTypeRead ? EP_RX : EP_TX, 0);
 	IsoK_SetPackets(isoCtx, EP_PACKET_SIZE);
 
-	ovlkHandle = OvlK_Acquire(NULL);
+	OvlK_Acquire(&ovlkHandle, gPool);
 
 	UsbK_ResetPipe(handle, isoCtx->PipeID);
 
@@ -191,7 +191,7 @@ Done:
 	/*!
 	Free the iso context.
 	*/
-	IsoK_Free(&isoCtx);
+	IsoK_Free(isoCtx);
 
 	return errorCode;
 }

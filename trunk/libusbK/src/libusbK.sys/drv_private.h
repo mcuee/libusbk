@@ -28,7 +28,7 @@
 // Global/shared includes
 #include "lusbk_version.h"
 #include "lusbk_debug.h"
-#include "lusbk_usbio.h"
+#include "lusbk_shared.h"
 /////////////////////////////////////////////////////////////////////
 
 #define POOL_TAG (ULONG) 'KBSU'

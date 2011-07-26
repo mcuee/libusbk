@@ -1,17 +1,21 @@
 LIBRARY
 EXPORTS
-	DrvK_GetProcAddress
-	DrvK_LoadDriverApi
+	LibK_GetProcAddress
+	LibK_LoadDriverApi
+	LibK_SetHandleCallbacks
+	LibK_GetContext
+	LibK_GetContextSize
+	LibK_SetContextSize
+	LibK_GetDefaultContextSize
+	LibK_SetDefaultContextSize
 
 	LstK_Init
 	LstK_Free
 	LstK_Enumerate
 	LstK_Current
 	LstK_MoveNext
-	LstK_Reset
+	LstK_MoveReset
 	LstK_FindByVidPid
-	LstK_Lock
-	LstK_Unlock
 	LstK_Count
 	LstK_Sync
 	LstK_Clone
@@ -22,14 +26,9 @@ EXPORTS
 
 	OvlK_Acquire
 	OvlK_Release
-	OvlK_CreatePool
-	OvlK_DestroyPool
-	OvlK_CreateDefaultPool
-	OvlK_DestroyDefaultPool
+	OvlK_InitPool
+	OvlK_FreePool
 	OvlK_GetEventHandle
-	OvlK_GetInfo
-	OvlK_GetContext
-	OvlK_GetPoolContext
 	OvlK_Wait
 	OvlK_WaitOrCancel
 	OvlK_WaitAndRelease
@@ -68,6 +67,8 @@ EXPORTS
 	UsbK_IsoReadPipe
 	UsbK_IsoWritePipe
 	UsbK_GetCurrentFrameNumber
+	UsbK_Clone
+	UsbK_SelectInterface
 
 	IsoK_Init
 	IsoK_Free
@@ -113,3 +114,5 @@ EXPORTS
 	WinUsb_IsoReadPipe
 	WinUsb_IsoWritePipe
 	WinUsb_GetCurrentFrameNumber
+	WinUsb_Clone
+	WinUsb_SelectInterface

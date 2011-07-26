@@ -141,8 +141,8 @@ NTSTATUS Registry_ReadAllDeviceKeys(__in PDEVICE_CONTEXT deviceContext)
 	}
 	else
 	{
-		USBWRN("DeviceInterfaceGUIDs registry key does not exist." USB_LN "Ensure the DeviceInterfaceGUIDs "
-		       "key has been properly set in the .inf and re-install the device.\n\n");
+		USBWRN("DeviceInterfaceGUIDs registry key does not exist.\n"
+		       "    Ensure the DeviceInterfaceGUIDs key has been properly set in the .inf and re-install the device.\n\n");
 	}
 
 	if (WdfCollectionGetCount(deviceContext->DeviceRegSettings.DeviceInterfaceGUIDs) == 0)

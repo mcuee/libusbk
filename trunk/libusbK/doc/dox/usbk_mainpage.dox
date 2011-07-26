@@ -33,7 +33,7 @@
 /*! @} */
 
 /*! \addtogroup usbk UsbK Core API
-* \brief \ref usbk \copybrief lusbk_usb.h
+* \brief \ref usbk \copybrief libusbk.h
 *
 *  @{
 */
@@ -64,8 +64,8 @@
 
 /*! @} */
 
-/*! \addtogroup drvk Dynamic Driver API
-* \brief \ref drvk \copybrief lusbk_dynamic.h
+/*! \addtogroup libk Dynamic Driver API
+* \brief \ref libk \copybrief lusbk_dynamic.h
 *
 *  @{
 */

@@ -1,0 +1,126 @@
+# MinGW64 tdm-gcc (multi-lib) project makefile include for unit_tests.
+#
+# !! IMPORTANT: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# !! Requires multilib GCC
+# !! Get it here: http://tdm-gcc.tdragon.net/
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#
+# IMPORTANT:
+# All relative paths in this "include" makefile are relative to the project
+# makefile, not the solution directory where this "include" makefile resides.
+#
+
+#
+# Copyright (c) 2011 Travis Robinson <libusbdotnet@gmail.com>
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+# 
+#     * Redistributions of source code must retain the above copyright
+#       notice, this list of conditions and the following disclaimer.
+# 	  
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS 
+# IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED 
+# TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A 
+# PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL TRAVIS LEE ROBINSON 
+# BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF 
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN 
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF 
+# THE POSSIBILITY OF SUCH DAMAGE. 
+#
+
+# Commands uses in this makefile:
+# (- prefix means ignore errors)
+#
+CC		= gcc
+RC		= windres
+MAKE	= make
+RM		= -rm -fr
+MKDIR	= -@mkdir -p
+CP		= -cp
+ECHO	= @echo
+
+override ARCH:=$(strip $(arch))
+$(info [K] Multi-lib support = $(if $(strip $(findstring 32;@m32,$(shell $(CC) --print-multi-lib))),Yes,No))
+
+# configure the gcc multi-lib architecture based on the "arch=x86|amd64"
+# argument passed on the command line.  (default is x86)
+#
+ifeq ("$(ARCH)","amd64")
+override ARCH:=amd64
+ARCH_MSVC:=x64
+MACHINE:=-m64
+RC_PE_TARGET:=--target=pe-x86-64
+endif
+ifneq ("$(ARCH)","amd64")
+override ARCH:=x86
+ARCH_MSVC:=Win32
+MACHINE:=-m32
+RC_PE_TARGET:=--target=pe-i386
+endif
+
+# Location of the input bin directory.  e.g. the bin directory
+# of a libusbK-x.x.x.x-bin.7z package.  This is required for linking.
+#
+# NOTE: The directory <solution-dir>/lib/<arch> is searched first.
+# (see the "lusbk_dir_search_list" var below)
+#
+USBK_BIN_DIR:=../../bin
+
+# project output base directory
+#
+OUT_BASE_DIR:=./bin
+
+# full (relative) output directory
+#
+OUT_DIR:=$(OUT_BASE_DIR)/$(ARCH)
+
+# intermediates (objects) output directory
+#
+INT_DIR:=$(OUT_DIR)
+
+# Include search paths
+#
+INC_SEARCH:=-I. -I.. -I../../includes
+
+# Standard libraries to link with all targets
+#
+STDC_LD_LIBS:=-lkernel32 -luser32
+
+# libusbK library name suffix
+#
+USBK_LIB_NAME:=usbK
+
+# ---------------------------------------------------------------------
+# Find the directory of the libusbK library to link with.
+# The "lusbk_dir_search_list" var defined below is searched in order
+# for libusbK.a or libusbK.dll files. "LIB_SEARCH" is set to the first
+# directory in "lusbk_dir_search_list" that has one of these files.
+#  
+lusbk_dir_search_list=../lib/$(ARCH)/ $(USBK_BIN_DIR)/lib/$(ARCH)/ $(USBK_BIN_DIR)/dll/$(ARCH)/
+lusbk_find_dir_fn=$(wildcard $(v_base)lib$(USBK_LIB_NAME).a) $(wildcard $(v_base)lib$(USBK_LIB_NAME).dll)
+lusbk_lib_dirs:=$(foreach v_base,$(lusbk_dir_search_list),$(lusbk_find_dir_fn))
+
+ifeq ("$(strip $(lusbk_lib_dirs))","")
+$(warning Failed locating libusbK library file)
+endif
+
+LIB_SEARCH:=-L$(dir $(firstword $(lusbk_lib_dirs)))
+# ---------------------------------------------------------------------
+
+# Flags passed to the compiler, assembler, and linker
+# (Win32 console application, using shared runtime libs, optimization level 2)
+#
+CFLAGS:=$(MACHINE) $(INC_SEARCH) -mconsole -mwin32 -s -O2
+
+# Flags passed to the linker
+#
+LDFLAGS:= -Wl,--kill-at,--enable-stdcall-fixup $(STDC_LD_LIBS) -l$(USBK_LIB_NAME)
+
+# Flags passed to the resource compiler
+#
+RCFLAGS:=$(INC_SEARCH) $(RC_PE_TARGET)

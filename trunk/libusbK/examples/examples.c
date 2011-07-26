@@ -24,7 +24,7 @@
 */
 #include "examples.h"
 BOOL Examples_GetTestDevice( __deref_out KLST_HANDLE* DeviceList,
-                             __deref_out PKLST_DEV_INFO* DeviceInfo,
+                             __deref_out KLST_DEVINFO_HANDLE* DeviceInfo,
                              __in int argc,
                              __in char* argv[])
 {
@@ -36,7 +36,7 @@ BOOL Examples_GetTestDevice( __deref_out KLST_HANDLE* DeviceList,
 
 }
 BOOL Examples_GetTestDeviceEx( __deref_out KLST_HANDLE* DeviceList,
-                               __deref_out PKLST_DEV_INFO* DeviceInfo,
+                               __deref_out KLST_DEVINFO_HANDLE* DeviceInfo,
                                __in int argc,
                                __in char* argv[],
                                __in_opt PKLST_INIT_PARAMS InitParams)
@@ -46,7 +46,7 @@ BOOL Examples_GetTestDeviceEx( __deref_out KLST_HANDLE* DeviceList,
 	ULONG deviceCount = 0;
 	int argPos;
 	KLST_HANDLE deviceList = NULL;
-	PKLST_DEV_INFO deviceInfo = NULL;
+	KLST_DEVINFO_HANDLE deviceInfo = NULL;
 
 	// init
 	*DeviceList = NULL;
@@ -73,7 +73,7 @@ BOOL Examples_GetTestDeviceEx( __deref_out KLST_HANDLE* DeviceList,
 		SetLastError(ERROR_DEVICE_NOT_CONNECTED);
 
 		// If LstK_Init returns TRUE, the list must be freed.
-		LstK_Free(&deviceList);
+		LstK_Free(deviceList);
 
 		return FALSE;
 	}
@@ -111,7 +111,7 @@ BOOL Examples_GetTestDeviceEx( __deref_out KLST_HANDLE* DeviceList,
 		printf("USAGE: %s vid=%04X pid=%04X\n\n", programExe, vidArg, pidArg);
 
 		// If LstK_Init returns TRUE, the list must be freed.
-		LstK_Free(&deviceList);
+		LstK_Free(deviceList);
 
 		return FALSE;
 	}

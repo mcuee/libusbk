@@ -16,11 +16,11 @@ License files are located in a license folder at the root of source and
 binary distributions.
 ********************************************************************!*/
 
-#include "lusbk_bknd.h"
+#include "lusbk_bknd_unsupported.h"
 
-KUSB_EXP BOOL KUSB_API Hid_Initialize (
+BOOL KUSB_API Unsupported_Initialize (
     __in HANDLE DeviceHandle,
-    __out PLIBUSBK_INTERFACE_HANDLE InterfaceHandle)
+    __out KUSB_HANDLE* InterfaceHandle)
 {
 	UNREFERENCED_PARAMETER(DeviceHandle);
 	UNREFERENCED_PARAMETER(InterfaceHandle);
@@ -29,8 +29,8 @@ KUSB_EXP BOOL KUSB_API Hid_Initialize (
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API Hid_Free (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle)
+BOOL KUSB_API Unsupported_Free (
+    __in KUSB_HANDLE InterfaceHandle)
 {
 	UNREFERENCED_PARAMETER(InterfaceHandle);
 
@@ -38,10 +38,10 @@ KUSB_EXP BOOL KUSB_API Hid_Free (
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API Hid_GetAssociatedInterface (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+BOOL KUSB_API Unsupported_GetAssociatedInterface (
+    __in KUSB_HANDLE InterfaceHandle,
     __in UCHAR AssociatedInterfaceIndex,
-    __out PLIBUSBK_INTERFACE_HANDLE AssociatedInterfaceHandle)
+    __out KUSB_HANDLE* AssociatedInterfaceHandle)
 {
 	UNREFERENCED_PARAMETER(InterfaceHandle);
 	UNREFERENCED_PARAMETER(AssociatedInterfaceIndex);
@@ -51,8 +51,19 @@ KUSB_EXP BOOL KUSB_API Hid_GetAssociatedInterface (
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API Hid_GetDescriptor (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+BOOL KUSB_API Unsupported_Clone (
+    __in KUSB_HANDLE InterfaceHandle,
+    __out KUSB_HANDLE* DstInterfaceHandle)
+{
+	UNREFERENCED_PARAMETER(InterfaceHandle);
+	UNREFERENCED_PARAMETER(DstInterfaceHandle);
+
+	SetLastError(ERROR_NOT_SUPPORTED);
+	return FALSE;
+}
+
+BOOL KUSB_API Unsupported_GetDescriptor (
+    __in KUSB_HANDLE InterfaceHandle,
     __in UCHAR DescriptorType,
     __in UCHAR Index,
     __in USHORT LanguageID,
@@ -72,21 +83,21 @@ KUSB_EXP BOOL KUSB_API Hid_GetDescriptor (
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API Hid_QueryInterfaceSettings (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in UCHAR AlternateSettingNumber,
+BOOL KUSB_API Unsupported_QueryInterfaceSettings (
+    __in KUSB_HANDLE InterfaceHandle,
+    __in UCHAR AltSettingNumber,
     __out PUSB_INTERFACE_DESCRIPTOR UsbAltInterfaceDescriptor)
 {
 	UNREFERENCED_PARAMETER(InterfaceHandle);
-	UNREFERENCED_PARAMETER(AlternateSettingNumber);
+	UNREFERENCED_PARAMETER(AltSettingNumber);
 	UNREFERENCED_PARAMETER(UsbAltInterfaceDescriptor);
 
 	SetLastError(ERROR_NOT_SUPPORTED);
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API Hid_QueryDeviceInformation (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+BOOL KUSB_API Unsupported_QueryDeviceInformation (
+    __in KUSB_HANDLE InterfaceHandle,
     __in ULONG InformationType,
     __inout PULONG BufferLength,
     __out PVOID Buffer)
@@ -100,36 +111,36 @@ KUSB_EXP BOOL KUSB_API Hid_QueryDeviceInformation (
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API Hid_SetCurrentAlternateSetting (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in UCHAR AlternateSettingNumber)
+BOOL KUSB_API Unsupported_SetCurrentAlternateSetting (
+    __in KUSB_HANDLE InterfaceHandle,
+    __in UCHAR AltSettingNumber)
 {
 	UNREFERENCED_PARAMETER(InterfaceHandle);
-	UNREFERENCED_PARAMETER(AlternateSettingNumber);
+	UNREFERENCED_PARAMETER(AltSettingNumber);
 
 	SetLastError(ERROR_NOT_SUPPORTED);
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API Hid_GetCurrentAlternateSetting (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __out PUCHAR AlternateSettingNumber)
+BOOL KUSB_API Unsupported_GetCurrentAlternateSetting (
+    __in KUSB_HANDLE InterfaceHandle,
+    __out PUCHAR AltSettingNumber)
 {
 	UNREFERENCED_PARAMETER(InterfaceHandle);
-	UNREFERENCED_PARAMETER(AlternateSettingNumber);
+	UNREFERENCED_PARAMETER(AltSettingNumber);
 
 	SetLastError(ERROR_NOT_SUPPORTED);
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API Hid_QueryPipe (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in UCHAR AlternateSettingNumber,
+BOOL KUSB_API Unsupported_QueryPipe (
+    __in KUSB_HANDLE InterfaceHandle,
+    __in UCHAR AltSettingNumber,
     __in UCHAR PipeIndex,
     __out PWINUSB_PIPE_INFORMATION PipeInformation)
 {
 	UNREFERENCED_PARAMETER(InterfaceHandle);
-	UNREFERENCED_PARAMETER(AlternateSettingNumber);
+	UNREFERENCED_PARAMETER(AltSettingNumber);
 	UNREFERENCED_PARAMETER(PipeIndex);
 	UNREFERENCED_PARAMETER(PipeInformation);
 
@@ -137,8 +148,8 @@ KUSB_EXP BOOL KUSB_API Hid_QueryPipe (
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API Hid_SetPipePolicy (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+BOOL KUSB_API Unsupported_SetPipePolicy (
+    __in KUSB_HANDLE InterfaceHandle,
     __in UCHAR PipeID,
     __in ULONG PolicyType,
     __in ULONG ValueLength,
@@ -154,8 +165,8 @@ KUSB_EXP BOOL KUSB_API Hid_SetPipePolicy (
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API Hid_GetPipePolicy (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+BOOL KUSB_API Unsupported_GetPipePolicy (
+    __in KUSB_HANDLE InterfaceHandle,
     __in UCHAR PipeID,
     __in ULONG PolicyType,
     __inout PULONG ValueLength,
@@ -171,8 +182,8 @@ KUSB_EXP BOOL KUSB_API Hid_GetPipePolicy (
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API Hid_ReadPipe (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+BOOL KUSB_API Unsupported_ReadPipe (
+    __in KUSB_HANDLE InterfaceHandle,
     __in UCHAR PipeID,
     __out_opt PUCHAR Buffer,
     __in ULONG BufferLength,
@@ -190,8 +201,8 @@ KUSB_EXP BOOL KUSB_API Hid_ReadPipe (
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API Hid_WritePipe (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+BOOL KUSB_API Unsupported_WritePipe (
+    __in KUSB_HANDLE InterfaceHandle,
     __in UCHAR PipeID,
     __in PUCHAR Buffer,
     __in ULONG BufferLength,
@@ -209,8 +220,8 @@ KUSB_EXP BOOL KUSB_API Hid_WritePipe (
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API Hid_ControlTransfer (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+BOOL KUSB_API Unsupported_ControlTransfer (
+    __in KUSB_HANDLE InterfaceHandle,
     __in WINUSB_SETUP_PACKET SetupPacket,
     __out_opt PUCHAR Buffer,
     __in ULONG BufferLength,
@@ -228,8 +239,8 @@ KUSB_EXP BOOL KUSB_API Hid_ControlTransfer (
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API Hid_ResetPipe (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+BOOL KUSB_API Unsupported_ResetPipe (
+    __in KUSB_HANDLE InterfaceHandle,
     __in UCHAR PipeID)
 {
 	UNREFERENCED_PARAMETER(InterfaceHandle);
@@ -239,8 +250,8 @@ KUSB_EXP BOOL KUSB_API Hid_ResetPipe (
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API Hid_AbortPipe (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+BOOL KUSB_API Unsupported_AbortPipe (
+    __in KUSB_HANDLE InterfaceHandle,
     __in UCHAR PipeID)
 {
 	UNREFERENCED_PARAMETER(InterfaceHandle);
@@ -250,8 +261,8 @@ KUSB_EXP BOOL KUSB_API Hid_AbortPipe (
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API Hid_FlushPipe (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+BOOL KUSB_API Unsupported_FlushPipe (
+    __in KUSB_HANDLE InterfaceHandle,
     __in UCHAR PipeID)
 {
 	UNREFERENCED_PARAMETER(InterfaceHandle);
@@ -261,8 +272,8 @@ KUSB_EXP BOOL KUSB_API Hid_FlushPipe (
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API Hid_SetPowerPolicy (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+BOOL KUSB_API Unsupported_SetPowerPolicy (
+    __in KUSB_HANDLE InterfaceHandle,
     __in ULONG PolicyType,
     __in ULONG ValueLength,
     __in PVOID Value)
@@ -276,8 +287,8 @@ KUSB_EXP BOOL KUSB_API Hid_SetPowerPolicy (
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API Hid_GetPowerPolicy (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+BOOL KUSB_API Unsupported_GetPowerPolicy (
+    __in KUSB_HANDLE InterfaceHandle,
     __in ULONG PolicyType,
     __inout PULONG ValueLength,
     __out PVOID Value)
@@ -291,8 +302,8 @@ KUSB_EXP BOOL KUSB_API Hid_GetPowerPolicy (
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API Hid_GetOverlappedResult (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+BOOL KUSB_API Unsupported_GetOverlappedResult (
+    __in KUSB_HANDLE InterfaceHandle,
     __in LPOVERLAPPED lpOverlapped,
     __out LPDWORD lpNumberOfBytesTransferred,
     __in BOOL bWait)
@@ -306,8 +317,8 @@ KUSB_EXP BOOL KUSB_API Hid_GetOverlappedResult (
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API Hid_ResetDevice (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle)
+BOOL KUSB_API Unsupported_ResetDevice (
+    __in KUSB_HANDLE InterfaceHandle)
 {
 	UNREFERENCED_PARAMETER(InterfaceHandle);
 
@@ -315,19 +326,19 @@ KUSB_EXP BOOL KUSB_API Hid_ResetDevice (
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API Hid_Open (
-    __in PKLST_DEV_INFO DeviceListItem,
-    __out PLIBUSBK_INTERFACE_HANDLE InterfaceHandle)
+BOOL KUSB_API Unsupported_Open (
+    __in KLST_DEVINFO* DevInfo,
+    __out KUSB_HANDLE* InterfaceHandle)
 {
-	UNREFERENCED_PARAMETER(DeviceListItem);
+	UNREFERENCED_PARAMETER(DevInfo);
 	UNREFERENCED_PARAMETER(InterfaceHandle);
 
 	SetLastError(ERROR_NOT_SUPPORTED);
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API Hid_Close (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle)
+BOOL KUSB_API Unsupported_Close (
+    __in KUSB_HANDLE InterfaceHandle)
 {
 	UNREFERENCED_PARAMETER(InterfaceHandle);
 
@@ -335,8 +346,8 @@ KUSB_EXP BOOL KUSB_API Hid_Close (
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API Hid_SetConfiguration (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+BOOL KUSB_API Unsupported_SetConfiguration (
+    __in KUSB_HANDLE InterfaceHandle,
     __in UCHAR ConfigurationNumber)
 {
 	UNREFERENCED_PARAMETER(InterfaceHandle);
@@ -346,8 +357,8 @@ KUSB_EXP BOOL KUSB_API Hid_SetConfiguration (
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API Hid_GetConfiguration (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+BOOL KUSB_API Unsupported_GetConfiguration (
+    __in KUSB_HANDLE InterfaceHandle,
     __out PUCHAR ConfigurationNumber)
 {
 	UNREFERENCED_PARAMETER(InterfaceHandle);
@@ -357,64 +368,77 @@ KUSB_EXP BOOL KUSB_API Hid_GetConfiguration (
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API Hid_ClaimInterface (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in UCHAR InterfaceNumberOrIndex,
+BOOL KUSB_API Unsupported_ClaimInterface (
+    __in KUSB_HANDLE InterfaceHandle,
+    __in UCHAR NumberOrIndex,
     __in BOOL IsIndex)
 {
 	UNREFERENCED_PARAMETER(InterfaceHandle);
-	UNREFERENCED_PARAMETER(InterfaceNumberOrIndex);
+	UNREFERENCED_PARAMETER(NumberOrIndex);
 	UNREFERENCED_PARAMETER(IsIndex);
 
 	SetLastError(ERROR_NOT_SUPPORTED);
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API Hid_ReleaseInterface (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in UCHAR InterfaceNumberOrIndex,
+BOOL KUSB_API Unsupported_SelectInterface (
+    __in KUSB_HANDLE InterfaceHandle,
+    __in UCHAR NumberOrIndex,
     __in BOOL IsIndex)
 {
 	UNREFERENCED_PARAMETER(InterfaceHandle);
-	UNREFERENCED_PARAMETER(InterfaceNumberOrIndex);
+	UNREFERENCED_PARAMETER(NumberOrIndex);
 	UNREFERENCED_PARAMETER(IsIndex);
 
 	SetLastError(ERROR_NOT_SUPPORTED);
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API Hid_SetAltInterface (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in UCHAR InterfaceNumberOrIndex,
-    __in BOOL IsIndex,
-    __in UCHAR AltInterfaceNumber)
+BOOL KUSB_API Unsupported_ReleaseInterface (
+    __in KUSB_HANDLE InterfaceHandle,
+    __in UCHAR NumberOrIndex,
+    __in BOOL IsIndex)
 {
 	UNREFERENCED_PARAMETER(InterfaceHandle);
-	UNREFERENCED_PARAMETER(InterfaceNumberOrIndex);
+	UNREFERENCED_PARAMETER(NumberOrIndex);
 	UNREFERENCED_PARAMETER(IsIndex);
-	UNREFERENCED_PARAMETER(AltInterfaceNumber);
 
 	SetLastError(ERROR_NOT_SUPPORTED);
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API Hid_GetAltInterface (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in UCHAR InterfaceNumberOrIndex,
+BOOL KUSB_API Unsupported_SetAltInterface (
+    __in KUSB_HANDLE InterfaceHandle,
+    __in UCHAR NumberOrIndex,
     __in BOOL IsIndex,
-    __out PUCHAR AltInterfaceNumber)
+    __in UCHAR AltSettingNumber)
 {
 	UNREFERENCED_PARAMETER(InterfaceHandle);
-	UNREFERENCED_PARAMETER(InterfaceNumberOrIndex);
+	UNREFERENCED_PARAMETER(NumberOrIndex);
 	UNREFERENCED_PARAMETER(IsIndex);
-	UNREFERENCED_PARAMETER(AltInterfaceNumber);
+	UNREFERENCED_PARAMETER(AltSettingNumber);
 
 	SetLastError(ERROR_NOT_SUPPORTED);
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API Hid_IsoReadPipe (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+BOOL KUSB_API Unsupported_GetAltInterface (
+    __in KUSB_HANDLE InterfaceHandle,
+    __in UCHAR NumberOrIndex,
+    __in BOOL IsIndex,
+    __out PUCHAR AltSettingNumber)
+{
+	UNREFERENCED_PARAMETER(InterfaceHandle);
+	UNREFERENCED_PARAMETER(NumberOrIndex);
+	UNREFERENCED_PARAMETER(IsIndex);
+	UNREFERENCED_PARAMETER(AltSettingNumber);
+
+	SetLastError(ERROR_NOT_SUPPORTED);
+	return FALSE;
+}
+
+BOOL KUSB_API Unsupported_IsoReadPipe (
+    __in KUSB_HANDLE InterfaceHandle,
     __inout PKISO_CONTEXT IsoContext,
     __out_opt PUCHAR Buffer,
     __in ULONG BufferLength,
@@ -430,8 +454,8 @@ KUSB_EXP BOOL KUSB_API Hid_IsoReadPipe (
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API Hid_IsoWritePipe (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+BOOL KUSB_API Unsupported_IsoWritePipe (
+    __in KUSB_HANDLE InterfaceHandle,
     __inout PKISO_CONTEXT IsoContext,
     __in PUCHAR Buffer,
     __in ULONG BufferLength,
@@ -447,8 +471,8 @@ KUSB_EXP BOOL KUSB_API Hid_IsoWritePipe (
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API Hid_GetCurrentFrameNumber (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+BOOL KUSB_API Unsupported_GetCurrentFrameNumber (
+    __in KUSB_HANDLE InterfaceHandle,
     __out PULONG FrameNumber)
 {
 	UNREFERENCED_PARAMETER(InterfaceHandle);
@@ -458,114 +482,121 @@ KUSB_EXP BOOL KUSB_API Hid_GetCurrentFrameNumber (
 	return FALSE;
 }
 
-BOOL GetProcAddress_Hid(__out KPROC* ProcAddress, __in ULONG FunctionID)
+
+BOOL GetProcAddress_Unsupported(__out KPROC* ProcAddress, __in ULONG FunctionID)
 {
 	DWORD rtn = ERROR_SUCCESS;
 
 	switch(FunctionID)
 	{
 	case KUSB_FNID_Initialize:
-		*ProcAddress = (KPROC)Hid_Initialize;
+		*ProcAddress = (KPROC)Unsupported_Initialize;
 		break;
 	case KUSB_FNID_Free:
-		*ProcAddress = (KPROC)Hid_Free;
+		*ProcAddress = (KPROC)Unsupported_Free;
 		break;
 	case KUSB_FNID_GetAssociatedInterface:
-		*ProcAddress = (KPROC)Hid_GetAssociatedInterface;
+		*ProcAddress = (KPROC)Unsupported_GetAssociatedInterface;
 		break;
 	case KUSB_FNID_GetDescriptor:
-		*ProcAddress = (KPROC)Hid_GetDescriptor;
+		*ProcAddress = (KPROC)Unsupported_GetDescriptor;
 		break;
 	case KUSB_FNID_QueryInterfaceSettings:
-		*ProcAddress = (KPROC)Hid_QueryInterfaceSettings;
+		*ProcAddress = (KPROC)Unsupported_QueryInterfaceSettings;
 		break;
 	case KUSB_FNID_QueryDeviceInformation:
-		*ProcAddress = (KPROC)Hid_QueryDeviceInformation;
+		*ProcAddress = (KPROC)Unsupported_QueryDeviceInformation;
 		break;
 	case KUSB_FNID_SetCurrentAlternateSetting:
-		*ProcAddress = (KPROC)Hid_SetCurrentAlternateSetting;
+		*ProcAddress = (KPROC)Unsupported_SetCurrentAlternateSetting;
 		break;
 	case KUSB_FNID_GetCurrentAlternateSetting:
-		*ProcAddress = (KPROC)Hid_GetCurrentAlternateSetting;
+		*ProcAddress = (KPROC)Unsupported_GetCurrentAlternateSetting;
 		break;
 	case KUSB_FNID_QueryPipe:
-		*ProcAddress = (KPROC)Hid_QueryPipe;
+		*ProcAddress = (KPROC)Unsupported_QueryPipe;
 		break;
 	case KUSB_FNID_SetPipePolicy:
-		*ProcAddress = (KPROC)Hid_SetPipePolicy;
+		*ProcAddress = (KPROC)Unsupported_SetPipePolicy;
 		break;
 	case KUSB_FNID_GetPipePolicy:
-		*ProcAddress = (KPROC)Hid_GetPipePolicy;
+		*ProcAddress = (KPROC)Unsupported_GetPipePolicy;
 		break;
 	case KUSB_FNID_ReadPipe:
-		*ProcAddress = (KPROC)Hid_ReadPipe;
+		*ProcAddress = (KPROC)Unsupported_ReadPipe;
 		break;
 	case KUSB_FNID_WritePipe:
-		*ProcAddress = (KPROC)Hid_WritePipe;
+		*ProcAddress = (KPROC)Unsupported_WritePipe;
 		break;
 	case KUSB_FNID_ControlTransfer:
-		*ProcAddress = (KPROC)Hid_ControlTransfer;
+		*ProcAddress = (KPROC)Unsupported_ControlTransfer;
 		break;
 	case KUSB_FNID_ResetPipe:
-		*ProcAddress = (KPROC)Hid_ResetPipe;
+		*ProcAddress = (KPROC)Unsupported_ResetPipe;
 		break;
 	case KUSB_FNID_AbortPipe:
-		*ProcAddress = (KPROC)Hid_AbortPipe;
+		*ProcAddress = (KPROC)Unsupported_AbortPipe;
 		break;
 	case KUSB_FNID_FlushPipe:
-		*ProcAddress = (KPROC)Hid_FlushPipe;
+		*ProcAddress = (KPROC)Unsupported_FlushPipe;
 		break;
 	case KUSB_FNID_SetPowerPolicy:
-		*ProcAddress = (KPROC)Hid_SetPowerPolicy;
+		*ProcAddress = (KPROC)Unsupported_SetPowerPolicy;
 		break;
 	case KUSB_FNID_GetPowerPolicy:
-		*ProcAddress = (KPROC)Hid_GetPowerPolicy;
+		*ProcAddress = (KPROC)Unsupported_GetPowerPolicy;
 		break;
 	case KUSB_FNID_GetOverlappedResult:
-		*ProcAddress = (KPROC)Hid_GetOverlappedResult;
+		*ProcAddress = (KPROC)Unsupported_GetOverlappedResult;
 		break;
 	case KUSB_FNID_ResetDevice:
-		*ProcAddress = (KPROC)Hid_ResetDevice;
+		*ProcAddress = (KPROC)Unsupported_ResetDevice;
 		break;
 	case KUSB_FNID_Open:
-		*ProcAddress = (KPROC)Hid_Open;
+		*ProcAddress = (KPROC)Unsupported_Open;
 		break;
 	case KUSB_FNID_Close:
-		*ProcAddress = (KPROC)Hid_Close;
+		*ProcAddress = (KPROC)Unsupported_Close;
 		break;
 	case KUSB_FNID_SetConfiguration:
-		*ProcAddress = (KPROC)Hid_SetConfiguration;
+		*ProcAddress = (KPROC)Unsupported_SetConfiguration;
 		break;
 	case KUSB_FNID_GetConfiguration:
-		*ProcAddress = (KPROC)Hid_GetConfiguration;
+		*ProcAddress = (KPROC)Unsupported_GetConfiguration;
 		break;
 	case KUSB_FNID_ClaimInterface:
-		*ProcAddress = (KPROC)Hid_ClaimInterface;
+		*ProcAddress = (KPROC)Unsupported_ClaimInterface;
 		break;
 	case KUSB_FNID_ReleaseInterface:
-		*ProcAddress = (KPROC)Hid_ReleaseInterface;
+		*ProcAddress = (KPROC)Unsupported_ReleaseInterface;
 		break;
 	case KUSB_FNID_SetAltInterface:
-		*ProcAddress = (KPROC)Hid_SetAltInterface;
+		*ProcAddress = (KPROC)Unsupported_SetAltInterface;
 		break;
 	case KUSB_FNID_GetAltInterface:
-		*ProcAddress = (KPROC)Hid_GetAltInterface;
+		*ProcAddress = (KPROC)Unsupported_GetAltInterface;
 		break;
 	case KUSB_FNID_IsoReadPipe:
-		*ProcAddress = (KPROC)Hid_IsoReadPipe;
+		*ProcAddress = (KPROC)Unsupported_IsoReadPipe;
 		break;
 	case KUSB_FNID_IsoWritePipe:
-		*ProcAddress = (KPROC)Hid_IsoWritePipe;
+		*ProcAddress = (KPROC)Unsupported_IsoWritePipe;
 		break;
 	case KUSB_FNID_GetCurrentFrameNumber:
-		*ProcAddress = (KPROC)Hid_GetCurrentFrameNumber;
+		*ProcAddress = (KPROC)Unsupported_GetCurrentFrameNumber;
+		break;
+	case KUSB_FNID_Clone:
+		*ProcAddress = (KPROC)Unsupported_Clone;
+		break;
+	case KUSB_FNID_SelectInterface:
+		*ProcAddress = (KPROC)Unsupported_SelectInterface;
 		break;
 
 
 	default:
 		rtn = ERROR_NOT_SUPPORTED;
 		*ProcAddress = (KPROC)NULL;
-		USBERR("Unrecognized function id! FunctionID=%u\n", FunctionID);
+		USBERRN("Unrecognized function id! FunctionID=%u", FunctionID);
 		break;
 
 	}

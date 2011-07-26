@@ -8,7 +8,8 @@
 // To send log messages to stdout, uncomment the line below.
 // #define DebugOutputFunction printf
 //
-#if !defined(DebugOutputFunction) && (defined(_DEBUG) || defined(DBG))
+//#if !defined(DebugOutputFunction) && (defined(_DEBUG) || defined(DBG))
+#if !defined(DebugOutputFunction)
 #define DebugOutputFunction DebugViewOutput
 
 //

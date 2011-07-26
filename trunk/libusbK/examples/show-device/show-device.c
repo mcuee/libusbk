@@ -27,7 +27,7 @@
 // This function is called by the LstK_Enumerate function for each
 // device until it returns FALSE.
 static BOOL KUSB_API ShowDevicesCB(KLST_HANDLE DeviceList,
-                                   PKLST_DEV_INFO deviceInfo,
+                                   KLST_DEVINFO_HANDLE deviceInfo,
                                    PVOID MyContext)
 {
 	// print some information about the device.
@@ -45,7 +45,7 @@ static BOOL KUSB_API ShowDevicesCB(KLST_HANDLE DeviceList,
 DWORD __cdecl main(int argc, char* argv[])
 {
 	KLST_HANDLE deviceList = NULL;
-	PKLST_DEV_INFO deviceInfo = NULL;
+	KLST_DEVINFO_HANDLE deviceInfo = NULL;
 	DWORD errorCode = ERROR_SUCCESS;
 	ULONG count = 0;
 
@@ -64,7 +64,7 @@ DWORD __cdecl main(int argc, char* argv[])
 		printf("No devices connected.\n");
 
 		// Always free the device list if LstK_Init returns TRUE
-		LstK_Free(&deviceList);
+		LstK_Free(deviceList);
 
 		return ERROR_DEVICE_NOT_CONNECTED;
 	}
@@ -72,7 +72,7 @@ DWORD __cdecl main(int argc, char* argv[])
 	/*
 	There are three (3) ways to search the device list:
 	- #1 LstK_FindByVidPid
-	- #2 LstK_Reset, LstK_MoveNext, and LstK_Current
+	- #2 LstK_MoveReset, LstK_MoveNext, and LstK_Current
 	- #3 LstK_Enumerate
 	*/
 
@@ -88,11 +88,11 @@ DWORD __cdecl main(int argc, char* argv[])
 	// Enumerates the device list using it's internal "current" position.
 	//
 	// Reset the device list position.
-	LstK_Reset(deviceList);
+	LstK_MoveReset(deviceList);
 	//
 	errorCode = ERROR_NO_MATCH;
 	//
-	// Call LstK_MoveNext after a LstK_Reset to advance to the first
+	// Call LstK_MoveNext after a LstK_MoveReset to advance to the first
 	// element.
 	while(LstK_MoveNext(deviceList, &deviceInfo))
 	{
@@ -119,7 +119,7 @@ DWORD __cdecl main(int argc, char* argv[])
 	LstK_Enumerate(deviceList, ShowDevicesCB, NULL);
 
 	// Free the device list
-	LstK_Free(&deviceList);
+	LstK_Free(deviceList);
 
 	// return the win32 error code.
 	return errorCode;

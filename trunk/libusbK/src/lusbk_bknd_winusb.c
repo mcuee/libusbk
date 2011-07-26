@@ -1,4 +1,3 @@
-
 /*!********************************************************************
 libusbK - Multi-driver USB library.
 Copyright (C) 2011 All Rights Reserved.
@@ -17,91 +16,114 @@ License files are located in a license folder at the root of source and
 binary distributions.
 ********************************************************************!*/
 
-#include "lusbk_bknd.h"
+#include "lusbk_private.h"
+#include "lusbk_handles.h"
 #include "lusbk_stack_collection.h"
+#include "lusbk_bknd_unsupported.h"
 
 #define WINUSB_BACKEND_SUPPORT
 
 #ifdef WINUSB_BACKEND_SUPPORT
 
+// warning C4127: conditional expression is constant.
 #pragma warning(disable: 4127)
 
 extern ULONG DebugLevel;
-extern KUSB_INTERFACE_HANDLE_INTERNAL InternalHandlePool[KUSB_MAX_INTERFACE_HANDLES];
 
-typedef struct _WINUSB_BKND_CONTEXT
-{
-	KUSB_INTERFACE_STACK UsbStack;
-}* PWINUSB_BKND_CONTEXT, WINUSB_BKND_CONTEXT;
+#ifndef WINUSB_DLL_DYNAMIC_____________________________________________
 
 typedef struct _WINUSB_API
 {
-	BOOL (KUSB_API* Initialize)				(__in HANDLE DeviceHandle, __out PLIBUSBK_INTERFACE_HANDLE InterfaceHandle);
-	BOOL (KUSB_API* Free)					(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle);
-	BOOL (KUSB_API* GetAssociatedInterface)	(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR AssociatedInterfaceIndex, __out PLIBUSBK_INTERFACE_HANDLE AssociatedInterfaceHandle);
-	BOOL (KUSB_API* GetDescriptor)			(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR DescriptorType, __in UCHAR Index, __in USHORT LanguageID, __out_opt PUCHAR Buffer, __in ULONG BufferLength, __out PULONG LengthTransferred);
-	BOOL (KUSB_API* QueryDeviceInformation)	(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in ULONG InformationType, __inout PULONG BufferLength, __out PVOID Buffer);
-	BOOL (KUSB_API* SetCurrentAlternateSetting)	(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR AlternateSettingNumber);
-	BOOL (KUSB_API* GetCurrentAlternateSetting)	(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __out PUCHAR AlternateSettingNumber);
-	BOOL (KUSB_API* SetPipePolicy)			(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR PipeID, __in ULONG PolicyType, __in ULONG ValueLength, __in PVOID Value);
-	BOOL (KUSB_API* GetPipePolicy)			(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR PipeID, __in ULONG PolicyType, __inout PULONG ValueLength, __out PVOID Value);
-	BOOL (KUSB_API* ReadPipe)				(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR PipeID, __out_opt PUCHAR Buffer, __in ULONG BufferLength, __out_opt PULONG LengthTransferred, __in_opt LPOVERLAPPED Overlapped);
-	BOOL (KUSB_API* WritePipe)				(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR PipeID, __in PUCHAR Buffer, __in ULONG BufferLength, __out_opt PULONG LengthTransferred, __in_opt LPOVERLAPPED Overlapped);
-	BOOL (KUSB_API* ControlTransfer)		(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in WINUSB_SETUP_PACKET SetupPacket, __out_opt PUCHAR Buffer, __in ULONG BufferLength, __out_opt PULONG LengthTransferred, __in_opt LPOVERLAPPED Overlapped);
-	BOOL (KUSB_API* ResetPipe)				(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR PipeID);
-	BOOL (KUSB_API* AbortPipe)				(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR PipeID);
-	BOOL (KUSB_API* FlushPipe)				(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in UCHAR PipeID);
-	BOOL (KUSB_API* SetPowerPolicy)			(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in ULONG PolicyType, __in ULONG ValueLength, __in PVOID Value);
-	BOOL (KUSB_API* GetPowerPolicy)			(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle, __in ULONG PolicyType, __inout PULONG ValueLength, __out PVOID Value);
+	struct
+	{
+		volatile long Lock;
+		BOOL IsInitialized;
+		volatile HMODULE DLL;
+	} Init;
+
+	BOOL (KUSB_API* Initialize)				(__in HANDLE DeviceHandle, __out KUSB_HANDLE* InterfaceHandle);
+	BOOL (KUSB_API* Free)					(__in KUSB_HANDLE InterfaceHandle);
+	BOOL (KUSB_API* GetAssociatedInterface)	(__in KUSB_HANDLE InterfaceHandle, __in UCHAR AssociatedInterfaceIndex, __out KUSB_HANDLE* AssociatedInterfaceHandle);
+	BOOL (KUSB_API* GetDescriptor)			(__in KUSB_HANDLE InterfaceHandle, __in UCHAR DescriptorType, __in UCHAR Index, __in USHORT LanguageID, __out_opt PUCHAR Buffer, __in ULONG BufferLength, __out PULONG LengthTransferred);
+	BOOL (KUSB_API* QueryDeviceInformation)	(__in KUSB_HANDLE InterfaceHandle, __in ULONG InformationType, __inout PULONG BufferLength, __out PVOID Buffer);
+	BOOL (KUSB_API* SetCurrentAlternateSetting)	(__in KUSB_HANDLE InterfaceHandle, __in UCHAR AltSettingNumber);
+	BOOL (KUSB_API* GetCurrentAlternateSetting)	(__in KUSB_HANDLE InterfaceHandle, __out PUCHAR AltSettingNumber);
+	BOOL (KUSB_API* SetPipePolicy)			(__in KUSB_HANDLE InterfaceHandle, __in UCHAR PipeID, __in ULONG PolicyType, __in ULONG ValueLength, __in PVOID Value);
+	BOOL (KUSB_API* GetPipePolicy)			(__in KUSB_HANDLE InterfaceHandle, __in UCHAR PipeID, __in ULONG PolicyType, __inout PULONG ValueLength, __out PVOID Value);
+	BOOL (KUSB_API* ReadPipe)				(__in KUSB_HANDLE InterfaceHandle, __in UCHAR PipeID, __out_opt PUCHAR Buffer, __in ULONG BufferLength, __out_opt PULONG LengthTransferred, __in_opt LPOVERLAPPED Overlapped);
+	BOOL (KUSB_API* WritePipe)				(__in KUSB_HANDLE InterfaceHandle, __in UCHAR PipeID, __in PUCHAR Buffer, __in ULONG BufferLength, __out_opt PULONG LengthTransferred, __in_opt LPOVERLAPPED Overlapped);
+	BOOL (KUSB_API* ControlTransfer)		(__in KUSB_HANDLE InterfaceHandle, __in WINUSB_SETUP_PACKET SetupPacket, __out_opt PUCHAR Buffer, __in ULONG BufferLength, __out_opt PULONG LengthTransferred, __in_opt LPOVERLAPPED Overlapped);
+	BOOL (KUSB_API* ResetPipe)				(__in KUSB_HANDLE InterfaceHandle, __in UCHAR PipeID);
+	BOOL (KUSB_API* AbortPipe)				(__in KUSB_HANDLE InterfaceHandle, __in UCHAR PipeID);
+	BOOL (KUSB_API* FlushPipe)				(__in KUSB_HANDLE InterfaceHandle, __in UCHAR PipeID);
+	BOOL (KUSB_API* SetPowerPolicy)			(__in KUSB_HANDLE InterfaceHandle, __in ULONG PolicyType, __in ULONG ValueLength, __in PVOID Value);
+	BOOL (KUSB_API* GetPowerPolicy)			(__in KUSB_HANDLE InterfaceHandle, __in ULONG PolicyType, __inout PULONG ValueLength, __out PVOID Value);
 }* PWINUSB_API, WINUSB_API;
 
-#define W_CTX(BackendContextPtr, InterfaceHandle) \
-	GET_BACKEND_CONTEXT((BackendContextPtr), ((PKUSB_INTERFACE_HANDLE_INTERNAL)(InterfaceHandle)), WINUSB_BKND_CONTEXT)
+static WINUSB_API WinUsb = {{0, FALSE, NULL}};
 
-#define W_CTXJ(BackendContextPtr, InterfaceHandle, ErrorJump) \
-	GET_BACKEND_CONTEXT_EJUMP((BackendContextPtr), ((PKUSB_INTERFACE_HANDLE_INTERNAL)(InterfaceHandle)), WINUSB_BKND_CONTEXT, ErrorJump)
+static void WUsb_Init_Library()
+{
 
-#define WUSBFN_CTX_PREFIX()							\
-	PKUSB_INTERFACE_HANDLE_INTERNAL handle=NULL;		\
-	BOOL success=FALSE;									\
-	DWORD errorCode=ERROR_SUCCESS;						\
-	PWINUSB_BKND_CONTEXT backendContext=NULL;			\
-														\
-	UNREFERENCED_PARAMETER(success);					\
-	UNREFERENCED_PARAMETER(errorCode);					\
-														\
-	GET_INTERNAL_HANDLE(handle);						\
-	W_CTX(backendContext, handle)
+	if (!WinUsb.Init.IsInitialized)
+	{
+		CheckLibInit();
+		SpinLock_Acquire(&WinUsb.Init.Lock, TRUE);
+		if ((WinUsb.Init.DLL = LoadLibraryA("winusb.dll")) != NULL)
+		{
+			WinUsb.AbortPipe = (KUSB_AbortPipe*)GetProcAddress(WinUsb.Init.DLL, "WinUsb_AbortPipe");
+			WinUsb.Initialize = (KUSB_Initialize*)GetProcAddress(WinUsb.Init.DLL, "WinUsb_Initialize");
+			WinUsb.Free = (KUSB_Free*)GetProcAddress(WinUsb.Init.DLL, "WinUsb_Free");
+			WinUsb.GetAssociatedInterface = (KUSB_GetAssociatedInterface*)GetProcAddress(WinUsb.Init.DLL, "WinUsb_GetAssociatedInterface");
+			WinUsb.GetDescriptor = (KUSB_GetDescriptor*)GetProcAddress(WinUsb.Init.DLL, "WinUsb_GetDescriptor");
+			WinUsb.QueryDeviceInformation = (KUSB_QueryDeviceInformation*)GetProcAddress(WinUsb.Init.DLL, "WinUsb_QueryDeviceInformation");
+			WinUsb.SetCurrentAlternateSetting = (KUSB_SetCurrentAlternateSetting*)GetProcAddress(WinUsb.Init.DLL, "WinUsb_SetCurrentAlternateSetting");
+			WinUsb.GetCurrentAlternateSetting = (KUSB_GetCurrentAlternateSetting*)GetProcAddress(WinUsb.Init.DLL, "WinUsb_GetCurrentAlternateSetting");
+			WinUsb.SetPipePolicy = (KUSB_SetPipePolicy*)GetProcAddress(WinUsb.Init.DLL, "WinUsb_SetPipePolicy");
+			WinUsb.GetPipePolicy = (KUSB_GetPipePolicy*)GetProcAddress(WinUsb.Init.DLL, "WinUsb_GetPipePolicy");
+			WinUsb.ReadPipe = (KUSB_ReadPipe*)GetProcAddress(WinUsb.Init.DLL, "WinUsb_ReadPipe");
+			WinUsb.WritePipe = (KUSB_WritePipe*)GetProcAddress(WinUsb.Init.DLL, "WinUsb_WritePipe");
+			WinUsb.ControlTransfer = (KUSB_ControlTransfer*)GetProcAddress(WinUsb.Init.DLL, "WinUsb_ControlTransfer");
+			WinUsb.ResetPipe = (KUSB_ResetPipe*)GetProcAddress(WinUsb.Init.DLL, "WinUsb_ResetPipe");
+			WinUsb.AbortPipe = (KUSB_AbortPipe*)GetProcAddress(WinUsb.Init.DLL, "WinUsb_AbortPipe");
+			WinUsb.FlushPipe = (KUSB_FlushPipe*)GetProcAddress(WinUsb.Init.DLL, "WinUsb_FlushPipe");
+			WinUsb.SetPowerPolicy = (KUSB_SetPowerPolicy*)GetProcAddress(WinUsb.Init.DLL, "WinUsb_SetPowerPolicy");
+			WinUsb.GetPowerPolicy = (KUSB_GetPowerPolicy*)GetProcAddress(WinUsb.Init.DLL, "WinUsb_GetPowerPolicy");
+		}
+		else
+		{
+			WinUsb.AbortPipe = Unsupported_AbortPipe;
+			WinUsb.Initialize = Unsupported_Initialize;
+			WinUsb.Free = Unsupported_Free;
+			WinUsb.GetAssociatedInterface = Unsupported_GetAssociatedInterface;
+			WinUsb.GetDescriptor = Unsupported_GetDescriptor;
+			WinUsb.QueryDeviceInformation = Unsupported_QueryDeviceInformation;
+			WinUsb.SetCurrentAlternateSetting = Unsupported_SetCurrentAlternateSetting;
+			WinUsb.GetCurrentAlternateSetting = Unsupported_GetCurrentAlternateSetting;
+			WinUsb.SetPipePolicy = Unsupported_SetPipePolicy;
+			WinUsb.GetPipePolicy = Unsupported_GetPipePolicy;
+			WinUsb.ReadPipe = Unsupported_ReadPipe;
+			WinUsb.WritePipe = Unsupported_WritePipe;
+			WinUsb.ControlTransfer = Unsupported_ControlTransfer;
+			WinUsb.ResetPipe = Unsupported_ResetPipe;
+			WinUsb.AbortPipe = Unsupported_AbortPipe;
+			WinUsb.FlushPipe = Unsupported_FlushPipe;
+			WinUsb.SetPowerPolicy = Unsupported_SetPowerPolicy;
+			WinUsb.GetPowerPolicy = Unsupported_GetPowerPolicy;
+		}
+		WinUsb.Init.IsInitialized = TRUE;
+		SpinLock_Release(&WinUsb.Init.Lock);
+	}
+}
 
-#define WUSBFN_CTX_DEVICE_PREFIX()						\
-	KUSB_DEVICE_EL deviceEL;							\
-	WUSBFN_CTX_PREFIX()
+#endif
 
-#define WUSBFN_CTX_INTERFACE_PREFIX()					\
-	KUSB_INTERFACE_EL interfaceEL;						\
-	WUSBFN_CTX_PREFIX()
-
-#define WUSBFN_CTX_PIPE_PREFIX()						\
-	WUSBFN_CTX_PREFIX()
-
-#define WUSBFN_CTX_ALL_PREFIX()							\
-	KUSB_DEVICE_EL deviceEL;							\
-	KUSB_INTERFACE_EL interfaceEL;						\
-	WUSBFN_CTX_PREFIX()
-
-#define GetStackInterfaceCache() {success=UsbStack_GetCache(&backendContext->UsbStack, NULL, &(interfaceEL)); }
-
-#define InterfaceHandleByPipeID(PipeID)	 GetPipeInterfaceHandle(backendContext->UsbStack,PipeID)
-#define DeviceHandleByPipeID(PipeID)	 GetPipeDeviceHandle(backendContext->UsbStack,PipeID)
-
-#define ErrorStackInterfaceCache()	ErrorSet(!success, Error, ERROR_DEVICE_NOT_AVAILABLE, "no interfaces found.")
+#ifndef OVLK_OVERLAPPED_XFER_DEFINES___________________________________
 
 #define OVLK_CHECK(mOverlapped, mPipeID, mBuffer, mBufferLength, mDeviceHandle, mInterfaceHandle)				\
-	if (mOverlapped && mOverlapped == mOverlapped->Pointer)														\
+	if (IS_OVLK(mOverlapped))																					\
 	{																											\
-		PKOVL_OVERLAPPED_INFO ovlkInfo = OvlK_GetInfo(mOverlapped);												\
-		mOverlapped->Pointer = NULL;																			\
-																												\
+		PKOVL_OVERLAPPED_INFO ovlkInfo = KOVL_GET_PRIVATE_INFO(mOverlapped);									\
 		ovlkInfo->DataBuffer = mBuffer;																			\
 		ovlkInfo->DataBufferSize = mBufferLength;																\
 		ovlkInfo->DeviceHandle = mDeviceHandle;																	\
@@ -110,12 +132,10 @@ typedef struct _WINUSB_API
 		ovlkInfo->Cancel = w_CancelOverlappedK;																	\
 	}
 
-#define OVLK_CHECK_CONTROL(mOverlapped, mBuffer, mBufferLength, mDeviceHandle, mInterfaceHandle)				\
-	if (mOverlapped && mOverlapped == mOverlapped->Pointer)														\
+#define OVLK_CONTROL_CHECK(mOverlapped, mBuffer, mBufferLength, mDeviceHandle, mInterfaceHandle)				\
+	if (IS_OVLK(mOverlapped))																					\
 	{																											\
-		PKOVL_OVERLAPPED_INFO ovlkInfo = OvlK_GetInfo(mOverlapped);												\
-		mOverlapped->Pointer = NULL;																			\
-																												\
+		PKOVL_OVERLAPPED_INFO ovlkInfo = KOVL_GET_PRIVATE_INFO(mOverlapped);									\
 		ovlkInfo->DataBuffer = mBuffer;																			\
 		ovlkInfo->DataBufferSize = mBufferLength;																\
 		ovlkInfo->DeviceHandle = mDeviceHandle;																	\
@@ -123,278 +143,13 @@ typedef struct _WINUSB_API
 		ovlkInfo->Cancel = w_CancelOverlappedK_Control;															\
 	}
 
-static volatile long WUsbInitLibLock = 0;
-static volatile BOOL IsWUsbInitialized = FALSE;
-static volatile HMODULE WinUsb_Dll_Module = NULL;
-static WINUSB_API WinUsb = {0};
-
-static VOID WUsb_Init_Library()
-{
-
-	CheckLibInitialized();
-
-Retry:
-	if (IsWUsbInitialized)
-		return;
-
-	if (InterlockedIncrement(&WUsbInitLibLock) > 1)
-	{
-		InterlockedDecrement(&WUsbInitLibLock);
-		Sleep(0);
-		goto Retry;
-	}
-	WinUsb_Dll_Module = LoadLibraryA("winusb.dll");
-	if (IsHandleValid(WinUsb_Dll_Module))
-	{
-		WinUsb.AbortPipe = (KUSB_AbortPipe*)GetProcAddress(WinUsb_Dll_Module, "WinUsb_AbortPipe");
-		WinUsb.Initialize = (KUSB_Initialize*)GetProcAddress(WinUsb_Dll_Module, "WinUsb_Initialize");
-		WinUsb.Free = (KUSB_Free*)GetProcAddress(WinUsb_Dll_Module, "WinUsb_Free");
-		WinUsb.GetAssociatedInterface = (KUSB_GetAssociatedInterface*)GetProcAddress(WinUsb_Dll_Module, "WinUsb_GetAssociatedInterface");
-		WinUsb.GetDescriptor = (KUSB_GetDescriptor*)GetProcAddress(WinUsb_Dll_Module, "WinUsb_GetDescriptor");
-		WinUsb.QueryDeviceInformation = (KUSB_QueryDeviceInformation*)GetProcAddress(WinUsb_Dll_Module, "WinUsb_QueryDeviceInformation");
-		WinUsb.SetCurrentAlternateSetting = (KUSB_SetCurrentAlternateSetting*)GetProcAddress(WinUsb_Dll_Module, "WinUsb_SetCurrentAlternateSetting");
-		WinUsb.GetCurrentAlternateSetting = (KUSB_GetCurrentAlternateSetting*)GetProcAddress(WinUsb_Dll_Module, "WinUsb_GetCurrentAlternateSetting");
-		WinUsb.SetPipePolicy = (KUSB_SetPipePolicy*)GetProcAddress(WinUsb_Dll_Module, "WinUsb_SetPipePolicy");
-		WinUsb.GetPipePolicy = (KUSB_GetPipePolicy*)GetProcAddress(WinUsb_Dll_Module, "WinUsb_GetPipePolicy");
-		WinUsb.ReadPipe = (KUSB_ReadPipe*)GetProcAddress(WinUsb_Dll_Module, "WinUsb_ReadPipe");
-		WinUsb.WritePipe = (KUSB_WritePipe*)GetProcAddress(WinUsb_Dll_Module, "WinUsb_WritePipe");
-		WinUsb.ControlTransfer = (KUSB_ControlTransfer*)GetProcAddress(WinUsb_Dll_Module, "WinUsb_ControlTransfer");
-		WinUsb.ResetPipe = (KUSB_ResetPipe*)GetProcAddress(WinUsb_Dll_Module, "WinUsb_ResetPipe");
-		WinUsb.AbortPipe = (KUSB_AbortPipe*)GetProcAddress(WinUsb_Dll_Module, "WinUsb_AbortPipe");
-		WinUsb.FlushPipe = (KUSB_FlushPipe*)GetProcAddress(WinUsb_Dll_Module, "WinUsb_FlushPipe");
-		WinUsb.SetPowerPolicy = (KUSB_SetPowerPolicy*)GetProcAddress(WinUsb_Dll_Module, "WinUsb_SetPowerPolicy");
-		WinUsb.GetPowerPolicy = (KUSB_GetPowerPolicy*)GetProcAddress(WinUsb_Dll_Module, "WinUsb_GetPowerPolicy");
-	}
-	else
-	{
-		InterlockedDecrement(&WUsbInitLibLock);
-	}
-
-	IsWUsbInitialized = TRUE;
-}
-
-///////////////////////////////////////////////////////////////////////
-// private winusb backend functions
-///////////////////////////////////////////////////////////////////////
-static LONG w_OpenInterfaceCB(
-    __in PKUSB_INTERFACE_STACK UsbStack,
-    __in HANDLE PreviousHandle,
-    __in INT InterfaceIndex,
-    __out PHANDLE AssociatedHandleRef,
-    __in PVOID Context)
+static BOOL KUSB_API w_CancelOverlappedK(__in KOVL_HANDLE Overlapped)
 {
 	BOOL success;
-
-	UNREFERENCED_PARAMETER(UsbStack);
-	UNREFERENCED_PARAMETER(Context);
-
-	if (InterfaceIndex == 0)
+	PKOVL_OVERLAPPED_INFO ovInfo = KOVL_GET_PRIVATE_INFO(Overlapped);
+	if (AllK.CancelIoEx)
 	{
-		success = WinUsb.Initialize(PreviousHandle, AssociatedHandleRef);
-		ErrorNoSet(!success, Error, "->WinUsb.Initialize");
-	}
-	else
-	{
-		success = WinUsb.GetAssociatedInterface(PreviousHandle, (UCHAR)InterfaceIndex - 1, AssociatedHandleRef);
-		ErrorNoSet(!success, Error, "->WinUsb.GetAssociatedInterface: AssociatedIndex=%u", InterfaceIndex - 1);
-	}
-
-	return ERROR_SUCCESS;
-Error:
-	return GetLastError();
-}
-
-static LONG w_GetCurrentConfigDescriptorCB(
-    __in PKUSB_INTERFACE_STACK UsbStack,
-    __in_opt LPCSTR DevicePath,
-    __in_opt HANDLE DeviceHandle,
-    __in_opt HANDLE InterfaceHandle,
-    __out PUSB_CONFIGURATION_DESCRIPTOR* ConfigDescriptorRef,
-    __in_opt PVOID Context)
-{
-	DWORD transferred = 0;
-	USB_CONFIGURATION_DESCRIPTOR configCheck;
-	BOOL success;
-
-	UNREFERENCED_PARAMETER(UsbStack);
-	UNREFERENCED_PARAMETER(DevicePath);
-	UNREFERENCED_PARAMETER(DeviceHandle);
-	UNREFERENCED_PARAMETER(Context);
-
-	Mem_Zero(&configCheck, sizeof(configCheck));
-
-	success = WinUsb.GetDescriptor(
-	              InterfaceHandle,
-	              USB_CONFIGURATION_DESCRIPTOR_TYPE, 0, 0,
-	              (PUCHAR)&configCheck, sizeof(configCheck), &transferred);
-	ErrorNoSet(!success, Error, "->WinUsb.GetDescriptor1");
-
-	*ConfigDescriptorRef = Mem_Alloc(configCheck.wTotalLength);
-	ErrorMemory(!*ConfigDescriptorRef, Error);
-
-	success = WinUsb.GetDescriptor(InterfaceHandle,
-	                               USB_CONFIGURATION_DESCRIPTOR_TYPE, 0, 0,
-	                               (PUCHAR) * ConfigDescriptorRef, configCheck.wTotalLength, &transferred);
-	ErrorNoSet(!success, Error, "->WinUsb.GetDescriptor2");
-
-Error:
-	return success ? ERROR_SUCCESS : GetLastError();
-}
-
-static BOOL w_DestroyContext(__inout PKUSB_INTERFACE_HANDLE_INTERNAL InternalHandle)
-{
-	PWINUSB_BKND_CONTEXT backendContext = NULL;
-
-	// handle uninitialized.
-	if (!IsHandleValid(InternalHandle))
-		return LusbwError(ERROR_INVALID_HANDLE);
-
-	if (InternalHandle->Instance.UsageCount < 1)
-		return LusbwError(ERROR_INVALID_HANDLE);
-
-	backendContext = (PWINUSB_BKND_CONTEXT)InternalHandle->BackendContext;
-	if (!IsHandleValid(backendContext))
-		goto Done;
-
-	// free the device/interface stack
-	UsbStack_Free(&backendContext->UsbStack, backendContext);
-
-Done:
-	// destroy the main context semaphore lock.
-	DestroyLock(&InternalHandle->Instance.Lock);
-
-	// Release the handle back to the pool.
-	DecUsageCount(InternalHandle);
-
-	Mem_Free(&backendContext);
-
-	return TRUE;
-}
-
-static LONG w_ClaimReleaseCB (__in PKUSB_INTERFACE_STACK UsbStack,
-                              __in PKUSB_INTERFACE_EL InterfaceElement,
-                              __in BOOL IsClaim,
-                              __in INT InterfaceIndexOrNumber,
-                              __in BOOL IsIndex,
-                              __in PVOID Context)
-{
-	LONG errorCode = ERROR_SUCCESS;
-
-	UNREFERENCED_PARAMETER(Context);
-	UNREFERENCED_PARAMETER(IsIndex);
-	UNREFERENCED_PARAMETER(InterfaceIndexOrNumber);
-
-	if (!InterfaceElement)
-		return ERROR_NO_MORE_ITEMS;
-
-	// The most recently claimed interface is always at the list head.
-	DL_DELETE(UsbStack->InterfaceList, InterfaceElement);
-	if (IsClaim)
-	{
-		DL_PREPEND(UsbStack->InterfaceList, InterfaceElement);
-	}
-	else
-	{
-		DL_APPEND(UsbStack->InterfaceList, InterfaceElement);
-	}
-
-	// All device handles and interface handles are cached.
-	UsbStack_BuildCache(UsbStack);
-
-	return errorCode;
-}
-
-static LONG w_CloseInterface(
-    __in PKUSB_INTERFACE_STACK UsbStack,
-    __in PKUSB_INTERFACE_EL InterfaceElement,
-    __in PVOID Context)
-{
-	BOOL success;
-	UNREFERENCED_PARAMETER(UsbStack);
-	UNREFERENCED_PARAMETER(Context);
-
-	success = WinUsb.Free(InterfaceElement->ParentDevice->Device->SharedInterfaces[InterfaceElement->Number].InterfaceHandle);
-	ErrorNoSet(!success, Error, "->WinUsb.Free");
-
-	return TRUE;
-Error:
-	return FALSE;
-}
-static BOOL w_CreateContext(__out PKUSB_INTERFACE_HANDLE_INTERNAL* InternalHandleRef)
-{
-	BOOL success;
-	PWINUSB_BKND_CONTEXT backendContext = NULL;
-	PKUSB_INTERFACE_HANDLE_INTERNAL internalHandle = NULL;
-
-	ErrorHandle(!InternalHandleRef, Error, "InternalHandleRef");
-
-	internalHandle = GetInternalPoolHandle();
-	ErrorHandle(!internalHandle, Error, "internalHandle");
-
-	memset(internalHandle, 0, sizeof(*internalHandle) - sizeof(internalHandle->Instance));
-
-	backendContext = Mem_Alloc(sizeof(WINUSB_BKND_CONTEXT));
-	ErrorMemory(!IsHandleValid(backendContext), Error);
-	internalHandle->BackendContext = backendContext;
-
-	success = UsbStack_Init(
-	              &backendContext->UsbStack,
-	              w_GetCurrentConfigDescriptorCB,
-	              w_ClaimReleaseCB,
-	              w_OpenInterfaceCB,
-	              w_CloseInterface,
-	              NULL);
-
-	ErrorNoSet(!success, Error, "->UsbStack_Init");
-
-	success = InitInterfaceLock(&internalHandle->Instance.Lock);
-	ErrorNoSet(!success, Error, "->InitInterfaceLock");
-
-	*InternalHandleRef = internalHandle;
-	return TRUE;
-
-Error:
-	w_DestroyContext(internalHandle);
-	*InternalHandleRef = NULL;
-	return FALSE;
-}
-
-BOOL w_ClaimOrReleaseInterface(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-                               __in INT InterfaceNumberOrIndex,
-                               __in UCHAR IsClaim,
-                               __in UCHAR IsIndex)
-{
-	LONG action;
-	WUSBFN_CTX_PREFIX();
-
-	if (InterfaceNumberOrIndex < 0)
-		return LusbwError(ERROR_NO_MORE_ITEMS);
-
-	AcquireSyncLockWrite(&handle->Instance.Lock);
-
-	GET_BACKEND_CONTEXT(backendContext, handle, WINUSB_BKND_CONTEXT);
-
-	action = UsbStack_ClaimOrRelease(&backendContext->UsbStack,
-	                                 IsClaim,
-	                                 InterfaceNumberOrIndex,
-	                                 IsIndex,
-	                                 handle);
-
-	ReleaseSyncLockWrite(&handle->Instance.Lock);
-
-	if (action == ERROR_SUCCESS)
-		return TRUE;
-
-	return LusbwError(action);
-}
-
-static BOOL KUSB_API w_CancelOverlappedK(__in PKOVL_OVERLAPPED Overlapped)
-{
-	BOOL success;
-	PKOVL_OVERLAPPED_INFO ovInfo = OvlK_GetInfo(Overlapped);
-	if (Opt_CancelIoEx)
-	{
-		success = Opt_CancelIoEx(ovInfo->DeviceHandle, Overlapped);
+		success = AllK.CancelIoEx(ovInfo->DeviceHandle, Overlapped);
 	}
 	else
 	{
@@ -404,13 +159,13 @@ static BOOL KUSB_API w_CancelOverlappedK(__in PKOVL_OVERLAPPED Overlapped)
 	return success;
 }
 
-static BOOL KUSB_API w_CancelOverlappedK_Control(__in PKOVL_OVERLAPPED Overlapped)
+static BOOL KUSB_API w_CancelOverlappedK_Control(__in KOVL_HANDLE Overlapped)
 {
 	BOOL success;
-	PKOVL_OVERLAPPED_INFO ovInfo = OvlK_GetInfo(Overlapped);
-	if (Opt_CancelIoEx)
+	PKOVL_OVERLAPPED_INFO ovInfo = KOVL_GET_PRIVATE_INFO(Overlapped);
+	if (AllK.CancelIoEx)
 	{
-		success = Opt_CancelIoEx(ovInfo->DeviceHandle, Overlapped);
+		success = AllK.CancelIoEx(ovInfo->DeviceHandle, Overlapped);
 	}
 	else
 	{
@@ -420,164 +175,191 @@ static BOOL KUSB_API w_CancelOverlappedK_Control(__in PKOVL_OVERLAPPED Overlappe
 	return success;
 }
 
+#endif
 
+#ifndef HANDLE_CLEANUP_________________________________________________
 
-KUSB_EXP BOOL KUSB_API WUsb_Initialize(
-    __in HANDLE DeviceHandle,
-    __out PLIBUSBK_INTERFACE_HANDLE InterfaceHandle)
+static void KUSB_API w_Cleanup_DevK(__in PKDEV_HANDLE_INTERNAL SharedDevice)
 {
+	int pos = 0;
+	for (pos = 0; pos < KDEV_SHARED_INTERFACE_COUNT; pos++)
+	{
+		if (!SharedDevice->SharedInterfaces[pos].InterfaceHandle)
+			break;
+		WinUsb.Free(SharedDevice->SharedInterfaces[pos].InterfaceHandle);
+		SharedDevice->SharedInterfaces[pos].InterfaceHandle = NULL;
+	}
+
+	if (!Str_IsNullOrEmpty(SharedDevice->DevicePath))
+	{
+		Mem_Free(&SharedDevice->DevicePath);
+		CloseHandle(SharedDevice->MasterDeviceHandle);
+	}
+	if (SharedDevice->UsbStack)
+	{
+		// free the device/interface stack
+		UsbStack_Clear(SharedDevice->UsbStack);
+		Mem_Free(&SharedDevice->UsbStack);
+	}
+	Mem_Free(&SharedDevice->ConfigDescriptor);
+}
+
+static void KUSB_API w_Cleanup_UsbK(__in PKUSB_HANDLE_INTERNAL InternalHandle)
+{
+	if (InternalHandle && InternalHandle->Device) PoolHandle_Dec_DevK(InternalHandle->Device);
+}
+
+#endif
+
+#ifndef HANDLE_INIT_CLONE_AND_FREE_FUNCTIONS___________________________
+
+static BOOL w_Init_Config(PKUSB_HANDLE_INTERNAL handle)
+{
+	DWORD transferred = 0;
+	USB_CONFIGURATION_DESCRIPTOR configCheck;
 	BOOL success;
-	PKUSB_INTERFACE_HANDLE_INTERNAL interfaceHandle = NULL;
-	PWINUSB_BKND_CONTEXT backendContext = NULL;
+	UCHAR nextIntefaceIndex = UCHAR_MAX;
+	HANDLE nextInterfaceHandle = NULL;
 
-	CheckLibInitialized();
+	if (!Intf_Handle())
+	{
+		success = WinUsb.Initialize(Dev_Handle(), (KUSB_HANDLE*)&Intf_Handle());
+		ErrorNoSetAction(!success, return FALSE, "WinUsb.Initialize failed.");
+		handle->Device->SharedInterfaces[0].InterfaceHandle = Intf_Handle();
+		handle->Device->SharedInterfaces[0].Index = 0;
 
-	ErrorHandle(!IsHandleValid(DeviceHandle), Error, "DeviceHandle");
-	ErrorHandle(!IsHandleValid(InterfaceHandle), Error, "InterfaceHandle");
+		while(WinUsb.GetAssociatedInterface(Intf_Handle(), ++nextIntefaceIndex, (KUSB_HANDLE*)&nextInterfaceHandle))
+		{
+			handle->Device->SharedInterfaces[nextIntefaceIndex + 1].InterfaceHandle = nextInterfaceHandle;
+			handle->Device->SharedInterfaces[nextIntefaceIndex + 1].Index = nextIntefaceIndex + 1;
+		}
+	}
 
-	success = w_CreateContext(&interfaceHandle);
-	ErrorNoSet(!success, Error, "->w_CreateContext");
+	Mem_Zero(&configCheck, sizeof(configCheck));
 
-	W_CTX(backendContext, interfaceHandle);
-	ErrorHandle(!backendContext, Error, "backendContext");
+	success = WinUsb.GetDescriptor(
+	              Intf_Handle(),
+	              USB_CONFIGURATION_DESCRIPTOR_TYPE,
+	              0,
+	              0,
+	              (PUCHAR)&configCheck,
+	              sizeof(configCheck),
+	              &transferred);
+	ErrorNoSet(!success, Error, "->WinUsb.GetDescriptor1");
 
-	success = UsbStack_AddDevice(
-	              &backendContext->UsbStack,
-	              NULL,
-	              DeviceHandle,
-	              backendContext);
+	handle->Device->ConfigDescriptor = Mem_Alloc(configCheck.wTotalLength);
+	ErrorMemory(!handle->Device->ConfigDescriptor, Error);
 
-	ErrorNoSet(!success, Error, "->UsbStack_AddDevice");
-
-	*InterfaceHandle = interfaceHandle;
-	return TRUE;
+	success = WinUsb.GetDescriptor(Intf_Handle(),
+	                               USB_CONFIGURATION_DESCRIPTOR_TYPE,
+	                               0,
+	                               0,
+	                               (PUCHAR)handle->Device->ConfigDescriptor,
+	                               configCheck.wTotalLength,
+	                               &transferred);
+	ErrorNoSet(!success, Error, "->WinUsb.GetDescriptor2");
 
 Error:
-	w_DestroyContext(interfaceHandle);
-	*InterfaceHandle = NULL;
-	return FALSE;
+	return success;
 }
 
-KUSB_EXP BOOL KUSB_API WUsb_SetConfiguration(
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in UCHAR ConfigurationNumber)
+KUSB_EXP BOOL KUSB_API WUsb_Free (__in KUSB_HANDLE InterfaceHandle)
 {
-	USB_STACK_HANDLER_RESULT result;
-	WUSBFN_CTX_PREFIX();
+	PKUSB_HANDLE_INTERNAL handle;
 
-	// currently this is only supported by libusb0; so the same is true for K.
-	AcquireSyncLockRead(&handle->Instance.Lock);
-	result = UsbStackHandler_SetConfiguration(&backendContext->UsbStack, ConfigurationNumber);
-	ReleaseSyncLockRead(&handle->Instance.Lock);
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return TRUE);
+	PoolHandle_Dec_UsbK(handle);
 
-	return (BOOL)(result & 1);
-
-}
-
-KUSB_EXP BOOL KUSB_API WUsb_GetConfiguration(
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __out PUCHAR ConfigurationNumber)
-{
-	USB_STACK_HANDLER_RESULT handerResult;
-	WUSBFN_CTX_PREFIX();
-
-	AcquireSyncLockRead(&handle->Instance.Lock);
-
-	handerResult = UsbStackHandler_GetConfiguration(&backendContext->UsbStack, ConfigurationNumber);
-
-	ReleaseSyncLockRead(&handle->Instance.Lock);
-	return (BOOL)handerResult & 1;
-}
-
-KUSB_EXP BOOL KUSB_API WUsb_Free (__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle)
-{
-	PKUSB_INTERFACE_HANDLE_INTERNAL handle;
-
-	GET_INTERNAL_HANDLE(handle);
-
-	AcquireSyncLockWrite(&handle->Instance.Lock);
-
-	w_DestroyContext(handle);
-
-	// Free always returns true;  The Close method does not. This is the primary difference.
-	SetLastError(ERROR_SUCCESS);
 	return TRUE;
 }
 
 KUSB_EXP BOOL KUSB_API WUsb_GetAssociatedInterface (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __in KUSB_HANDLE InterfaceHandle,
     __in UCHAR AssociatedInterfaceIndex,
-    __out PLIBUSBK_INTERFACE_HANDLE AssociatedInterfaceHandle)
+    __out KUSB_HANDLE* AssociatedInterfaceHandle)
 {
-	PKUSB_INTERFACE_HANDLE_INTERNAL assocHandle = NULL;
-	PWINUSB_BKND_CONTEXT assocContext = NULL;
-	PKUSB_INTERFACE_EL assocEL = NULL;
-	INT findVirtualIndex;
+	return UsbStack_GetAssociatedInterface(InterfaceHandle, AssociatedInterfaceIndex, AssociatedInterfaceHandle);
+}
 
-	WUSBFN_CTX_PREFIX();
+KUSB_EXP BOOL KUSB_API WUsb_Clone (
+    __in KUSB_HANDLE InterfaceHandle,
+    __out KUSB_HANDLE* DstInterfaceHandle)
+{
+	return UsbStack_CloneHandle(InterfaceHandle, DstInterfaceHandle);
+}
 
-	AcquireSyncLockWrite(&handle->Instance.Lock);
+KUSB_EXP BOOL KUSB_API WUsb_Initialize(
+    __in HANDLE DeviceHandle,
+    __out KUSB_HANDLE* InterfaceHandle)
+{
+	CheckLibInit();
 
-	ErrorHandle(!backendContext->UsbStack.InterfaceList, Error, "UsbStack.InterfaceList");
+	return UsbStack_Init(InterfaceHandle, KUSB_DRVID_WINUSB, TRUE, DeviceHandle, NULL, NULL, w_Init_Config, NULL, w_Cleanup_UsbK, w_Cleanup_DevK);
+}
 
-	// this is where we are right now, we must find [this] + 1 + AssociatedInterfaceIndex
-	findVirtualIndex = backendContext->UsbStack.InterfaceList->VirtualIndex;
-	findVirtualIndex = (findVirtualIndex + 1) + (INT)AssociatedInterfaceIndex;
+KUSB_EXP BOOL KUSB_API WUsb_Open(
+    __in KLST_DEVINFO* DevInfo,
+    __out KUSB_HANDLE* InterfaceHandle)
+{
+	CheckLibInit();
+	return UsbStack_Init(InterfaceHandle, KUSB_DRVID_WINUSB, TRUE, NULL, DevInfo, NULL, w_Init_Config, NULL, w_Cleanup_UsbK, w_Cleanup_DevK);
 
-	DL_SEARCH_SCALAR(backendContext->UsbStack.InterfaceList, assocEL, VirtualIndex, findVirtualIndex);
-	if (!assocEL)
+}
+
+KUSB_EXP BOOL KUSB_API WUsb_Close(
+    __in KUSB_HANDLE InterfaceHandle)
+{
+	return WUsb_Free(InterfaceHandle);
+}
+
+#endif
+
+#ifndef DEVICE_AND_INTERFACE_FUNCTIONS_________________________________
+
+KUSB_EXP BOOL KUSB_API WUsb_SetConfiguration(
+    __in KUSB_HANDLE InterfaceHandle,
+    __in UCHAR ConfigurationNumber)
+{
+
+	PKUSB_HANDLE_INTERNAL handle;
+
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
+
+	if (handle->Device->ConfigDescriptor->bConfigurationValue != ConfigurationNumber)
 	{
 		LusbwError(ERROR_NO_MORE_ITEMS);
 		goto Error;
 	}
 
-	success = w_CreateContext(&assocHandle);
-	ErrorNoSet(!success, Error, "->w_CreateContext");
-
-	W_CTX(assocContext, assocHandle);
-	ErrorHandle(!assocContext, Error, "assocContext");
-
-	success = UsbStack_Init(
-	              &assocContext->UsbStack,
-	              w_GetCurrentConfigDescriptorCB,
-	              w_ClaimReleaseCB,
-	              w_OpenInterfaceCB,
-	              w_CloseInterface,
-	              NULL);
-
-	ErrorNoSet(!success, Error, "->UsbStack_Init");
-
-	UsbStack_Clone(&backendContext->UsbStack, &assocContext->UsbStack);
-	ErrorNoSet(!success, Error, "->UsbStack_Clone");
-
-	// move this interface to top if stack for the cloned handle.
-	DL_SEARCH_SCALAR(assocContext->UsbStack.InterfaceList, assocEL, VirtualIndex, findVirtualIndex);
-	DL_DELETE(assocContext->UsbStack.InterfaceList, assocEL);
-	DL_PREPEND(assocContext->UsbStack.InterfaceList, assocEL);
-
-	// clone the backend
-
-	// clone the users context
-	memcpy(&assocHandle->UserContext, &handle->UserContext, sizeof(assocHandle->UserContext));
-
-	// rebuild the pipe caches
-	success = UsbStack_BuildCache(&assocContext->UsbStack);
-	ErrorNoSet(!success, Error, "->UsbStack_BuildCache");
-
-	*AssociatedInterfaceHandle = assocHandle;
-
-	ReleaseSyncLockWrite(&handle->Instance.Lock);
+	PoolHandle_Dec_UsbK(handle);
 	return TRUE;
 
 Error:
-	w_DestroyContext(assocHandle);
-
-	ReleaseSyncLockWrite(&handle->Instance.Lock);
+	PoolHandle_Dec_UsbK(handle);
 	return FALSE;
 }
 
+KUSB_EXP BOOL KUSB_API WUsb_GetConfiguration(
+    __in KUSB_HANDLE InterfaceHandle,
+    __out PUCHAR ConfigurationNumber)
+{
+	PKUSB_HANDLE_INTERNAL handle;
+
+	ErrorParamAction(!ConfigurationNumber, "ConfigurationNumber", return FALSE);
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
+	if (handle->Device->ConfigDescriptor)
+		*ConfigurationNumber = handle->Device->ConfigDescriptor->bConfigurationValue;
+	else
+		*ConfigurationNumber = 0;
+
+	PoolHandle_Dec_UsbK(handle);
+	return TRUE;
+}
+
 KUSB_EXP BOOL KUSB_API WUsb_GetDescriptor (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __in KUSB_HANDLE InterfaceHandle,
     __in UCHAR DescriptorType,
     __in UCHAR Index,
     __in USHORT LanguageID,
@@ -585,29 +367,14 @@ KUSB_EXP BOOL KUSB_API WUsb_GetDescriptor (
     __in ULONG BufferLength,
     __out PULONG LengthTransferred)
 {
-	USB_STACK_HANDLER_RESULT handerResult;
-	WUSBFN_CTX_PREFIX();
+	PKUSB_HANDLE_INTERNAL handle;
+	BOOL success;
 
-	AcquireSyncLockRead(&handle->Instance.Lock);
-
-	handerResult = UsbStackHandler_GetDescriptor(
-	                   &backendContext->UsbStack,
-	                   DescriptorType,
-	                   Index,
-	                   LanguageID,
-	                   Buffer,
-	                   BufferLength,
-	                   LengthTransferred);
-
-
-	if (handerResult != HANDLER_NOT_HANDLED)
-	{
-		ReleaseSyncLockRead(&handle->Instance.Lock);
-		return(BOOL)handerResult & 1;
-	}
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
 
 	success = WinUsb.GetDescriptor(
-	              InterfaceHandleByPipeID(0),
+	              Intf_Handle(),
 	              DescriptorType,
 	              Index,
 	              LanguageID,
@@ -615,595 +382,478 @@ KUSB_EXP BOOL KUSB_API WUsb_GetDescriptor (
 	              BufferLength,
 	              LengthTransferred);
 
-	ReleaseSyncLockRead(&handle->Instance.Lock);
+	ErrorNoSet(!success, Error, "Failed getting descriptor.");
+
+	PoolHandle_Dec_UsbK(handle);
 	return success;
+
+Error:
+	PoolHandle_Dec_UsbK(handle);
+	return FALSE;
 }
 
 KUSB_EXP BOOL KUSB_API WUsb_QueryInterfaceSettings (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in UCHAR AlternateSettingNumber,
+    __in KUSB_HANDLE InterfaceHandle,
+    __in UCHAR AltSettingNumber,
     __out PUSB_INTERFACE_DESCRIPTOR UsbAltInterfaceDescriptor)
 {
-	USB_STACK_HANDLER_RESULT handerResult;
-
-	WUSBFN_CTX_PREFIX();
-
-	AcquireSyncLockRead(&handle->Instance.Lock);
-
-	handerResult = UsbStackHandler_QueryInterfaceSettings(
-	                   &backendContext->UsbStack,
-	                   AlternateSettingNumber,
-	                   UsbAltInterfaceDescriptor);
-
-
-	if (handerResult != HANDLER_NOT_HANDLED)
-	{
-		ReleaseSyncLockRead(&handle->Instance.Lock);
-		return(BOOL)handerResult & 1;
-	}
-
-	success = LusbwError(ERROR_NOT_SUPPORTED);
-	ReleaseSyncLockRead(&handle->Instance.Lock);
-	return success;
+	return UsbStack_QueryInterfaceSettings(InterfaceHandle, AltSettingNumber, UsbAltInterfaceDescriptor);
 }
 
 KUSB_EXP BOOL KUSB_API WUsb_QueryDeviceInformation (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __in KUSB_HANDLE InterfaceHandle,
     __in ULONG InformationType,
     __inout PULONG BufferLength,
     __out PVOID Buffer)
 {
+	PKUSB_HANDLE_INTERNAL handle;
+	BOOL success;
 
-	WUSBFN_CTX_PREFIX();
-
-	AcquireSyncLockRead(&handle->Instance.Lock);
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
 
 	success = WinUsb.QueryDeviceInformation(
-	              InterfaceHandleByPipeID(0),
+	              Intf_Handle(),
 	              InformationType,
 	              BufferLength,
 	              Buffer);
 
-	ErrorNoSet(!success, Error, "->WinUsb.QueryDeviceInformation");
-
-Error:
-	ReleaseSyncLockRead(&handle->Instance.Lock);
-	return success;
-}
-
-KUSB_EXP BOOL KUSB_API WUsb_SetCurrentAlternateSetting (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in UCHAR AlternateSettingNumber)
-{
-
-
-	WUSBFN_CTX_INTERFACE_PREFIX();
-
-	AcquireSyncLockWrite(&handle->Instance.Lock);
-
-	GetStackInterfaceCache();
-	ErrorStackInterfaceCache();
-
-	success = WinUsb.SetCurrentAlternateSetting(InterfaceHandleByPipeID(0), AlternateSettingNumber);
-	if (success)
-	{
-
-		success = (BOOL)UsbStackHandler_SetAltInterface(
-		              &backendContext->UsbStack,
-		              interfaceEL.Number, FALSE,
-		              AlternateSettingNumber, FALSE);
-	}
-
-
-Error:
-	ReleaseSyncLockWrite(&handle->Instance.Lock);
-	return success;
-
-}
-
-KUSB_EXP BOOL KUSB_API WUsb_GetCurrentAlternateSetting (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __out PUCHAR AlternateSettingNumber)
-{
-	WUSBFN_CTX_INTERFACE_PREFIX();
-
-	AcquireSyncLockWrite(&handle->Instance.Lock);
-
-
-	GetStackInterfaceCache();
-	ErrorStackInterfaceCache();
-
-	success = WinUsb.GetCurrentAlternateSetting(InterfaceHandleByPipeID(0), AlternateSettingNumber);
-
-	if (success)
-	{
-		success = (BOOL)UsbStackHandler_SetAltInterface(
-		              &backendContext->UsbStack,
-		              interfaceEL.Number, FALSE,
-		              *AlternateSettingNumber, FALSE);
-
-	}
-
-Error:
-	ReleaseSyncLockWrite(&handle->Instance.Lock);
+	PoolHandle_Dec_UsbK(handle);
 	return success;
 }
 
 KUSB_EXP BOOL KUSB_API WUsb_QueryPipe (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in UCHAR AlternateSettingNumber,
+    __in KUSB_HANDLE InterfaceHandle,
+    __in UCHAR AltSettingNumber,
     __in UCHAR PipeIndex,
     __out PWINUSB_PIPE_INFORMATION PipeInformation)
 {
-	USB_STACK_HANDLER_RESULT handerResult;
 
-	WUSBFN_CTX_PREFIX();
-
-	AcquireSyncLockRead(&handle->Instance.Lock);
-
-	handerResult = UsbStackHandler_QueryPipe(
-	                   &backendContext->UsbStack,
-	                   AlternateSettingNumber,
-	                   PipeIndex,
-	                   PipeInformation);
-
-
-	if (handerResult != HANDLER_NOT_HANDLED)
-	{
-		ReleaseSyncLockRead(&handle->Instance.Lock);
-		return(BOOL)handerResult & 1;
-	}
-
-	success = LusbwError(ERROR_NOT_SUPPORTED);
-	ReleaseSyncLockRead(&handle->Instance.Lock);
-	return success;
+	return UsbStack_QueryPipe(
+	           InterfaceHandle,
+	           AltSettingNumber,
+	           PipeIndex,
+	           PipeInformation);
 }
 
 KUSB_EXP BOOL KUSB_API WUsb_SetPipePolicy (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __in KUSB_HANDLE InterfaceHandle,
     __in UCHAR PipeID,
     __in ULONG PolicyType,
     __in ULONG ValueLength,
     __in PVOID Value)
 {
-	WUSBFN_CTX_PIPE_PREFIX();
+	PKUSB_HANDLE_INTERNAL handle;
+	BOOL success;
 
-	AcquireSyncLockRead(&handle->Instance.Lock);
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
 
-	success = WinUsb.SetPipePolicy(InterfaceHandleByPipeID(PipeID), PipeID, PolicyType, ValueLength, Value);
-	ErrorNoSet(!success, Error, "->WinUsb.SetPipePolicy");
+	success = WinUsb.SetPipePolicy(Intf_Handle(), PipeID, PolicyType, ValueLength, Value);
+	ErrorNoSet(!success, Error, "PipeID=%02Xh PolicyType=%04Xh ValueLength=%u", PipeID, PolicyType, ValueLength);
+
+	PoolHandle_Dec_UsbK(handle);
+	return success;
 
 Error:
-	ReleaseSyncLockRead(&handle->Instance.Lock);
-	return success;
+	PoolHandle_Dec_UsbK(handle);
+	return FALSE;
 }
 
 KUSB_EXP BOOL KUSB_API WUsb_GetPipePolicy (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __in KUSB_HANDLE InterfaceHandle,
     __in UCHAR PipeID,
     __in ULONG PolicyType,
     __inout PULONG ValueLength,
     __out PVOID Value)
 {
-	WUSBFN_CTX_PIPE_PREFIX();
 
-	AcquireSyncLockRead(&handle->Instance.Lock);
+	PKUSB_HANDLE_INTERNAL handle;
+	BOOL success;
 
-	success = WinUsb.GetPipePolicy(InterfaceHandleByPipeID(PipeID), PipeID, PolicyType, ValueLength, Value);
-	ErrorNoSet(!success, Error, "->WinUsb.GetPipePolicy");
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
+
+	success = WinUsb.GetPipePolicy(Intf_Handle(), PipeID, PolicyType, ValueLength, Value);
+	ErrorNoSet(!success, Error, "PipeID=%02Xh PolicyType=%04Xh ValueLength=%p", PipeID, PolicyType, ValueLength);
+
+	PoolHandle_Dec_UsbK(handle);
+	return success;
 
 Error:
-	ReleaseSyncLockRead(&handle->Instance.Lock);
+	PoolHandle_Dec_UsbK(handle);
+	return FALSE;
+}
+
+KUSB_EXP BOOL KUSB_API WUsb_SetPowerPolicy (
+    __in KUSB_HANDLE InterfaceHandle,
+    __in ULONG PolicyType,
+    __in ULONG ValueLength,
+    __in PVOID Value)
+{
+	PKUSB_HANDLE_INTERNAL handle;
+	BOOL success;
+
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
+
+	success = WinUsb.SetPowerPolicy(Intf_Handle(), PolicyType, ValueLength, Value);
+	ErrorNoSet(!success, Error, "PolicyType=%04Xh ValueLength=%u", PolicyType, ValueLength);
+
+	PoolHandle_Dec_UsbK(handle);
+	return success;
+
+Error:
+	PoolHandle_Dec_UsbK(handle);
+	return FALSE;
+}
+
+KUSB_EXP BOOL KUSB_API WUsb_GetPowerPolicy (
+    __in KUSB_HANDLE InterfaceHandle,
+    __in ULONG PolicyType,
+    __inout PULONG ValueLength,
+    __out PVOID Value)
+{
+	PKUSB_HANDLE_INTERNAL handle;
+	BOOL success;
+
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
+
+	success = WinUsb.GetPowerPolicy(Intf_Handle(), PolicyType, ValueLength, Value);
+	ErrorNoSet(!success, Error, "PolicyType=%04Xh ValueLength=%p", PolicyType, ValueLength);
+
+	PoolHandle_Dec_UsbK(handle);
+	return success;
+
+Error:
+	PoolHandle_Dec_UsbK(handle);
+	return FALSE;
+}
+
+BOOL w_ClaimOrReleaseInterface(__in KUSB_HANDLE InterfaceHandle,
+                               __in INT NumberOrIndex,
+                               __in UCHAR IsClaim,
+                               __in UCHAR IsIndex)
+{
+	PKUSB_HANDLE_INTERNAL handle;
+	PKUSB_INTERFACE_EL interfaceEL;
+	BOOL success = FALSE;
+
+	ErrorParamAction(NumberOrIndex < 0, "NumberOrIndex", return FALSE);
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
+
+	FindInterfaceEL(handle->Device->UsbStack, interfaceEL, IsIndex, NumberOrIndex);
+	ErrorSetAction(!interfaceEL, ERROR_RESOURCE_NOT_FOUND, goto Done, "Interface not found. NumberOrIndex=%u IsClaim=%u IsIndex=%u", NumberOrIndex, IsClaim, IsIndex);
+
+	success = TRUE;
+
+	if (IsClaim && success)
+	{
+		Get_SharedInterface(handle, interfaceEL->Index).Claimed = TRUE;
+		InterlockedExchange(&handle->Selected_SharedInterface_Index, interfaceEL->Index);
+	}
+	else
+	{
+		Get_SharedInterface(handle, interfaceEL->Index).Claimed = FALSE;
+	}
+Done:
+	PoolHandle_Dec_UsbK(handle);
 	return success;
 }
 
-KUSB_EXP BOOL KUSB_API WUsb_ReadPipe (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in UCHAR PipeID,
-    __out_opt PUCHAR Buffer,
-    __in ULONG BufferLength,
-    __out_opt PULONG LengthTransferred,
-    __in_opt LPOVERLAPPED Overlapped)
+KUSB_EXP BOOL KUSB_API WUsb_ClaimInterface (
+    __in KUSB_HANDLE InterfaceHandle,
+    __in UCHAR NumberOrIndex,
+    __in BOOL IsIndex)
 {
-	WUSBFN_CTX_PIPE_PREFIX();
 
-	AcquireSyncLockRead(&handle->Instance.Lock);
-
-	OVLK_CHECK(
-	    Overlapped,
-	    PipeID,
-	    Buffer,
-	    BufferLength,
-	    DeviceHandleByPipeID(PipeID),
-	    InterfaceHandleByPipeID(PipeID));
-
-	success = WinUsb.ReadPipe(InterfaceHandleByPipeID(PipeID), PipeID, Buffer, BufferLength, LengthTransferred, Overlapped);
-
-	ReleaseSyncLockRead(&handle->Instance.Lock);
-	return success;
+	return w_ClaimOrReleaseInterface(InterfaceHandle, NumberOrIndex, TRUE, (UCHAR)IsIndex);
 }
 
-KUSB_EXP BOOL KUSB_API WUsb_WritePipe (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in UCHAR PipeID,
-    __in PUCHAR Buffer,
-    __in ULONG BufferLength,
-    __out_opt PULONG LengthTransferred,
-    __in_opt LPOVERLAPPED Overlapped)
+KUSB_EXP BOOL KUSB_API WUsb_SelectInterface (
+    __in KUSB_HANDLE InterfaceHandle,
+    __in UCHAR NumberOrIndex,
+    __in BOOL IsIndex)
 {
-	WUSBFN_CTX_PIPE_PREFIX();
+	return UsbStack_SelectInterface(InterfaceHandle, NumberOrIndex, IsIndex);
+}
 
-	AcquireSyncLockRead(&handle->Instance.Lock);
+KUSB_EXP BOOL KUSB_API WUsb_ReleaseInterface(
+    __in KUSB_HANDLE InterfaceHandle,
+    __in UCHAR NumberOrIndex,
+    __in BOOL IsIndex)
+{
+	return w_ClaimOrReleaseInterface(InterfaceHandle, NumberOrIndex, FALSE, (UCHAR)IsIndex);
+}
 
-	OVLK_CHECK(
-	    Overlapped,
-	    PipeID,
-	    Buffer,
-	    BufferLength,
-	    DeviceHandleByPipeID(PipeID),
-	    InterfaceHandleByPipeID(PipeID));
+KUSB_EXP BOOL KUSB_API WUsb_SetCurrentAlternateSetting (
+    __in KUSB_HANDLE InterfaceHandle,
+    __in UCHAR AltSettingNumber)
+{
+	PKUSB_HANDLE_INTERNAL handle;
+	BOOL success;
+	PKDEV_SHARED_INTERFACE sharedInterface;
 
-	success = WinUsb.WritePipe(InterfaceHandleByPipeID(PipeID), PipeID, Buffer, BufferLength, LengthTransferred, Overlapped);
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
 
-	ReleaseSyncLockRead(&handle->Instance.Lock);
+	Get_CurSharedInterface(handle, sharedInterface);
+
+	success = WinUsb.SetCurrentAlternateSetting(sharedInterface->InterfaceHandle, AltSettingNumber);
+	ErrorNoSet(!success, Error, "Failed setting AltSettingNumber %u", AltSettingNumber);
+
+	Update_SharedInterface_AltSetting(sharedInterface, AltSettingNumber);
+	UsbStack_RefreshPipeCache(handle);
+	PoolHandle_Dec_UsbK(handle);
 	return success;
+
+Error:
+	PoolHandle_Dec_UsbK(handle);
+	return FALSE;
+}
+
+KUSB_EXP BOOL KUSB_API WUsb_GetCurrentAlternateSetting (
+    __in KUSB_HANDLE InterfaceHandle,
+    __out PUCHAR AltSettingNumber)
+{
+	PKUSB_HANDLE_INTERNAL handle;
+	BOOL success;
+	PKDEV_SHARED_INTERFACE sharedInterface;
+	UCHAR altNumber = 0;
+
+	ErrorParamAction(!AltSettingNumber, "AltSettingNumber", return FALSE);
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+
+	Get_CurSharedInterface(handle, sharedInterface);
+
+	success = WinUsb.GetCurrentAlternateSetting(sharedInterface->InterfaceHandle, &altNumber);
+	ErrorNoSet(!success, Error, "Failed getting AltSettingNumber");
+
+	*AltSettingNumber = altNumber;
+	Update_SharedInterface_AltSetting(sharedInterface, altNumber);
+	UsbStack_RefreshPipeCache(handle);
+	PoolHandle_Dec_UsbK(handle);
+	return success;
+
+Error:
+	PoolHandle_Dec_UsbK(handle);
+	return FALSE;
+}
+
+KUSB_EXP BOOL KUSB_API WUsb_SetAltInterface(
+    __in KUSB_HANDLE InterfaceHandle,
+    __in UCHAR NumberOrIndex,
+    __in BOOL IsIndex,
+    __in UCHAR AltSettingNumber)
+{
+	PKUSB_HANDLE_INTERNAL handle;
+	BOOL success;
+	PKDEV_SHARED_INTERFACE sharedInterface;
+	PKUSB_INTERFACE_EL intfEL;
+
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
+
+	FindInterfaceEL(handle->Device->UsbStack, intfEL, IsIndex, NumberOrIndex);
+	ErrorSet(!intfEL, Error, ERROR_RESOURCE_NOT_FOUND, "Interface not found. NumberOrIndex=%u IsIndex=%u.", NumberOrIndex, IsIndex);
+
+	sharedInterface = &Get_SharedInterface(handle, intfEL->Index);
+
+	success = WinUsb.SetCurrentAlternateSetting(sharedInterface->InterfaceHandle, AltSettingNumber);
+	ErrorNoSet(!success, Error, "Failed setting AltSettingNumber %u.", AltSettingNumber);
+
+	Update_SharedInterface_AltSetting(sharedInterface, AltSettingNumber);
+	UsbStack_RefreshPipeCache(handle);
+	PoolHandle_Dec_UsbK(handle);
+	return TRUE;
+
+Error:
+	PoolHandle_Dec_UsbK(handle);
+	return FALSE;
+}
+
+KUSB_EXP BOOL KUSB_API WUsb_GetAltInterface(
+    __in KUSB_HANDLE InterfaceHandle,
+    __in UCHAR NumberOrIndex,
+    __in BOOL IsIndex,
+    __out PUCHAR AltSettingNumber)
+{
+	PKUSB_HANDLE_INTERNAL handle;
+	BOOL success = FALSE;
+	PKDEV_SHARED_INTERFACE sharedInterface;
+	PKUSB_INTERFACE_EL intfEL;
+	UCHAR altNumber = 0;
+
+	ErrorParamAction(!AltSettingNumber, "AltSettingNumber", return FALSE);
+
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
+
+	FindInterfaceEL(handle->Device->UsbStack, intfEL, IsIndex, NumberOrIndex);
+	ErrorSet(!intfEL, Error, ERROR_NO_MORE_ITEMS, "Interface not found. NumberOrIndex=%u IsIndex=%u AltSettingNumber=%u", NumberOrIndex, IsIndex, AltSettingNumber);
+
+	sharedInterface = &Get_SharedInterface(handle, intfEL->Index);
+
+	success = WinUsb.GetCurrentAlternateSetting(sharedInterface->InterfaceHandle, &altNumber);
+	ErrorNoSet(!success, Error, "Failed getting AltSettingNumber.");
+
+	*AltSettingNumber = altNumber;
+	Update_SharedInterface_AltSetting(sharedInterface, altNumber);
+	UsbStack_RefreshPipeCache(handle);
+	PoolHandle_Dec_UsbK(handle);
+	return TRUE;
+
+Error:
+	PoolHandle_Dec_UsbK(handle);
+	return FALSE;
 }
 
 KUSB_EXP BOOL KUSB_API WUsb_ControlTransfer (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __in KUSB_HANDLE InterfaceHandle,
     __in WINUSB_SETUP_PACKET SetupPacket,
     __out_opt PUCHAR Buffer,
     __in ULONG BufferLength,
     __out_opt PULONG LengthTransferred,
     __in_opt  LPOVERLAPPED Overlapped)
 {
-	WUSBFN_CTX_PIPE_PREFIX();
+	PKUSB_HANDLE_INTERNAL handle;
+	BOOL success;
 
-	AcquireSyncLockRead(&handle->Instance.Lock);
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
 
-	OVLK_CHECK_CONTROL(
-	    Overlapped,
-	    Buffer,
-	    BufferLength,
-	    DeviceHandleByPipeID(0),
-	    InterfaceHandleByPipeID(0));
+	OVLK_CONTROL_CHECK(Overlapped, Buffer, BufferLength, Dev_Handle(), Intf_Handle());
+	success = WinUsb.ControlTransfer(Intf_Handle(), SetupPacket, Buffer, BufferLength, LengthTransferred, Overlapped);
 
-	success = WinUsb.ControlTransfer(InterfaceHandleByPipeID(0), SetupPacket, Buffer, BufferLength, LengthTransferred, Overlapped);
-
-	ReleaseSyncLockRead(&handle->Instance.Lock);
-	return success;
-}
-
-KUSB_EXP BOOL KUSB_API WUsb_ResetPipe (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in UCHAR PipeID)
-{
-	WUSBFN_CTX_PIPE_PREFIX();
-
-	AcquireSyncLockRead(&handle->Instance.Lock);
-
-	success = WinUsb.ResetPipe(InterfaceHandleByPipeID(PipeID), PipeID);
-
-	ReleaseSyncLockRead(&handle->Instance.Lock);
-	return success;
-}
-
-KUSB_EXP BOOL KUSB_API WUsb_AbortPipe (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in UCHAR PipeID)
-{
-	WUSBFN_CTX_PIPE_PREFIX();
-
-	AcquireSyncLockRead(&handle->Instance.Lock);
-
-	success = WinUsb.AbortPipe(InterfaceHandleByPipeID(PipeID), PipeID);
-
-	ReleaseSyncLockRead(&handle->Instance.Lock);
-	return success;
-}
-
-KUSB_EXP BOOL KUSB_API WUsb_FlushPipe (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in UCHAR PipeID)
-{
-	WUSBFN_CTX_PIPE_PREFIX();
-
-	AcquireSyncLockRead(&handle->Instance.Lock);
-
-	success = WinUsb.FlushPipe(InterfaceHandleByPipeID(PipeID), PipeID);
-
-	ReleaseSyncLockRead(&handle->Instance.Lock);
-	return success;
-}
-
-KUSB_EXP BOOL KUSB_API WUsb_SetPowerPolicy (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in ULONG PolicyType,
-    __in ULONG ValueLength,
-    __in PVOID Value)
-{
-	WUSBFN_CTX_PIPE_PREFIX();
-
-	AcquireSyncLockRead(&handle->Instance.Lock);
-
-	success = WinUsb.SetPowerPolicy(InterfaceHandleByPipeID(0), PolicyType, ValueLength, Value);
-	ErrorNoSet(!success, Error, "->WinUsb.SetPowerPolicy");
-
-Error:
-	ReleaseSyncLockRead(&handle->Instance.Lock);
-	return success;
-}
-
-KUSB_EXP BOOL KUSB_API WUsb_GetPowerPolicy (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in ULONG PolicyType,
-    __inout PULONG ValueLength,
-    __out PVOID Value)
-{
-	WUSBFN_CTX_PIPE_PREFIX();
-
-	AcquireSyncLockRead(&handle->Instance.Lock);
-
-	success = WinUsb.GetPowerPolicy(InterfaceHandleByPipeID(0), PolicyType, ValueLength, Value);
-	ErrorNoSet(!success, Error, "->WinUsb.GetPowerPolicy");
-
-Error:
-	ReleaseSyncLockRead(&handle->Instance.Lock);
+	PoolHandle_Dec_UsbK(handle);
 	return success;
 }
 
 KUSB_EXP BOOL KUSB_API WUsb_GetOverlappedResult (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __in KUSB_HANDLE InterfaceHandle,
     __in LPOVERLAPPED lpOverlapped,
     __out LPDWORD lpNumberOfBytesTransferred,
     __in BOOL bWait)
 {
-	return UsbK_GetOverlappedResult(InterfaceHandle, lpOverlapped, lpNumberOfBytesTransferred, bWait);
-}
-
-BOOL KUSB_API w_AddDeviceToStackCB(__in KLST_HANDLE List,
-                                   __in PKLST_DEV_INFO Item,
-                                   __in PWINUSB_BKND_CONTEXT BackendContext)
-{
+	PKUSB_HANDLE_INTERNAL handle;
 	BOOL success;
 
-	UNREFERENCED_PARAMETER(List);
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
 
-	success = UsbStack_AddDevice(
-	              &BackendContext->UsbStack,
-	              Item->DevicePath,
-	              NULL,
-	              BackendContext);
+	success = GetOverlappedResult(Dev_Handle(), lpOverlapped, lpNumberOfBytesTransferred, bWait);
 
-	if (!success)
-	{
-		USBWRN("skipping composite device %s. ErrorCode=%08Xh\n",
-		       Item->DeviceDesc, GetLastError());
-	}
-
-	return TRUE;
+	PoolHandle_Dec_UsbK(handle);
+	return success;
 }
 
-KUSB_EXP BOOL KUSB_API WUsb_Open(
-    __in PKLST_DEV_INFO DeviceListItem,
-    __out PLIBUSBK_INTERFACE_HANDLE InterfaceHandle)
+#endif
+
+#ifndef PIPE_IO_FUNCTIONS______________________________________________
+
+KUSB_EXP BOOL KUSB_API WUsb_ResetPipe (
+    __in KUSB_HANDLE InterfaceHandle,
+    __in UCHAR PipeID)
 {
+	PKUSB_HANDLE_INTERNAL handle;
 	BOOL success;
-	PKUSB_INTERFACE_HANDLE_INTERNAL interfaceHandle = NULL;
-	PWINUSB_BKND_CONTEXT backendContext = NULL;
 
-	CheckLibInitialized();
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
 
-	if(!IsHandleValid(DeviceListItem) || !IsHandleValid(InterfaceHandle))
-	{
-		success = LusbwError(ERROR_INVALID_HANDLE);
-		goto Error;
-	}
+	success = WinUsb.ResetPipe(Get_PipeInterfaceHandle(handle, PipeID), PipeID);
+	ErrorNoSetAction(!success, USB_LOG_NOP(), "PipeID=%02Xh", PipeID);
 
-	success = w_CreateContext(&interfaceHandle);
-	ErrorNoSet(!success, Error, "->w_CreateContext");
-
-	W_CTX(backendContext, interfaceHandle);
-	ErrorHandle(!backendContext, Error, "backendContext");
-
-	success = UsbStack_AddDevice(
-	              &backendContext->UsbStack,
-	              DeviceListItem->DevicePath,
-	              NULL,
-	              backendContext);
-
-	ErrorNoSet(!backendContext->UsbStack.DeviceCount, Error, "failed opening %s device. ErrorCode=%d",
-	           DeviceListItem->DeviceDesc, GetLastError());
-
-	*InterfaceHandle = interfaceHandle;
-	return TRUE;
-
-Error:
-	w_DestroyContext(interfaceHandle);
-	return FALSE;
-}
-
-KUSB_EXP BOOL KUSB_API WUsb_Close(
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle)
-{
-	WUSBFN_CTX_PREFIX();
-
-	// w_DestroyContext will also destroy the lock.
-	AcquireSyncLockWrite(&handle->Instance.Lock);
-
-	success = w_DestroyContext(handle);
-	if (!success)
-	{
-		USBERR("->w_DestroyContext\n");
-	}
-
-	return success;
-
-}
-BOOL KUSB_API WUsb_ClaimInterface (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in UCHAR InterfaceNumberOrIndex,
-    __in BOOL IsIndex)
-{
-	return w_ClaimOrReleaseInterface(InterfaceHandle, InterfaceNumberOrIndex, TRUE, (UCHAR)IsIndex);
-}
-
-BOOL KUSB_API WUsb_ReleaseInterface (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in UCHAR InterfaceNumberOrIndex,
-    __in BOOL IsIndex)
-{
-	return w_ClaimOrReleaseInterface(InterfaceHandle, InterfaceNumberOrIndex, FALSE, (UCHAR)IsIndex);
-}
-
-BOOL KUSB_API WUsb_SetAltInterface (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in UCHAR InterfaceNumberOrIndex,
-    __in BOOL IsIndex,
-    __in UCHAR AltInterfaceNumber)
-{
-	PKUSB_INTERFACE_EL interfaceEL = NULL;
-	WUSBFN_CTX_PREFIX();
-
-	AcquireSyncLockWrite(&handle->Instance.Lock);
-
-	if (IsIndex)
-	{
-		DL_SEARCH_SCALAR(backendContext->UsbStack.InterfaceList, interfaceEL, VirtualIndex, InterfaceNumberOrIndex);
-	}
-	else
-	{
-		DL_SEARCH_SCALAR(backendContext->UsbStack.InterfaceList, interfaceEL, Number, InterfaceNumberOrIndex);
-	}
-
-	if (!interfaceEL)
-	{
-		USBWRN("interface #%u not found.\n", InterfaceNumberOrIndex);
-		success = LusbwError(ERROR_NO_MORE_ITEMS);
-		goto Error;
-	}
-
-	success = WinUsb.SetCurrentAlternateSetting(
-	              interfaceEL->ParentDevice->Device->SharedInterfaces[interfaceEL->Number].InterfaceHandle,
-	              AltInterfaceNumber);
-
-	if (success)
-	{
-		success = (BOOL)UsbStackHandler_SetAltInterface(
-		              &backendContext->UsbStack,
-		              interfaceEL->Number, FALSE,
-		              AltInterfaceNumber, FALSE);
-
-		ErrorNoSet(!success, Error, "->UsbStackHandler_SetAltInterface");
-
-	}
-
-Error:
-	ReleaseSyncLockWrite(&handle->Instance.Lock);
+	PoolHandle_Dec_UsbK(handle);
 	return success;
 }
 
-BOOL KUSB_API WUsb_GetAltInterface (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in UCHAR InterfaceNumberOrIndex,
-    __in BOOL IsIndex,
-    __out PUCHAR AltInterfaceNumber)
+KUSB_EXP BOOL KUSB_API WUsb_AbortPipe (
+    __in KUSB_HANDLE InterfaceHandle,
+    __in UCHAR PipeID)
 {
-	PKUSB_INTERFACE_EL interfaceEL = NULL;
-	WUSBFN_CTX_PREFIX();
+	PKUSB_HANDLE_INTERNAL handle;
+	BOOL success;
 
-	AcquireSyncLockWrite(&handle->Instance.Lock);
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
 
-	ErrorParam(!AltInterfaceNumber, Error, "AltInterfaceNumber");
+	success = WinUsb.AbortPipe(Get_PipeInterfaceHandle(handle, PipeID), PipeID);
+	ErrorNoSetAction(!success, USB_LOG_NOP(), "PipeID=%02Xh", PipeID);
 
-	if (IsIndex)
-	{
-		DL_SEARCH_SCALAR(backendContext->UsbStack.InterfaceList, interfaceEL, VirtualIndex, InterfaceNumberOrIndex);
-	}
-	else
-	{
-		DL_SEARCH_SCALAR(backendContext->UsbStack.InterfaceList, interfaceEL, Number, InterfaceNumberOrIndex);
-	}
-
-	if (!interfaceEL)
-	{
-		USBWRN("interface #%u not found.\n", InterfaceNumberOrIndex);
-		success = LusbwError(ERROR_NO_MORE_ITEMS);
-		goto Error;
-	}
-
-	success = WinUsb.GetCurrentAlternateSetting(
-	              interfaceEL->ParentDevice->Device->SharedInterfaces[interfaceEL->Number].InterfaceHandle,
-	              AltInterfaceNumber);
-
-	if (success)
-	{
-		success = UsbStackHandler_SetAltInterface(
-		              &backendContext->UsbStack,
-		              interfaceEL->Number, FALSE,
-		              *AltInterfaceNumber, FALSE);
-
-		ErrorNoSet(!success, Error, "->UsbStackHandler_SetAltInterface");
-	}
-
-Error:
-	ReleaseSyncLockWrite(&handle->Instance.Lock);
+	PoolHandle_Dec_UsbK(handle);
 	return success;
 }
 
-BOOL KUSB_API WUsb_ResetDevice (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle)
+KUSB_EXP BOOL KUSB_API WUsb_FlushPipe (
+    __in KUSB_HANDLE InterfaceHandle,
+    __in UCHAR PipeID)
 {
-	UNREFERENCED_PARAMETER(InterfaceHandle);
+	PKUSB_HANDLE_INTERNAL handle;
+	BOOL success;
 
-	SetLastError(ERROR_NOT_SUPPORTED);
-	return FALSE;
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
+
+	success = WinUsb.FlushPipe(Get_PipeInterfaceHandle(handle, PipeID), PipeID);
+	ErrorNoSetAction(!success, USB_LOG_NOP(), "PipeID=%02Xh", PipeID);
+
+	PoolHandle_Dec_UsbK(handle);
+	return success;
 }
 
-BOOL KUSB_API WUsb_IsoReadPipe (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __inout PKISO_CONTEXT IsoContext,
+KUSB_EXP BOOL KUSB_API WUsb_ReadPipe (
+    __in KUSB_HANDLE InterfaceHandle,
+    __in UCHAR PipeID,
     __out_opt PUCHAR Buffer,
     __in ULONG BufferLength,
-    __in LPOVERLAPPED Overlapped)
+    __out_opt PULONG LengthTransferred,
+    __in_opt LPOVERLAPPED Overlapped)
 {
-	UNREFERENCED_PARAMETER(InterfaceHandle);
-	UNREFERENCED_PARAMETER(IsoContext);
-	UNREFERENCED_PARAMETER(Buffer);
-	UNREFERENCED_PARAMETER(BufferLength);
-	UNREFERENCED_PARAMETER(Overlapped);
+	PKUSB_HANDLE_INTERNAL handle;
+	BOOL success;
+	HANDLE intfHandle;
 
-	SetLastError(ERROR_NOT_SUPPORTED);
-	return FALSE;
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
+
+	intfHandle = Get_PipeInterfaceHandle(handle, PipeID);
+
+	OVLK_CHECK(Overlapped, PipeID, Buffer, BufferLength, Dev_Handle(), intfHandle);
+
+	success = WinUsb.ReadPipe(intfHandle, PipeID, Buffer, BufferLength, LengthTransferred, Overlapped);
+
+	PoolHandle_Dec_UsbK(handle);
+	return success;
 }
 
-BOOL KUSB_API WUsb_IsoWritePipe (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __inout PKISO_CONTEXT IsoContext,
+KUSB_EXP BOOL KUSB_API WUsb_WritePipe (
+    __in KUSB_HANDLE InterfaceHandle,
+    __in UCHAR PipeID,
     __in PUCHAR Buffer,
     __in ULONG BufferLength,
-    __in LPOVERLAPPED Overlapped)
+    __out_opt PULONG LengthTransferred,
+    __in_opt LPOVERLAPPED Overlapped)
 {
-	UNREFERENCED_PARAMETER(InterfaceHandle);
-	UNREFERENCED_PARAMETER(IsoContext);
-	UNREFERENCED_PARAMETER(Buffer);
-	UNREFERENCED_PARAMETER(BufferLength);
-	UNREFERENCED_PARAMETER(Overlapped);
+	PKUSB_HANDLE_INTERNAL handle;
+	BOOL success;
+	HANDLE intfHandle;
 
-	SetLastError(ERROR_NOT_SUPPORTED);
-	return FALSE;
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
+
+	intfHandle = Get_PipeInterfaceHandle(handle, PipeID);
+
+	OVLK_CHECK(Overlapped, PipeID, Buffer, BufferLength, Dev_Handle(), intfHandle);
+	success = WinUsb.WritePipe(intfHandle, PipeID, Buffer, BufferLength, LengthTransferred, Overlapped);
+
+	PoolHandle_Dec_UsbK(handle);
+	return success;
 }
 
-BOOL KUSB_API WUsb_GetCurrentFrameNumber (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __out PULONG FrameNumber)
-{
-	UNREFERENCED_PARAMETER(InterfaceHandle);
-	UNREFERENCED_PARAMETER(FrameNumber);
-
-	SetLastError(ERROR_NOT_SUPPORTED);
-	return FALSE;
-}
+#endif
 
 BOOL GetProcAddress_WUsb(__out KPROC* ProcAddress, __in ULONG FunctionID)
 {
@@ -1211,12 +861,10 @@ BOOL GetProcAddress_WUsb(__out KPROC* ProcAddress, __in ULONG FunctionID)
 
 	WUsb_Init_Library();
 
-	if (!IsHandleValid(WinUsb_Dll_Module))
+	if (WinUsb.Init.DLL == NULL)
 	{
-		rtn = ERROR_NOT_SUPPORTED;
-		*ProcAddress = (KPROC)NULL;
-		USBERR("winusb.dll not found.\n");
-		return LusbwError(rtn);
+		GetProcAddress_Unsupported(ProcAddress, FunctionID);
+		return LusbwError(ERROR_NOT_SUPPORTED);
 	}
 
 	switch(FunctionID)
@@ -1281,9 +929,6 @@ BOOL GetProcAddress_WUsb(__out KPROC* ProcAddress, __in ULONG FunctionID)
 	case KUSB_FNID_GetOverlappedResult:
 		*ProcAddress = (KPROC)WUsb_GetOverlappedResult;
 		break;
-	case KUSB_FNID_ResetDevice:
-		*ProcAddress = (KPROC)WUsb_ResetDevice;
-		break;
 	case KUSB_FNID_Open:
 		*ProcAddress = (KPROC)WUsb_Open;
 		break;
@@ -1308,22 +953,15 @@ BOOL GetProcAddress_WUsb(__out KPROC* ProcAddress, __in ULONG FunctionID)
 	case KUSB_FNID_GetAltInterface:
 		*ProcAddress = (KPROC)WUsb_GetAltInterface;
 		break;
-	case KUSB_FNID_IsoReadPipe:
-		*ProcAddress = (KPROC)WUsb_IsoReadPipe;
+	case KUSB_FNID_Clone:
+		*ProcAddress = (KPROC)WUsb_Clone;
 		break;
-	case KUSB_FNID_IsoWritePipe:
-		*ProcAddress = (KPROC)WUsb_IsoWritePipe;
+	case KUSB_FNID_SelectInterface:
+		*ProcAddress = (KPROC)WUsb_SelectInterface;
 		break;
-	case KUSB_FNID_GetCurrentFrameNumber:
-		*ProcAddress = (KPROC)WUsb_GetCurrentFrameNumber;
-		break;
-
-
 	default:
-		rtn = ERROR_NOT_SUPPORTED;
-		*ProcAddress = (KPROC)NULL;
-		USBERR("Unrecognized function id! FunctionID=%u\n", FunctionID);
-		break;
+		GetProcAddress_Unsupported(ProcAddress, FunctionID);
+		return LusbwError(ERROR_NOT_SUPPORTED);
 
 	}
 	return LusbwError(rtn);
@@ -1331,8 +969,7 @@ BOOL GetProcAddress_WUsb(__out KPROC* ProcAddress, __in ULONG FunctionID)
 #else
 BOOL GetProcAddress_WUsb(__out KPROC* ProcAddress, __in ULONG FunctionID)
 {
-	UNREFERENCED_PARAMETER(ProcAddress);
-	UNREFERENCED_PARAMETER(FunctionID);
+	GetProcAddress_Unsupported(ProcAddress, FunctionID);
 	return LusbwError(ERROR_NOT_SUPPORTED);
 }
 #endif // WINUSB_BACKEND_SUPPORT

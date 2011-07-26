@@ -66,10 +66,10 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib"
+				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib libusbK.lib"
 				Version="3.0.0.0"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories=" "
+				AdditionalLibraryDirectories="..\..\bin\Debug\libusbK.lib\Win32;..\lib\x86;..\..\bin\lib\x86"
 				IgnoreAllDefaultLibraries="true"
 				GenerateDebugInformation="true"
 				SubSystem="1"
@@ -145,10 +145,10 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib"
+				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib libusbK.lib"
 				Version="3.0.0.0"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories=" "
+				AdditionalLibraryDirectories="..\..\bin\Debug\libusbK.lib\x64;..\lib\amd64;..\..\bin\lib\amd64"
 				IgnoreAllDefaultLibraries="true"
 				GenerateDebugInformation="true"
 				SubSystem="1"
@@ -224,9 +224,9 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib"
+				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib libusbK.lib"
 				Version="3.0.0.0"
-				AdditionalLibraryDirectories=" "
+				AdditionalLibraryDirectories="..\..\bin\Release\libusbK.lib\Win32;..\lib\x86;..\..\bin\lib\x86"
 				IgnoreAllDefaultLibraries="true"
 				SubSystem="1"
 				TargetMachine="1"
@@ -302,9 +302,9 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib"
+				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib libusbK.lib"
 				Version="3.0.0.0"
-				AdditionalLibraryDirectories=" "
+				AdditionalLibraryDirectories="..\..\bin\Release\libusbK.lib\x64;..\lib\amd64;..\..\bin\lib\amd64"
 				IgnoreAllDefaultLibraries="true"
 				SubSystem="1"
 				TargetMachine="17"
@@ -341,14 +341,14 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath="..\examples.c"
-				>
-			</File>
-			<File
 				RelativePath=".\xfer-iso.c"
 				>
 			</File>
-		</Filter>
+			<File
+				RelativePath="..\examples.c"
+				>
+			</File>
+			</Filter>
 		<Filter
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
@@ -359,31 +359,15 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\includes\lusbk_common.h"
+				RelativePath="..\..\includes\libusbk.h"
 				>
 			</File>
 			<File
-				RelativePath="..\..\includes\lusbk_device_list.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\includes\lusbk_dynamic.h"
+				RelativePath="..\..\includes\lusbk_shared.h"
 				>
 			</File>
 			<File
 				RelativePath="..\..\includes\lusbk_linked_list.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\includes\lusbk_overlapped.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\includes\lusbk_usb.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\includes\lusbk_usbio.h"
 				>
 			</File>
 		</Filter>
