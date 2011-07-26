@@ -355,6 +355,11 @@ volatile BYTE CtrlTrfData[USB_EP0_BUFF_SIZE];
 
 extern ROM BYTE *ROM USB_SD_Ptr[];
 
+#if defined(DESCRIPTOR_COUNTING_ENABLED)
+extern unsigned char gDeviceDescriptorCount;
+extern unsigned char gConfigDescriptorCount;
+#endif
+
 /** DECLARATIONS ***************************************************/
 #pragma code
 
@@ -1840,6 +1845,11 @@ static void USBStdGetDscHandler(void)
                     inPipes[0].pSrc.bRom = (ROM BYTE*)USB_USER_DEVICE_DESCRIPTOR;
                 #endif
                 inPipes[0].wCount.Val = sizeof(device_dsc);
+
+				#if defined(DESCRIPTOR_COUNTING_ENABLED)
+				gDeviceDescriptorCount++;
+				#endif
+
                 break;
             case USB_DESCRIPTOR_CONFIGURATION:
                 #if !defined(USB_USER_CONFIG_DESCRIPTOR)
@@ -1853,6 +1863,11 @@ static void USBStdGetDscHandler(void)
                 //  in an address error on the dereference.
                 inPipes[0].wCount.byte.LB = *(inPipes[0].pSrc.bRom+2);
                 inPipes[0].wCount.byte.HB = *(inPipes[0].pSrc.bRom+3);
+
+				#if defined(DESCRIPTOR_COUNTING_ENABLED)
+				gConfigDescriptorCount++;
+				#endif
+
                 break;
             case USB_DESCRIPTOR_STRING:
                 //USB_NUM_STRING_DESCRIPTORS was introduced as optional in release v2.3.  In v2.4 and
