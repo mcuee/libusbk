@@ -1,4 +1,4 @@
-# MinGW64 tdm-gcc (multi-lib) SOLUTION makefile for examples.
+# MinGW64 tdm-gcc (multi-lib) SOLUTION makefile for unit_tests.
 #
 # !! IMPORTANT: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 # !! Requires multilib GCC
@@ -34,104 +34,20 @@
 MAKE	= make
 RM		= -rm -fr
 
-$(info [K] Running examples SOLUTION makefile..)
+$(info [K] Running unit_tests SOLUTION makefile..)
 
-# make all examples for the specified "arch" (default is x86)
+# make all unit_tests for the specified "arch" (default is x86)
 #
 .PHONY: all
-all: show-device
-all: open-device
-all: xfer-async-rw
-all: xfer-sync-rw
-all: xfer-control
-all: xfer-stream-r
-all: xfer-stream-w
-all: xfer-stream-rw
-all: load-driver-api
-all: config-interface
-all: config-pipe
-all: config-power
-all: hot-plug-monitor
-all: xfer-iso
-all: xfer-queued-iso
+all: test_lstk
 
-# make the show-device example for the specified "arch" (default is x86)
+# make the test_lstk example for the specified "arch" (default is x86)
 #
-.PHONY: show-device
-show-device:
-	$(MAKE) --no-print-directory --directory=./show-device $(subst w -- ,,$(MAKEFLAGS)) all
-# make the open-device example for the specified "arch" (default is x86)
-#
-.PHONY: open-device
-open-device:
-	$(MAKE) --no-print-directory --directory=./open-device $(subst w -- ,,$(MAKEFLAGS)) all
-# make the xfer-async-rw example for the specified "arch" (default is x86)
-#
-.PHONY: xfer-async-rw
-xfer-async-rw:
-	$(MAKE) --no-print-directory --directory=./xfer-async-rw $(subst w -- ,,$(MAKEFLAGS)) all
-# make the xfer-sync-rw example for the specified "arch" (default is x86)
-#
-.PHONY: xfer-sync-rw
-xfer-sync-rw:
-	$(MAKE) --no-print-directory --directory=./xfer-sync-rw $(subst w -- ,,$(MAKEFLAGS)) all
-# make the xfer-control example for the specified "arch" (default is x86)
-#
-.PHONY: xfer-control
-xfer-control:
-	$(MAKE) --no-print-directory --directory=./xfer-control $(subst w -- ,,$(MAKEFLAGS)) all
-# make the xfer-stream-r example for the specified "arch" (default is x86)
-#
-.PHONY: xfer-stream-r
-xfer-stream-r:
-	$(MAKE) --no-print-directory --directory=./xfer-stream-r $(subst w -- ,,$(MAKEFLAGS)) all
-# make the xfer-stream-w example for the specified "arch" (default is x86)
-#
-.PHONY: xfer-stream-w
-xfer-stream-w:
-	$(MAKE) --no-print-directory --directory=./xfer-stream-w $(subst w -- ,,$(MAKEFLAGS)) all
-# make the xfer-stream-rw example for the specified "arch" (default is x86)
-#
-.PHONY: xfer-stream-rw
-xfer-stream-rw:
-	$(MAKE) --no-print-directory --directory=./xfer-stream-rw $(subst w -- ,,$(MAKEFLAGS)) all
-# make the load-driver-api example for the specified "arch" (default is x86)
-#
-.PHONY: load-driver-api
-load-driver-api:
-	$(MAKE) --no-print-directory --directory=./load-driver-api $(subst w -- ,,$(MAKEFLAGS)) all
-# make the config-interface example for the specified "arch" (default is x86)
-#
-.PHONY: config-interface
-config-interface:
-	$(MAKE) --no-print-directory --directory=./config-interface $(subst w -- ,,$(MAKEFLAGS)) all
-# make the config-pipe example for the specified "arch" (default is x86)
-#
-.PHONY: config-pipe
-config-pipe:
-	$(MAKE) --no-print-directory --directory=./config-pipe $(subst w -- ,,$(MAKEFLAGS)) all
-# make the config-power example for the specified "arch" (default is x86)
-#
-.PHONY: config-power
-config-power:
-	$(MAKE) --no-print-directory --directory=./config-power $(subst w -- ,,$(MAKEFLAGS)) all
-# make the hot-plug-monitor example for the specified "arch" (default is x86)
-#
-.PHONY: hot-plug-monitor
-hot-plug-monitor:
-	$(MAKE) --no-print-directory --directory=./hot-plug-monitor $(subst w -- ,,$(MAKEFLAGS)) all
-# make the xfer-iso example for the specified "arch" (default is x86)
-#
-.PHONY: xfer-iso
-xfer-iso:
-	$(MAKE) --no-print-directory --directory=./xfer-iso $(subst w -- ,,$(MAKEFLAGS)) all
-# make the xfer-queued-iso example for the specified "arch" (default is x86)
-#
-.PHONY: xfer-queued-iso
-xfer-queued-iso:
-	$(MAKE) --no-print-directory --directory=./xfer-queued-iso $(subst w -- ,,$(MAKEFLAGS)) all
+.PHONY: test_lstk
+test_lstk:
+	$(MAKE) --no-print-directory --directory=./test_lstk $(subst w -- ,,$(MAKEFLAGS)) all
 
-# make all examples for x86 and amd64 archs. ("arch" argument not used)
+# make all unit_tests for x86 and amd64 archs. ("arch" argument not used)
 #
 .PHONY: multi-all
 multi-all: 
@@ -142,19 +58,5 @@ multi-all:
 #
 .PHONY: clean
 clean:
-	$(MAKE) --directory=./show-device $(MAKEFLAGS) clean
-	$(MAKE) --directory=./open-device $(MAKEFLAGS) clean
-	$(MAKE) --directory=./xfer-async-rw $(MAKEFLAGS) clean
-	$(MAKE) --directory=./xfer-sync-rw $(MAKEFLAGS) clean
-	$(MAKE) --directory=./xfer-control $(MAKEFLAGS) clean
-	$(MAKE) --directory=./xfer-stream-r $(MAKEFLAGS) clean
-	$(MAKE) --directory=./xfer-stream-w $(MAKEFLAGS) clean
-	$(MAKE) --directory=./xfer-stream-rw $(MAKEFLAGS) clean
-	$(MAKE) --directory=./load-driver-api $(MAKEFLAGS) clean
-	$(MAKE) --directory=./config-interface $(MAKEFLAGS) clean
-	$(MAKE) --directory=./config-pipe $(MAKEFLAGS) clean
-	$(MAKE) --directory=./config-power $(MAKEFLAGS) clean
-	$(MAKE) --directory=./hot-plug-monitor $(MAKEFLAGS) clean
-	$(MAKE) --directory=./xfer-iso $(MAKEFLAGS) clean
-	$(MAKE) --directory=./xfer-queued-iso $(MAKEFLAGS) clean
+	$(MAKE) --directory=./test_lstk $(MAKEFLAGS) clean
 	$(RM) ./_ReSharper*

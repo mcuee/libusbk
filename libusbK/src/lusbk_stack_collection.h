@@ -19,273 +19,56 @@ binary distributions.
 #ifndef __LUSBK_STACK_COLLECTION_
 #define __LUSBK_STACK_COLLECTION_
 
+#include "lusbk_handles.h"
 #include "lusbk_private.h"
-#include "lusbk_common.h"
 #include "lusbk_linked_list.h"
 
-/*!********************************************************************
-Interface stack structures for libusbK, libusb0, and WinUSB
-********************************************************************!*/
-
-#define GetPipeDeviceHandle(UsbStack, PipeNumber)	\
-	(&(UsbStack))->PipeNumberCache[((((PipeNumber) & 0xF)|(((PipeNumber)>>3) & 0x10)) & 0x1F)].DeviceHandle
-
-#define GetPipeInterfaceHandle(UsbStack, PipeNumber)	\
-	(&(UsbStack))->PipeNumberCache[((((PipeNumber) & 0xF)|(((PipeNumber)>>3) & 0x10)) & 0x1F)].InterfaceHandle
-
-typedef enum _USB_STACK_HANDLER_RESULT
-{
-    HANDLER_HANDLED_WITH_FALSE,
-    HANDLER_HANDLED_WITH_TRUE,
-    HANDLER_NOT_HANDLED,
-
-} USB_STACK_HANDLER_RESULT;
-
-typedef struct _KUSB_PIPE_CACHE
-{
-	INT Index;
-	INT Number;
-
-	HANDLE DeviceHandle;
-	HANDLE InterfaceHandle;
-}* PKUSB_PIPE_CACHE, KUSB_PIPE_CACHE;
-
-typedef struct _KUSB_PIPE_EL
-{
-	INT Index;
-	INT Number;
-	USB_ENDPOINT_DESCRIPTOR Descriptor;
-
-	struct _KUSB_PIPE_EL* next;
-	struct _KUSB_PIPE_EL* prev;
-}* PKUSB_PIPE_EL, KUSB_PIPE_EL;
-
-
-typedef struct _KUSB_ALT_INTERFACE_EL
-{
-	INT Index;
-	INT Number;
-	USB_INTERFACE_DESCRIPTOR Descriptor;
-	PKUSB_PIPE_EL PipeList;
-
-	struct _KUSB_ALT_INTERFACE_EL* next;
-	struct _KUSB_ALT_INTERFACE_EL* prev;
-
-}* PKUSB_ALT_INTERFACE_EL, KUSB_ALT_INTERFACE_EL;
-
-typedef struct _KUSB_DEVICE_EL
-{
-	PKUSB_SHARED_DEVICE Device;
-
-	PVOID Context;
-
-	struct _KUSB_DEVICE_EL* next;
-	struct _KUSB_DEVICE_EL* prev;
-
-}* PKUSB_DEVICE_EL, KUSB_DEVICE_EL;
-
-typedef struct _KUSB_INTERFACE_EL
-{
-	INT CurrentAltSetting;
-
-	INT Index;
-	INT Number;
-
-	INT VirtualIndex;
-	PKUSB_ALT_INTERFACE_EL AltInterfaceList;
-
-	PKUSB_DEVICE_EL ParentDevice;
-
-	struct _KUSB_INTERFACE_EL* next;
-	struct _KUSB_INTERFACE_EL* prev;
-
-}* PKUSB_INTERFACE_EL, KUSB_INTERFACE_EL;
-
-typedef struct _KUSB_ASSOCIATED_INTERFACE_EL
-{
-	HANDLE DeviceHandle;
-	HANDLE ParentHandle;
-	HANDLE Handle;
-	INT Index;
-
-	struct _KUSB_ASSOCIATED_INTERFACE_EL* next;
-	struct _KUSB_ASSOCIATED_INTERFACE_EL* prev;
-
-}* PKUSB_ASSOCIATED_INTERFACE_EL, KUSB_ASSOCIATED_INTERFACE_EL;
-
-typedef struct _KUSB_INTERFACE_STACK
-{
-	KUSB_PIPE_CACHE PipeNumberCache[32];
-
-	struct
-	{
-		LONG (*GetConfigDescriptor)		(struct _KUSB_INTERFACE_STACK*, LPCSTR, HANDLE, HANDLE, PUSB_CONFIGURATION_DESCRIPTOR*, PVOID);
-		LONG (*ClaimReleaseInterface)	(struct _KUSB_INTERFACE_STACK*, PKUSB_INTERFACE_EL, BOOL, INT, BOOL, PVOID);
-		LONG (*OpenInterface)			(struct _KUSB_INTERFACE_STACK*, HANDLE, INT, PHANDLE, PVOID);
-		LONG (*CloseInterface)			(struct _KUSB_INTERFACE_STACK*, PKUSB_INTERFACE_EL, PVOID);
-		LONG (*CloseDevice)				(struct _KUSB_INTERFACE_STACK*, PKUSB_DEVICE_EL, PVOID);
-	} Cb;
-
-	PUSB_CONFIGURATION_DESCRIPTOR DynamicConfigDescriptor;
-	ULONG DynamicConfigDescriptorSize;
-
-	PKUSB_INTERFACE_EL InterfaceList;
-	PKUSB_DEVICE_EL DeviceList;
-	PKUSB_ASSOCIATED_INTERFACE_EL AssociatedList;
-
-	ULONG DeviceCount;
-
-}* PKUSB_INTERFACE_STACK, KUSB_INTERFACE_STACK;
-
-typedef LONG KUSB_INTERFACE_CB (
-    __in PKUSB_INTERFACE_STACK UsbStack,
-    __in PKUSB_INTERFACE_EL InterfaceElement,
-    __in BOOL IsClaim,
-    __in INT InterfaceIndexOrNumber,
-    __in BOOL IsIndex,
-    __in PVOID Context);
-
-typedef LONG KUSB_DEVICE_ACTION_CB (
-    __in PKUSB_INTERFACE_STACK UsbStack,
-    __in PKUSB_DEVICE_EL DeviceElement,
-    __in PVOID Context);
-
-typedef LONG KUSB_INTERFACE_ACTION_CB (
-    __in PKUSB_INTERFACE_STACK UsbStack,
-    __in PKUSB_INTERFACE_EL InterfaceElement,
-    __in PVOID Context);
-
-typedef LONG KUSB_SET_ALT_INTERFACE_CB (
-    __in PKUSB_INTERFACE_STACK UsbStack,
-    __in PKUSB_INTERFACE_EL InterfaceElement,
-    __in PKUSB_ALT_INTERFACE_EL AltInterfaceElement,
-    __in INT InterfaceIndexOrNumber,
-    __in BOOL IsInterfaceIndex,
-    __in INT AltSettingIndexOrNumber,
-    __in BOOL IsAltSettingIndex,
-    __in_opt PVOID Context);
-
-typedef LONG KUSB_GET_ALT_INTERFACE_CB (
-    __in PKUSB_INTERFACE_STACK UsbStack,
-    __in PKUSB_INTERFACE_EL InterfaceElement,
-    __in INT InterfaceIndexOrNumber,
-    __in BOOL IsInterfaceIndex,
-    __in_opt PVOID Context);
-
-typedef LONG KUSB_GET_CFG_DESCRIPTOR_CB (
-    __in PKUSB_INTERFACE_STACK UsbStack,
-    __in_opt LPCSTR DevicePath,
-    __in_opt HANDLE DeviceHandle,
-    __in_opt HANDLE InterfaceHandle,
-    __out PUSB_CONFIGURATION_DESCRIPTOR* ConfigDescriptorRef,
-    __in_opt PVOID Context);
-
-typedef LONG KUSB_OPEN_ASSOCIATED_INTERFACE_CB (
-    __in PKUSB_INTERFACE_STACK UsbStack,
-    __in HANDLE DeviceOrInterfaceHandle,
-    __in INT InterfaceIndex,
-    __out PHANDLE AssociatedHandleRef,
-    __in_opt PVOID Context);
-
-typedef LONG KUSB_CLOSE_ASSOCIATED_INTERFACE_CB (
-    __in PKUSB_INTERFACE_STACK UsbStack,
-    __in PKUSB_INTERFACE_EL InterfaceElement,
-    __in_opt PVOID Context);
-
-typedef KUSB_INTERFACE_CB* PKUSB_INTERFACE_CB;
-typedef KUSB_SET_ALT_INTERFACE_CB* PKUSB_SET_ALT_INTERFACE_CB;
-typedef KUSB_GET_ALT_INTERFACE_CB* PKUSB_GET_ALT_INTERFACE_CB;
-typedef KUSB_DEVICE_ACTION_CB* PKUSB_DEVICE_ACTION_CB;
-typedef KUSB_INTERFACE_ACTION_CB* PKUSB_INTERFACE_ACTION_CB;
-typedef KUSB_GET_CFG_DESCRIPTOR_CB* PKUSB_GET_CFG_DESCRIPTOR_CB;
-typedef KUSB_OPEN_ASSOCIATED_INTERFACE_CB* PKUSB_OPEN_ASSOCIATED_INTERFACE_CB;
+typedef BOOL KUSB_STACK_CB(HANDLE MasterHandle);
+typedef KUSB_STACK_CB* PKUSB_STACK_CB;
 
 BOOL UsbStack_Init(
-    __in PKUSB_INTERFACE_STACK UsbStack,
-    __in PKUSB_GET_CFG_DESCRIPTOR_CB GetConfigDescriptorCB,
-    __in PKUSB_INTERFACE_CB ClaimReleaseInterfaceCB,
-    __in_opt PKUSB_OPEN_ASSOCIATED_INTERFACE_CB OpenInterfaceCB,
-    __in_opt PKUSB_INTERFACE_ACTION_CB CloseInterfaceCB,
-    __in_opt PKUSB_DEVICE_ACTION_CB CloseDeviceCB);
+    __out		KUSB_HANDLE* Handle,
+    __in		KUSB_DRVID DriverID,
+    __in		BOOL UsePipeCache,
+    __in_opt	HANDLE DeviceHandle,
+    __in_opt	KLST_DEVINFO* DevInfo,
+    __in_opt	PKDEV_HANDLE_INTERNAL SharedDevice,
+    __in		PKUSB_STACK_CB Init_ConfigCB,
+    __in_opt	PKUSB_STACK_CB Init_BackendCB,
+    __in		PKOBJ_CB Cleanup_UsbK,
+    __in		PKOBJ_CB Cleanup_DevK);
 
-BOOL UsbStack_Free(
-    __in PKUSB_INTERFACE_STACK UsbStack,
-    __in_opt PVOID Context);
+BOOL UsbStack_GetAssociatedInterface (
+    __in KUSB_HANDLE Handle,
+    __in UCHAR AssociatedInterfaceIndex,
+    __out KUSB_HANDLE* AssociatedHandle);
 
-BOOL UsbStack_Add(
-    __in PKUSB_INTERFACE_STACK UsbStack,
-    __in PKUSB_SHARED_DEVICE SharedDevice,
-    __in_opt PVOID Context);
+BOOL UsbStack_CloneHandle (
+    __in KUSB_HANDLE Handle,
+    __out KUSB_HANDLE* ClonedHandle);
 
-BOOL UsbStack_AddDevice(
-    __in PKUSB_INTERFACE_STACK UsbStack,
-    __in_opt LPCSTR DevicePath,
-    __in_opt HANDLE DeviceHandle,
-    __in_opt PVOID Context);
+VOID UsbStack_Clear(PKUSB_INTERFACE_STACK UsbStack);
 
-LONG UsbStack_ClaimOrRelease(
-    __in PKUSB_INTERFACE_STACK UsbStack,
-    __in BOOL IsClaim,
-    __in INT InterfaceIndexOrNumber,
-    __in BOOL IsIndex,
-    __in_opt PVOID Context);
+BOOL UsbStack_Rebuild(
+    __in PKUSB_HANDLE_INTERNAL Handle,
+    __in PKUSB_STACK_CB Init_ConfigCB);
 
-BOOL UsbStack_BuildCache(
-    __in PKUSB_INTERFACE_STACK UsbStack);
-
-
-BOOL UsbStack_GetCache(
-    __in PKUSB_INTERFACE_STACK UsbStack,
-    __inout_opt PKUSB_DEVICE_EL Device,
-    __inout_opt PKUSB_INTERFACE_EL Interface);
-
-VOID UsbStack_CloneList(
-    __in PKUSB_INTERFACE_EL InterfaceListSrcPtr,
-    __inout PKUSB_INTERFACE_EL* InterfaceLisDstPtr);
-
-VOID UsbStack_Clone(
-    __in PKUSB_INTERFACE_STACK SrcUsbStack,
-    __in PKUSB_INTERFACE_STACK DstUsbStack);
-
-USB_STACK_HANDLER_RESULT UsbStackHandler_GetDescriptor (
-    __in PKUSB_INTERFACE_STACK UsbStack,
-    __in UCHAR DescriptorType,
-    __in UCHAR Index,
-    __in USHORT LanguageID,
-    __out_opt PUCHAR Buffer,
-    __in ULONG BufferLength,
-    __out PULONG LengthTransferred);
-
-USB_STACK_HANDLER_RESULT UsbStackHandler_SetAltInterface(
-    __in PKUSB_INTERFACE_STACK UsbStack,
-    __in INT InterfaceIndexOrNumber,
-    __in BOOL IsInterfaceIndex,
-    __in INT AltSettingIndexOrNumber,
-    __in BOOL IsAltSettingIndex);
-
-USB_STACK_HANDLER_RESULT UsbStackHandler_GetAltInterface(
-    __in PKUSB_INTERFACE_STACK UsbStack,
-    __in INT InterfaceIndexOrNumber,
-    __in BOOL IsInterfaceIndex,
-    __out PINT AltSettingNumber);
-
-USB_STACK_HANDLER_RESULT UsbStackHandler_QueryInterfaceSettings (
-    __in PKUSB_INTERFACE_STACK UsbStack,
-    __in  UCHAR AlternateSettingNumber,
+BOOL UsbStack_QueryInterfaceSettings (
+    __in KUSB_HANDLE Handle,
+    __in UCHAR AltSettingNumber,
     __out PUSB_INTERFACE_DESCRIPTOR UsbAltInterfaceDescriptor);
 
-USB_STACK_HANDLER_RESULT UsbStackHandler_QueryPipe (
-    __in PKUSB_INTERFACE_STACK UsbStack,
-    __in  UCHAR AlternateSettingNumber,
-    __in  UCHAR PipeIndex,
+BOOL UsbStack_QueryPipe(
+    __in KUSB_HANDLE Handle,
+    __in UCHAR AltSettingNumber,
+    __in UCHAR PipeIndex,
     __out PWINUSB_PIPE_INFORMATION PipeInformation);
 
-USB_STACK_HANDLER_RESULT UsbStackHandler_GetConfiguration (
-    __in PKUSB_INTERFACE_STACK UsbStack,
-    __out PUCHAR ConfigurationNumber);
+BOOL UsbStack_SelectInterface (
+    __in KUSB_HANDLE Handle,
+    __in UCHAR IndexOrNumber,
+    __in BOOL IsIndex);
 
-USB_STACK_HANDLER_RESULT UsbStackHandler_SetConfiguration (
-    __in PKUSB_INTERFACE_STACK UsbStack,
-    __in UCHAR ConfigurationNumber);
+BOOL UsbStack_RefreshPipeCache(PKUSB_HANDLE_INTERNAL Handle);
 
 #endif

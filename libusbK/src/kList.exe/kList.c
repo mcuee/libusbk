@@ -23,7 +23,7 @@ binary distributions.
 #include <setupapi.h>
 
 #include "lusbk_version.h"
-#include "lusbk_usb.h"
+#include "libusbk.h"
 #include "UsbIds.h"
 
 #pragma warning(disable:4296)
@@ -71,14 +71,14 @@ typedef struct _UNI_DESCRIPTOR
 #pragma warning(default:4201)
 
 static KUSB_DRIVER_API K;
-static LIBUSBK_INTERFACE_HANDLE InterfaceHandle;
+static KUSB_HANDLE InterfaceHandle;
 
 LONG WinError(__in_opt DWORD errorCode);
 
 BOOL OpenDeviceFileHandle(__in LPCSTR deviceFileName,
                           __out HANDLE* fileHandle);
 
-BOOL GetDescriptorReport(__in PKLST_DEV_INFO deviceElement,
+BOOL GetDescriptorReport(__in KLST_DEVINFO_HANDLE deviceElement,
                          __in BOOL detailed);
 
 BOOL GetRealConfigDescriptor(__in UCHAR Index,
@@ -284,7 +284,7 @@ int __cdecl main(int argc, char** argv)
 {
 	LONG ec = ERROR_SUCCESS;
 	KLST_HANDLE deviceList = NULL;
-	PKLST_DEV_INFO deviceElement;
+	KLST_DEVINFO_HANDLE deviceElement;
 	LONG devicePos = 0;
 	LONG_PTR selection;
 	ULONG count = 0;
@@ -367,7 +367,7 @@ int __cdecl main(int argc, char** argv)
 	}
 
 	printf("Loading driver api..\n");
-	if (!DrvK_LoadDriverApi(&K, deviceElement->DrvId, sizeof(K)))
+	if (!LibK_LoadDriverApi(&K, deviceElement->DrvId, sizeof(K)))
 	{
 		ec = WinError(0);
 		goto Done;
@@ -380,7 +380,7 @@ int __cdecl main(int argc, char** argv)
 	}
 
 Done:
-	LstK_Free(&deviceList);
+	LstK_Free(deviceList);
 	return ec;
 }
 
@@ -390,14 +390,14 @@ BOOL GetRealConfigDescriptor(__in UCHAR Index,
                              __out PULONG LengthTransferred)
 {
 	WINUSB_SETUP_PACKET Pkt;
-	PKUSB_SETUP_PACKET defPkt = (PKUSB_SETUP_PACKET)&Pkt;
+	KUSB_SETUP_PACKET* defPkt = (KUSB_SETUP_PACKET*)&Pkt;
 
 	memset(&Pkt, 0, sizeof(Pkt));
-	defPkt->bmRequestType.BM.Dir = BMREQUEST_DEVICE_TO_HOST;
-	defPkt->bRequest = USB_REQUEST_GET_DESCRIPTOR;
-	defPkt->wValue.HiByte = USB_CONFIGURATION_DESCRIPTOR_TYPE;
-	defPkt->wValue.LowByte = Index;
-	defPkt->wLength = (USHORT)BufferLength;
+	defPkt->BmRequest.Dir = BMREQUEST_DEVICE_TO_HOST;
+	defPkt->Request = USB_REQUEST_GET_DESCRIPTOR;
+	defPkt->ValueHi = USB_CONFIGURATION_DESCRIPTOR_TYPE;
+	defPkt->ValueLo = Index;
+	defPkt->Length = (USHORT)BufferLength;
 
 	return K.ControlTransfer(InterfaceHandle, Pkt, Buffer, BufferLength, LengthTransferred, NULL);
 }
@@ -422,7 +422,7 @@ BOOL OpenDeviceFileHandle(__in LPCSTR deviceFileName, __out HANDLE* fileHandle)
 	return TRUE;
 }
 
-BOOL GetDescriptorReport(__in PKLST_DEV_INFO deviceElement, __in BOOL detailed)
+BOOL GetDescriptorReport(__in KLST_DEVINFO_HANDLE deviceElement, __in BOOL detailed)
 {
 	HANDLE fileHandle = NULL;
 	ULONG length;
@@ -792,21 +792,21 @@ BOOL DumpDescriptorHidReport(__in PHID_DESCRIPTOR desc,
 	PUCHAR reportBuffer = LocalAlloc(LPTR, reportLength);
 
 	WINUSB_SETUP_PACKET Pkt;
-	PKUSB_SETUP_PACKET defPkt = (PKUSB_SETUP_PACKET)&Pkt;
+	KUSB_SETUP_PACKET* defPkt = (KUSB_SETUP_PACKET*)&Pkt;
 
 	memset(&idContext, 0, sizeof(idContext));
 	memset(&Pkt, 0, sizeof(Pkt));
 
-	defPkt->bmRequestType.BM.Dir = BMREQUEST_DEVICE_TO_HOST;
-	defPkt->bmRequestType.BM.Recipient = BMREQUEST_TO_INTERFACE;
+	defPkt->BmRequest.Dir = BMREQUEST_DEVICE_TO_HOST;
+	defPkt->BmRequest.Recipient = BMREQUEST_TO_INTERFACE;
 
-	defPkt->bRequest = USB_REQUEST_GET_DESCRIPTOR;
+	defPkt->Request = USB_REQUEST_GET_DESCRIPTOR;
 
-	defPkt->wValue.HiByte = reportType;
-	defPkt->wValue.LowByte = descriptorPos;
+	defPkt->ValueHi = reportType;
+	defPkt->ValueLo = descriptorPos;
 
-	defPkt->wIndex.LowByte = currentInterface->bInterfaceNumber;
-	defPkt->wLength = reportLength;
+	defPkt->IndexLo = currentInterface->bInterfaceNumber;
+	defPkt->Length = reportLength;
 
 	success = K.ControlTransfer(InterfaceHandle, Pkt, reportBuffer, reportLength, (PULONG)&transferred, NULL);
 	if (success)

@@ -27,8 +27,8 @@
 DWORD __cdecl main(int argc, char* argv[])
 {
 	KLST_HANDLE deviceList = NULL;
-	PKLST_DEV_INFO deviceInfo = NULL;
-	LIBUSBK_INTERFACE_HANDLE handle = NULL;
+	KLST_DEVINFO_HANDLE deviceInfo = NULL;
+	KUSB_HANDLE handle = NULL;
 	DWORD ec = ERROR_SUCCESS;
 	UCHAR pipeIndex = 0;
 	WINUSB_PIPE_INFORMATION pipeInfo;
@@ -63,7 +63,7 @@ Done:
 
 	// Free the device list
 	// if deviceList is invalid (NULL), has no effect
-	LstK_Free(&deviceList);
+	LstK_Free(deviceList);
 
 	return ec;
 }

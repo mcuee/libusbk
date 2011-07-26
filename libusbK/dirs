@@ -1,3 +1,4 @@
 DIRS= \
      examples \
-     src
+     src \
+     unit_tests

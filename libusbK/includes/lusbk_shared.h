@@ -1,14 +1,110 @@
-/*! \file lusbk_usb_iso.h
-* \brief structs, typedefs, enums, defines, and functions for the \ref isok.
-*/
-#ifndef __LUSBK_USB_ISO_H_
-#define __LUSBK_USB_ISO_H_
 
-#if !defined(WDK_DRIVER)
-#include <windows.h>
-#include <objbase.h>
-#include "lusbk_common.h"
+
+#ifndef __LUSBK_SHARED_H_
+#define __LUSBK_SHARED_H_
+
+#ifndef __USB_H__
+
+//! Values used in the \c bmAttributes field of a \ref USB_ENDPOINT_DESCRIPTOR
+typedef enum _USBD_PIPE_TYPE
+{
+    //! Indicates a control endpoint
+    UsbdPipeTypeControl,
+
+    //! Indicates an isochronous endpoint
+    UsbdPipeTypeIsochronous,
+
+    //! Indicates a bulk endpoint
+    UsbdPipeTypeBulk,
+
+    //! Indicates an interrupt endpoint
+    UsbdPipeTypeInterrupt,
+} USBD_PIPE_TYPE;
+
 #endif
+
+#if !defined(__WINUSB_COMPAT_IO_H__) && !defined(__WUSBIO_H__)
+
+// pipe policy types ///////////////
+#define SHORT_PACKET_TERMINATE  0x01
+#define AUTO_CLEAR_STALL        0x02
+#define PIPE_TRANSFER_TIMEOUT   0x03
+#define IGNORE_SHORT_PACKETS    0x04
+#define ALLOW_PARTIAL_READS     0x05
+#define AUTO_FLUSH              0x06
+#define RAW_IO                  0x07
+#define MAXIMUM_TRANSFER_SIZE   0x08
+#define RESET_PIPE_ON_RESUME    0x09
+// [tr] !NEW! (mainly for testing)
+#define MAX_TRANSFER_STAGE_SIZE    0x0F
+
+// Power policy types //////////////
+#define AUTO_SUSPEND            0x81
+#define SUSPEND_DELAY           0x83
+
+// Device Information types ////////
+#define DEVICE_SPEED            0x01
+
+// Device Speeds
+#define LowSpeed                0x01
+#define FullSpeed               0x02
+#define HighSpeed               0x03
+
+///! The \c WINUSB_PIPE_INFORMATION structure contains pipe information that the \ref UsbK_QueryPipe routine retrieves.
+typedef struct _WINUSB_PIPE_INFORMATION
+{
+	//! A \c USBD_PIPE_TYPE enumeration value that specifies the pipe type
+	USBD_PIPE_TYPE	PipeType;
+
+	//! The pipe identifier (ID)
+	UCHAR PipeId;
+
+	//! The maximum size, in bytes, of the packets that are transmitted on the pipe
+	USHORT MaximumPacketSize;
+
+	//! The pipe interval
+	UCHAR Interval;
+
+} WINUSB_PIPE_INFORMATION;
+//! Pointer to a \ref WINUSB_PIPE_INFORMATION structure
+typedef WINUSB_PIPE_INFORMATION* PWINUSB_PIPE_INFORMATION;
+C_ASSERT(sizeof(WINUSB_PIPE_INFORMATION) == 12);
+
+#include <pshpack1.h>
+
+///! The \c WINUSB_SETUP_PACKET structure describes a USB setup packet.
+/*!
+* It is often more convient to use this structure in combination with a \ref KUSB_SETUP_PACKET.
+* For example:
+* \code
+
+* \endcode
+*/
+typedef struct _WINUSB_SETUP_PACKET
+{
+	//! The request type. The values that are assigned to this member are defined in Table 9.2 of section 9.3 of the Universal Serial Bus (USB) specification (www.usb.org).
+	UCHAR   RequestType;
+
+	//! The device request. The values that are assigned to this member are defined in Table 9.3 of section 9.4 of the Universal Serial Bus (USB) specification.
+	UCHAR   Request;
+
+	//! The meaning of this member varies according to the request. For an explanation of this member, see the Universal Serial Bus (USB) specification.
+	USHORT  Value;
+
+	//! The meaning of this member varies according to the request. For an explanation of this member, see the Universal Serial Bus (USB) specification.
+	USHORT  Index;
+
+	//! The number of bytes to transfer. (not including the \c WINUSB_SETUP_PACKET itself)
+	USHORT  Length;
+
+} WINUSB_SETUP_PACKET;
+//! pointer to a \c WINUSB_SETUP_PACKET structure
+typedef WINUSB_SETUP_PACKET* PWINUSB_SETUP_PACKET;
+C_ASSERT(sizeof(WINUSB_SETUP_PACKET) == 8);
+
+#include <poppack.h>
+
+#endif // __WUSBIO_H__ __WINUSB_COMPAT_IO_H__
 
 #include <pshpack1.h>
 /*! \addtogroup isok
@@ -21,7 +117,7 @@ typedef struct _KISO_PACKET
 	/*!
 	* \c Offset represents an absolute data offset from the start of the \c Buffer parameter \ref UsbK_IsoReadPipe or \ref UsbK_IsoWritePipe.
 	*
-	* \note This field is assgined by the user application only and used by the driver upon transfer submission and completion.
+	* \note This field is assigned by the user application only and used by the driver upon transfer submission and completion.
 	*/
 	ULONG Offset;
 
@@ -120,7 +216,7 @@ typedef struct _KISO_CONTEXT
 	* This parameter corresponds to the bEndpointAddress field in the endpoint
 	* descriptor.
 	*
-	* \note This field is assgined by the user application only and used by the driver upon transfer submission.
+	* \note This field is assigned by the user application only and used by the driver upon transfer submission.
 	*/
 	UCHAR PipeID;
 
@@ -147,7 +243,7 @@ typedef struct _KISO_CONTEXT
 	*
 	* For more information about resetting pipes, see \ref UsbK_ResetPipe.
 	*
-	* \note This field may be assgined by the user application and is updated by the driver upon transfer completion.
+	* \note This field may be assigned by the user application and is updated by the driver upon transfer completion.
 	*/
 	ULONG StartFrame;
 
@@ -157,7 +253,7 @@ typedef struct _KISO_CONTEXT
 	*/
 	ULONG ErrorCount;
 
-	//! Contains a unqiue per-pipe transfer counter.
+	//! Contains aunique per-pipe transfer counter.
 	/*
 	*
 	* For each pipe, libusbK maintains a transfer counter which increments
@@ -172,13 +268,13 @@ typedef struct _KISO_CONTEXT
 
 	//! Specifies the number of packets that are described by the variable-length array member \c IsoPacket.
 	/*
-	* \note This field is assgined by the user application only and used by the driver upon transfer submission and completion.
+	* \note This field is assigned by the user application only and used by the driver upon transfer submission and completion.
 	*/
 	ULONG NumberOfPackets;
 
 	//! Contains a variable-length array of \c KISO_PACKET structures that describe the isochronous transfer packets to be transferred on the USB bus.
 	/*
-	* \note This field is assgined by the user application, used by the driver upon transfer submission, and updated by the driver upon transfer completion.
+	* \note This field is assigned by the user application, used by the driver upon transfer submission, and updated by the driver upon transfer completion.
 	*/
 	KISO_PACKET IsoPackets[0];
 
@@ -190,177 +286,5 @@ typedef KISO_CONTEXT* PKISO_CONTEXT;
 
 #include <poppack.h>
 
-#if !defined(WDK_DRIVER)
-// [User application/library only section]
+#endif // __LUSBK_SHARED_H_
 
-//! Callback function typedef for \ref IsoK_EnumPackets
-typedef BOOL KUSB_API KISO_PACKETS_ENUM_CB (__in ULONG PacketIndex, __inout PKISO_PACKET IsoPacket, __inout PVOID UserContext);
-//! Pointer to a \ref KISO_PACKETS_ENUM_CB.
-typedef KISO_PACKETS_ENUM_CB* PKISO_PACKETS_ENUM_CB;
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-//! Creates a new isochronous transfer context.
-	/*!
-	*
-	* \param IsoContext
-	* Receives a new isochronous transfer context.
-	*
-	* \param NumberOfPackets
-	* The number of \ref KISO_PACKET structures allocated to \c
-	* IsoContext. Assigned to \ref KISO_CONTEXT::NumberOfPackets. The \ref
-	* KISO_CONTEXT::NumberOfPackets field is assignable by \c IsoK_Init
-	* only and must not be changed by the user.
-	*
-	* \param PipeID
-	* The USB endpoint address assigned to \ref KISO_CONTEXT::PipeID. The
-	* driver uses this field to determine which pipe will receive the transfer
-	* request. The \ref KISO_CONTEXT::PipeID may be chamged by the user in
-	* subsequent request.
-	*
-	* \param StartFrame
-	* The USB frame number this request must start on (or \b 0 for ASAP) and
-	* assigned to \ref KISO_CONTEXT::StartFrame. The \ref
-	* KISO_CONTEXT::StartFrame may be chamged by the user in subsequent
-	* request. For more information, see \ref KISO_CONTEXT::StartFrame.
-	*
-	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get
-	* extended error information.
-	*
-	* \c IsoK_Init is performs the following tasks in order:
-	* -# Allocates the \c IsoContext and the required \ref KISO_PACKET structures.
-	* -# Zero-initializes all iso context memory.
-	* -# Assigns \b NumberOfPackets, \b PipeID, and \b StartFrame to \c IsoContext.
-	*
-	*/
-	KUSB_EXP BOOL KUSB_API IsoK_Init (
-	    __deref_out PKISO_CONTEXT* IsoContext,
-	    __in ULONG NumberOfPackets,
-	    __in_opt UCHAR PipeID,
-	    __in_opt ULONG StartFrame);
-
-//! Destroys an isochronous transfer context.
-	/*!
-	* \param IsoContext
-	* A pointer reference to an isochronous transfer context created with \ref IsoK_Init.
-	*
-	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get
-	* extended error information.
-	*/
-	KUSB_EXP BOOL KUSB_API IsoK_Free(
-	    __deref_inout PKISO_CONTEXT* IsoContext);
-
-//! Convenience function for setting the offset of all iso packets of an isochronous transfer context.
-	/*!
-	* \param IsoContext
-	* A pointer to an isochronous transfer context.
-	*
-	* \param PacketSize
-	* The packet size used to calculate and assign the absolute data offset for each \ref KISO_PACKET in \c IsoContext.
-	*
-	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get
-	* extended error information.
-	*
-	* \c IsoK_SetPackets updates all \ref KISO_PACKET::Offset fields in a \ref KISO_CONTEXT
-	* so all offset are \c PacketSize apart.
-	* For example:
-	* - The offset of the first  (0-index) packet is 0.
-	* - The offset of the second (1-index) packet is PacketSize.
-	* - The offset of the third  (2-index) packet is PacketSize*2.
-	*
-	*/
-	KUSB_EXP BOOL KUSB_API IsoK_SetPackets(
-	    __inout PKISO_CONTEXT IsoContext,
-	    __in ULONG PacketSize);
-
-//! Convenience function for setting all fields of a \ref KISO_PACKET.
-	/*!
-	* \param IsoContext
-	* A pointer to an isochronous transfer context.
-	*
-	* \param PacketIndex
-	* The packet index to set.
-	*
-	* \param IsoPacket
-	* Pointer to a user allocated \c KISO_PACKET which is copied into
-	* the PKISO_CONTEXT::IsoPackets array at the specified index.
-	*
-	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get
-	* extended error information.
-	*/
-	KUSB_EXP BOOL KUSB_API IsoK_SetPacket(
-	    __in PKISO_CONTEXT IsoContext,
-	    __in ULONG PacketIndex,
-	    __in PKISO_PACKET IsoPacket);
-
-//! Convenience function for getting all fields of a \ref KISO_PACKET.
-	/*!
-	* \param IsoContext
-	* A pointer to an isochronous transfer context.
-	*
-	* \param PacketIndex
-	* The packet index to get.
-	*
-	* \param IsoPacket
-	* Pointer to a user allocated \c KISO_PACKET which receives a copy of
-	* the iso packet in the PKISO_CONTEXT::IsoPackets array at the specified
-	* index.
-	*
-	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get
-	* extended error information.
-	*/
-	KUSB_EXP BOOL KUSB_API IsoK_GetPacket(
-	    __in PKISO_CONTEXT IsoContext,
-	    __in ULONG PacketIndex,
-	    __out PKISO_PACKET IsoPacket);
-
-//! Convenience function for enumerating iso packets of an isochronous transfer context.
-	/*!
-	* \param IsoContext
-	* A pointer to an isochronous transfer context.
-	*
-	* \param EnumPackets
-	* Pointer to a user supplied callback function which is executed for all iso packets
-	* in \c IsoContext or until the user supplied callback function returns \c FALSE.
-	*
-	* \param StartPacketIndex
-	* The zero-based iso pakcet index to begin enumeration at.
-	*
-	* \param UserContext
-	* A user defined value which is passed as a parameter to the user supplied callback function.
-	*
-	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get
-	* extended error information.
-	*/
-	KUSB_EXP BOOL KUSB_API IsoK_EnumPackets(
-	    __in PKISO_CONTEXT IsoContext,
-	    __in PKISO_PACKETS_ENUM_CB EnumPackets,
-	    __in_opt ULONG StartPacketIndex,
-	    __in_opt PVOID UserContext);
-
-//! Convenience function for re-using an isochronous transfer context in a subsequent request.
-	/*!
-	* \param IsoContext
-	* A pointer to an isochronous transfer context.
-	*
-	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get
-	* extended error information.
-	*
-	* \c IsoK_ReUse is performs the following tasks in order:
-	* -# Zero-initializes the \b Length and \b Status fields of all \ref KISO_PACKET structures.
-	* -# Zero-initializes the \b StartFrame and \b ErrorCount of the \ref KISO_CONTEXT.
-	*
-	*/
-	KUSB_EXP BOOL KUSB_API IsoK_ReUse(
-	    __inout PKISO_CONTEXT IsoContext);
-
-#ifdef __cplusplus
-}
-#endif
-
-/*! @} */
-#endif // WDK_DRIVER
-
-#endif // __LUSBK_USB_ISO_H_

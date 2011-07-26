@@ -17,6 +17,7 @@ binary distributions.
 ********************************************************************!*/
 
 #include "lusbk_private.h"
+#include "lusbk_handles.h"
 
 KUSB_EXP BOOL KUSB_API IsoK_Init (
     __deref_out PKISO_CONTEXT* IsoContext,
@@ -50,12 +51,11 @@ Error:
 }
 
 KUSB_EXP BOOL KUSB_API IsoK_Free(
-    __deref_inout PKISO_CONTEXT* IsoContext)
+    __in PKISO_CONTEXT IsoContext)
 {
 	ErrorHandle(!IsHandleValid(IsoContext), Error, "IsoContext");
-	ErrorHandle(!IsHandleValid(*IsoContext), Error, "IsoContext");
+	Mem_Free(&IsoContext);
 
-	Mem_Free(IsoContext);
 	return TRUE;
 
 Error:
@@ -118,7 +118,7 @@ Error:
 
 KUSB_EXP BOOL KUSB_API IsoK_EnumPackets(
     __in PKISO_CONTEXT IsoContext,
-    __in PKISO_PACKETS_ENUM_CB EnumPackets,
+    __in PKISO_ENUM_PACKETS_CB EnumPackets,
     __in_opt ULONG StartPacketIndex,
     __in_opt PVOID UserContext)
 {

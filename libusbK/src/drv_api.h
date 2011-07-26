@@ -1,7 +1,6 @@
 /*! \file drv_api.h
 */
-#include "lusbk_usbio.h"
-#include "lusbk_usb_iso.h"
+#include "lusbk_shared.h"
 
 #ifndef __LIBUSBK_KUSB_DRIVER_API_H__
 #define __LIBUSBK_KUSB_DRIVER_API_H__

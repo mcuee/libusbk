@@ -481,7 +481,7 @@ do {                                                                            
 * First element of the list.
 *
 * \param el
-* assgined to an element of the linked list on each iteration.
+* assigned to an element of the linked list on each iteration.
 */
 #define DL_FOREACH(head,el)                                                                    \
     for(el=head;el;el=el->next)

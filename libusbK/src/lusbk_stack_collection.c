@@ -1,192 +1,356 @@
-#include "lusbk_bknd.h"
-#include "lusbk_private.h"
-#include "lusbk_stack_collection.h"
+/*!********************************************************************
+libusbK - Multi-driver USB library.
+Copyright (C) 2011 All Rights Reserved.
+libusb-win32.sourceforge.net
 
+Development : Travis Lee Robinson  (libusbdotnet@gmail.com)
+Testing     : Xiaofan Chen         (xiaofanc@gmail.com)
+
+At the discretion of the user of this library, this software may be
+licensed under the terms of the GNU Public License v3 or a BSD-Style
+license as outlined in the following files:
+* LICENSE-gpl3.txt
+* LICENSE-bsd.txt
+
+License files are located in a license folder at the root of source and
+binary distributions.
+********************************************************************!*/
+
+#include "lusbk_private.h"
+#include "lusbk_handles.h"
+#include "lusbk_stack_collection.h"
 
 // warning C4127: conditional expression is constant.
 #pragma warning(disable: 4127)
 
+#ifndef DESCRIPTOR_PARSE_BUILD_STACK___________________________________
 
-#define AdvanceDescriptor(DescriptorPtr, SizeLeft)																\
-{																												\
-	if (!DescriptorPtr || SizeLeft < (INT)(DescriptorPtr->bLength+sizeof(USB_COMMON_DESCRIPTOR)))				\
-	{																											\
-		SizeLeft=0;																								\
-		DescriptorPtr = NULL;																					\
-	}																											\
-	else																										\
-	{																											\
-		SizeLeft-=(INT)DescriptorPtr->bLength;																	\
-		DescriptorPtr = (PUSB_COMMON_DESCRIPTOR)&((PUCHAR)DescriptorPtr)[DescriptorPtr->bLength];				\
-	}																											\
+typedef struct _DESCRIPTOR_ITERATOR
+{
+	LONG	Remaining;
+
+	UCHAR NextInterfaceIndex;
+	UCHAR NextAltInterfaceIndex;
+	UCHAR NextPipeIndex;
+
+	union
+	{
+		PUCHAR						Offset;
+
+		PUSB_COMMON_DESCRIPTOR		Comn;
+		PUSB_INTERFACE_DESCRIPTOR	Intf;
+		PUSB_ENDPOINT_DESCRIPTOR	Pipe;
+	} Ptr;
+} DESCRIPTOR_ITERATOR, *PDESCRIPTOR_ITERATOR;
+
+static BOOL u_Desc_Next(PDESCRIPTOR_ITERATOR desc)
+{
+	if (desc->Remaining < sizeof(USB_COMMON_DESCRIPTOR)) return FALSE;
+
+	desc->Remaining -= desc->Ptr.Comn->bLength;
+
+	if (desc->Remaining >= sizeof(USB_COMMON_DESCRIPTOR))
+	{
+		desc->Ptr.Offset += desc->Ptr.Comn->bLength;
+		return TRUE;
+	}
+	return FALSE;
 }
 
-#define GetPipeNumberCache(PipeElement, PipeNumber)	\
-	(PipeElement->PipeNumberCache[((((PipeNumber) & 0xF)|(((PipeNumber)>>3) & 0x10)) & 0x1F)])
+static void u_Add_Pipe(PKUSB_ALT_INTERFACE_EL altInterfaceEL, PDESCRIPTOR_ITERATOR desc)
+{
+	PKUSB_PIPE_EL pipeEL;
+	DESCRIPTOR_ITERATOR descPrev;
 
+	memcpy(&descPrev, desc, sizeof(descPrev));
 
-#define L_Clone(dst,src) if (src) { (dst) = Mem_Alloc(sizeof(*(dst))); if ((dst)) { memcpy((dst), (src), sizeof(*(dst))); (dst)->next=NULL; (dst)->prev=NULL; } else break; } else break
+	while (u_Desc_Next(desc))
+	{
+		if (desc->Ptr.Comn->bDescriptorType == USB_INTERFACE_DESCRIPTOR_TYPE)
+		{
+			memcpy(desc, &descPrev, sizeof(*desc));
+			break;
+		}
+		else if (desc->Ptr.Comn->bDescriptorType == USB_ENDPOINT_DESCRIPTOR_TYPE)
+		{
+			FindPipeEL(altInterfaceEL, pipeEL, FALSE, desc->Ptr.Pipe->bEndpointAddress);
+			if (!pipeEL)
+			{
+				pipeEL = Mem_Alloc(sizeof(*pipeEL));
+				if (!pipeEL) return;
+
+				pipeEL->Descriptor	= desc->Ptr.Pipe;
+				pipeEL->ID			= pipeEL->Descriptor->bEndpointAddress;
+				pipeEL->Index		= desc->NextPipeIndex++;
+
+				DL_APPEND(altInterfaceEL->PipeList, pipeEL);
+			}
+		}
+		memcpy(&descPrev, desc, sizeof(descPrev));
+	}
+}
+
+static void u_Add_Interface(PKUSB_HANDLE_INTERNAL Handle, PDESCRIPTOR_ITERATOR desc)
+{
+	PKUSB_INTERFACE_EL interfaceEL;
+	PKUSB_ALT_INTERFACE_EL altInterfaceEL;
+
+	FindInterfaceEL(Handle->Device->UsbStack, interfaceEL, FALSE, desc->Ptr.Intf->bInterfaceNumber);
+	if (!interfaceEL)
+	{
+		interfaceEL = Mem_Alloc(sizeof(*interfaceEL));
+		if (!interfaceEL) return;
+
+		interfaceEL->ID		= desc->Ptr.Intf->bInterfaceNumber;
+		interfaceEL->Index	= desc->NextInterfaceIndex++;
+
+		interfaceEL->SharedInterface		= &Get_SharedInterface(Handle, interfaceEL->Index);
+		interfaceEL->SharedInterface->ID	= interfaceEL->ID;
+		interfaceEL->SharedInterface->Index	= interfaceEL->Index;
+
+		desc->NextAltInterfaceIndex = 0;
+
+		DL_APPEND(Handle->Device->UsbStack->InterfaceList,	interfaceEL);
+	}
+
+	FindAltInterfaceEL(interfaceEL, altInterfaceEL, FALSE, desc->Ptr.Intf->bAlternateSetting);
+	if (!altInterfaceEL)
+	{
+		altInterfaceEL = Mem_Alloc(sizeof(*altInterfaceEL));
+		if (!altInterfaceEL) return;
+
+		altInterfaceEL->Descriptor	= desc->Ptr.Intf;
+		altInterfaceEL->ID			= desc->Ptr.Intf->bAlternateSetting;
+		altInterfaceEL->Index		= desc->NextAltInterfaceIndex++;
+
+		desc->NextPipeIndex			= 0;
+
+		DL_APPEND(Handle->Device->UsbStack->InterfaceList->AltInterfaceList, altInterfaceEL);
+	}
+
+	u_Add_Pipe(altInterfaceEL, desc);
+}
+
+static BOOL u_Init_Config(__in PKUSB_HANDLE_INTERNAL Handle)
+{
+	DWORD errorCode = ERROR_SUCCESS;
+	DESCRIPTOR_ITERATOR desc;
+	PUSB_CONFIGURATION_DESCRIPTOR cfg = Handle->Device->ConfigDescriptor;
+
+	Mem_Zero(&desc, sizeof(desc));
+	desc.Ptr.Offset = (PUCHAR)cfg;
+	desc.Remaining = (LONG)cfg->wTotalLength;
+
+	while(u_Desc_Next(&desc))
+	{
+		if (desc.Ptr.Comn->bDescriptorType == USB_INTERFACE_DESCRIPTOR_TYPE)
+			u_Add_Interface(Handle, &desc);
+	}
+
+	return LusbwError(errorCode);
+}
+
+#endif
+
+static BOOL u_Init_Handle(__out PKUSB_HANDLE_INTERNAL* Handle,
+                          __in KUSB_DRVID DriverID,
+                          __in_opt PKDEV_HANDLE_INTERNAL SharedDevice,
+                          __in_opt PKUSB_STACK_CB Init_BackendCB,
+                          __in PKOBJ_CB Cleanup_UsbK,
+                          __in PKOBJ_CB Cleanup_DevK)
+{
+	PKUSB_HANDLE_INTERNAL handle = NULL;
+
+	ErrorHandle(!IsHandleValid(Handle), Error, "Handle");
+
+	handle = PoolHandle_Acquire_UsbK(Cleanup_UsbK);
+	ErrorNoSet(!IsHandleValid(handle), Error, "->PoolHandle_Acquire_UsbK");
+
+	if (SharedDevice)
+	{
+		// this is a cloned/associated handle.
+		ErrorSet(!PoolHandle_Inc_DevK(SharedDevice), Error, ERROR_RESOURCE_NOT_AVAILABLE, "->PoolHandle_Inc_DevK");
+		handle->Device = SharedDevice;
+		handle->IsClone = TRUE;
+	}
+	else
+	{
+		handle->Device = PoolHandle_Acquire_DevK(Cleanup_DevK);
+		ErrorNoSet(!IsHandleValid(handle->Device), Error, "->PoolHandle_Acquire_DevK");
+		handle->Device->DriverID = DriverID;
+
+		if (Init_BackendCB)
+		{
+			ErrorNoSet(!Init_BackendCB(handle), Error, "->Init_BackendCB");
+		}
+	}
+
+	*Handle = handle;
+	return TRUE;
+
+Error:
+	if (handle) PoolHandle_Dec_UsbK(handle);
+	*Handle = NULL;
+	return FALSE;
+}
 
 BOOL UsbStack_Init(
-    __in PKUSB_INTERFACE_STACK UsbStack,
-    __in PKUSB_GET_CFG_DESCRIPTOR_CB GetConfigDescriptorCB,
-    __in PKUSB_INTERFACE_CB ClaimReleaseInterfaceCB,
-    __in_opt PKUSB_OPEN_ASSOCIATED_INTERFACE_CB OpenInterfaceCB,
-    __in_opt PKUSB_INTERFACE_ACTION_CB CloseInterfaceCB,
-    __in_opt PKUSB_DEVICE_ACTION_CB CloseDeviceCB)
+    __out		KUSB_HANDLE* Handle,
+    __in_opt	KUSB_DRVID DriverID,
+    __in		BOOL UsePipeCache,
+    __in_opt	HANDLE DeviceHandle,
+    __in_opt	KLST_DEVINFO* DevInfo,
+    __in_opt	PKDEV_HANDLE_INTERNAL SharedDevice,
+    __in		PKUSB_STACK_CB Init_ConfigCB,
+    __in_opt	PKUSB_STACK_CB Init_BackendCB,
+    __in		PKOBJ_CB Cleanup_UsbK,
+    __in		PKOBJ_CB Cleanup_DevK)
 {
-	if (!Mem_Zero(UsbStack, sizeof(*UsbStack)))
-	{
-		return LusbwError(ERROR_INVALID_HANDLE);
-	}
-	UsbStack->Cb.GetConfigDescriptor = GetConfigDescriptorCB;
-	UsbStack->Cb.ClaimReleaseInterface = ClaimReleaseInterfaceCB;
-	UsbStack->Cb.OpenInterface = OpenInterfaceCB;
-	UsbStack->Cb.CloseInterface = CloseInterfaceCB;
-	UsbStack->Cb.CloseDevice = CloseDeviceCB;
+	BOOL success;
+	PKUSB_HANDLE_INTERNAL handle = NULL;
+	const size_t extraMemAlloc = sizeof(KUSB_INTERFACE_STACK) + sizeof(KUSB_DRIVER_API) + ((sizeof(KDEV_SHARED_INTERFACE) * KDEV_SHARED_INTERFACE_COUNT));
+	PUCHAR extraMem;
 
+	success = u_Init_Handle(&handle, DriverID, SharedDevice, Init_BackendCB, Cleanup_UsbK, Cleanup_DevK);
+	ErrorNoSetAction(!success, return FALSE, "->u_Init_Handle");
+
+	// if SharedDevice is non-null this handle is an associated handle
+	if (!SharedDevice)
+	{
+		if (!IsHandleValid(DeviceHandle))
+		{
+			DeviceHandle = CreateDeviceFile(DevInfo->DevicePath);
+			ErrorNoSet(!IsHandleValid(DeviceHandle), Error, "CreateDeviceFile failed.");
+			handle->Device->DriverID = DevInfo->DrvId;
+			handle->Device->DevicePath = Str_Dupe(DevInfo->DevicePath);
+		}
+
+		handle->Device->MasterDeviceHandle = DeviceHandle;
+
+		extraMem = Mem_Alloc(extraMemAlloc);
+		ErrorMemoryAction(!IsHandleValid(extraMem), return FALSE);
+
+		handle->Device->UsbStack = (KUSB_INTERFACE_STACK*)extraMem;
+		extraMem += sizeof(KUSB_INTERFACE_STACK);
+
+		handle->Device->DriverAPI = (KUSB_DRIVER_API*)extraMem;
+		extraMem += sizeof(KUSB_DRIVER_API);
+
+		handle->Device->SharedInterfaces = (KDEV_SHARED_INTERFACE*)extraMem;
+		extraMem += ((sizeof(KDEV_SHARED_INTERFACE) * KDEV_SHARED_INTERFACE_COUNT));
+
+		handle->Device->UsbStack->UsePipeCache = UsePipeCache;
+
+		success = Init_ConfigCB(handle);
+		ErrorNoSet(!success, Error, "->Init_ConfigCB");
+
+		handle->Selected_SharedInterface_Index = 0;
+		success = u_Init_Config(handle);
+		ErrorNoSet(!success, Error, "->u_Init_Config");
+
+		// load a driver API
+		LibK_LoadDriverApi(handle->Device->DriverAPI, handle->Device->DriverID, sizeof(*handle->Device->DriverAPI));
+
+		if (handle->Device->UsbStack->UsePipeCache)
+			UsbStack_RefreshPipeCache(handle);
+	}
+
+	*Handle = (KUSB_HANDLE)handle;
+	if (!SharedDevice)
+	{
+		PoolHandle_Live_DevK(handle->Device);
+		PoolHandle_Live_UsbK(handle);
+	}
 	return TRUE;
+
+Error:
+	if (IsHandleValid(handle)) PoolHandle_Dec_UsbK(handle);
+	*Handle = NULL;
+	return FALSE;
 }
 
-VOID UsbStack_Clone(
-    __in PKUSB_INTERFACE_STACK SrcUsbStack,
-    __in PKUSB_INTERFACE_STACK DstUsbStack)
+BOOL UsbStack_CloneHandle (
+    __in KUSB_HANDLE Handle,
+    __out KUSB_HANDLE* ClonedHandle)
 {
-	PKUSB_INTERFACE_EL nextInterfaceEL, newInterfaceEL;
-	PKUSB_ALT_INTERFACE_EL nextAltInterfaceEL, newAltInterfaceEL;
-	PKUSB_PIPE_EL nextPipeEL, newPipeEL;
-	PKUSB_DEVICE_EL nextDeviceEL, newDeviceEL;
+	PKUSB_HANDLE_INTERNAL handle;
+	PKUSB_HANDLE_INTERNAL clonedHandle = NULL;
+	BOOL success;
 
-	newDeviceEL = NULL;
+	Pub_To_Priv_UsbK(Handle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
 
-	DL_FOREACH(SrcUsbStack->DeviceList, nextDeviceEL)
-	{
-		if (!nextDeviceEL->Device->ConfigDescriptor)
-		{
-			USBERR("null config descriptor.\n");
-			SetLastError(ERROR_SOURCE_ELEMENT_EMPTY);
-			return;
-		}
+	success = UsbStack_Init(
+	              (KUSB_HANDLE*)&clonedHandle,
+	              handle->Device->DriverID,
+	              handle->Device->UsbStack->UsePipeCache,
+	              NULL,
+	              NULL,
+	              handle->Device,
+	              NULL,
+	              NULL,
+	              handle->Base.Evt.Cleanup,
+	              handle->Device->Base.Evt.Cleanup);
 
-		// clone the device
-		L_Clone(newDeviceEL, nextDeviceEL);
+	ErrorNoSet(!success, Error, "->UsbStack_Init");
 
-		// increment the reference count on this device.
-		InterlockedIncrement(&newDeviceEL->Device->OpenedRefCount);
-		IncDeviceUsageCount(newDeviceEL->Device);
+	clonedHandle->Selected_SharedInterface_Index = handle->Selected_SharedInterface_Index;
 
-		// add cloned device
-		DL_APPEND(DstUsbStack->DeviceList, newDeviceEL);
-	}
+	*ClonedHandle = (KUSB_HANDLE)clonedHandle;
+	PoolHandle_Dec_UsbK(handle);
+	PoolHandle_Live_UsbK(clonedHandle);
+	return TRUE;
 
-	DL_FOREACH(SrcUsbStack->InterfaceList, nextInterfaceEL)
-	{
-
-		DL_SEARCH_SCALAR(DstUsbStack->DeviceList, nextDeviceEL, Device, nextInterfaceEL->ParentDevice->Device);
-
-		// clone interface
-		L_Clone(newInterfaceEL, nextInterfaceEL);
-		newInterfaceEL->AltInterfaceList = NULL;
-		newInterfaceEL->ParentDevice = nextDeviceEL;
-
-		DL_FOREACH(nextInterfaceEL->AltInterfaceList, nextAltInterfaceEL)
-		{
-			// clone alt-interface
-			L_Clone(newAltInterfaceEL, nextAltInterfaceEL);
-			newAltInterfaceEL->PipeList = NULL;
-
-			DL_FOREACH(nextAltInterfaceEL->PipeList, nextPipeEL)
-			{
-				// clone pipe
-				L_Clone(newPipeEL, nextPipeEL);
-
-				// add cloned pipe
-				DL_APPEND(newAltInterfaceEL->PipeList, newPipeEL);
-			}
-
-			// add cloned alt-interface
-			DL_APPEND(newInterfaceEL->AltInterfaceList, newAltInterfaceEL);
-		}
-
-		// add clone interface
-		DL_APPEND(DstUsbStack->InterfaceList, newInterfaceEL);
-	}
+Error:
+	if (IsHandleValid(clonedHandle)) PoolHandle_Dec_UsbK(clonedHandle);
+	PoolHandle_Dec_UsbK(handle);
+	*ClonedHandle = NULL;
+	return FALSE;
 }
 
-BOOL UsbStack_Free(
-    __in PKUSB_INTERFACE_STACK UsbStack,
-    __in_opt PVOID Context)
+BOOL UsbStack_GetAssociatedInterface (
+    __in KUSB_HANDLE Handle,
+    __in UCHAR AssociatedInterfaceIndex,
+    __out KUSB_HANDLE* AssociatedHandle)
+{
+	PKUSB_HANDLE_INTERNAL handle;
+	PKUSB_HANDLE_INTERNAL associatedHandle = NULL;
+	UCHAR nextIndex;
+	PKUSB_INTERFACE_EL interfaceEL;
+	BOOL success;
+
+	Pub_To_Priv_UsbK(Handle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
+
+	nextIndex = ((UCHAR)handle->Selected_SharedInterface_Index) + 1 + AssociatedInterfaceIndex;
+
+	FindInterfaceEL(handle->Device->UsbStack, interfaceEL, TRUE, nextIndex);
+	ErrorSet(!interfaceEL, Error, ERROR_NO_MORE_ITEMS, "Interface index %u not found.", nextIndex);
+
+	success = UsbStack_CloneHandle((KUSB_HANDLE)handle, (KUSB_HANDLE*)&associatedHandle);
+	ErrorNoSet(!success, Error, "->UsbStack_CloneHandle");
+
+	associatedHandle->Selected_SharedInterface_Index = nextIndex;
+	*AssociatedHandle = (KUSB_HANDLE)associatedHandle;
+	PoolHandle_Dec_UsbK(handle);
+
+	PoolHandle_Live_UsbK(associatedHandle);
+	return TRUE;
+
+Error:
+	if (IsHandleValid(associatedHandle)) PoolHandle_Dec_UsbK(associatedHandle);
+	PoolHandle_Dec_UsbK(handle);
+	*AssociatedHandle = NULL;
+	return FALSE;
+}
+
+VOID UsbStack_Clear(PKUSB_INTERFACE_STACK UsbStack)
 {
 	PKUSB_INTERFACE_EL nextInterfaceEL, t0;
 	PKUSB_ALT_INTERFACE_EL nextAltInterfaceEL, t1;
 	PKUSB_PIPE_EL nextPipeEL, t2;
-	PKUSB_DEVICE_EL nextDeviceEL, t3;
 
-	if (!IsHandleValid(UsbStack))
-		return FALSE;
-
-	// safely free the device list.
-	// the caller may supply a call back function
-	// to free additional resources for the device.
-	DL_FOREACH_SAFE(UsbStack->DeviceList, nextDeviceEL, t3)
-	{
-		long lockCount;
-		AquireDeviceActionPendingLock(nextDeviceEL->Device);
-
-		if ((lockCount = InterlockedDecrement(&nextDeviceEL->Device->OpenedRefCount)) == 0)
-		{
-			// When Device->OpenedRefCount falls to zero, there are no more internal K handles
-			// using this device.
-			if (UsbStack->Cb.CloseInterface)
-			{
-				// * Call CloseInterfaceCB for all of the elements that belong to this device.
-				// * Update the shared device interface array.
-				DL_FOREACH_SAFE(UsbStack->InterfaceList, nextInterfaceEL, t0)
-				{
-					if (nextInterfaceEL->ParentDevice == nextDeviceEL)
-					{
-						UsbStack->Cb.CloseInterface(UsbStack, nextInterfaceEL, Context);
-
-						InterlockedExchangePointer(
-						    &nextDeviceEL->Device->SharedInterfaces[nextInterfaceEL->Number].InterfaceHandle,
-						    NULL);
-					}
-				}
-			}
-
-			if (UsbStack->Cb.CloseDevice)
-			{
-				// The caller is responsible for his own cleanup.
-				UsbStack->Cb.CloseDevice(UsbStack, nextDeviceEL, Context);
-			}
-			else
-			{
-
-				// the default action is to close devices if the device path is valid.
-				if (!Str_IsNullOrEmpty(nextDeviceEL->Device->DevicePath))
-				{
-					CloseHandle(nextDeviceEL->Device->MasterDeviceHandle);
-				}
-			}
-		}
-		else
-		{
-			USBDBG("skipped close; device is still referenced. OpenedRefCount=%d\n", lockCount);
-		}
-
-		// allow another thread to (again) open/close this handle.
-		ReleaseDeviceActionPendingLock(nextDeviceEL->Device);
-
-		if (DecDeviceUsageCount(nextDeviceEL->Device) == 1)
-		{
-			// return this one to the pool.  this was the last stack using it.
-			Mem_Free(&nextDeviceEL->Device->ConfigDescriptor);
-			DecDeviceUsageCount(nextDeviceEL->Device);
-		}
-
-		DL_DELETE(UsbStack->DeviceList, nextDeviceEL);
-		Mem_Free(&nextDeviceEL);
-	}
+	if (!IsHandleValid(UsbStack)) return;
 
 	// free the interface list
 	DL_FOREACH_SAFE(UsbStack->InterfaceList, nextInterfaceEL, t0)
@@ -207,672 +371,162 @@ BOOL UsbStack_Free(
 		DL_DELETE(UsbStack->InterfaceList, nextInterfaceEL);
 		Mem_Free(&nextInterfaceEL);
 	}
-
-	Mem_Free(&UsbStack->DynamicConfigDescriptor);
-
-	return TRUE;
 }
 
-
-static int Predicate_FindDeviceEL_ByPath(PKUSB_DEVICE_EL deviceEL, LPCSTR DevicePath)
+BOOL UsbStack_Rebuild(
+    __in PKUSB_HANDLE_INTERNAL Handle,
+    __in PKUSB_STACK_CB Init_ConfigCB)
 {
-	return Str_Cmp(DevicePath, deviceEL->Device->DevicePath);
-}
+	BOOL success;
 
-#define AllocEL(el)						\
-{										\
-	el = Mem_Alloc(sizeof(*el));		\
-	if (!IsHandleValid(el))	goto Error;	\
-}
+	ErrorSetAction(!PoolHandle_Acquire_Spin_DevK(Handle->Device, FALSE), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Acquire_Spin_DevK");
 
-BOOL UsbStack_AddDevice(
-    __in PKUSB_INTERFACE_STACK UsbStack,
-    __in_opt LPCSTR DevicePath,
-    __in_opt HANDLE DeviceHandle,
-    __in_opt PVOID Context)
-{
-	BOOL newDeviceOpen = FALSE;
-	BOOL fetchedConfigDescriptor = FALSE;
-	BOOL success = FALSE;
-	PKUSB_SHARED_DEVICE sharedDevice;
-	LONG errorCode = ERROR_SUCCESS;
+	UsbStack_Clear(Handle->Device->UsbStack);
+	Mem_Free(&Handle->Device->ConfigDescriptor);
+	Handle->Selected_SharedInterface_Index = 0;
+	memset(Handle->Device->SharedInterfaces, 0, sizeof(Handle->Device->SharedInterfaces));
+	memset(&Handle->Move, 0, sizeof(Handle->Move));
 
-	if (!IsHandleValid(DeviceHandle) &&
-	        !IsHandleValid(DevicePath))
-	{
-		return LusbwError(ERROR_INVALID_PARAMETER);
-	}
+	success = Init_ConfigCB(Handle);
+	ErrorNoSet(!success, Error, "->Init_ConfigCB");
 
-	sharedDevice = GetSharedDevicePoolHandle(DevicePath);
-	if (!sharedDevice)
-		return FALSE;
+	success = u_Init_Config(Handle);
+	ErrorNoSet(!success, Error, "->u_Init_Config");
 
-	if (IsHandleValid(DeviceHandle))
-	{
-		sharedDevice->MasterDeviceHandle = DeviceHandle;
-	}
-
-	if (!IsHandleValid(sharedDevice->MasterDeviceHandle) &&
-	        !Str_IsNullOrEmpty(sharedDevice->DevicePath))
-	{
-		sharedDevice->MasterDeviceHandle = CreateDeviceFile(sharedDevice->DevicePath);
-		newDeviceOpen = IsHandleValid(sharedDevice->MasterDeviceHandle);
-	}
-
-	if (!IsHandleValid(sharedDevice->MasterDeviceHandle))
-	{
-		errorCode = GetLastError();
-		if (errorCode == ERROR_SUCCESS)
-			errorCode = ERROR_DEVICE_IN_USE;
-
-		DecDeviceUsageCount(sharedDevice);
-		ReleaseDeviceActionPendingLock(sharedDevice);
-
-		USBERR("failed creating device file handle. ErrorCode=%08Xh\n\tDevicePath=%s\n",
-		       errorCode, sharedDevice->DevicePath);
-
-		return LusbwError(errorCode);
-	}
-
-	if (!sharedDevice->ConfigDescriptor)
-	{
-		HANDLE newInterefaceHandle = sharedDevice->MasterDeviceHandle;
-
-		if (UsbStack->Cb.OpenInterface &&
-		        !IsHandleValid(sharedDevice->MasterInterfaceHandle))
-		{
-			// Call OpenInterface once here.
-			// We will need it to get the config descriptor.
-			errorCode = UsbStack->Cb.OpenInterface(
-			                UsbStack,
-			                newInterefaceHandle,
-			                0,
-			                &newInterefaceHandle,
-			                Context);
-
-			if (errorCode == ERROR_SUCCESS)
-				sharedDevice->MasterInterfaceHandle = newInterefaceHandle;
-		}
-
-		if (errorCode == ERROR_SUCCESS)
-		{
-			errorCode = UsbStack->Cb.GetConfigDescriptor(
-			                UsbStack,
-			                DevicePath,
-			                sharedDevice->MasterDeviceHandle,
-			                sharedDevice->MasterInterfaceHandle,
-			                &sharedDevice->ConfigDescriptor,
-			                Context);
-
-			if (errorCode == ERROR_SUCCESS)
-				fetchedConfigDescriptor = TRUE;
-		}
-	}
-
-	if (errorCode != ERROR_SUCCESS)
-	{
-		success = LusbwError(errorCode);
-	}
-	else
-	{
-		success = UsbStack_Add(
-		              UsbStack,
-		              sharedDevice,
-		              Context);
-	}
-
-	if (success)
-	{
-		// inc the device open count
-		InterlockedIncrement(&sharedDevice->OpenedRefCount);
-
-		// UsageCount=2 (for a new device)
-		IncDeviceUsageCount(sharedDevice);
-
-		// release the action lock
-		ReleaseDeviceActionPendingLock(sharedDevice);
-		return TRUE;
-	}
-
-	if (newDeviceOpen)
-		CloseHandle(sharedDevice->MasterDeviceHandle);
-
-	if (fetchedConfigDescriptor)
-		Mem_Free(&sharedDevice->ConfigDescriptor);
-
-	// return the ShardDevice back to the pool. (GetSharedDevicePoolHandle incs the count)
-	DecDeviceUsageCount(sharedDevice);
-	ReleaseDeviceActionPendingLock(sharedDevice);
-
-	return FALSE;
-}
-
-BOOL mergeConfigDescriptor(__in PKUSB_INTERFACE_STACK UsbStack, PUSB_CONFIGURATION_DESCRIPTOR cfgToAdd)
-{
-	PUSB_CONFIGURATION_DESCRIPTOR merged = NULL;
-
-	if (!UsbStack->DynamicConfigDescriptor)
-	{
-		UsbStack->DynamicConfigDescriptor = Mem_Alloc(cfgToAdd->wTotalLength);
-		if (!IsHandleValid(UsbStack->DynamicConfigDescriptor))
-			goto Error;
-
-		memcpy(
-		    UsbStack->DynamicConfigDescriptor,
-		    cfgToAdd,
-		    cfgToAdd->wTotalLength);
-
-		UsbStack->DynamicConfigDescriptorSize = cfgToAdd->wTotalLength;
-	}
-	else
-	{
-		PUCHAR mergeDst, configSrc;
-		ULONG addLength = cfgToAdd->wTotalLength - sizeof(USB_CONFIGURATION_DESCRIPTOR);
-		ULONG newConfigDescriptorSize = (ULONG) UsbStack->DynamicConfigDescriptorSize + addLength;
-
-		merged = Mem_Alloc(newConfigDescriptorSize);
-		if (!IsHandleValid(merged))
-			goto Error;
-
-		memcpy(merged, UsbStack->DynamicConfigDescriptor, UsbStack->DynamicConfigDescriptorSize);
-
-		mergeDst = &(((PUCHAR)merged)[UsbStack->DynamicConfigDescriptorSize]);
-		configSrc = &(((PUCHAR)cfgToAdd)[sizeof(USB_CONFIGURATION_DESCRIPTOR)]);
-
-		memcpy(mergeDst, configSrc, addLength);
-
-		merged->wTotalLength += (USHORT)addLength;
-		merged->bNumInterfaces += cfgToAdd->bNumInterfaces;
-
-		Mem_Free(&UsbStack->DynamicConfigDescriptor);
-		UsbStack->DynamicConfigDescriptor = merged;
-		UsbStack->DynamicConfigDescriptorSize = newConfigDescriptorSize;
-	}
-
-	return TRUE;
-Error:
-	Mem_Free(&merged);
-	return FALSE;
-}
-
-BOOL UsbStack_Add(
-    __in PKUSB_INTERFACE_STACK UsbStack,
-    __in PKUSB_SHARED_DEVICE SharedDevice,
-    __in_opt PVOID Context)
-{
-	PKUSB_INTERFACE_EL nextInterfaceEL = NULL;
-	PKUSB_ALT_INTERFACE_EL nextAltInterfaceEL = NULL;
-	PKUSB_PIPE_EL nextPipeEL = NULL;
-	PKUSB_DEVICE_EL nextDeviceEL = NULL;
-
-	PUSB_COMMON_DESCRIPTOR nextNewDescriptor;
-	PUSB_INTERFACE_DESCRIPTOR interfaceDescriptor;
-	PUSB_ENDPOINT_DESCRIPTOR endpointDescriptor;
-	INT interfaceIndex, altIndex, pipeIndex;
-	INT ConfigSizeLeft;
-	BOOL success = FALSE;
-
-	// don't add duplicates
-	DL_SEARCH_SCALAR(UsbStack->DeviceList, nextDeviceEL, Device, SharedDevice);
-	if (nextDeviceEL)
-	{
-		USBWRN("attempted to add a duplicate device.\n\tDevicePath = %s\n", SharedDevice->DevicePath);
-		return LusbwError(ERROR_DUP_NAME);
-	}
-
-	AllocEL(nextDeviceEL);
-	nextDeviceEL->Device = SharedDevice;
-	nextDeviceEL->Context = Context;
-
-	DL_APPEND(UsbStack->DeviceList, nextDeviceEL);
-	success = mergeConfigDescriptor(UsbStack, SharedDevice->ConfigDescriptor);
-	ErrorNoSet(!success, Error, "->mergeConfigDescriptor");
-
-	ConfigSizeLeft = SharedDevice->ConfigDescriptor->wTotalLength;
-	nextNewDescriptor = (PUSB_COMMON_DESCRIPTOR)SharedDevice->ConfigDescriptor;
-	AdvanceDescriptor(nextNewDescriptor, ConfigSizeLeft);
-
-	interfaceIndex = 0;
-	altIndex = 0;
-	while (nextNewDescriptor)
-	{
-		while (nextNewDescriptor && nextNewDescriptor->bDescriptorType != USB_INTERFACE_DESCRIPTOR_TYPE)
-			AdvanceDescriptor(nextNewDescriptor, ConfigSizeLeft);
-
-		if (!nextNewDescriptor) break;
-
-AddInterfaceDescriptorJump:
-
-		interfaceDescriptor = (PUSB_INTERFACE_DESCRIPTOR)nextNewDescriptor;
-
-		DL_SEARCH_SCALAR(UsbStack->InterfaceList, nextInterfaceEL, Number, interfaceDescriptor->bInterfaceNumber);
-		if (!nextInterfaceEL)
-		{
-			HANDLE newInterfaceHandle = NULL;
-			// New interface found
-
-
-			// if there is an interface callback function, an interface handle is required.
-			if (UsbStack->Cb.OpenInterface)
-			{
-				if (!(IsHandleValid(SharedDevice->SharedInterfaces[interfaceDescriptor->bInterfaceNumber].InterfaceHandle)))
-				{
-					if (interfaceIndex > 0)
-					{
-						success = UsbStack->Cb.OpenInterface(UsbStack, SharedDevice->MasterDeviceHandle, interfaceIndex, &newInterfaceHandle, Context);
-						ErrorNoSet(!success, Error, "->UsbStack->Cb.OpenInterface");
-					}
-					else
-					{
-						newInterfaceHandle = SharedDevice->MasterInterfaceHandle;
-					}
-					SharedDevice->SharedInterfaces[interfaceDescriptor->bInterfaceNumber].InterfaceHandle = newInterfaceHandle;
-				}
-			}
-			altIndex = 0;
-			AllocEL(nextInterfaceEL);
-
-			nextInterfaceEL->Index				= interfaceIndex++;
-			nextInterfaceEL->ParentDevice		= nextDeviceEL;
-			nextInterfaceEL->Number				= interfaceDescriptor->bInterfaceNumber;
-
-			DL_APPEND(UsbStack->InterfaceList, nextInterfaceEL);
-		}
-		else
-		{
-			altIndex++;
-		}
-
-		DL_SEARCH_SCALAR(nextInterfaceEL->AltInterfaceList, nextAltInterfaceEL, Number, interfaceDescriptor->bAlternateSetting);
-
-		if (nextAltInterfaceEL)
-		{
-			USBWRN("duplicate alternate interface #%02Xh on interface #%02Xh\n",
-			       interfaceDescriptor->bAlternateSetting,
-			       interfaceDescriptor->bInterfaceNumber);
-		}
-		else
-		{
-			AllocEL(nextAltInterfaceEL);
-
-			memcpy(&nextAltInterfaceEL->Descriptor, interfaceDescriptor, sizeof(nextAltInterfaceEL->Descriptor));
-			nextAltInterfaceEL->Number = interfaceDescriptor->bAlternateSetting;
-			nextAltInterfaceEL->Index = altIndex++;
-
-			DL_APPEND(nextInterfaceEL->AltInterfaceList, nextAltInterfaceEL);
-
-		}
-
-		AdvanceDescriptor(nextNewDescriptor, ConfigSizeLeft);
-
-		// find endpoints in the new config descriptor
-		pipeIndex = 0;
-		while (nextNewDescriptor)
-		{
-			// continue searching/advancing; looking for endpoint descriptors until we reach
-			// the end or hit another interface descriptor.
-			if (nextNewDescriptor->bDescriptorType == USB_INTERFACE_DESCRIPTOR_TYPE)
-				goto AddInterfaceDescriptorJump;
-
-			if (nextNewDescriptor->bDescriptorType == USB_ENDPOINT_DESCRIPTOR_TYPE)
-			{
-				// new endpoint found
-				endpointDescriptor = (PUSB_ENDPOINT_DESCRIPTOR)nextNewDescriptor;
-
-				// make sure we don't already have this one.
-				DL_SEARCH_SCALAR(nextAltInterfaceEL->PipeList, nextPipeEL, Number, endpointDescriptor->bEndpointAddress);
-				if (nextPipeEL)
-				{
-					USBWRN("duplicate pipe id %02Xh on alternate interface #%02Xh on interface #%02Xh\n",
-					       endpointDescriptor->bEndpointAddress,
-					       interfaceDescriptor->bAlternateSetting,
-					       interfaceDescriptor->bInterfaceNumber);
-				}
-				else
-				{
-					// new pipe address
-					AllocEL(nextPipeEL);
-
-					nextPipeEL->Number = endpointDescriptor->bEndpointAddress;
-					nextPipeEL->Index = pipeIndex++;
-					memcpy(&nextPipeEL->Descriptor, endpointDescriptor, sizeof(nextPipeEL->Descriptor));
-
-					DL_APPEND(nextAltInterfaceEL->PipeList, nextPipeEL);
-				}
-			}
-			AdvanceDescriptor(nextNewDescriptor, ConfigSizeLeft);
-		}
-	}
-
-	// build virtual interface indexes
-	interfaceIndex = 0;
-	DL_FOREACH(UsbStack->InterfaceList, nextInterfaceEL)
-	{
-		nextInterfaceEL->VirtualIndex = interfaceIndex++;
-	}
-
-	success = UsbStack_BuildCache(UsbStack);
-	ErrorNoSet(!success, Error, "->UsbStack_BuildCache");
-
+	PoolHandle_Release_Spin_DevK(Handle->Device);
 	return TRUE;
 
 Error:
+	PoolHandle_Release_Spin_DevK(Handle->Device);
 	return FALSE;
 }
 
-
-
-LONG UsbStack_ClaimOrRelease(
-    __in PKUSB_INTERFACE_STACK UsbStack,
-    __in BOOL IsClaim,
-    __in INT InterfaceIndexOrNumber,
-    __in BOOL IsIndex,
-    __in_opt PVOID Context)
-{
-	PKUSB_INTERFACE_EL interfaceEL;
-	LONG action = ERROR_SUCCESS;
-
-	if (IsIndex)
-	{
-		DL_SEARCH_SCALAR(UsbStack->InterfaceList, interfaceEL, VirtualIndex, InterfaceIndexOrNumber);
-	}
-	else
-	{
-		DL_SEARCH_SCALAR(UsbStack->InterfaceList, interfaceEL, Number, InterfaceIndexOrNumber);
-	}
-
-	if (UsbStack->Cb.ClaimReleaseInterface)
-	{
-		action = UsbStack->Cb.ClaimReleaseInterface(UsbStack, interfaceEL, IsClaim, InterfaceIndexOrNumber, IsIndex, Context);
-	}
-	return action;
-}
-
-USB_STACK_HANDLER_RESULT UsbStackHandler_SetAltInterface(
-    __in PKUSB_INTERFACE_STACK UsbStack,
-    __in INT InterfaceIndexOrNumber,
-    __in BOOL IsInterfaceIndex,
-    __in INT AltSettingIndexOrNumber,
-    __in BOOL IsAltSettingIndex)
-{
-	PKUSB_INTERFACE_EL interfaceEL = NULL;
-	PKUSB_ALT_INTERFACE_EL altInterfaceEL = NULL;
-
-	if (IsInterfaceIndex)
-	{
-		DL_SEARCH_SCALAR(UsbStack->InterfaceList, interfaceEL, Index, InterfaceIndexOrNumber);
-	}
-	else
-	{
-		DL_SEARCH_SCALAR(UsbStack->InterfaceList, interfaceEL, Number, InterfaceIndexOrNumber);
-	}
-	if (interfaceEL)
-	{
-		if (IsAltSettingIndex)
-		{
-			DL_SEARCH_SCALAR(interfaceEL->AltInterfaceList, altInterfaceEL, Index, AltSettingIndexOrNumber);
-		}
-		else
-		{
-			DL_SEARCH_SCALAR(interfaceEL->AltInterfaceList, altInterfaceEL, Number, AltSettingIndexOrNumber);
-		}
-	}
-
-	if (interfaceEL && altInterfaceEL)
-	{
-		interfaceEL->CurrentAltSetting = altInterfaceEL->Number;
-
-		DL_DELETE(interfaceEL->AltInterfaceList, altInterfaceEL);
-		DL_PREPEND(interfaceEL->AltInterfaceList, altInterfaceEL);
-
-		UsbStack_BuildCache(UsbStack);
-
-		return HANDLER_HANDLED_WITH_TRUE;
-	}
-
-	LusbwError(ERROR_NOT_FOUND);
-	return HANDLER_HANDLED_WITH_FALSE;
-}
-
-USB_STACK_HANDLER_RESULT UsbStackHandler_GetAltInterface(
-    __in PKUSB_INTERFACE_STACK UsbStack,
-    __in INT InterfaceIndexOrNumber,
-    __in BOOL IsInterfaceIndex,
-    __out PINT AltSettingNumber)
-{
-	PKUSB_INTERFACE_EL interfaceEL = NULL;
-	PKUSB_ALT_INTERFACE_EL altInterfaceEL = NULL;
-
-	if (IsInterfaceIndex)
-	{
-		DL_SEARCH_SCALAR(UsbStack->InterfaceList, interfaceEL, Index, InterfaceIndexOrNumber);
-	}
-	else
-	{
-		DL_SEARCH_SCALAR(UsbStack->InterfaceList, interfaceEL, Number, InterfaceIndexOrNumber);
-	}
-	if (interfaceEL)
-	{
-		*AltSettingNumber = interfaceEL->CurrentAltSetting;
-		DL_SEARCH_SCALAR(interfaceEL->AltInterfaceList, altInterfaceEL, Number, interfaceEL->CurrentAltSetting);
-	}
-
-	if (interfaceEL && altInterfaceEL)
-	{
-		return HANDLER_HANDLED_WITH_TRUE;
-	}
-
-	LusbwError(ERROR_NOT_FOUND);
-	return HANDLER_HANDLED_WITH_FALSE;
-}
-
-BOOL UsbStack_BuildCache(
-    __in PKUSB_INTERFACE_STACK UsbStack)
-{
-	PKUSB_INTERFACE_EL nextInterfaceEL = NULL;
-	PKUSB_ALT_INTERFACE_EL nextAltInterfaceEL = NULL;
-	PKUSB_PIPE_EL nextPipeEL = NULL;
-	PKUSB_DEVICE_EL nextDeviceEL = NULL;
-	int pos;
-	HANDLE firstDeviceHandle = NULL;
-	HANDLE firstInterfaceHandle = NULL;
-	ULONG deviceCount = 0;
-
-	DL_FOREACH(UsbStack->DeviceList, nextDeviceEL)
-	{
-		deviceCount++;
-	}
-	UsbStack->DeviceCount = deviceCount;
-
-	Mem_Zero(&UsbStack->PipeNumberCache, sizeof(UsbStack->PipeNumberCache));
-
-	DL_FOREACH(UsbStack->InterfaceList, nextInterfaceEL)
-	{
-		DL_FOREACH(nextInterfaceEL->AltInterfaceList, nextAltInterfaceEL)
-		{
-			DL_FOREACH(nextAltInterfaceEL->PipeList, nextPipeEL)
-			{
-				PKUSB_PIPE_CACHE pipeCache;
-				pipeCache = &GetPipeNumberCache(UsbStack, nextPipeEL->Number);
-
-				if (!firstDeviceHandle && IsHandleValid(nextInterfaceEL->ParentDevice->Device->MasterDeviceHandle))
-					firstDeviceHandle = nextInterfaceEL->ParentDevice->Device->MasterDeviceHandle;
-
-				if (!firstInterfaceHandle && IsHandleValid(nextInterfaceEL->ParentDevice->Device->MasterInterfaceHandle))
-					firstInterfaceHandle = nextInterfaceEL->ParentDevice->Device->MasterInterfaceHandle;
-
-				if (pipeCache->Number && nextAltInterfaceEL->Number != nextInterfaceEL->CurrentAltSetting)
-					continue;
-
-				pipeCache->DeviceHandle		= nextInterfaceEL->ParentDevice->Device->MasterDeviceHandle;
-				pipeCache->InterfaceHandle	= nextInterfaceEL->ParentDevice->Device->SharedInterfaces[nextInterfaceEL->Number].InterfaceHandle;
-
-				pipeCache->Index			= nextPipeEL->Index;
-				pipeCache->Number			= nextPipeEL->Number;
-			}
-		}
-	}
-
-	for (pos = 0; pos < sizeof(UsbStack->PipeNumberCache) / sizeof(UsbStack->PipeNumberCache[0]); pos++)
-	{
-		if (!UsbStack->PipeNumberCache[pos].DeviceHandle)
-			UsbStack->PipeNumberCache[pos].DeviceHandle = firstDeviceHandle;
-
-		if (!UsbStack->PipeNumberCache[pos].InterfaceHandle)
-			UsbStack->PipeNumberCache[pos].InterfaceHandle = firstInterfaceHandle;
-	}
-	return TRUE;
-}
-
-BOOL UsbStack_GetCache(
-    __in PKUSB_INTERFACE_STACK UsbStack,
-    __inout_opt PKUSB_DEVICE_EL Device,
-    __inout_opt PKUSB_INTERFACE_EL Interface)
-
-{
-	if (Interface)
-	{
-		memcpy(Interface, UsbStack->InterfaceList, sizeof(*Interface));
-	}
-	if (Device)
-	{
-		memcpy(Device, UsbStack->DeviceList, sizeof(*Device));
-	}
-
-	return TRUE;
-}
-
-USB_STACK_HANDLER_RESULT UsbStackHandler_GetDescriptor (
-    __in PKUSB_INTERFACE_STACK UsbStack,
-    __in UCHAR DescriptorType,
-    __in UCHAR Index,
-    __in USHORT LanguageID,
-    __out_opt PUCHAR Buffer,
-    __in ULONG BufferLength,
-    __out PULONG LengthTransferred)
-{
-	UNREFERENCED_PARAMETER(LanguageID);
-	if (!LengthTransferred)
-	{
-		LusbwError(ERROR_INVALID_PARAMETER);
-		return HANDLER_HANDLED_WITH_FALSE;
-	}
-	if (DescriptorType == USB_CONFIGURATION_DESCRIPTOR_TYPE && Index == 0)
-	{
-		if (!Buffer)
-		{
-			*LengthTransferred = UsbStack->DynamicConfigDescriptorSize;
-			LusbwError(ERROR_MORE_DATA);
-			return HANDLER_HANDLED_WITH_FALSE;
-		}
-
-		*LengthTransferred = min(UsbStack->DynamicConfigDescriptorSize , BufferLength);
-
-		memcpy(Buffer, UsbStack->DynamicConfigDescriptor, *LengthTransferred);
-		if (BufferLength < UsbStack->DynamicConfigDescriptorSize)
-		{
-			LusbwError(ERROR_MORE_DATA);
-			return HANDLER_HANDLED_WITH_FALSE;
-		}
-		return HANDLER_HANDLED_WITH_TRUE;
-	}
-
-	return  HANDLER_NOT_HANDLED;
-}
-
-USB_STACK_HANDLER_RESULT UsbStackHandler_QueryInterfaceSettings (
-    __in PKUSB_INTERFACE_STACK UsbStack,
-    __in  UCHAR AlternateSettingNumber,
+BOOL UsbStack_QueryInterfaceSettings (
+    __in KUSB_HANDLE Handle,
+    __in UCHAR AltSettingNumber,
     __out PUSB_INTERFACE_DESCRIPTOR UsbAltInterfaceDescriptor)
 {
-	PKUSB_ALT_INTERFACE_EL nextAltInterfaceEL;
+	PKUSB_HANDLE_INTERNAL handle;
+	PKUSB_INTERFACE_EL intfEL;
+	PKUSB_ALT_INTERFACE_EL altfEL;
 
-	if (!UsbAltInterfaceDescriptor)
-	{
-		LusbwError(ERROR_INVALID_PARAMETER);
-		return HANDLER_HANDLED_WITH_FALSE;
-	}
+	ErrorParamAction(!IsHandleValid(UsbAltInterfaceDescriptor), "UsbAltInterfaceDescriptor", return FALSE);
+	ErrorParamAction(AltSettingNumber > 0x7F, "AltSettingNumber", return FALSE);
 
-	if (UsbStack->InterfaceList)
-	{
-		DL_SEARCH_SCALAR(UsbStack->InterfaceList->AltInterfaceList, nextAltInterfaceEL, Number, AlternateSettingNumber);
-		if (!nextAltInterfaceEL)
-		{
-			LusbwError(ERROR_NO_MORE_ITEMS);
-			return HANDLER_HANDLED_WITH_FALSE;
-		}
+	Pub_To_Priv_UsbK(Handle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
 
-		memcpy(UsbAltInterfaceDescriptor, &nextAltInterfaceEL->Descriptor, sizeof(*UsbAltInterfaceDescriptor));
-		return HANDLER_HANDLED_WITH_TRUE;
+	FindInterfaceEL(handle->Device->UsbStack, intfEL, TRUE, handle->Selected_SharedInterface_Index);
+	ErrorSet(!intfEL, Error, ERROR_NO_MORE_ITEMS, "Failed locating interface number %u.", handle->Selected_SharedInterface_Index);
 
-	}
-	return HANDLER_NOT_HANDLED;
+	FindAltInterfaceEL(intfEL, altfEL, FALSE, AltSettingNumber);
+	ErrorSet(!altfEL, Error, ERROR_NO_MORE_ITEMS, "AltSettingNumber %u does not exists.", AltSettingNumber);
+
+	memcpy(UsbAltInterfaceDescriptor, altfEL->Descriptor, sizeof(*UsbAltInterfaceDescriptor));
+	PoolHandle_Dec_UsbK(handle);
+	return TRUE;
+
+Error:
+	PoolHandle_Dec_UsbK(handle);
+	return FALSE;
 }
 
-USB_STACK_HANDLER_RESULT UsbStackHandler_QueryPipe (
-    __in PKUSB_INTERFACE_STACK UsbStack,
-    __in  UCHAR AlternateSettingNumber,
-    __in  UCHAR PipeIndex,
+BOOL UsbStack_SelectInterface (
+    __in KUSB_HANDLE Handle,
+    __in UCHAR IndexOrNumber,
+    __in BOOL IsIndex)
+{
+	PKUSB_HANDLE_INTERNAL handle;
+	PKUSB_INTERFACE_EL intfEL;
+
+	ErrorParamAction(IndexOrNumber > 0x7F, "IndexOrNumber", return FALSE);
+
+	Pub_To_Priv_UsbK(Handle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
+
+	FindInterfaceEL(handle->Device->UsbStack, intfEL, IsIndex, IndexOrNumber);
+	ErrorSet(!intfEL, Error, ERROR_NO_MORE_ITEMS, "Failed locating interface %s %u.", IsIndex?"index":"number", IndexOrNumber);
+
+	InterlockedExchange(&handle->Selected_SharedInterface_Index, intfEL->Index);
+
+	PoolHandle_Dec_UsbK(handle);
+	return TRUE;
+
+Error:
+	PoolHandle_Dec_UsbK(handle);
+	return FALSE;
+}
+
+BOOL UsbStack_QueryPipe(
+    __in KUSB_HANDLE Handle,
+    __in UCHAR AltSettingNumber,
+    __in UCHAR PipeIndex,
     __out PWINUSB_PIPE_INFORMATION PipeInformation)
 {
-	PKUSB_ALT_INTERFACE_EL nextAltInterfaceEL;
-	PKUSB_PIPE_EL nextPipeEL;
+	PKUSB_HANDLE_INTERNAL handle;
+	PKUSB_INTERFACE_EL intfEL;
+	PKUSB_ALT_INTERFACE_EL altfEL;
+	PKUSB_PIPE_EL pipeEL;
 
-	if (!PipeInformation)
-	{
-		LusbwError(ERROR_INVALID_PARAMETER);
-		return HANDLER_HANDLED_WITH_FALSE;
-	}
+	ErrorParamAction(AltSettingNumber > 0x7F, "AltSettingNumber", return FALSE);
+	ErrorParamAction(PipeIndex > 0x1F, "PipeIndex", return FALSE);
+	ErrorParamAction(!IsHandleValid(PipeInformation), "PipeInformation", return FALSE);
 
-	if (UsbStack->InterfaceList)
-	{
-		DL_SEARCH_SCALAR(UsbStack->InterfaceList->AltInterfaceList, nextAltInterfaceEL, Number, AlternateSettingNumber);
-		if (!nextAltInterfaceEL)
-		{
-			LusbwError(ERROR_NO_MORE_ITEMS);
-			return HANDLER_HANDLED_WITH_FALSE;
-		}
+	Pub_To_Priv_UsbK(Handle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
 
-		DL_SEARCH_SCALAR(nextAltInterfaceEL->PipeList, nextPipeEL, Index, PipeIndex);
-		if (!nextPipeEL)
-		{
-			LusbwError(ERROR_NO_MORE_ITEMS);
-			return HANDLER_HANDLED_WITH_FALSE;
-		}
+	FindInterfaceEL(handle->Device->UsbStack, intfEL, TRUE, handle->Selected_SharedInterface_Index);
+	ErrorSet(!intfEL, Error, ERROR_NO_MORE_ITEMS, "Failed locating interface number %u.", handle->Selected_SharedInterface_Index);
 
-		PipeInformation->PipeType = nextPipeEL->Descriptor.bmAttributes & 0x03;
-		PipeInformation->MaximumPacketSize = nextPipeEL->Descriptor.wMaxPacketSize;
-		PipeInformation->PipeId = nextPipeEL->Descriptor.bEndpointAddress;
-		PipeInformation->Interval = nextPipeEL->Descriptor.bInterval;
-		return HANDLER_HANDLED_WITH_TRUE;
+	FindAltInterfaceEL(intfEL, altfEL, FALSE, AltSettingNumber);
+	ErrorSet(!altfEL, Error, ERROR_NO_MORE_ITEMS, "AltSettingNumber %u does not exists.", AltSettingNumber);
 
-	}
-	return HANDLER_NOT_HANDLED;
+	FindPipeEL(altfEL, pipeEL, TRUE, PipeIndex);
+	ErrorSet(!pipeEL, Error, ERROR_NO_MORE_ITEMS, "PipeIndex %u does not exists.", PipeIndex);
+
+	PipeInformation->PipeType			= pipeEL->Descriptor->bmAttributes & 0x03;
+	PipeInformation->MaximumPacketSize	= pipeEL->Descriptor->wMaxPacketSize;
+	PipeInformation->PipeId				= pipeEL->Descriptor->bEndpointAddress;
+	PipeInformation->Interval			= pipeEL->Descriptor->bInterval;
+
+	PoolHandle_Dec_UsbK(handle);
+	return TRUE;
+
+Error:
+	PoolHandle_Dec_UsbK(handle);
+	return FALSE;
 }
 
-USB_STACK_HANDLER_RESULT UsbStackHandler_GetConfiguration (
-    __in PKUSB_INTERFACE_STACK UsbStack,
-    __out PUCHAR ConfigurationNumber)
+BOOL UsbStack_RefreshPipeCache(PKUSB_HANDLE_INTERNAL Handle)
 {
-	if (!ConfigurationNumber)
+	PKUSB_INTERFACE_EL		intfEL;
+	PKUSB_ALT_INTERFACE_EL	altfEL;
+	PKUSB_PIPE_EL			pipeEL;
+	PKDEV_SHARED_INTERFACE	sharedInterface;
+	KUSB_PIPE_CACHE*		pipeCacheItem;
+
+	DL_FOREACH(Handle->Device->UsbStack->InterfaceList, intfEL)
 	{
-		LusbwError(ERROR_INVALID_PARAMETER);
-		return HANDLER_HANDLED_WITH_FALSE;
+		sharedInterface = &Get_SharedInterface(Handle, intfEL->Index);
+		DL_FOREACH(intfEL->AltInterfaceList, altfEL)
+		{
+			DL_FOREACH(altfEL->PipeList, pipeEL)
+			{
+				pipeCacheItem = &Handle->Device->UsbStack->PipeCache[PIPEID_TO_IDX(pipeEL->ID)];
+				if (altfEL->ID == sharedInterface->CurrentAltSetting)
+				{
+					InterlockedExchangePointer(&pipeCacheItem->InterfaceHandle, sharedInterface->InterfaceHandle);
+				}
+				else if (pipeCacheItem->InterfaceHandle == NULL)
+				{
+					if (sharedInterface->InterfaceHandle)
+						InterlockedExchangePointer(&pipeCacheItem->InterfaceHandle, sharedInterface->InterfaceHandle);
+					else
+						InterlockedExchangePointer(&pipeCacheItem->InterfaceHandle, Handle->Device->MasterInterfaceHandle);
+				}
+			}
+		}
 	}
 
-	*ConfigurationNumber = UsbStack->DynamicConfigDescriptor->bConfigurationValue;
-	return HANDLER_HANDLED_WITH_TRUE;
-}
-
-
-USB_STACK_HANDLER_RESULT UsbStackHandler_SetConfiguration (
-    __in PKUSB_INTERFACE_STACK UsbStack,
-    __in UCHAR ConfigurationNumber)
-{
-	if (UsbStack->DynamicConfigDescriptor->bConfigurationValue != ConfigurationNumber)
-	{
-		LusbwError(ERROR_NO_MORE_ITEMS);
-		return HANDLER_HANDLED_WITH_FALSE;
-	}
-	return HANDLER_HANDLED_WITH_TRUE;
+	return TRUE;
 }

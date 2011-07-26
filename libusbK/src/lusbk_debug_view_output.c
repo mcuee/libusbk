@@ -53,10 +53,8 @@ VOID DebugViewOutput(CONST CHAR* fmt, ...)
 #endif
 	va_end(args);
 
-	if (len > 0)
-		buf[len - 1] = '\0';
-
-	buf[sizeof(buf) - 1] = '\0';
+	if (len > 0) buf[len] = '\0';
+	else buf[sizeof(buf) - 1] = '\0';
 
 	OutputDebugStringA(buf);
 }

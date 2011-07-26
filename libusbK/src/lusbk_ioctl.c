@@ -139,8 +139,8 @@ BOOL Ioctl_SyncWithTimeout(__in HANDLE DeviceHandle,
 				                NULL))
 				{
 					_ret =  GetLastError();
-					USBERR("A transfer time out occurred and it could not be aborted. Timeout=%u PipeID=%02Xh ErrorCode=%08Xh\n",
-					       timeout, PipeID, _ret);
+					USBERRN("A transfer time out occurred and it could not be aborted. Timeout=%u PipeID=%02Xh ErrorCode=%08Xh",
+					        timeout, PipeID, _ret);
 				}
 				else
 				{

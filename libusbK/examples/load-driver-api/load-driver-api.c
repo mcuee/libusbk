@@ -27,8 +27,8 @@
 DWORD __cdecl main(int argc, char* argv[])
 {
 	KLST_HANDLE deviceList = NULL;
-	PKLST_DEV_INFO deviceInfo = NULL;
-	LIBUSBK_INTERFACE_HANDLE handle = NULL;
+	KLST_DEVINFO_HANDLE deviceInfo = NULL;
+	KUSB_HANDLE handle = NULL;
 	DWORD errorCode = ERROR_SUCCESS;
 	KUSB_DRIVER_API K;
 
@@ -39,7 +39,7 @@ DWORD __cdecl main(int argc, char* argv[])
 
 	// load a dynamic driver api for this device.  The dynamic driver api
 	// is more versatile because it adds support for winusb.sys devices.
-	if (!DrvK_LoadDriverApi(&K, deviceInfo->DrvId, sizeof(K)))
+	if (!LibK_LoadDriverApi(&K, deviceInfo->DrvId, sizeof(K)))
 	{
 		errorCode = GetLastError();
 		printf("Loading driver api failed. Win32Error=%u (0x%08X)\n", errorCode, errorCode);
@@ -84,7 +84,7 @@ Done:
 
 	// Free the device list
 	// if deviceList is invalid (NULL), has no effect
-	LstK_Free(&deviceList);
+	LstK_Free(deviceList);
 
 	return errorCode;
 }

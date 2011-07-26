@@ -20,8 +20,9 @@ binary distributions.
 #include <stdio.h>
 #include <stdlib.h>
 #include <conio.h>
+#include <wtypes.h>
 
-#include "lusbk_usb.h"
+#include "libusbk.h"
 #include "lusbk_version.h"
 
 #define COMPOSITE_MERGE_MODE 1
@@ -112,9 +113,9 @@ typedef struct _BENCHMARK_TEST_PARAM
 	// Internal value use during the test.
 	//
 	KLST_HANDLE DeviceList;
-	PKLST_DEV_INFO SelectedDeviceProfile;
+	KLST_DEVINFO_HANDLE SelectedDeviceProfile;
 	HANDLE DeviceHandle;
-	LIBUSBK_INTERFACE_HANDLE InterfaceHandle;
+	KUSB_HANDLE InterfaceHandle;
 	USB_DEVICE_DESCRIPTOR DeviceDescriptor;
 	USB_INTERFACE_DESCRIPTOR InterfaceDescriptor;
 	WINUSB_PIPE_INFORMATION PipeInformation[32];
@@ -177,12 +178,20 @@ typedef struct _BENCHMARK_TRANSFER_PARAM
 	//
 	UCHAR Buffer[0];
 } BENCHMARK_TRANSFER_PARAM, *PBENCHMARK_TRANSFER_PARAM;
+
+#include <pshpack1.h>
+typedef struct _KBENCH_CONTEXT_LSTK
+{
+	BYTE Selected;
+} KBENCH_CONTEXT_LSTK, *PKBENCH_CONTEXT_LSTK;
+#include <poppack.h>
+
 #pragma warning(default:4200)
 
 // Benchmark device api.
 BOOL Bench_Open(__in PBENCHMARK_TEST_PARAM test);
 
-BOOL Bench_Configure(__in LIBUSBK_INTERFACE_HANDLE handle,
+BOOL Bench_Configure(__in KUSB_HANDLE handle,
                      __in BENCHMARK_DEVICE_COMMAND command,
                      __in UCHAR intf,
                      __deref_inout PBENCHMARK_DEVICE_TEST_TYPE testType);
@@ -274,20 +283,17 @@ void SetTestDefaults(PBENCHMARK_TEST_PARAM test)
 BOOL Bench_Open(__in PBENCHMARK_TEST_PARAM test)
 {
 	UCHAR altSetting;
-	LIBUSBK_INTERFACE_HANDLE associatedHandle;
+	KUSB_HANDLE associatedHandle;
 	ULONG transferred;
-	PKLST_DEV_INFO deviceInfo;
+	KLST_DEVINFO_HANDLE deviceInfo;
 
 	test->SelectedDeviceProfile = NULL;
 
-	LstK_Reset(test->DeviceList);
+	LstK_MoveReset(test->DeviceList);
 
 	while (LstK_MoveNext(test->DeviceList, &deviceInfo))
 	{
-		if (!deviceInfo->UserContext.Byte[0])
-			continue;
-
-		if (!DrvK_LoadDriverApi(&K, deviceInfo->DrvId, sizeof(K)))
+		if (!LibK_LoadDriverApi(&K, deviceInfo->DrvId, sizeof(K)))
 		{
 			WinError(0);
 			CONWRN("could not load driver api %s.\n", GetDrvIdString(deviceInfo->DrvId));
@@ -438,7 +444,7 @@ NextInterface:
 	return FALSE;
 }
 
-BOOL Bench_Configure(__in LIBUSBK_INTERFACE_HANDLE handle,
+BOOL Bench_Configure(__in KUSB_HANDLE handle,
                      __in BENCHMARK_DEVICE_COMMAND command,
                      __in UCHAR intf,
                      __deref_inout PBENCHMARK_DEVICE_TEST_TYPE testType)
@@ -446,15 +452,15 @@ BOOL Bench_Configure(__in LIBUSBK_INTERFACE_HANDLE handle,
 	UCHAR buffer[1];
 	DWORD transferred = 0;
 	WINUSB_SETUP_PACKET Pkt;
-	PKUSB_SETUP_PACKET defPkt = (PKUSB_SETUP_PACKET)&Pkt;
+	KUSB_SETUP_PACKET* defPkt = (KUSB_SETUP_PACKET*)&Pkt;
 
 	memset(&Pkt, 0, sizeof(Pkt));
-	defPkt->bmRequestType.BM.Dir = BMREQUEST_DEVICE_TO_HOST;
-	defPkt->bmRequestType.BM.Type = BMREQUEST_VENDOR;
-	defPkt->bRequest = (UCHAR)command;
-	defPkt->wValue.W = (UCHAR) * testType;
-	defPkt->wIndex.W = intf;
-	defPkt->wLength = 1;
+	defPkt->BmRequest.Dir = BMREQUEST_DEVICE_TO_HOST;
+	defPkt->BmRequest.Type = BMREQUEST_VENDOR;
+	defPkt->Request = (UCHAR)command;
+	defPkt->Value = (UCHAR) * testType;
+	defPkt->Index = intf;
+	defPkt->Length = 1;
 
 	if (!handle || handle == INVALID_HANDLE_VALUE)
 		return WinError(ERROR_INVALID_HANDLE);
@@ -1369,9 +1375,9 @@ void ResetRunningStatus(PBENCHMARK_TRANSFER_PARAM transferParam)
 int GetTestDeviceFromArgs(PBENCHMARK_TEST_PARAM test)
 {
 	CHAR id[MAX_PATH];
-	PKLST_DEV_INFO deviceInfo = NULL;
+	KLST_DEVINFO_HANDLE deviceInfo = NULL;
 
-	LstK_Reset(test->DeviceList);
+	LstK_MoveReset(test->DeviceList);
 
 	while (LstK_MoveNext(test->DeviceList, &deviceInfo))
 	{
@@ -1391,10 +1397,11 @@ int GetTestDeviceFromArgs(PBENCHMARK_TEST_PARAM test)
 		if ( (chID = strstr(id, "mi_")) != NULL)
 			sscanf_s(chID, "mi_%02x", &mi);
 
-		if (test->Vid == vid && test->Pid == pid)
-			deviceInfo->UserContext.Byte[0] = TRUE;
-		else
-			deviceInfo->UserContext.Byte[0] = FALSE;
+		if (test->Vid != vid || test->Pid != pid)
+		{
+			LstK_DetachInfo(test->DeviceList, deviceInfo);
+			LstK_FreeInfo(deviceInfo);
+		}
 	}
 
 	return ERROR_SUCCESS;
@@ -1404,9 +1411,9 @@ int GetTestDeviceFromList(PBENCHMARK_TEST_PARAM test)
 {
 	UCHAR selection;
 	UCHAR count = 0;
-	PKLST_DEV_INFO deviceInfo = NULL;
+	KLST_DEVINFO_HANDLE deviceInfo = NULL;
 
-	LstK_Reset(test->DeviceList);
+	LstK_MoveReset(test->DeviceList);
 
 	if (test->ListDevicesOnly)
 	{
@@ -1423,7 +1430,6 @@ int GetTestDeviceFromList(PBENCHMARK_TEST_PARAM test)
 		while (LstK_MoveNext(test->DeviceList, &deviceInfo) && count < 9)
 		{
 			CONMSG("%u. %s (%s) [%s]\n", count + 1, deviceInfo->DeviceDesc, deviceInfo->InstanceID, GetDrvIdString(deviceInfo->DrvId));
-			deviceInfo->UserContext.Byte[0] = FALSE;
 			count++;
 		}
 		if (!count)
@@ -1442,16 +1448,17 @@ int GetTestDeviceFromList(PBENCHMARK_TEST_PARAM test)
 		if (selection > 0 && selection <= count)
 		{
 			count = 0;
-			while (
-			    LstK_MoveNext(test->DeviceList, &deviceInfo) &&
-			    ++count != selection);
+			while (LstK_MoveNext(test->DeviceList, &deviceInfo) && ++count != selection)
+			{
+				LstK_DetachInfo(test->DeviceList, deviceInfo);
+				LstK_FreeInfo(deviceInfo);
+			}
 
 			if (!deviceInfo)
 			{
 				CONERR("unknown selection\n");
 				return -1;
 			}
-			deviceInfo->UserContext.Byte[0] = TRUE;
 
 			return ERROR_SUCCESS;
 		}
@@ -1732,7 +1739,7 @@ Done:
 
 	}
 
-	LstK_Free(&Test.DeviceList);
+	LstK_Free(Test.DeviceList);
 	FreeTransferParam(&ReadTest);
 	FreeTransferParam(&WriteTest);
 

@@ -2,9 +2,10 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9.00"
-	Name="benchmark_test"
-	ProjectGUID="{96588F2F-1483-42D0-80A0-A86922D498B2}"
-	RootNamespace="benchmark_control_test"
+	Name="test_exhaust_handles"
+	ProjectGUID="{BBF1B36E-D8ED-3694-19E2-E7B67BF7F2C3}"
+	RootNamespace="test_exhaust_handles"
+	Keyword="Win32Proj"
 	TargetFrameworkVersion="196613"
 	>
 	<Platforms>
@@ -20,15 +21,13 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="$(SolutionDir)output\$(ConfigurationName)\testing\$(PlatformName)"
-			IntermediateDirectory="$(SolutionDir)output\$(ConfigurationName)\testing\$(PlatformName)\obj"
+			OutputDirectory="$(ProjectDir)$(ConfigurationName)\$(PlatformName)"
+			IntermediateDirectory="$(ConfigurationName)\$(PlatformName)"
 			ConfigurationType="1"
-			CharacterSet="2"
+			CharacterSet="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
-				Description=""
-				CommandLine=""
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
@@ -45,16 +44,16 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories=".\;..\;Z:\WinDDK\7600.16385.1\inc\api\"
-				PreprocessorDefinitions="LUSBW_DEBUG_NO_APPNAME=1;_DEBUG=1;DebugOutputFunction=printf"
+				AdditionalIncludeDirectories=".\;..\;..\..\includes;"
+				PreprocessorDefinitions="_CRT_SECURE_NO_WARNINGS=1;WIN32;_DEBUG;_CONSOLE;_WIN32_WINNT=0x501"
 				MinimalRebuild="true"
-				ExceptionHandling="0"
 				BasicRuntimeChecks="3"
-				RuntimeLibrary="1"
+				RuntimeLibrary="3"
+				EnableFunctionLevelLinking="true"
+				UsePrecompiledHeader="0"
 				WarningLevel="3"
 				DebugInformationFormat="4"
 				CompileAs="1"
-				ForcedIncludeFiles="$(DevEnvDir)..\..\VC\include\sal.h"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -67,86 +66,13 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="libusbK.lib setupapi.lib"
+				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib libusbK.lib"
+				Version="3.0.0.0"
+				LinkIncremental="2"
+				AdditionalLibraryDirectories="..\..\bin\Debug\libusbK.lib\Win32;..\lib\x86;..\..\bin\lib\x86"
+				IgnoreAllDefaultLibraries="true"
 				GenerateDebugInformation="true"
-				TargetMachine="1"
-			/>
-			<Tool
-				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCManifestTool"
-			/>
-			<Tool
-				Name="VCXDCMakeTool"
-			/>
-			<Tool
-				Name="VCBscMakeTool"
-			/>
-			<Tool
-				Name="VCFxCopTool"
-			/>
-			<Tool
-				Name="VCAppVerifierTool"
-			/>
-			<Tool
-				Name="VCPostBuildEventTool"
-			/>
-		</Configuration>
-		<Configuration
-			Name="Release|Win32"
-			OutputDirectory="$(SolutionDir)output\$(ConfigurationName)\testing\$(PlatformName)"
-			IntermediateDirectory="$(SolutionDir)output\$(ConfigurationName)\testing\$(PlatformName)\obj"
-			ConfigurationType="1"
-			CharacterSet="2"
-			WholeProgramOptimization="1"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-				Description=""
-				CommandLine=""
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-			/>
-			<Tool
-				Name="VCCLCompilerTool"
-				Optimization="2"
-				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories=".\;..\;Z:\WinDDK\7600.16385.1\inc\api\"
-				PreprocessorDefinitions="LUSBW_DEBUG_NO_APPNAME=1;_DEBUG=1;DebugOutputFunction=printf"
-				ExceptionHandling="0"
-				RuntimeLibrary="0"
-				EnableFunctionLevelLinking="true"
-				WarningLevel="3"
-				DebugInformationFormat="3"
-				CompileAs="1"
-				ForcedIncludeFiles="$(DevEnvDir)..\..\VC\include\sal.h"
-			/>
-			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
-			<Tool
-				Name="VCLinkerTool"
-				AdditionalDependencies="libusbK.lib setupapi.lib"
-				GenerateDebugInformation="true"
-				OptimizeReferences="2"
-				EnableCOMDATFolding="2"
+				SubSystem="1"
 				TargetMachine="1"
 			/>
 			<Tool
@@ -173,15 +99,13 @@
 		</Configuration>
 		<Configuration
 			Name="Debug|x64"
-			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
-			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
+			OutputDirectory="$(ProjectDir)$(ConfigurationName)\$(PlatformName)"
+			IntermediateDirectory="$(ConfigurationName)\$(PlatformName)"
 			ConfigurationType="1"
-			CharacterSet="2"
+			CharacterSet="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
-				Description=""
-				CommandLine=""
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
@@ -199,16 +123,16 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories=".\;..\;Z:\WinDDK\7600.16385.1\inc\api\"
-				PreprocessorDefinitions="LUSBW_DEBUG_NO_APPNAME=1;_DEBUG=1;DebugOutputFunction=printf"
+				AdditionalIncludeDirectories=".\;..\;..\..\includes;"
+				PreprocessorDefinitions="_CRT_SECURE_NO_WARNINGS=1;WIN32;_DEBUG;_CONSOLE;_WIN32_WINNT=0x501"
 				MinimalRebuild="true"
-				ExceptionHandling="0"
 				BasicRuntimeChecks="3"
-				RuntimeLibrary="1"
+				RuntimeLibrary="3"
+				EnableFunctionLevelLinking="true"
+				UsePrecompiledHeader="0"
 				WarningLevel="3"
 				DebugInformationFormat="3"
 				CompileAs="1"
-				ForcedIncludeFiles="$(DevEnvDir)..\..\VC\include\sal.h"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -221,8 +145,13 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="libusbK.lib setupapi.lib"
+				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib libusbK.lib"
+				Version="3.0.0.0"
+				LinkIncremental="2"
+				AdditionalLibraryDirectories="..\..\bin\Debug\libusbK.lib\x64;..\lib\amd64;..\..\bin\lib\amd64"
+				IgnoreAllDefaultLibraries="true"
 				GenerateDebugInformation="true"
+				SubSystem="1"
 				TargetMachine="17"
 			/>
 			<Tool
@@ -248,17 +177,91 @@
 			/>
 		</Configuration>
 		<Configuration
-			Name="Release|x64"
-			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
-			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
+			Name="Release|Win32"
+			OutputDirectory="$(ProjectDir)$(ConfigurationName)\$(PlatformName)"
+			IntermediateDirectory="$(ConfigurationName)\$(PlatformName)"
 			ConfigurationType="1"
-			CharacterSet="2"
-			WholeProgramOptimization="1"
+			CharacterSet="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
-				Description=""
-				CommandLine=""
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				InlineFunctionExpansion="2"
+				EnableIntrinsicFunctions="true"
+				FavorSizeOrSpeed="1"
+				WholeProgramOptimization="true"
+				AdditionalIncludeDirectories=".\;..\;..\..\includes;"
+				PreprocessorDefinitions="_CRT_SECURE_NO_WARNINGS=1;WIN32;_CONSOLE;_WIN32_WINNT=0x501"
+				RuntimeLibrary="2"
+				EnableFunctionLevelLinking="false"
+				UsePrecompiledHeader="0"
+				WarningLevel="3"
+				DebugInformationFormat="0"
+				CompileAs="1"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib libusbK.lib"
+				Version="3.0.0.0"
+				AdditionalLibraryDirectories="..\..\bin\Release\libusbK.lib\Win32;..\lib\x86;..\..\bin\lib\x86"
+				IgnoreAllDefaultLibraries="true"
+				SubSystem="1"
+				TargetMachine="1"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release|x64"
+			OutputDirectory="$(ProjectDir)$(ConfigurationName)\$(PlatformName)"
+			IntermediateDirectory="$(ConfigurationName)\$(PlatformName)"
+			ConfigurationType="1"
+			CharacterSet="1"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
@@ -275,17 +278,18 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="2"
+				InlineFunctionExpansion="2"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories=".\;..\;Z:\WinDDK\7600.16385.1\inc\api\"
-				PreprocessorDefinitions="LUSBW_DEBUG_NO_APPNAME=1;_DEBUG=1;DebugOutputFunction=printf"
-				ExceptionHandling="0"
-				RuntimeLibrary="0"
-				EnableFunctionLevelLinking="true"
+				FavorSizeOrSpeed="1"
+				WholeProgramOptimization="true"
+				AdditionalIncludeDirectories=".\;..\;..\..\includes;"
+				PreprocessorDefinitions="_CRT_SECURE_NO_WARNINGS=1;WIN32;_CONSOLE;_WIN32_WINNT=0x501"
+				RuntimeLibrary="2"
+				EnableFunctionLevelLinking="false"
+				UsePrecompiledHeader="0"
 				WarningLevel="3"
-				DebugInformationFormat="3"
+				DebugInformationFormat="0"
 				CompileAs="1"
-				ForcedIncludeFiles="$(DevEnvDir)..\..\VC\include\sal.h"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -298,10 +302,11 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="libusbK.lib setupapi.lib"
-				GenerateDebugInformation="true"
-				OptimizeReferences="2"
-				EnableCOMDATFolding="2"
+				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib libusbK.lib"
+				Version="3.0.0.0"
+				AdditionalLibraryDirectories="..\..\bin\Release\libusbK.lib\x64;..\lib\amd64;..\..\bin\lib\amd64"
+				IgnoreAllDefaultLibraries="true"
+				SubSystem="1"
 				TargetMachine="17"
 			/>
 			<Tool
@@ -336,25 +341,33 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\benchmark_api.c"
+				RelativePath=".\test_exhaust_handles.c"
 				>
 			</File>
 			<File
-				RelativePath=".\benchmark_test.c"
+				RelativePath="..\unit_tests.c"
 				>
 			</File>
-		</Filter>
+			</Filter>
 		<Filter
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath=".\benchmark_api.h"
+				RelativePath="..\unit_tests.h"
 				>
 			</File>
 			<File
-				RelativePath="..\lusbk_debug.h"
+				RelativePath="..\..\includes\libusbk.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\includes\lusbk_shared.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\includes\lusbk_linked_list.h"
 				>
 			</File>
 		</Filter>
@@ -363,7 +376,15 @@
 			Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav"
 			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
 			>
+			<File
+				RelativePath=".\test_exhaust_handles_rc.rc"
+				>
+			</File>
 		</Filter>
+		<File
+			RelativePath="..\clean.cmd"
+			>
+		</File>
 	</Files>
 	<Globals>
 	</Globals>

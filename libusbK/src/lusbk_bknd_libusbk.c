@@ -16,80 +16,43 @@ License files are located in a license folder at the root of source and
 binary distributions.
 ********************************************************************!*/
 
-#include "lusbk_bknd.h"
+#include "lusbk_private.h"
+#include "lusbk_handles.h"
 #include "lusbk_stack_collection.h"
+
+// warning C4127: conditional expression is constant.
 #pragma warning(disable: 4127)
 
 extern ULONG DebugLevel;
-extern KUSB_INTERFACE_HANDLE_INTERNAL InternalHandlePool[KUSB_MAX_INTERFACE_HANDLES];
 
-typedef struct _LIBUSBK_BKND_CONTEXT
-{
-	KUSB_INTERFACE_STACK UsbStack;
+#ifndef LIBUSBK0_SYNC_TRANSFER_HELPER_DEFINES__________________________
 
-	USER_PIPE_POLICY PipePolicies[32];
-	version_t Version;
-}* PLIBUSBK_BKND_CONTEXT, LIBUSBK_BKND_CONTEXT;
+#define SubmitSyncBufferRequest(IoControlCode)					\
+	Ioctl_Sync(Dev_Handle(),IoControlCode,&request,sizeof(request),Buffer,*BufferLength, BufferLength);
 
-#define K_CTX(BackendContextPtr, InterfaceHandle) \
-	GET_BACKEND_CONTEXT((BackendContextPtr), ((PKUSB_INTERFACE_HANDLE_INTERNAL)(InterfaceHandle)), LIBUSBK_BKND_CONTEXT)
+#define SubmitSyncRequestPtr(IoControlCode,transferredLength)	\
+	Ioctl_Sync(Dev_Handle(), IoControlCode, request, sizeof(*request), request, sizeof(*request), &(transferredLength))
 
-#define K_CTXJ(BackendContextPtr, InterfaceHandle, ErrorJump) \
-	GET_BACKEND_CONTEXT_EJUMP((BackendContextPtr), ((PKUSB_INTERFACE_HANDLE_INTERNAL)(InterfaceHandle)), LIBUSBK_BKND_CONTEXT, ErrorJump)
+#define SubmitSyncRequest(IoControlCode,transferredLength)		\
+	Ioctl_Sync(Dev_Handle(), IoControlCode, &request, sizeof(request), &request, sizeof(request), (transferredLength))
 
-#define SubmitSimpleSyncRequest(DeviceHandle, IoControlCode) \
+#define SubmitSimpleSyncRequestEx(DeviceHandle,IoControlCode)	\
 	Ioctl_Sync(DeviceHandle, IoControlCode, &request, sizeof(request), &request, sizeof(request), NULL)
+#define SubmitSimpleSyncRequest(IoControlCode)					\
+	SubmitSimpleSyncRequestEx(Dev_Handle(),IoControlCode)
+#endif
 
-
-#define LUSBKFN_CTX_PREFIX()							\
-	PKUSB_INTERFACE_HANDLE_INTERNAL handle=NULL;		\
-	BOOL success=FALSE;									\
-	DWORD errorCode=ERROR_SUCCESS;						\
-	PLIBUSBK_BKND_CONTEXT backendContext=NULL;			\
-														\
-	UNREFERENCED_PARAMETER(success);					\
-	UNREFERENCED_PARAMETER(errorCode);					\
-														\
-	GET_INTERNAL_HANDLE(handle);						\
-	K_CTX(backendContext, handle)
-
-#define LUSBKFN_CTX_DEVICE_PREFIX()						\
-	HANDLE deviceHandle=NULL;							\
-	KUSB_DEVICE_EL deviceEL;							\
-	LUSBKFN_CTX_PREFIX()
-
-#define LUSBKFN_CTX_INTERFACE_PREFIX()					\
-	HANDLE deviceHandle=NULL;							\
-	KUSB_INTERFACE_EL interfaceEL;						\
-	LUSBKFN_CTX_PREFIX()
-
-#define LUSBKFN_CTX_PIPE_PREFIX()						\
-	LUSBKFN_CTX_PREFIX()
-
-#define LUSBKFN_CTX_ALL_PREFIX()						\
-	HANDLE deviceHandle=NULL;							\
-	KUSB_DEVICE_EL deviceEL;							\
-	KUSB_INTERFACE_EL interfaceEL;						\
-	LUSBKFN_CTX_PREFIX()
-
-#define GetStackDeviceCache()	 {success=UsbStack_GetCache(&backendContext->UsbStack, &(deviceEL), NULL); if (success) deviceHandle = deviceEL.Device->MasterDeviceHandle; }
-#define GetStackInterfaceCache() {success=UsbStack_GetCache(&backendContext->UsbStack, NULL, &(interfaceEL)); if (success) deviceHandle = interfaceEL.ParentDevice->Device->MasterDeviceHandle; }
-
-#define DeviceHandleByPipeID(PipeID)	 GetPipeDeviceHandle(backendContext->UsbStack,PipeID)
-
-#define ErrorStackDeviceCache()		ErrorSet(!success, Error, ERROR_DEVICE_NOT_AVAILABLE, "no devices found.")
-#define ErrorStackInterfaceCache()	ErrorSet(!success, Error, ERROR_DEVICE_NOT_AVAILABLE, "no interfaces found.")
+#ifndef OVLK_OVERLAPPED_XFER_DEFINES___________________________________
 
 #define OVLK_CHECK_SUBMIT(mJump, mOverlapped, mPipeID, mBuffer, mBufferLength, mDeviceHandle, mPacketSize, mIoCtl)	\
-	if (mOverlapped && mOverlapped == mOverlapped->Pointer)														\
+	if (IS_OVLK(mOverlapped))																					\
 	{																											\
-		PKOVL_OVERLAPPED_INFO ovlkInfo = OvlK_GetInfo(mOverlapped);												\
-		libusb_request* request = (libusb_request*)ovlkInfo->BackendContext;									\
-		mOverlapped->Pointer = NULL;																			\
+		PKOVL_OVERLAPPED_INFO ovlkInfo = KOVL_GET_PRIVATE_INFO(mOverlapped);									\
 																												\
-		Mem_Zero(request, sizeof(*request));																	\
-		request->endpoint.endpoint = mPipeID;																	\
-		request->endpoint.packet_size = mPacketSize;															\
+		Mem_Zero(&ovlkInfo->Backend.request, sizeof(ovlkInfo->Backend.request));								\
+		ovlkInfo->Backend.request.endpoint.endpoint = mPipeID;													\
+		ovlkInfo->Backend.request.endpoint.packet_size = mPacketSize;											\
+																												\
 		ovlkInfo->DataBuffer = mBuffer;																			\
 		ovlkInfo->DataBufferSize = mBufferLength;																\
 		ovlkInfo->DeviceHandle = mDeviceHandle;																	\
@@ -98,23 +61,22 @@ typedef struct _LIBUSBK_BKND_CONTEXT
 																												\
 		success = Ioctl_Async(ovlkInfo->DeviceHandle,															\
 		                      mIoCtl,																			\
-		                      request, sizeof(*request),														\
+		                      &ovlkInfo->Backend.request, sizeof(ovlkInfo->Backend.request),					\
 		                      mBuffer, mBufferLength,															\
 		                      mOverlapped);																		\
 		goto mJump;																								\
 	}
 
-#define OVLK_ISO_CHECK_SUBMIT(mJump, mOverlapped, mIsoContext, mIsoContextSize, mBuffer, mBufferLength, mDeviceHandle, mIoCtl)	\
-	if (mOverlapped && mOverlapped == mOverlapped->Pointer)														\
+#define OVLK_ISO_SUBMIT(mOverlapped, mIsoContext, mIsoContextSize, mBuffer, mBufferLength, mDeviceHandle, mIoCtl)	\
+	do																											\
 	{																											\
-		PKOVL_OVERLAPPED_INFO ovlkInfo = OvlK_GetInfo(mOverlapped);												\
-		libusb_request* request = (libusb_request*)ovlkInfo->BackendContext;									\
-		mOverlapped->Pointer = NULL;																			\
+		PKOVL_OVERLAPPED_INFO ovlkInfo = KOVL_GET_PRIVATE_INFO(mOverlapped);									\
 																												\
-		Mem_Zero(request, sizeof(*request));																	\
-		request->IsoEx.PipeID = mIsoContext->PipeID;															\
-		request->IsoEx.IsoContext = mIsoContext;																\
-		request->IsoEx.IsoContextSize = mIsoContextSize;														\
+		Mem_Zero(&ovlkInfo->Backend.request, sizeof(ovlkInfo->Backend.request));								\
+		ovlkInfo->Backend.request.IsoEx.PipeID = mIsoContext->PipeID;											\
+		ovlkInfo->Backend.request.IsoEx.IsoContext = mIsoContext;												\
+		ovlkInfo->Backend.request.IsoEx.IsoContextSize = mIsoContextSize;										\
+																												\
 		ovlkInfo->DataBuffer = mBuffer;																			\
 		ovlkInfo->DataBufferSize = mBufferLength;																\
 		ovlkInfo->DeviceHandle = mDeviceHandle;																	\
@@ -123,21 +85,19 @@ typedef struct _LIBUSBK_BKND_CONTEXT
 																												\
 		success = Ioctl_Async(ovlkInfo->DeviceHandle,															\
 		                      mIoCtl,																			\
-		                      request, sizeof(*request),														\
+		                      &ovlkInfo->Backend.request, sizeof(ovlkInfo->Backend.request),					\
 		                      mBuffer, mBufferLength,															\
 		                      mOverlapped);																		\
-		goto mJump;																								\
-	}
+	}while(0)
 
-#define OVLK_CHECK_SUBMIT_CONTROL(mJump, mOverlapped, mSetupPacket, mBuffer, mBufferLength, mDeviceHandle, mIoCtl)	\
-	if (mOverlapped && mOverlapped == mOverlapped->Pointer)														\
+#define OVLK_CONTROL_CHECK_SUBMIT(mJump, mOverlapped, mSetupPacket, mBuffer, mBufferLength, mDeviceHandle, mIoCtl)	\
+	if (IS_OVLK(mOverlapped))																					\
 	{																											\
-		PKOVL_OVERLAPPED_INFO ovlkInfo = OvlK_GetInfo(mOverlapped);												\
-		libusb_request* request = (libusb_request*)ovlkInfo->BackendContext;									\
-		mOverlapped->Pointer = NULL;																			\
+		PKOVL_OVERLAPPED_INFO ovlkInfo = KOVL_GET_PRIVATE_INFO(mOverlapped);									\
 																												\
-		Mem_Zero(request, sizeof(*request));																	\
-		memcpy(&request->control, &mSetupPacket, sizeof(request->control));										\
+		Mem_Zero(&ovlkInfo->Backend.request, sizeof(ovlkInfo->Backend.request));								\
+		memcpy(&ovlkInfo->Backend.request.control, &mSetupPacket, sizeof(ovlkInfo->Backend.request.control));	\
+																												\
 		ovlkInfo->DataBuffer = mBuffer;																			\
 		ovlkInfo->DataBufferSize = mBufferLength;																\
 		ovlkInfo->DeviceHandle = mDeviceHandle;																	\
@@ -145,104 +105,118 @@ typedef struct _LIBUSBK_BKND_CONTEXT
 																												\
 		success = Ioctl_Async(ovlkInfo->DeviceHandle,															\
 		                      mIoCtl,																			\
-		                      request, sizeof(*request),														\
+		                      &ovlkInfo->Backend.request, sizeof(ovlkInfo->Backend.request),					\
 		                      mBuffer, mBufferLength,															\
 		                      mOverlapped);																		\
 		goto mJump;																								\
 	}
 
-///////////////////////////////////////////////////////////////////////
-// private libusbk/0 backend functions
-///////////////////////////////////////////////////////////////////////
-
-static BOOL KUSB_API k_CancelOverlappedK(__in PKOVL_OVERLAPPED Overlapped)
+static BOOL KUSB_API k_CancelOverlappedK(__in KOVL_HANDLE Overlapped)
 {
 	BOOL success;
-	PKOVL_OVERLAPPED_INFO ovInfo = OvlK_GetInfo(Overlapped);
-	if (Opt_CancelIoEx)
+	PKOVL_OVERLAPPED_INFO ovlkInfo = KOVL_GET_PRIVATE_INFO(Overlapped);
+	if (AllK.CancelIoEx)
 	{
-		success = Opt_CancelIoEx(ovInfo->DeviceHandle, Overlapped);
+		success = AllK.CancelIoEx(ovlkInfo->DeviceHandle, Overlapped);
 	}
-	else
+	else if (ovlkInfo->PipeID & USB_ENDPOINT_ADDRESS_MASK)
 	{
 		libusb_request request;
 		Mem_Zero(&request, sizeof(request));
-		request.endpoint.endpoint = ovInfo->PipeID;
+		request.endpoint.endpoint = ovlkInfo->PipeID;
 
-		success = Ioctl_Sync(ovInfo->DeviceHandle,
+		success = Ioctl_Sync(ovlkInfo->DeviceHandle,
 		                     LIBUSB_IOCTL_ABORT_ENDPOINT,
 		                     &request, sizeof(request),
 		                     NULL, 0,
 		                     NULL);
 	}
+	else
+	{
+		success = CancelIo(ovlkInfo->DeviceHandle);
+	}
 
 	return success;
 }
 
-static BOOL KUSB_API k_CancelOverlappedK_Control(__in PKOVL_OVERLAPPED Overlapped)
+static BOOL KUSB_API k_CancelOverlappedK_Control(__in KOVL_HANDLE Overlapped)
 {
 	BOOL success;
-	PKOVL_OVERLAPPED_INFO ovInfo = OvlK_GetInfo(Overlapped);
-	if (Opt_CancelIoEx)
+	PKOVL_OVERLAPPED_INFO ovlkInfo = KOVL_GET_PRIVATE_INFO(Overlapped);
+	if (AllK.CancelIoEx)
 	{
-		success = Opt_CancelIoEx(ovInfo->DeviceHandle, Overlapped);
+		success = AllK.CancelIoEx(ovlkInfo->DeviceHandle, Overlapped);
 	}
 	else
 	{
-		success = CancelIo(ovInfo->DeviceHandle);
+		success = CancelIo(ovlkInfo->DeviceHandle);
 	}
 
 	return success;
 }
 
-LONG k_ClosedBySetConfigCB(__in PKUSB_INTERFACE_STACK UsbStack,
-                           __in PKUSB_DEVICE_EL DeviceElement,
-                           __in PVOID Context)
-{
-	UNREFERENCED_PARAMETER(UsbStack);
-	UNREFERENCED_PARAMETER(DeviceElement);
-	UNREFERENCED_PARAMETER(Context);
+#endif
 
-	return ERROR_SUCCESS;
+#ifndef HANDLE_CLEANUP_________________________________________________
+
+static void KUSB_API k_Cleanup_DevK(__in PKDEV_HANDLE_INTERNAL handle)
+{
+	PoolHandle_Dead_DevK(handle);
+	if (!Str_IsNullOrEmpty(handle->DevicePath))
+	{
+		Mem_Free(&handle->DevicePath);
+		CloseHandle(handle->MasterDeviceHandle);
+	}
+	if (handle->UsbStack)
+	{
+		// free the device/interface stack
+		UsbStack_Clear(handle->UsbStack);
+		Mem_Free(&handle->UsbStack);
+	}
+	Mem_Free(&handle->ConfigDescriptor);
+	Mem_Free(&handle->Backend.Ctx);
 }
 
-static BOOL k_GetVersion(__in HANDLE DeviceHandle, version_t* Version)
+static void KUSB_API k_Cleanup_UsbK(__in PKUSB_HANDLE_INTERNAL handle)
+{
+	PoolHandle_Dead_UsbK(handle);
+	if (handle && handle->Device)
+	{
+		PoolHandle_Dec_DevK(handle->Device);
+	}
+}
+
+#endif
+
+#ifndef HANDLE_INIT_CLONE_AND_FREE_FUNCTIONS___________________________
+
+static BOOL k_Init_Version(__in HANDLE DeviceHandle, version_t* Version)
 {
 	libusb_request request;
-	BOOL success;
-
-	ErrorParam(!DeviceHandle, Error, "DeviceHandle");
-	ErrorParam(!Version, Error, "Version");
+	BOOL success = FALSE;
 
 	Mem_Zero(&request, sizeof(request));
 
-	success = Ioctl_Sync(DeviceHandle, LIBUSB_IOCTL_GET_VERSION,
-	                     &request, sizeof(request),
-	                     &request, sizeof(request),
-	                     NULL);
-
+	success = SubmitSimpleSyncRequestEx(DeviceHandle, LIBUSB_IOCTL_GET_VERSION);
 	ErrorNoSet(!success, Error, "failed get version request.");
+
 	memcpy(Version, &request.version, sizeof(*Version));
+	USBMSGN("%s.sys v%u.%u.%u.%u",
+	        Version->major > 2 ? "libusbK" : "libusb0",
+	        Version->major, Version->minor, Version->micro, Version->nano);
 
-	USBMSG("%s.sys v%u.%u.%u.%u\n",
-	       Version->major <= 1 ? "libusb0" : "libusbK",
-	       Version->major,
-	       Version->minor,
-	       Version->micro,
-	       Version->nano);
-
-	return TRUE;
+	return success;
 Error:
-	return FALSE;
+	return success;
 }
 
-static LONG k_GetCurrentConfigDescriptorCB(
-    __in PKUSB_INTERFACE_STACK UsbStack,
-    __in_opt LPCSTR DevicePath,
-    __in_opt HANDLE DeviceHandle,
-    __in_opt HANDLE InterfaceHandle,
-    __out PUSB_CONFIGURATION_DESCRIPTOR* ConfigDescriptorRef,
-    __in_opt PVOID Context)
+static BOOL k_Init_Backend(PKUSB_HANDLE_INTERNAL handle)
+{
+	handle->Device->Backend.CtxK = Mem_Alloc(sizeof(*handle->Device->Backend.CtxK));
+	return IsHandleValid(handle->Device->Backend.CtxK);
+}
+
+static BOOL k_Init_Config(PKUSB_HANDLE_INTERNAL handle)
 {
 	libusb_request request;
 	DWORD transferred = 0;
@@ -251,17 +225,12 @@ static LONG k_GetCurrentConfigDescriptorCB(
 	UCHAR lastConfigValue = 0;
 	UCHAR currentConfigNumber = 0;
 	UCHAR configIndex = 0;
-	PLIBUSBK_BKND_CONTEXT backendContext = (PLIBUSBK_BKND_CONTEXT)Context;
 
-	UNREFERENCED_PARAMETER(UsbStack);
-	UNREFERENCED_PARAMETER(DevicePath);
-	UNREFERENCED_PARAMETER(InterfaceHandle);
-
-	success = k_GetVersion(DeviceHandle, &backendContext->Version);
-	ErrorNoSet(!success, Error, "->k_GetVersion");
+	success = k_Init_Version(Dev_Handle(), &handle->Device->Backend.CtxK->Version);
+	ErrorNoSet(!success, Error, "->k_Init_Version");
 
 	Mem_Zero(&request, sizeof(request));
-	success = Ioctl_Sync(DeviceHandle, LIBUSB_IOCTL_GET_CACHED_CONFIGURATION,
+	success = Ioctl_Sync(Dev_Handle(), LIBUSB_IOCTL_GET_CACHED_CONFIGURATION,
 	                     &request, sizeof(request),
 	                     &request, sizeof(request),
 	                     &transferred);
@@ -272,14 +241,14 @@ static LONG k_GetCurrentConfigDescriptorCB(
 		currentConfigNumber = 0;
 		Mem_Zero(&request, sizeof(request));
 		request.configuration.configuration = (unsigned int) - 1;
-		success = Ioctl_Sync(DeviceHandle, LIBUSB_IOCTL_SET_CONFIGURATION,
+		success = Ioctl_Sync(Dev_Handle(), LIBUSB_IOCTL_SET_CONFIGURATION,
 		                     &request, (DWORD)sizeof(request),
 		                     &request, (DWORD)sizeof(request),
 		                     NULL);
 
 		if (!success)
 		{
-			USBERR("failed configuring device. ErrorCode = %08Xh\n", GetLastError());
+			USBERRN("failed configuring device. ErrorCode = %08Xh", GetLastError());
 			goto Error;
 		}
 	}
@@ -298,7 +267,7 @@ static LONG k_GetCurrentConfigDescriptorCB(
 			goto Error;
 		}
 
-		success = Ioctl_Sync(DeviceHandle, LIBUSB_IOCTL_GET_DESCRIPTOR,
+		success = Ioctl_Sync(Dev_Handle(), LIBUSB_IOCTL_GET_DESCRIPTOR,
 		                     &request, sizeof(request),
 		                     &configCheck,
 		                     sizeof(configCheck),
@@ -319,395 +288,143 @@ static LONG k_GetCurrentConfigDescriptorCB(
 
 	if (success)
 	{
-		*ConfigDescriptorRef = Mem_Alloc(configCheck.wTotalLength);
-		if (!*ConfigDescriptorRef)
+		handle->Device->ConfigDescriptor = Mem_Alloc(configCheck.wTotalLength);
+		if (!handle->Device->ConfigDescriptor)
 			return FALSE;
 
-		success = Ioctl_Sync(DeviceHandle, LIBUSB_IOCTL_GET_DESCRIPTOR,
+		success = Ioctl_Sync(Dev_Handle(), LIBUSB_IOCTL_GET_DESCRIPTOR,
 		                     &request, sizeof(request),
-		                     *ConfigDescriptorRef,
+		                     handle->Device->ConfigDescriptor,
 		                     configCheck.wTotalLength,
 		                     &transferred);
 
 		if (!success)
 		{
-			Mem_Free(ConfigDescriptorRef);
+			Mem_Free(&handle->Device->ConfigDescriptor);
 		}
 	}
 
 Error:
-	return success ? ERROR_SUCCESS : GetLastError();
-}
-
-static BOOL k_DestroyContext(__inout PKUSB_INTERFACE_HANDLE_INTERNAL InternalHandle)
-{
-	PLIBUSBK_BKND_CONTEXT backendContext = NULL;
-
-	// handle uninitialized.
-	if (!IsHandleValid(InternalHandle))
-		return LusbwError(ERROR_INVALID_HANDLE);
-
-	if (InternalHandle->Instance.UsageCount < 1)
-		return LusbwError(ERROR_INVALID_HANDLE);
-
-	backendContext = (PLIBUSBK_BKND_CONTEXT)InternalHandle->BackendContext;
-	if (!IsHandleValid(backendContext))
-		goto Done;
-
-	// free the device/interface stack
-	UsbStack_Free(&backendContext->UsbStack, backendContext);
-
-Done:
-	// destroy the main context semaphore lock.
-	DestroyLock(&InternalHandle->Instance.Lock);
-
-	// Release the handle back to the pool.
-	DecUsageCount(InternalHandle);
-
-	Mem_Free(&backendContext);
-
-	return TRUE;
-}
-
-LONG k_ClaimReleaseCB (__in PKUSB_INTERFACE_STACK UsbStack,
-                       __in PKUSB_INTERFACE_EL InterfaceElement,
-                       __in BOOL IsClaim,
-                       __in INT InterfaceIndexOrNumber,
-                       __in BOOL IsIndex,
-                       __in PVOID Context)
-{
-	libusb_request request;
-	BOOL success;
-	LONG errorCode = ERROR_SUCCESS;
-	INT ioControlCode = IsClaim ? LIBUSBK_IOCTL_CLAIM_INTERFACE : LIBUSBK_IOCTL_RELEASE_INTERFACE;
-
-	UNREFERENCED_PARAMETER(Context);
-	UNREFERENCED_PARAMETER(IsIndex);
-	UNREFERENCED_PARAMETER(InterfaceIndexOrNumber);
-
-	if (!InterfaceElement)
-		return ERROR_NO_MORE_ITEMS;
-
-	Mem_Zero(&request, sizeof(request));
-	request.intf.interface_number = (UCHAR)InterfaceElement->Number;
-	success = Ioctl_Sync(InterfaceElement->ParentDevice->Device->MasterDeviceHandle, ioControlCode,
-	                     &request, sizeof(request),
-	                     &request, sizeof(request),
-	                     NULL);
-
-	if (!success)
-	{
-		errorCode = GetLastError();
-		USBWRN("failed %s interface #%d. ret=%d\n",
-		       IsClaim ? "claiming" : "releasing",
-		       InterfaceElement->Number,
-		       errorCode);
-	}
-	else
-	{
-		// The most recently claimed interface is always at the list head.
-		DL_DELETE(UsbStack->InterfaceList, InterfaceElement);
-		if (IsClaim)
-		{
-			DL_PREPEND(UsbStack->InterfaceList, InterfaceElement);
-		}
-		else
-		{
-			DL_APPEND(UsbStack->InterfaceList, InterfaceElement);
-		}
-		// All device handles and interface handles are cached.
-		UsbStack_BuildCache(UsbStack);
-	}
-
-	return errorCode;
-}
-
-static BOOL k_CreateContext(__out PKUSB_INTERFACE_HANDLE_INTERNAL* InternalHandleRef)
-{
-	BOOL success;
-	PLIBUSBK_BKND_CONTEXT backendContext = NULL;
-	PKUSB_INTERFACE_HANDLE_INTERNAL internalHandle = NULL;
-
-	ErrorHandle(!InternalHandleRef, Error, "InternalHandleRef");
-
-	internalHandle = GetInternalPoolHandle();
-	ErrorHandle(!internalHandle, Error, "internalHandle");
-
-	memset(internalHandle, 0, sizeof(*internalHandle) - sizeof(internalHandle->Instance));
-
-	backendContext = Mem_Alloc(sizeof(LIBUSBK_BKND_CONTEXT));
-	ErrorMemory(!IsHandleValid(backendContext), Error);
-	internalHandle->BackendContext = backendContext;
-
-	success = UsbStack_Init(&backendContext->UsbStack, k_GetCurrentConfigDescriptorCB, k_ClaimReleaseCB, NULL, NULL, NULL);
-	ErrorNoSet(!success, Error, "->UsbStack_Init");
-
-	success = InitInterfaceLock(&internalHandle->Instance.Lock);
-	ErrorNoSet(!success, Error, "->InitInterfaceLock");
-
-	*InternalHandleRef = internalHandle;
-	return TRUE;
-
-Error:
-	k_DestroyContext(internalHandle);
-	*InternalHandleRef = NULL;
-	return FALSE;
-}
-
-BOOL k_ClaimOrReleaseInterface(__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-                               __in INT InterfaceNumberOrIndex,
-                               __in UCHAR IsClaim,
-                               __in UCHAR IsIndex)
-{
-	LONG action;
-	LUSBKFN_CTX_PREFIX();
-
-	if (InterfaceNumberOrIndex < 0)
-		return LusbwError(ERROR_NO_MORE_ITEMS);
-
-	AcquireSyncLockWrite(&handle->Instance.Lock);
-
-	GET_BACKEND_CONTEXT(backendContext, handle, LIBUSBK_BKND_CONTEXT);
-
-	action = UsbStack_ClaimOrRelease(&backendContext->UsbStack,
-	                                 IsClaim,
-	                                 InterfaceNumberOrIndex,
-	                                 IsIndex,
-	                                 handle);
-
-	ReleaseSyncLockWrite(&handle->Instance.Lock);
-
-	if (action == ERROR_SUCCESS)
-		return TRUE;
-
-	return LusbwError(action);
-}
-
-KUSB_EXP BOOL KUSB_API UsbK_Initialize(
-    __in HANDLE DeviceHandle,
-    __out PLIBUSBK_INTERFACE_HANDLE InterfaceHandle)
-{
-	BOOL success;
-	PKUSB_INTERFACE_HANDLE_INTERNAL interfaceHandle = NULL;
-	PLIBUSBK_BKND_CONTEXT backendContext = NULL;
-
-	CheckLibInitialized();
-
-	ErrorHandle(!IsHandleValid(DeviceHandle), Error, "DeviceHandle");
-	ErrorHandle(!IsHandleValid(InterfaceHandle), Error, "InterfaceHandle");
-
-	success = k_CreateContext(&interfaceHandle);
-	ErrorNoSet(!success, Error, "->k_CreateContext");
-
-	K_CTX(backendContext, interfaceHandle);
-	ErrorHandle(!backendContext, Error, "backendContext");
-
-	success = UsbStack_AddDevice(
-	              &backendContext->UsbStack,
-	              NULL,
-	              DeviceHandle,
-	              backendContext);
-
-	ErrorNoSet(!success, Error, "->UsbStack_AddDevice");
-
-	*InterfaceHandle = interfaceHandle;
-	return TRUE;
-
-Error:
-	k_DestroyContext(interfaceHandle);
-	*InterfaceHandle = NULL;
-	return FALSE;
-}
-
-KUSB_EXP BOOL KUSB_API UsbK_SetConfiguration(
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in UCHAR ConfigurationNumber)
-{
-	libusb_request request;
-	USB_STACK_HANDLER_RESULT result;
-	CHAR devicePath[KLST_STRING_MAX_LEN];
-
-	LUSBKFN_CTX_DEVICE_PREFIX();
-
-	if (backendContext->UsbStack.DeviceCount > 1 ||
-	        backendContext->Version.major > 1)
-	{
-		// The best thing we can do to for composite device is nothing.
-		// there is no support for this in usbccgp.
-
-		// currently this is only supported by libusb0; so the same is true for K.
-		AcquireSyncLockRead(&handle->Instance.Lock);
-		result = UsbStackHandler_SetConfiguration(&backendContext->UsbStack, ConfigurationNumber);
-		ReleaseSyncLockRead(&handle->Instance.Lock);
-
-		return (BOOL)(result & 1);
-	}
-
-	// we will need to rebuild the interface stack completely, so get the write lock now.
-	AcquireSyncLockWrite(&handle->Instance.Lock);
-
-	GetStackDeviceCache();
-	ErrorStackDeviceCache();
-
-	Mem_Zero(&request, sizeof(request));
-	request.configuration.configuration = ConfigurationNumber;
-	success = Ioctl_Sync(deviceEL.Device->MasterDeviceHandle, LIBUSB_IOCTL_SET_CONFIGURATION,
-	                     &request, sizeof(request),
-	                     &request, sizeof(request),
-	                     NULL);
-	if (!success)
-	{
-		USBERR("failed setting configuration #%d\n", ConfigurationNumber);
-		goto Error;
-	}
-
-	if (!Str_IsNullOrEmpty(deviceEL.Device->DevicePath))
-		strcpy_s(devicePath, sizeof(devicePath) - 1, deviceEL.Device->DevicePath);
-	else
-		Mem_Zero(devicePath, sizeof(devicePath));
-
-	deviceHandle = deviceEL.Device->MasterDeviceHandle;
-
-	// rebuild the interface list.
-	backendContext->UsbStack.Cb.CloseDevice = k_ClosedBySetConfigCB;
-	UsbStack_Free(&backendContext->UsbStack, backendContext);
-
-	UsbStack_Init(&backendContext->UsbStack, k_GetCurrentConfigDescriptorCB, k_ClaimReleaseCB, NULL, NULL, NULL);
-
-	success = UsbStack_AddDevice(
-	              &backendContext->UsbStack,
-	              devicePath,
-	              deviceHandle,
-	              backendContext);
-
-Error:
-	ReleaseSyncLockWrite(&handle->Instance.Lock);
 	return success;
 }
 
-KUSB_EXP BOOL KUSB_API UsbK_GetConfiguration(
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __out PUCHAR ConfigurationNumber)
+KUSB_EXP BOOL KUSB_API UsbK_Free (__in KUSB_HANDLE InterfaceHandle)
 {
-	libusb_request request;
-	USB_STACK_HANDLER_RESULT handerResult;
-	DWORD transferred;
-	UCHAR PipeID = 0;
-	LUSBKFN_CTX_PIPE_PREFIX();
+	PKUSB_HANDLE_INTERNAL handle;
 
-	AcquireSyncLockRead(&handle->Instance.Lock);
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return TRUE);
+	PoolHandle_Dec_UsbK(handle);
 
-	handerResult = UsbStackHandler_GetConfiguration(&backendContext->UsbStack, ConfigurationNumber);
-
-	if (handerResult != HANDLER_NOT_HANDLED)
-	{
-		ReleaseSyncLockRead(&handle->Instance.Lock);
-		return(BOOL)handerResult & 1;
-	}
-
-	Mem_Zero(&request, sizeof(request));
-	success = Ioctl_Sync(DeviceHandleByPipeID(PipeID), LIBUSB_IOCTL_GET_CACHED_CONFIGURATION,
-	                     &request, sizeof(request),
-	                     &request, sizeof(request),
-	                     &transferred);
-
-	if (!success && !transferred)
-	{
-		USBERR("failed getting cached configration number\n");
-	}
-	else
-	{
-		*ConfigurationNumber = ((PUCHAR)&request)[0];
-	}
-
-	ReleaseSyncLockRead(&handle->Instance.Lock);
-	return success;
-}
-
-KUSB_EXP BOOL KUSB_API UsbK_Free (__in LIBUSBK_INTERFACE_HANDLE InterfaceHandle)
-{
-	PKUSB_INTERFACE_HANDLE_INTERNAL handle;
-
-	GET_INTERNAL_HANDLE(handle);
-
-	AcquireSyncLockWrite(&handle->Instance.Lock);
-
-	k_DestroyContext(handle);
-
-	// Free always returns true;  The Close method does not. This is the primary difference.
-	SetLastError(ERROR_SUCCESS);
 	return TRUE;
 }
 
 KUSB_EXP BOOL KUSB_API UsbK_GetAssociatedInterface (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __in KUSB_HANDLE InterfaceHandle,
     __in UCHAR AssociatedInterfaceIndex,
-    __out PLIBUSBK_INTERFACE_HANDLE AssociatedInterfaceHandle)
+    __out KUSB_HANDLE* AssociatedInterfaceHandle)
 {
-	PKUSB_INTERFACE_HANDLE_INTERNAL assocHandle = NULL;
-	PLIBUSBK_BKND_CONTEXT assocContext = NULL;
-	PKUSB_INTERFACE_EL assocEL = NULL;
-	INT findVirtualIndex;
+	return UsbStack_GetAssociatedInterface(InterfaceHandle, AssociatedInterfaceIndex, AssociatedInterfaceHandle);
+}
 
-	LUSBKFN_CTX_PREFIX();
+KUSB_EXP BOOL KUSB_API UsbK_Clone (
+    __in KUSB_HANDLE InterfaceHandle,
+    __out KUSB_HANDLE* DstInterfaceHandle)
+{
+	return UsbStack_CloneHandle(InterfaceHandle, DstInterfaceHandle);
+}
 
-	AcquireSyncLockWrite(&handle->Instance.Lock);
+KUSB_EXP BOOL KUSB_API UsbK_Initialize(
+    __in HANDLE DeviceHandle,
+    __out KUSB_HANDLE* InterfaceHandle)
+{
+	CheckLibInit();
 
-	ErrorHandle(!backendContext->UsbStack.InterfaceList, Error, "UsbStack.InterfaceList");
+	return UsbStack_Init(InterfaceHandle, KUSB_DRVID_LIBUSBK, FALSE, DeviceHandle, NULL, NULL, k_Init_Config, k_Init_Backend, k_Cleanup_UsbK, k_Cleanup_DevK);
+}
 
-	// this is where we are right now, we must find [this] + 1 + AssociatedInterfaceIndex
-	findVirtualIndex = backendContext->UsbStack.InterfaceList->VirtualIndex;
-	findVirtualIndex = (findVirtualIndex + 1) + (INT)AssociatedInterfaceIndex;
+KUSB_EXP BOOL KUSB_API UsbK_Open(
+    __in KLST_DEVINFO* DevInfo,
+    __out KUSB_HANDLE* InterfaceHandle)
+{
+	CheckLibInit();
 
-	DL_SEARCH_SCALAR(backendContext->UsbStack.InterfaceList, assocEL, VirtualIndex, findVirtualIndex);
-	if (!assocEL)
+	return UsbStack_Init(InterfaceHandle, KUSB_DRVID_LIBUSBK, FALSE, NULL, DevInfo, NULL, k_Init_Config, k_Init_Backend, k_Cleanup_UsbK, k_Cleanup_DevK);
+
+}
+
+KUSB_EXP BOOL KUSB_API UsbK_Close(
+    __in KUSB_HANDLE InterfaceHandle)
+{
+	return UsbK_Free(InterfaceHandle);
+}
+
+#endif
+
+#ifndef DEVICE_AND_INTERFACE_FUNCTIONS_________________________________
+
+KUSB_EXP BOOL KUSB_API UsbK_SetConfiguration(
+    __in KUSB_HANDLE InterfaceHandle,
+    __in UCHAR ConfigurationNumber)
+{
+
+	libusb_request request;
+	PKUSB_HANDLE_INTERNAL handle;
+	BOOL success;
+
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
+
+	if (handle->Device->Backend.CtxK->Version.major > 2)
 	{
-		LusbwError(ERROR_NO_MORE_ITEMS);
+		if (handle->Device->ConfigDescriptor->bConfigurationValue != ConfigurationNumber)
+		{
+			LusbwError(ERROR_NO_MORE_ITEMS);
+			goto Error;
+		}
+		goto Done;
+	}
+
+	request.configuration.configuration = ConfigurationNumber;
+	success = SubmitSimpleSyncRequest(LIBUSB_IOCTL_SET_CONFIGURATION);
+	if (!success)
+	{
+		USBERRN("failed setting configuration #%d", ConfigurationNumber);
 		goto Error;
 	}
 
-	success = k_CreateContext(&assocHandle);
-	ErrorNoSet(!success, Error, "->k_CreateContext");
+	// rebuild the interface list.
+	success = UsbStack_Rebuild(handle, k_Init_Config);
+	ErrorNoSet(!success, Error, "->UsbStack_Rebuild");
 
-	K_CTX(assocContext, assocHandle);
-	ErrorHandle(!assocContext, Error, "assocContext");
-
-	success = UsbStack_Init(&assocContext->UsbStack, k_GetCurrentConfigDescriptorCB, k_ClaimReleaseCB, NULL, NULL, NULL);
-	ErrorNoSet(!success, Error, "->UsbStack_Init");
-
-	UsbStack_Clone(&backendContext->UsbStack, &assocContext->UsbStack);
-	ErrorNoSet(!success, Error, "->UsbStack_Clone");
-
-	// move this interface to top if stack for the cloned handle.
-	DL_SEARCH_SCALAR(assocContext->UsbStack.InterfaceList, assocEL, VirtualIndex, findVirtualIndex);
-	DL_DELETE(assocContext->UsbStack.InterfaceList, assocEL);
-	DL_PREPEND(assocContext->UsbStack.InterfaceList, assocEL);
-
-	// clone the backend
-	memcpy(&assocContext->Version, &backendContext->Version, sizeof(assocContext->Version));
-	memcpy(&assocContext->PipePolicies, &backendContext->PipePolicies, sizeof(assocContext->PipePolicies));
-
-	// clone the users context
-	memcpy(&assocHandle->UserContext, &handle->UserContext, sizeof(assocHandle->UserContext));
-
-	// rebuild the pipe caches
-	success = UsbStack_BuildCache(&assocContext->UsbStack);
-	ErrorNoSet(!success, Error, "->UsbStack_BuildCache");
-
-	*AssociatedInterfaceHandle = assocHandle;
-
-	ReleaseSyncLockWrite(&handle->Instance.Lock);
+Done:
+	PoolHandle_Dec_UsbK(handle);
 	return TRUE;
 
 Error:
-	k_DestroyContext(assocHandle);
-
-	ReleaseSyncLockWrite(&handle->Instance.Lock);
+	PoolHandle_Dec_UsbK(handle);
 	return FALSE;
 }
 
+KUSB_EXP BOOL KUSB_API UsbK_GetConfiguration(
+    __in KUSB_HANDLE InterfaceHandle,
+    __out PUCHAR ConfigurationNumber)
+{
+	PKUSB_HANDLE_INTERNAL handle;
+
+	ErrorParamAction(!ConfigurationNumber, "ConfigurationNumber", return FALSE);
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
+	if (handle->Device->ConfigDescriptor)
+		*ConfigurationNumber = handle->Device->ConfigDescriptor->bConfigurationValue;
+	else
+		*ConfigurationNumber = 0;
+
+	PoolHandle_Dec_UsbK(handle);
+	return TRUE;
+}
+
 KUSB_EXP BOOL KUSB_API UsbK_GetDescriptor (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __in KUSB_HANDLE InterfaceHandle,
     __in UCHAR DescriptorType,
     __in UCHAR Index,
     __in USHORT LanguageID,
@@ -716,27 +433,11 @@ KUSB_EXP BOOL KUSB_API UsbK_GetDescriptor (
     __out PULONG LengthTransferred)
 {
 	libusb_request request;
-	USB_STACK_HANDLER_RESULT handerResult;
-	UCHAR PipeID = 0;
-	LUSBKFN_CTX_PIPE_PREFIX();
+	PKUSB_HANDLE_INTERNAL handle;
+	BOOL success;
 
-	AcquireSyncLockRead(&handle->Instance.Lock);
-
-	handerResult = UsbStackHandler_GetDescriptor(
-	                   &backendContext->UsbStack,
-	                   DescriptorType,
-	                   Index,
-	                   LanguageID,
-	                   Buffer,
-	                   BufferLength,
-	                   LengthTransferred);
-
-
-	if (handerResult != HANDLER_NOT_HANDLED)
-	{
-		ReleaseSyncLockRead(&handle->Instance.Lock);
-		return(BOOL)handerResult & 1;
-	}
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
 
 	Mem_Zero(&request, sizeof(request));
 	request.descriptor.type = DescriptorType;
@@ -744,174 +445,126 @@ KUSB_EXP BOOL KUSB_API UsbK_GetDescriptor (
 	request.descriptor.language_id = LanguageID;
 
 	success = Ioctl_Sync(
-	              DeviceHandleByPipeID(PipeID),
+	              Dev_Handle(),
 	              LIBUSB_IOCTL_GET_DESCRIPTOR,
 	              &request, sizeof(request),
 	              Buffer, BufferLength,
 	              LengthTransferred);
+	ErrorNoSet(!success, Error, "Failed getting descriptor.");
 
-	ReleaseSyncLockRead(&handle->Instance.Lock);
-	return success;
+	PoolHandle_Dec_UsbK(handle);
+	return TRUE;
+
+Error:
+	PoolHandle_Dec_UsbK(handle);
+	return FALSE;
 }
 
 KUSB_EXP BOOL KUSB_API UsbK_QueryInterfaceSettings (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in UCHAR AlternateSettingNumber,
+    __in KUSB_HANDLE InterfaceHandle,
+    __in UCHAR AltSettingNumber,
     __out PUSB_INTERFACE_DESCRIPTOR UsbAltInterfaceDescriptor)
 {
-	USB_STACK_HANDLER_RESULT handerResult;
 
-	LUSBKFN_CTX_PREFIX();
-
-	AcquireSyncLockRead(&handle->Instance.Lock);
-
-	handerResult = UsbStackHandler_QueryInterfaceSettings(
-	                   &backendContext->UsbStack,
-	                   AlternateSettingNumber,
-	                   UsbAltInterfaceDescriptor);
-
-
-	if (handerResult != HANDLER_NOT_HANDLED)
-	{
-		ReleaseSyncLockRead(&handle->Instance.Lock);
-		return(BOOL)handerResult & 1;
-	}
-
-	success = LusbwError(ERROR_NOT_SUPPORTED);
-	ReleaseSyncLockRead(&handle->Instance.Lock);
-	return success;
+	return UsbStack_QueryInterfaceSettings(InterfaceHandle, AltSettingNumber, UsbAltInterfaceDescriptor);
 }
 
 KUSB_EXP BOOL KUSB_API UsbK_QueryDeviceInformation (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __in KUSB_HANDLE InterfaceHandle,
     __in ULONG InformationType,
     __inout PULONG BufferLength,
     __out PVOID Buffer)
 {
-
 	libusb_request request;
-	LUSBKFN_CTX_INTERFACE_PREFIX();
+	PKUSB_HANDLE_INTERNAL handle;
+	BOOL success;
 
-	AcquireSyncLockRead(&handle->Instance.Lock);
-
-	GetStackInterfaceCache();
-	ErrorStackInterfaceCache();
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
 
 	Mem_Zero(&request, sizeof(request));
 	request.query_device.information_type = InformationType;
+	success = SubmitSyncBufferRequest(LIBUSB_IOCTL_QUERY_DEVICE_INFORMATION);
 
-	success = Ioctl_Sync(deviceHandle, LIBUSB_IOCTL_QUERY_DEVICE_INFORMATION,
-	                     &request, sizeof(request),
-	                     Buffer, *BufferLength,
-	                     BufferLength);
-
-Error:
-	ReleaseSyncLockRead(&handle->Instance.Lock);
+	PoolHandle_Dec_UsbK(handle);
 	return success;
 }
 
 KUSB_EXP BOOL KUSB_API UsbK_SetCurrentAlternateSetting (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in UCHAR AlternateSettingNumber)
+    __in KUSB_HANDLE InterfaceHandle,
+    __in UCHAR AltSettingNumber)
 {
-
-
 	libusb_request request;
-	LUSBKFN_CTX_INTERFACE_PREFIX();
+	PKUSB_HANDLE_INTERNAL handle;
+	BOOL success;
+	PKDEV_SHARED_INTERFACE sharedInterface;
 
-	AcquireSyncLockWrite(&handle->Instance.Lock);
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
 
-	GetStackInterfaceCache();
-	ErrorStackInterfaceCache();
+	Get_CurSharedInterface(handle, sharedInterface);
 
 	Mem_Zero(&request, sizeof(request));
-	request.intf.interface_number = interfaceEL.Number;
-	request.intf.altsetting_number = AlternateSettingNumber;
-	request.intf.intf_use_index = FALSE;
-	request.intf.altf_use_index = FALSE;
+	request.intf.interface_number = sharedInterface->ID;
+	request.intf.altsetting_number = AltSettingNumber;
 
-	success = SubmitSimpleSyncRequest(deviceHandle, LIBUSBK_IOCTL_SET_INTERFACE);
-	if (success)
-	{
-		success = (BOOL)UsbStackHandler_SetAltInterface(
-		              &backendContext->UsbStack,
-		              request.intf.interface_number, FALSE,
-		              request.intf.altsetting_number, FALSE);
-	}
+	success = SubmitSimpleSyncRequest(LIBUSBK_IOCTL_SET_INTERFACE);
+	ErrorNoSet(!success, Error, "Failed setting AltSettingNumber %u", AltSettingNumber);
+
+	Update_SharedInterface_AltSetting(sharedInterface, AltSettingNumber);
+	PoolHandle_Dec_UsbK(handle);
+	return TRUE;
 
 Error:
-	ReleaseSyncLockWrite(&handle->Instance.Lock);
-	return success;
-
+	PoolHandle_Dec_UsbK(handle);
+	return FALSE;
 }
 
 KUSB_EXP BOOL KUSB_API UsbK_GetCurrentAlternateSetting (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __out PUCHAR AlternateSettingNumber)
+    __in KUSB_HANDLE InterfaceHandle,
+    __out PUCHAR AltSettingNumber)
 {
 	libusb_request request;
-	LUSBKFN_CTX_INTERFACE_PREFIX();
+	PKUSB_HANDLE_INTERNAL handle;
+	BOOL success;
+	PKDEV_SHARED_INTERFACE sharedInterface;
 
-	AcquireSyncLockWrite(&handle->Instance.Lock);
+	ErrorParamAction(!AltSettingNumber, "AltSettingNumber", return FALSE);
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
 
-	GetStackInterfaceCache();
-	ErrorStackInterfaceCache();
-
+	Get_CurSharedInterface(handle, sharedInterface);
 	Mem_Zero(&request, sizeof(request));
-	request.intf.interface_number = interfaceEL.Number;
-	request.intf.intf_use_index = FALSE;
-	request.intf.altf_use_index = FALSE;
+	request.intf.interface_number = sharedInterface->ID;
 
-	success = SubmitSimpleSyncRequest(deviceHandle, LIBUSBK_IOCTL_GET_INTERFACE);
+	success = SubmitSimpleSyncRequest(LIBUSBK_IOCTL_GET_INTERFACE);
+	ErrorNoSet(!success, Error, "Failed getting AltSettingNumber");
 
-	if (success)
-	{
-		*AlternateSettingNumber = (UCHAR)request.intf.altsetting_number;
-
-		success = (BOOL)UsbStackHandler_SetAltInterface(
-		              &backendContext->UsbStack,
-		              request.intf.interface_number, FALSE,
-		              request.intf.altsetting_number, FALSE);
-
-	}
+	*AltSettingNumber = (UCHAR)request.intf.altsetting_number;
+	Update_SharedInterface_AltSetting(sharedInterface, request.intf.altsetting_number);
+	PoolHandle_Dec_UsbK(handle);
+	return TRUE;
 
 Error:
-	ReleaseSyncLockWrite(&handle->Instance.Lock);
-	return success;
+	PoolHandle_Dec_UsbK(handle);
+	return FALSE;
 }
 
 KUSB_EXP BOOL KUSB_API UsbK_QueryPipe (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in UCHAR AlternateSettingNumber,
+    __in KUSB_HANDLE InterfaceHandle,
+    __in UCHAR AltSettingNumber,
     __in UCHAR PipeIndex,
     __out PWINUSB_PIPE_INFORMATION PipeInformation)
 {
-	USB_STACK_HANDLER_RESULT handerResult;
 
-	LUSBKFN_CTX_PREFIX();
-
-	AcquireSyncLockRead(&handle->Instance.Lock);
-
-	handerResult = UsbStackHandler_QueryPipe(
-	                   &backendContext->UsbStack,
-	                   AlternateSettingNumber,
-	                   PipeIndex,
-	                   PipeInformation);
-
-
-	if (handerResult != HANDLER_NOT_HANDLED)
-	{
-		ReleaseSyncLockRead(&handle->Instance.Lock);
-		return(BOOL)handerResult & 1;
-	}
-
-	success = LusbwError(ERROR_NOT_SUPPORTED);
-	ReleaseSyncLockRead(&handle->Instance.Lock);
-	return success;
+	return UsbStack_QueryPipe(
+	           InterfaceHandle,
+	           AltSettingNumber,
+	           PipeIndex,
+	           PipeInformation);
 }
 
 KUSB_EXP BOOL KUSB_API UsbK_SetPipePolicy (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __in KUSB_HANDLE InterfaceHandle,
     __in UCHAR PipeID,
     __in ULONG PolicyType,
     __in ULONG ValueLength,
@@ -919,10 +572,11 @@ KUSB_EXP BOOL KUSB_API UsbK_SetPipePolicy (
 {
 	ULONG requestLength = sizeof(libusb_request) + ValueLength;
 	libusb_request* request = NULL;
+	PKUSB_HANDLE_INTERNAL handle;
+	BOOL success = FALSE;
 
-	LUSBKFN_CTX_PIPE_PREFIX();
-
-	AcquireSyncLockRead(&handle->Instance.Lock);
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
 
 	request = AllocRequest(ValueLength);
 	ErrorSet(!IsHandleValid(request), Error, ERROR_NOT_ENOUGH_MEMORY, "ValueLength=%u", ValueLength);
@@ -930,10 +584,10 @@ KUSB_EXP BOOL KUSB_API UsbK_SetPipePolicy (
 	request->pipe_policy.pipe_id = PipeID;
 	request->pipe_policy.policy_type = PolicyType;
 
-	if (backendContext->Version.major > 1)
+	if (handle->Device->Backend.CtxK->Version.major > 2)
 	{
 		// this is a libusbK driver; it has full support for policies
-		success = Ioctl_Sync(DeviceHandleByPipeID(PipeID), LIBUSB_IOCTL_SET_PIPE_POLICY,
+		success = Ioctl_Sync(Dev_Handle(), LIBUSB_IOCTL_SET_PIPE_POLICY,
 		                     request, requestLength,
 		                     NULL, 0, NULL);
 	}
@@ -944,7 +598,7 @@ KUSB_EXP BOOL KUSB_API UsbK_SetPipePolicy (
 			// libusb-win32 must do a little in the driver and a little in the dll.
 			// this pipe policy is for the default pipe; they are handled by the driver.
 			SetRequestData(request, Value, ValueLength);
-			success = Ioctl_Sync(DeviceHandleByPipeID(PipeID), LIBUSB_IOCTL_SET_PIPE_POLICY,
+			success = Ioctl_Sync(Dev_Handle(), LIBUSB_IOCTL_SET_PIPE_POLICY,
 			                     request, requestLength,
 			                     NULL, 0, NULL);
 		}
@@ -958,7 +612,7 @@ KUSB_EXP BOOL KUSB_API UsbK_SetPipePolicy (
 			case PIPE_TRANSFER_TIMEOUT:
 				if (Value && (ValueLength >= 4))
 				{
-					InterlockedExchange((PLONG)&GetSetPipePolicy(backendContext, PipeID).timeout, (LONG) * ((PULONG)Value));
+					InterlockedExchange((PLONG)&GetSetPipePolicy(handle->Device->Backend.CtxK, PipeID).timeout, (LONG) * ((PULONG)Value));
 					success = TRUE;
 				}
 				break;
@@ -969,14 +623,18 @@ KUSB_EXP BOOL KUSB_API UsbK_SetPipePolicy (
 		}
 	}
 
+	Mem_Free(&request);
+	PoolHandle_Dec_UsbK(handle);
+	return success;
+
 Error:
 	Mem_Free(&request);
-	ReleaseSyncLockRead(&handle->Instance.Lock);
-	return success;
+	PoolHandle_Dec_UsbK(handle);
+	return FALSE;
 }
 
 KUSB_EXP BOOL KUSB_API UsbK_GetPipePolicy (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __in KUSB_HANDLE InterfaceHandle,
     __in UCHAR PipeID,
     __in ULONG PolicyType,
     __inout PULONG ValueLength,
@@ -984,18 +642,23 @@ KUSB_EXP BOOL KUSB_API UsbK_GetPipePolicy (
 {
 
 	libusb_request request;
+	PKUSB_HANDLE_INTERNAL handle;
+	BOOL success = FALSE;
 
-	LUSBKFN_CTX_PIPE_PREFIX();
+	ErrorParamAction(!ValueLength || !ValueLength[0], "ValueLength", return FALSE);
+	ErrorParamAction(!Value, "Value", return FALSE);
 
-	AcquireSyncLockRead(&handle->Instance.Lock);
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
 
+	Mem_Zero(&request, sizeof(request));
 	request.pipe_policy.pipe_id = PipeID;
 	request.pipe_policy.policy_type = PolicyType;
 
-	if (backendContext->Version.major > 1)
+	if (handle->Device->Backend.CtxK->Version.major > 1)
 	{
 		// this is a libusbK driver; it has full support for policies
-		success = Ioctl_Sync(DeviceHandleByPipeID(PipeID), LIBUSB_IOCTL_GET_PIPE_POLICY,
+		success = Ioctl_Sync(Dev_Handle(), LIBUSB_IOCTL_GET_PIPE_POLICY,
 		                     &request, sizeof(request),
 		                     Value, *ValueLength,
 		                     ValueLength);
@@ -1006,7 +669,7 @@ KUSB_EXP BOOL KUSB_API UsbK_GetPipePolicy (
 		{
 			// libusb-win32 must do a little in the driver and a little in the dll.
 			// this pipe policy is for the default pipe; they are handled by the driver.
-			success = Ioctl_Sync(DeviceHandleByPipeID(PipeID), LIBUSB_IOCTL_GET_PIPE_POLICY,
+			success = Ioctl_Sync(Dev_Handle(), LIBUSB_IOCTL_GET_PIPE_POLICY,
 			                     &request, sizeof(request),
 			                     Value, *ValueLength,
 			                     ValueLength);
@@ -1021,7 +684,7 @@ KUSB_EXP BOOL KUSB_API UsbK_GetPipePolicy (
 			case PIPE_TRANSFER_TIMEOUT:
 				if (*ValueLength >= 4)
 				{
-					((PULONG)Value)[0] = GetSetPipePolicy(backendContext, PipeID).timeout;
+					((PULONG)Value)[0] = GetSetPipePolicy(handle->Device->Backend.CtxK, PipeID).timeout;
 					*ValueLength = 4;
 					success = TRUE;
 				}
@@ -1033,93 +696,441 @@ KUSB_EXP BOOL KUSB_API UsbK_GetPipePolicy (
 		}
 	}
 
-	ReleaseSyncLockRead(&handle->Instance.Lock);
+	PoolHandle_Dec_UsbK(handle);
+	return success;
+}
+
+KUSB_EXP BOOL KUSB_API UsbK_SetPowerPolicy (
+    __in KUSB_HANDLE InterfaceHandle,
+    __in ULONG PolicyType,
+    __in ULONG ValueLength,
+    __in PVOID Value)
+{
+	ULONG requestLength = sizeof(libusb_request) + ValueLength;
+	libusb_request* request = NULL;
+	PKUSB_HANDLE_INTERNAL handle;
+	BOOL success;
+
+	ErrorParamAction(!ValueLength, "ValueLength", return FALSE);
+	ErrorParamAction(!Value, "Value", return FALSE);
+
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
+
+	request = AllocRequest(ValueLength);
+	ErrorSet(!IsHandleValid(request), Error, ERROR_NOT_ENOUGH_MEMORY, "ValueLength=%u", ValueLength);
+
+	request->power_policy.policy_type = PolicyType;
+	SetRequestData(request, Value, ValueLength);
+
+	success = Ioctl_Sync(Dev_Handle(), LIBUSB_IOCTL_SET_POWER_POLICY,
+	                     request, requestLength,
+	                     NULL, 0,
+	                     NULL);
+
+	Mem_Free(&request);
+	PoolHandle_Dec_UsbK(handle);
+	return success;
+
+Error:
+	Mem_Free(&request);
+	PoolHandle_Dec_UsbK(handle);
+	return FALSE;
+}
+
+KUSB_EXP BOOL KUSB_API UsbK_GetPowerPolicy (
+    __in KUSB_HANDLE InterfaceHandle,
+    __in ULONG PolicyType,
+    __inout PULONG ValueLength,
+    __out PVOID Value)
+{
+	libusb_request request;
+	PKUSB_HANDLE_INTERNAL handle;
+	BOOL success;
+
+	ErrorParamAction(!ValueLength || !ValueLength[0], "ValueLength", return FALSE);
+	ErrorParamAction(!Value, "Value", return FALSE);
+
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
+
+	Mem_Zero(&request, sizeof(request));
+	request.power_policy.policy_type = PolicyType;
+
+	success = Ioctl_Sync(Dev_Handle(), LIBUSB_IOCTL_GET_POWER_POLICY,
+	                     &request, sizeof(request),
+	                     Value, *ValueLength,
+	                     ValueLength);
+
+	PoolHandle_Dec_UsbK(handle);
+	return success;
+}
+
+BOOL k_ClaimOrReleaseInterface(__in KUSB_HANDLE InterfaceHandle,
+                               __in INT NumberOrIndex,
+                               __in UCHAR IsClaim,
+                               __in UCHAR IsIndex)
+{
+	libusb_request request;
+	PKUSB_HANDLE_INTERNAL handle;
+	INT ioControlCode = IsClaim ? LIBUSBK_IOCTL_CLAIM_INTERFACE : LIBUSBK_IOCTL_RELEASE_INTERFACE;
+	PKUSB_INTERFACE_EL interfaceEL;
+	BOOL success = FALSE;
+
+	ErrorParamAction(NumberOrIndex < 0, "NumberOrIndex", return FALSE);
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
+
+	FindInterfaceEL(handle->Device->UsbStack, interfaceEL, IsIndex, NumberOrIndex);
+	ErrorSetAction(!interfaceEL, ERROR_RESOURCE_NOT_FOUND, goto Done, "Interface not found. NumberOrIndex=%u IsClaim=%u IsIndex=%u", NumberOrIndex, IsClaim, IsIndex);
+
+	Mem_Zero(&request, sizeof(request));
+	request.intf.interface_number = (UCHAR)interfaceEL->ID;
+	success = SubmitSimpleSyncRequest(ioControlCode);
+
+	if (IsClaim && success)
+	{
+		Get_SharedInterface(handle, interfaceEL->Index).Claimed = TRUE;
+		InterlockedExchange(&handle->Selected_SharedInterface_Index, interfaceEL->Index);
+	}
+	else
+	{
+		Get_SharedInterface(handle, interfaceEL->Index).Claimed = FALSE;
+	}
+	ErrorNoSet(!success, Done, "Failed claiming/releasing interface #%u.", interfaceEL->ID);
+Done:
+	PoolHandle_Dec_UsbK(handle);
+	return success;
+}
+
+KUSB_EXP BOOL KUSB_API UsbK_ClaimInterface (
+    __in KUSB_HANDLE InterfaceHandle,
+    __in UCHAR NumberOrIndex,
+    __in BOOL IsIndex)
+{
+	return k_ClaimOrReleaseInterface(InterfaceHandle, NumberOrIndex, TRUE, (UCHAR)IsIndex);
+}
+
+KUSB_EXP BOOL KUSB_API UsbK_SelectInterface (
+    __in KUSB_HANDLE InterfaceHandle,
+    __in UCHAR NumberOrIndex,
+    __in BOOL IsIndex)
+{
+	return UsbStack_SelectInterface(InterfaceHandle, NumberOrIndex, IsIndex);
+}
+
+KUSB_EXP BOOL KUSB_API UsbK_ReleaseInterface(
+    __in KUSB_HANDLE InterfaceHandle,
+    __in UCHAR NumberOrIndex,
+    __in BOOL IsIndex)
+{
+	return k_ClaimOrReleaseInterface(InterfaceHandle, NumberOrIndex, FALSE, (UCHAR)IsIndex);
+}
+
+
+KUSB_EXP BOOL KUSB_API UsbK_SetAltInterface(
+    __in KUSB_HANDLE InterfaceHandle,
+    __in UCHAR NumberOrIndex,
+    __in BOOL IsIndex,
+    __in UCHAR AltSettingNumber)
+{
+	libusb_request request;
+	PKUSB_HANDLE_INTERNAL handle;
+	BOOL success;
+	PKDEV_SHARED_INTERFACE sharedInterface;
+	PKUSB_INTERFACE_EL intfEL;
+
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
+
+	FindInterfaceEL(handle->Device->UsbStack, intfEL, IsIndex, NumberOrIndex);
+	ErrorSet(!intfEL, Error, ERROR_RESOURCE_NOT_FOUND, "Interface not found. NumberOrIndex=%u IsIndex=%u.", NumberOrIndex, IsIndex);
+
+	sharedInterface = &Get_SharedInterface(handle, intfEL->Index);
+
+	Mem_Zero(&request, sizeof(request));
+	request.intf.interface_number = sharedInterface->ID;
+	request.intf.altsetting_number = AltSettingNumber;
+	request.intf.intf_use_index = FALSE;
+	request.intf.altf_use_index = FALSE;
+
+	success = SubmitSimpleSyncRequest(LIBUSBK_IOCTL_SET_INTERFACE);
+	ErrorNoSet(!success, Error, "Failed setting AltSettingNumber %u.", AltSettingNumber);
+
+	Update_SharedInterface_AltSetting(sharedInterface, AltSettingNumber);
+	PoolHandle_Dec_UsbK(handle);
+	return TRUE;
+
+Error:
+	PoolHandle_Dec_UsbK(handle);
+	return FALSE;
+}
+
+KUSB_EXP BOOL KUSB_API UsbK_GetAltInterface(
+    __in KUSB_HANDLE InterfaceHandle,
+    __in UCHAR NumberOrIndex,
+    __in BOOL IsIndex,
+    __out PUCHAR AltSettingNumber)
+{
+	libusb_request request;
+	PKUSB_HANDLE_INTERNAL handle;
+	BOOL success = FALSE;
+	PKDEV_SHARED_INTERFACE sharedInterface;
+	PKUSB_INTERFACE_EL intfEL;
+
+	ErrorParamAction(!AltSettingNumber, "AltSettingNumber", return FALSE);
+
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
+
+	FindInterfaceEL(handle->Device->UsbStack, intfEL, IsIndex, NumberOrIndex);
+	ErrorSet(!intfEL, Error, ERROR_NO_MORE_ITEMS, "Interface not found. NumberOrIndex=%u IsIndex=%u AltSettingNumber=%u", NumberOrIndex, IsIndex, AltSettingNumber);
+
+	sharedInterface = &Get_SharedInterface(handle, intfEL->Index);
+	Mem_Zero(&request, sizeof(request));
+	request.intf.interface_number = intfEL->ID;
+
+	success = SubmitSimpleSyncRequest(LIBUSBK_IOCTL_GET_INTERFACE);
+	ErrorNoSet(!success, Error, "Failed getting AltSettingNumber.");
+
+	*AltSettingNumber = (UCHAR)request.intf.altsetting_number;
+	Update_SharedInterface_AltSetting(sharedInterface, request.intf.altsetting_number);
+	PoolHandle_Dec_UsbK(handle);
+	return TRUE;
+
+Error:
+	PoolHandle_Dec_UsbK(handle);
+	return FALSE;
+}
+
+KUSB_EXP BOOL KUSB_API UsbK_GetCurrentFrameNumber (
+    __in KUSB_HANDLE InterfaceHandle,
+    __out PULONG FrameNumber)
+{
+	libusb_request request;
+	PKUSB_HANDLE_INTERNAL handle;
+	BOOL success;
+
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
+
+	success = SubmitSimpleSyncRequest(LIBUSBK_IOCTL_GET_CURRENTFRAME_NUMBER);
+	if (success)
+		*FrameNumber = ((PULONG)&request)[0];
+
+	PoolHandle_Dec_UsbK(handle);
+	return success;
+}
+
+KUSB_EXP BOOL KUSB_API UsbK_ResetDevice (
+    __in KUSB_HANDLE InterfaceHandle)
+{
+	libusb_request request;
+	PKUSB_HANDLE_INTERNAL handle;
+	BOOL success;
+
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
+
+	Mem_Zero(&request, sizeof(request));
+	success = SubmitSimpleSyncRequest(LIBUSB_IOCTL_RESET_DEVICE);
+
+	PoolHandle_Dec_UsbK(handle);
+	return success;
+}
+
+KUSB_EXP BOOL KUSB_API UsbK_ControlTransfer (
+    __in KUSB_HANDLE InterfaceHandle,
+    __in WINUSB_SETUP_PACKET SetupPacket,
+    __out_opt PUCHAR Buffer,
+    __in ULONG BufferLength,
+    __out_opt PULONG LengthTransferred,
+    __in_opt  LPOVERLAPPED Overlapped)
+{
+	libusb_request request;
+	INT ioctlCode;
+	PKUSB_HANDLE_INTERNAL handle;
+	BOOL success;
+
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
+
+	ioctlCode = (SetupPacket.RequestType & USB_ENDPOINT_DIRECTION_MASK) ? LIBUSB_IOCTL_CONTROL_READ : LIBUSB_IOCTL_CONTROL_WRITE;
+
+	OVLK_CONTROL_CHECK_SUBMIT(Done, Overlapped, SetupPacket, Buffer, BufferLength, Dev_Handle(), ioctlCode);
+
+	if (Overlapped)
+	{
+		Mem_Zero(&request, sizeof(request));
+		memcpy(&request.control, &SetupPacket, sizeof(request.control));
+		success = Ioctl_Async(Dev_Handle(), ioctlCode, &request, sizeof(request), Buffer, BufferLength, Overlapped);
+	}
+	else
+	{
+		UCHAR pipeID = (SetupPacket.RequestType & USB_ENDPOINT_DIRECTION_MASK) ? 0x80 : 0x00;
+
+		Mem_Zero(&request, sizeof(request));
+		memcpy(&request.control, &SetupPacket, sizeof(request.control));
+		request.timeout = GetSetPipePolicy(handle->Device->Backend.CtxK, pipeID).timeout;
+
+		success = Ioctl_Sync(Dev_Handle(), ioctlCode, &request, sizeof(request), Buffer, BufferLength, LengthTransferred);
+	}
+
+Done:
+	PoolHandle_Dec_UsbK(handle);
+	return success;
+}
+
+KUSB_EXP BOOL KUSB_API UsbK_GetOverlappedResult (
+    __in KUSB_HANDLE InterfaceHandle,
+    __in LPOVERLAPPED lpOverlapped,
+    __out LPDWORD lpNumberOfBytesTransferred,
+    __in BOOL bWait)
+{
+	PKUSB_HANDLE_INTERNAL handle;
+	BOOL success;
+
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
+
+	success = GetOverlappedResult(Dev_Handle(), lpOverlapped, lpNumberOfBytesTransferred, bWait);
+
+	PoolHandle_Dec_UsbK(handle);
+	return success;
+}
+
+#endif
+
+#ifndef PIPE_IO_FUNCTIONS______________________________________________
+
+KUSB_EXP BOOL KUSB_API UsbK_ResetPipe (
+    __in KUSB_HANDLE InterfaceHandle,
+    __in UCHAR PipeID)
+{
+	libusb_request request;
+	PKUSB_HANDLE_INTERNAL handle;
+	BOOL success;
+
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
+
+	Mem_Zero(&request, sizeof(request));
+	request.endpoint.endpoint = PipeID;
+
+	success = SubmitSimpleSyncRequest(LIBUSB_IOCTL_RESET_ENDPOINT);
+
+	PoolHandle_Dec_UsbK(handle);
+	return success;
+}
+
+KUSB_EXP BOOL KUSB_API UsbK_AbortPipe (
+    __in KUSB_HANDLE InterfaceHandle,
+    __in UCHAR PipeID)
+{
+	libusb_request request;
+	PKUSB_HANDLE_INTERNAL handle;
+	BOOL success;
+
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
+
+	Mem_Zero(&request, sizeof(request));
+	request.endpoint.endpoint = PipeID;
+
+	success = SubmitSimpleSyncRequest(LIBUSB_IOCTL_ABORT_ENDPOINT);
+
+	PoolHandle_Dec_UsbK(handle);
+	return success;
+}
+
+KUSB_EXP BOOL KUSB_API UsbK_FlushPipe (
+    __in KUSB_HANDLE InterfaceHandle,
+    __in UCHAR PipeID)
+{
+	libusb_request request;
+	PKUSB_HANDLE_INTERNAL handle;
+	BOOL success;
+
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
+
+	Mem_Zero(&request, sizeof(request));
+	request.endpoint.endpoint = PipeID;
+
+	success = SubmitSimpleSyncRequest(LIBUSB_IOCTL_FLUSH_PIPE);
+
+	PoolHandle_Dec_UsbK(handle);
 	return success;
 }
 
 KUSB_EXP BOOL KUSB_API UsbK_ReadPipe (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __in KUSB_HANDLE InterfaceHandle,
     __in UCHAR PipeID,
     __out_opt PUCHAR Buffer,
     __in ULONG BufferLength,
     __out_opt PULONG LengthTransferred,
     __in_opt LPOVERLAPPED Overlapped)
 {
-	LUSBKFN_CTX_PIPE_PREFIX();
+	PKUSB_HANDLE_INTERNAL handle;
+	BOOL success;
 
-	AcquireSyncLockRead(&handle->Instance.Lock);
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
 
-	OVLK_CHECK_SUBMIT(
-	    Done,
-	    Overlapped,
-	    PipeID,
-	    Buffer,
-	    BufferLength,
-	    DeviceHandleByPipeID(PipeID),
-	    0,
-	    LIBUSB_IOCTL_INTERRUPT_OR_BULK_READ);
+	OVLK_CHECK_SUBMIT(Done, Overlapped, PipeID, Buffer, BufferLength, Dev_Handle(), 0, LIBUSB_IOCTL_INTERRUPT_OR_BULK_READ);
 
 	if (Overlapped)
 	{
 		libusb_request request;
 		Mem_Zero(&request, sizeof(request));
 		request.endpoint.endpoint = PipeID;
-		success = Ioctl_Async(DeviceHandleByPipeID(PipeID), LIBUSB_IOCTL_INTERRUPT_OR_BULK_READ,
+		success = Ioctl_Async(Dev_Handle(), LIBUSB_IOCTL_INTERRUPT_OR_BULK_READ,
 		                      &request, sizeof(request),
 		                      Buffer, BufferLength,
 		                      Overlapped);
 	}
 	else
 	{
-		PLIBUSBK_BKND_CONTEXT backendContext;
 		libusb_request request;
 		Mem_Zero(&request, sizeof(request));
 		request.endpoint.endpoint = PipeID;
-		GET_BACKEND_CONTEXT(backendContext, handle, LIBUSBK_BKND_CONTEXT);
 
-		success = Ioctl_SyncWithTimeout(DeviceHandleByPipeID(PipeID),
+		success = Ioctl_SyncWithTimeout(Dev_Handle(),
 		                                LIBUSB_IOCTL_INTERRUPT_OR_BULK_READ,
 		                                &request,
 		                                Buffer, BufferLength,
-		                                GetSetPipePolicy(backendContext, PipeID).timeout,
+		                                GetSetPipePolicy(handle->Device->Backend.CtxK, PipeID).timeout,
 		                                PipeID,
 		                                LengthTransferred);
 	}
 
 Done:
-	ReleaseSyncLockRead(&handle->Instance.Lock);
+	PoolHandle_Dec_UsbK(handle);
 	return success;
 }
 
 KUSB_EXP BOOL KUSB_API UsbK_WritePipe (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __in KUSB_HANDLE InterfaceHandle,
     __in UCHAR PipeID,
     __in PUCHAR Buffer,
     __in ULONG BufferLength,
     __out_opt PULONG LengthTransferred,
     __in_opt LPOVERLAPPED Overlapped)
 {
+	PKUSB_HANDLE_INTERNAL handle;
+	BOOL success;
 
-	LUSBKFN_CTX_PIPE_PREFIX();
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
 
-	AcquireSyncLockRead(&handle->Instance.Lock);
-
-	OVLK_CHECK_SUBMIT(
-	    Done,
-	    Overlapped,
-	    PipeID,
-	    Buffer,
-	    BufferLength,
-	    DeviceHandleByPipeID(PipeID),
-	    0,
-	    LIBUSB_IOCTL_INTERRUPT_OR_BULK_WRITE);
+	OVLK_CHECK_SUBMIT(Done, Overlapped, PipeID, Buffer, BufferLength, Dev_Handle(), 0, LIBUSB_IOCTL_INTERRUPT_OR_BULK_WRITE);
 
 	if (Overlapped)
 	{
 		libusb_request request;
 		Mem_Zero(&request, sizeof(request));
 		request.endpoint.endpoint = PipeID;
-		success = Ioctl_Async(DeviceHandleByPipeID(PipeID),
+		success = Ioctl_Async(Dev_Handle(),
 		                      LIBUSB_IOCTL_INTERRUPT_OR_BULK_WRITE,
 		                      &request, sizeof(request),
 		                      Buffer, BufferLength,
@@ -1130,432 +1141,43 @@ KUSB_EXP BOOL KUSB_API UsbK_WritePipe (
 		libusb_request request;
 		Mem_Zero(&request, sizeof(request));
 		request.endpoint.endpoint = PipeID;
-		success = Ioctl_SyncWithTimeout(DeviceHandleByPipeID(PipeID),
+		success = Ioctl_SyncWithTimeout(Dev_Handle(),
 		                                LIBUSB_IOCTL_INTERRUPT_OR_BULK_WRITE,
 		                                &request,
 		                                Buffer, BufferLength,
-		                                GetSetPipePolicy(backendContext, PipeID).timeout,
+		                                GetSetPipePolicy(handle->Device->Backend.CtxK, PipeID).timeout,
 		                                PipeID,
 		                                LengthTransferred);
 	}
 
 Done:
-	ReleaseSyncLockRead(&handle->Instance.Lock);
-	return success;
-}
-
-KUSB_EXP BOOL KUSB_API UsbK_ControlTransfer (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in WINUSB_SETUP_PACKET SetupPacket,
-    __out_opt PUCHAR Buffer,
-    __in ULONG BufferLength,
-    __out_opt PULONG LengthTransferred,
-    __in_opt  LPOVERLAPPED Overlapped)
-{
-	libusb_request request;
-	INT ioctlCode;
-	UCHAR PipeID = 0;
-	LUSBKFN_CTX_PIPE_PREFIX();
-
-	AcquireSyncLockRead(&handle->Instance.Lock);
-
-	ioctlCode = (SetupPacket.RequestType & USB_ENDPOINT_DIRECTION_MASK) ? LIBUSB_IOCTL_CONTROL_READ : LIBUSB_IOCTL_CONTROL_WRITE;
-
-	OVLK_CHECK_SUBMIT_CONTROL(Done, Overlapped, SetupPacket, Buffer, BufferLength, DeviceHandleByPipeID(PipeID), ioctlCode);
-
-	if (Overlapped)
-	{
-		Mem_Zero(&request, sizeof(request));
-		memcpy(&request.control, &SetupPacket, sizeof(request.control));
-		success = Ioctl_Async(DeviceHandleByPipeID(PipeID), ioctlCode, &request, sizeof(request), Buffer, BufferLength, Overlapped);
-	}
-	else
-	{
-		UCHAR pipeID = (SetupPacket.RequestType & USB_ENDPOINT_DIRECTION_MASK) ? 0x80 : 0x00;
-
-		Mem_Zero(&request, sizeof(request));
-		memcpy(&request.control, &SetupPacket, sizeof(request.control));
-		request.timeout = GetSetPipePolicy(backendContext, pipeID).timeout;
-
-		success = Ioctl_Sync(DeviceHandleByPipeID(PipeID), ioctlCode, &request, sizeof(request), Buffer, BufferLength, LengthTransferred);
-	}
-
-Done:
-	ReleaseSyncLockRead(&handle->Instance.Lock);
-	return success;
-}
-
-KUSB_EXP BOOL KUSB_API UsbK_ResetPipe (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in UCHAR PipeID)
-{
-	libusb_request request;
-
-	LUSBKFN_CTX_PIPE_PREFIX();
-
-	AcquireSyncLockRead(&handle->Instance.Lock);
-
-	Mem_Zero(&request, sizeof(request));
-	request.endpoint.endpoint = PipeID;
-
-	success = Ioctl_Sync(DeviceHandleByPipeID(PipeID), LIBUSB_IOCTL_RESET_ENDPOINT,
-	                     &request, sizeof(request),
-	                     NULL, 0,
-	                     NULL);
-
-	ReleaseSyncLockRead(&handle->Instance.Lock);
-	return success;
-}
-
-KUSB_EXP BOOL KUSB_API UsbK_AbortPipe (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in UCHAR PipeID)
-{
-	libusb_request request;
-
-	LUSBKFN_CTX_PIPE_PREFIX();
-
-	AcquireSyncLockRead(&handle->Instance.Lock);
-
-	Mem_Zero(&request, sizeof(request));
-	request.endpoint.endpoint = PipeID;
-
-	success = Ioctl_Sync(DeviceHandleByPipeID(PipeID), LIBUSB_IOCTL_ABORT_ENDPOINT,
-	                     &request, sizeof(request),
-	                     NULL, 0,
-	                     NULL);
-
-	ReleaseSyncLockRead(&handle->Instance.Lock);
-	return success;
-}
-
-KUSB_EXP BOOL KUSB_API UsbK_FlushPipe (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in UCHAR PipeID)
-{
-	libusb_request request;
-
-	LUSBKFN_CTX_PIPE_PREFIX();
-
-	AcquireSyncLockRead(&handle->Instance.Lock);
-
-	Mem_Zero(&request, sizeof(request));
-	request.endpoint.endpoint = PipeID;
-
-	success = Ioctl_Sync(DeviceHandleByPipeID(PipeID), LIBUSB_IOCTL_FLUSH_PIPE,
-	                     &request, sizeof(request),
-	                     NULL, 0,
-	                     NULL);
-
-	ReleaseSyncLockRead(&handle->Instance.Lock);
-	return success;
-}
-
-KUSB_EXP BOOL KUSB_API UsbK_SetPowerPolicy (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in ULONG PolicyType,
-    __in ULONG ValueLength,
-    __in PVOID Value)
-{
-	libusb_request* request;
-	UCHAR PipeID = 0;
-	LUSBKFN_CTX_PIPE_PREFIX();
-
-	AcquireSyncLockRead(&handle->Instance.Lock);
-	ErrorParam(Value == NULL, Error, "Value");
-
-	request = AllocRequest(ValueLength);
-	ErrorSet(!IsHandleValid(request), Error, ERROR_NOT_ENOUGH_MEMORY, "ValueLength=%u", ValueLength);
-
-	request->power_policy.policy_type = PolicyType;
-	SetRequestData(request, Value, ValueLength);
-
-	success = Ioctl_Sync(DeviceHandleByPipeID(PipeID), LIBUSB_IOCTL_SET_POWER_POLICY,
-	                     request, sizeof(libusb_request) + ValueLength,
-	                     NULL, 0,
-	                     NULL);
-
-Error:
-	Mem_Free(&request);
-	ReleaseSyncLockRead(&handle->Instance.Lock);
-	return success;
-}
-
-KUSB_EXP BOOL KUSB_API UsbK_GetPowerPolicy (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in ULONG PolicyType,
-    __inout PULONG ValueLength,
-    __out PVOID Value)
-{
-	libusb_request request;
-	UCHAR PipeID = 0;
-	LUSBKFN_CTX_PIPE_PREFIX();
-
-	AcquireSyncLockRead(&handle->Instance.Lock);
-	ErrorParam(!Value, Error, "Value");
-	ErrorParam(!ValueLength, Error, "ValueLength");
-
-	Mem_Zero(&request, sizeof(request));
-	request.power_policy.policy_type = PolicyType;
-
-	success = Ioctl_Sync(DeviceHandleByPipeID(PipeID), LIBUSB_IOCTL_GET_POWER_POLICY,
-	                     &request, sizeof(request),
-	                     Value, *ValueLength,
-	                     ValueLength);
-
-Error:
-	ReleaseSyncLockRead(&handle->Instance.Lock);
-	return success;
-}
-
-KUSB_EXP BOOL KUSB_API UsbK_GetOverlappedResult (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in LPOVERLAPPED lpOverlapped,
-    __out LPDWORD lpNumberOfBytesTransferred,
-    __in BOOL bWait)
-{
-	LUSBKFN_CTX_INTERFACE_PREFIX();
-
-	AcquireSyncLockRead(&handle->Instance.Lock);
-
-	GetStackInterfaceCache();
-	ErrorStackInterfaceCache();
-
-	success = GetOverlappedResult(deviceHandle, lpOverlapped, lpNumberOfBytesTransferred, bWait);
-
-Error:
-	ReleaseSyncLockRead(&handle->Instance.Lock);
-	return success;
-}
-
-BOOL KUSB_API k_AddDeviceToStackCB(__in KLST_HANDLE List,
-                                   __in PKLST_DEV_INFO Item,
-                                   __in PLIBUSBK_BKND_CONTEXT BackendContext)
-{
-	BOOL success;
-
-	UNREFERENCED_PARAMETER(List);
-
-	success = UsbStack_AddDevice(
-	              &BackendContext->UsbStack,
-	              Item->DevicePath,
-	              NULL,
-	              BackendContext);
-
-	if (!success)
-	{
-		USBWRN("skipping composite device %s. ErrorCode=%08Xh\n",
-		       Item->DeviceDesc, GetLastError());
-	}
-
-	return TRUE;
-}
-
-KUSB_EXP BOOL KUSB_API UsbK_Open(
-    __in PKLST_DEV_INFO DeviceListItem,
-    __out PLIBUSBK_INTERFACE_HANDLE InterfaceHandle)
-{
-	BOOL success;
-	PKUSB_INTERFACE_HANDLE_INTERNAL interfaceHandle = NULL;
-	PLIBUSBK_BKND_CONTEXT backendContext = NULL;
-
-	CheckLibInitialized();
-
-	if(!IsHandleValid(DeviceListItem) || !IsHandleValid(InterfaceHandle))
-	{
-		success = LusbwError(ERROR_INVALID_HANDLE);
-		goto Error;
-	}
-
-	success = k_CreateContext(&interfaceHandle);
-	ErrorNoSet(!success, Error, "->k_CreateContext");
-
-	K_CTX(backendContext, interfaceHandle);
-	ErrorHandle(!backendContext, Error, "backendContext");
-
-	success = UsbStack_AddDevice(
-	              &backendContext->UsbStack,
-	              DeviceListItem->DevicePath,
-	              NULL,
-	              backendContext);
-
-	ErrorNoSet(!backendContext->UsbStack.DeviceCount, Error, "failed opening %s device. ErrorCode=%d",
-	           DeviceListItem->DeviceDesc, GetLastError());
-
-	*InterfaceHandle = interfaceHandle;
-	return TRUE;
-
-Error:
-	k_DestroyContext(interfaceHandle);
-	return FALSE;
-}
-
-KUSB_EXP BOOL KUSB_API UsbK_Close(
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle)
-{
-	LUSBKFN_CTX_PREFIX();
-
-	// k_DestroyContext will also destroy the lock.
-	AcquireSyncLockWrite(&handle->Instance.Lock);
-
-	success = k_DestroyContext(handle);
-	if (!success)
-	{
-		USBERR("->k_DestroyContext\n");
-	}
-
-	return success;
-
-}
-
-
-KUSB_EXP BOOL KUSB_API UsbK_ClaimInterface (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in UCHAR InterfaceNumberOrIndex,
-    __in BOOL IsIndex)
-{
-
-	return k_ClaimOrReleaseInterface(InterfaceHandle, InterfaceNumberOrIndex, TRUE, (UCHAR)IsIndex);
-}
-
-
-KUSB_EXP BOOL KUSB_API UsbK_ReleaseInterface(
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in UCHAR InterfaceNumberOrIndex,
-    __in BOOL IsIndex)
-{
-	return k_ClaimOrReleaseInterface(InterfaceHandle, InterfaceNumberOrIndex, FALSE, (UCHAR)IsIndex);
-}
-
-
-KUSB_EXP BOOL KUSB_API UsbK_SetAltInterface(
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in UCHAR InterfaceNumberOrIndex,
-    __in BOOL IsIndex,
-    __in UCHAR AltInterfaceNumber)
-{
-	PKUSB_INTERFACE_EL interfaceEL = NULL;
-	libusb_request request;
-	LUSBKFN_CTX_PREFIX();
-
-	AcquireSyncLockWrite(&handle->Instance.Lock);
-
-	if (IsIndex)
-	{
-		DL_SEARCH_SCALAR(backendContext->UsbStack.InterfaceList, interfaceEL, VirtualIndex, InterfaceNumberOrIndex);
-	}
-	else
-	{
-		DL_SEARCH_SCALAR(backendContext->UsbStack.InterfaceList, interfaceEL, Number, InterfaceNumberOrIndex);
-	}
-	if (!interfaceEL)
-	{
-		USBWRN("interface #%u not found.\n", InterfaceNumberOrIndex);
-		success = LusbwError(ERROR_NO_MORE_ITEMS);
-		goto Error;
-	}
-
-	Mem_Zero(&request, sizeof(request));
-	request.intf.interface_number = interfaceEL->Number;
-	request.intf.altsetting_number = AltInterfaceNumber;
-
-	request.intf.intf_use_index = FALSE;
-	request.intf.altf_use_index = FALSE;
-
-	success = SubmitSimpleSyncRequest(interfaceEL->ParentDevice->Device->MasterDeviceHandle, LIBUSBK_IOCTL_SET_INTERFACE);
-	if (success)
-	{
-		success = (BOOL)UsbStackHandler_SetAltInterface(
-		              &backendContext->UsbStack,
-		              request.intf.interface_number, FALSE,
-		              request.intf.altsetting_number, FALSE);
-		if (!success)
-		{
-			USBERR("->UsbStackHandler_SetAltInterface\n");
-		}
-	}
-
-Error:
-	ReleaseSyncLockWrite(&handle->Instance.Lock);
-	return success;
-}
-
-
-KUSB_EXP BOOL KUSB_API UsbK_GetAltInterface(
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __in UCHAR InterfaceNumberOrIndex,
-    __in BOOL IsIndex,
-    __out PUCHAR AltInterfaceNumber)
-{
-	PKUSB_INTERFACE_EL interfaceEL = NULL;
-	libusb_request request;
-	LUSBKFN_CTX_PREFIX();
-
-	AcquireSyncLockWrite(&handle->Instance.Lock);
-
-	ErrorParam(!AltInterfaceNumber, Error, "AltInterfaceNumber");
-
-	if (IsIndex)
-	{
-		DL_SEARCH_SCALAR(backendContext->UsbStack.InterfaceList, interfaceEL, VirtualIndex, InterfaceNumberOrIndex);
-	}
-	else
-	{
-		DL_SEARCH_SCALAR(backendContext->UsbStack.InterfaceList, interfaceEL, Number, InterfaceNumberOrIndex);
-	}
-	if (!interfaceEL)
-	{
-		USBWRN("interface #%u not found.\n", InterfaceNumberOrIndex);
-		success = LusbwError(ERROR_NO_MORE_ITEMS);
-		goto Error;
-	}
-
-	Mem_Zero(&request, sizeof(request));
-	request.intf.interface_number = interfaceEL->Number;
-	request.intf.intf_use_index = FALSE;
-
-	success = SubmitSimpleSyncRequest(interfaceEL->ParentDevice->Device->MasterDeviceHandle, LIBUSBK_IOCTL_GET_INTERFACE);
-	if (success)
-	{
-		UsbStackHandler_SetAltInterface(
-		    &backendContext->UsbStack,
-		    request.intf.interface_number, FALSE,
-		    request.intf.altsetting_number, FALSE);
-
-		*AltInterfaceNumber = (UCHAR)request.intf.altsetting_number;
-	}
-
-Error:
-	ReleaseSyncLockWrite(&handle->Instance.Lock);
+	PoolHandle_Dec_UsbK(handle);
 	return success;
 }
 
 KUSB_EXP BOOL KUSB_API UsbK_IsoReadPipe (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __in KUSB_HANDLE InterfaceHandle,
     __inout PKISO_CONTEXT IsoContext,
     __out_opt PUCHAR Buffer,
     __in ULONG BufferLength,
     __in LPOVERLAPPED Overlapped)
 {
 	ULONG IsoContextSize;
-	LUSBKFN_CTX_PIPE_PREFIX();
+	PKUSB_HANDLE_INTERNAL handle;
+	BOOL success;
 
-	AcquireSyncLockRead(&handle->Instance.Lock);
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
 
 	ErrorParam(!IsHandleValid(Overlapped), Error, "Overlapped");
 	ErrorParam(!IsHandleValid(IsoContext), Error, "IsoContext");
 
 	IsoContextSize = sizeof(KISO_CONTEXT) + (IsoContext->NumberOfPackets * sizeof(KISO_PACKET));
-
-	OVLK_ISO_CHECK_SUBMIT(
-	    Done,
-	    Overlapped,
-	    IsoContext,
-	    IsoContextSize,
-	    Buffer,
-	    BufferLength,
-	    DeviceHandleByPipeID(IsoContext->PipeID),
-	    LIBUSBK_IOCTL_ISOEX_READ) else
+	if (IS_OVLK(Overlapped))
+	{
+		OVLK_ISO_SUBMIT(Overlapped, IsoContext, IsoContextSize, Buffer, BufferLength, Dev_Handle(), LIBUSBK_IOCTL_ISOEX_READ);
+	}
+	else
 	{
 		libusb_request request;
 		Mem_Zero(&request, sizeof(request));
@@ -1563,46 +1185,43 @@ KUSB_EXP BOOL KUSB_API UsbK_IsoReadPipe (
 		request.IsoEx.IsoContextSize = IsoContextSize;
 		request.IsoEx.PipeID = IsoContext->PipeID;
 
-		success = Ioctl_Async(DeviceHandleByPipeID(IsoContext->PipeID), LIBUSBK_IOCTL_ISOEX_READ,
+		success = Ioctl_Async(Dev_Handle(), LIBUSBK_IOCTL_ISOEX_READ,
 		                      &request, sizeof(request),
 		                      Buffer, BufferLength,
 		                      Overlapped);
 	}
 
-Done:
-	ReleaseSyncLockRead(&handle->Instance.Lock);
+	PoolHandle_Dec_UsbK(handle);
 	return success;
 Error:
-	ReleaseSyncLockRead(&handle->Instance.Lock);
+	PoolHandle_Dec_UsbK(handle);
 	return FALSE;
 }
 
 KUSB_EXP BOOL KUSB_API UsbK_IsoWritePipe (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
+    __in KUSB_HANDLE InterfaceHandle,
     __inout PKISO_CONTEXT IsoContext,
     __in PUCHAR Buffer,
     __in ULONG BufferLength,
     __in LPOVERLAPPED Overlapped)
 {
 	ULONG IsoContextSize;
-	LUSBKFN_CTX_PIPE_PREFIX();
+	PKUSB_HANDLE_INTERNAL handle;
+	BOOL success;
 
-	AcquireSyncLockRead(&handle->Instance.Lock);
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
 
 	ErrorParam(!IsHandleValid(Overlapped), Error, "Overlapped");
 	ErrorParam(!IsHandleValid(IsoContext), Error, "IsoContext");
 
 	IsoContextSize = sizeof(KISO_CONTEXT) + (IsoContext->NumberOfPackets * sizeof(KISO_PACKET));
 
-	OVLK_ISO_CHECK_SUBMIT(
-	    Done,
-	    Overlapped,
-	    IsoContext,
-	    IsoContextSize,
-	    Buffer,
-	    BufferLength,
-	    DeviceHandleByPipeID(IsoContext->PipeID),
-	    LIBUSBK_IOCTL_ISOEX_WRITE) else
+	if (IS_OVLK(Overlapped))
+	{
+		OVLK_ISO_SUBMIT(Overlapped, IsoContext, IsoContextSize, Buffer, BufferLength, Dev_Handle(), LIBUSBK_IOCTL_ISOEX_WRITE);
+	}
+	else
 	{
 		libusb_request request;
 		Mem_Zero(&request, sizeof(request));
@@ -1610,65 +1229,20 @@ KUSB_EXP BOOL KUSB_API UsbK_IsoWritePipe (
 		request.IsoEx.IsoContextSize = IsoContextSize;
 		request.IsoEx.PipeID = IsoContext->PipeID;
 
-		success = Ioctl_Async(DeviceHandleByPipeID(IsoContext->PipeID), LIBUSBK_IOCTL_ISOEX_WRITE,
+		success = Ioctl_Async(Dev_Handle(), LIBUSBK_IOCTL_ISOEX_WRITE,
 		                      &request, sizeof(request),
 		                      Buffer, BufferLength,
 		                      Overlapped);
 	}
 
-Done:
-	ReleaseSyncLockRead(&handle->Instance.Lock);
+	PoolHandle_Dec_UsbK(handle);
 	return success;
 Error:
-	ReleaseSyncLockRead(&handle->Instance.Lock);
+	PoolHandle_Dec_UsbK(handle);
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API UsbK_GetCurrentFrameNumber (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle,
-    __out PULONG FrameNumber)
-{
-	libusb_request request;
-	UCHAR PipeID = 0;
-	LUSBKFN_CTX_PIPE_PREFIX();
-
-	AcquireSyncLockRead(&handle->Instance.Lock);
-
-	Mem_Zero(&request, sizeof(request));
-
-	success = Ioctl_Sync(DeviceHandleByPipeID(PipeID), LIBUSBK_IOCTL_GET_CURRENTFRAME_NUMBER,
-	                     &request, sizeof(request),
-	                     &request, sizeof(request),
-	                     NULL);
-	if (success)
-	{
-		*FrameNumber = *((PULONG)&request);
-	}
-	ReleaseSyncLockRead(&handle->Instance.Lock);
-	return success;
-}
-
-KUSB_EXP BOOL KUSB_API UsbK_ResetDevice (
-    __in LIBUSBK_INTERFACE_HANDLE InterfaceHandle)
-{
-	libusb_request request;
-	LUSBKFN_CTX_INTERFACE_PREFIX();
-
-	AcquireSyncLockRead(&handle->Instance.Lock);
-
-	GetStackInterfaceCache();
-	ErrorStackInterfaceCache();
-
-	Mem_Zero(&request, sizeof(request));
-	success = Ioctl_Sync(deviceHandle, LIBUSB_IOCTL_RESET_DEVICE,
-	                     &request, sizeof(request),
-	                     NULL, 0,
-	                     NULL);
-
-Error:
-	ReleaseSyncLockRead(&handle->Instance.Lock);
-	return success;
-}
+#endif
 
 BOOL GetProcAddress_UsbK(__out KPROC* ProcAddress, __in ULONG FunctionID)
 {
@@ -1772,11 +1346,16 @@ BOOL GetProcAddress_UsbK(__out KPROC* ProcAddress, __in ULONG FunctionID)
 	case KUSB_FNID_GetCurrentFrameNumber:
 		*ProcAddress = (KPROC)UsbK_GetCurrentFrameNumber;
 		break;
+	case KUSB_FNID_Clone:
+		*ProcAddress = (KPROC)UsbK_Clone;
+		break;
+	case KUSB_FNID_SelectInterface:
+		*ProcAddress = (KPROC)UsbK_SelectInterface;
+		break;
 
 	default:
-		rtn = ERROR_NOT_SUPPORTED;
-		*ProcAddress = (KPROC)NULL;
-		USBERR("Unrecognized function id! FunctionID=%u\n", FunctionID);
+		GetProcAddress_Unsupported(ProcAddress, FunctionID);
+		return LusbwError(ERROR_NOT_SUPPORTED);
 		break;
 
 	}

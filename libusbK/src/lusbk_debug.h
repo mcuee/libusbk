@@ -14,8 +14,6 @@
 //
 extern ULONG DebugLevel;
 
-#if (defined(DBG) || defined (_DEBUG))
-
 #ifndef LOG_APPNAME
 
 #ifdef RC_FILENAME_STR
@@ -41,7 +39,18 @@ extern ULONG DebugLevel;
 #endif
 
 #define IFDBGLVL(level) if (DebugLevel > level)
-#define USB_LN "\n     "
+#define USB_LN "\r\n"
+
+#define USBLOG_PRINTLN(format,...) DebugOutputFunction(format USB_LN,__VA_ARGS__)
+#define USBLOG_PRINT(format,...) DebugOutputFunction(format,__VA_ARGS__)
+
+#define USBERRN(format,...) USBERR(format USB_LN,__VA_ARGS__)
+#define USBWRNN(format,...) USBWRN(format USB_LN,__VA_ARGS__)
+#define USBMSGN(format,...) USBMSG(format USB_LN,__VA_ARGS__)
+#define USBDBGN(format,...) USBDBG(format USB_LN,__VA_ARGS__)
+#define USBDEVN(format,...) USBDEV(format USB_LN,__VA_ARGS__)
+
+#if (defined(DBG) || defined (_DEBUG))
 
 #define USBLOG(MinDebugLevel,LogAppNameString,CategoryText,FunctionText,format,...) \
 	IFDBGLVL(MinDebugLevel) DebugOutputFunction("%s%s%s " format, CategoryText, LogAppNameString, FunctionText,__VA_ARGS__)
@@ -54,14 +63,11 @@ extern ULONG DebugLevel;
 
 #define USBE_SUCCESS(success,format,...) USBLOG(2,LOG_APPNAME,((success)?"[Success!]":"[Fail!]"),__FUNCTION__,format,__VA_ARGS__)
 #define USBE_OK(format,...) USBMSG("[Ok!] " format,__VA_ARGS__)
-#define USBE_PARAM(ParameterName) USBERR("invalid parameter: %s\n",DEFINE_TO_STR(ParameterName))
+#define USBE_PARAM(ParameterName) USBERRN("invalid parameter: %s",DEFINE_TO_STR(ParameterName))
 
 #else
 // Logging Off //
 
-FORCEINLINE VOID USB_LOG_NOP() {}
-
-#define USB_LN
 #define USBERR(format,...) USB_LOG_NOP()
 #define USBMSG(format,...) USB_LOG_NOP()
 #define USBWRN(format,...) USB_LOG_NOP()
@@ -73,5 +79,7 @@ FORCEINLINE VOID USB_LOG_NOP() {}
 #define USBE_SUCCESS(success,format,...) USB_LOG_NOP()
 
 #endif // defined(DBG) || defined (_DEBUG)
+
+FORCEINLINE VOID USB_LOG_NOP() {}
 
 #endif // __KUSB_DEBUG_H__

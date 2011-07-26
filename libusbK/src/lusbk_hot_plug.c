@@ -16,18 +16,38 @@ License files are located in a license folder at the root of source and
 binary distributions.
 ********************************************************************!*/
 #include "lusbk_private.h"
-#include "lusbk_hot_plug.h"
 #include "lusbk_handles.h"
+#include "lusbk_linked_list.h"
 #include <process.h>
 #include <dbt.h>
 
-#pragma warning(disable:4127)
+// warning C4127: conditional expression is constant.
+#pragma warning(disable: 4127)
 
 #define DEFER_THRU_TIMER
 
 #define IDT_KHOT_DBT_DEVNODES_CHANGED		0xA
 #define IDT_KHOT_DBT_DEVICEARRIVAL			0xB
 #define IDT_KHOT_DBT_DEVICEREMOVAL			0xC
+
+#define GUID_MAXSIZE 38
+#define GUID_FORMAT_STRING "%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X"
+#define IsPatternMatch(IsMatch,HotHandle,DeviceInfo,FieldName) if (strlen(HotHandle->Public.PatternMatch.FieldName)) {		\
+	if (!MatchPattern(HotHandle->Public.PatternMatch.FieldName, DeviceInfo->FieldName))										\
+		IsMatch = FALSE;																									\
+}
+
+#define KUSB_STR_EL_CLEANUP(StrElList, StrEL, StrTmp)	\
+	DL_FOREACH_SAFE(StrElList, StrEL, StrTmp)			\
+	{													\
+		DL_DELETE(StrElList, StrEL);					\
+		Mem_Free(&StrEL);								\
+	}
+
+#define hotk_CmpBroadcastGuid(BroadcastEL, DevIntfGUID) memcmp(&BroadcastEL->InterfaceGUID,&DevIntfGUID,sizeof(GUID))
+
+#define HOTWND_LOCK_ACQUIRE()
+#define HOTWND_LOCK_RELEASE()
 
 typedef struct _KHOT_BROADCAST_EL
 {
@@ -37,36 +57,6 @@ typedef struct _KHOT_BROADCAST_EL
 	struct _KHOT_BROADCAST_EL* prev;
 	struct _KHOT_BROADCAST_EL* next;
 } KHOT_BROADCAST_EL, *PKHOT_BROADCAST_EL;
-
-typedef struct _KHOT_NOTIFIER_LIST
-{
-	volatile long Lock;
-
-	KLST_HANDLE DeviceList;
-	ULONG MaxRefreshMS;
-
-	PKHOT_HANDLE_INTERNAL Items;
-	LONG Count;
-
-	CHAR WindowName[32];
-	HINSTANCE hAppInstance;
-
-	HANDLE ThreadHandle;
-	UINT ThreadID;
-
-	PKHOT_BROADCAST_EL BroadcastList;
-
-	volatile HWND Hwnd;
-	volatile long UpdatePendingCount;
-} KHOT_NOTIFIER_LIST;
-typedef KHOT_NOTIFIER_LIST* PKHOT_NOTIFIER_LIST;
-
-#define KUSB_STR_EL_CLEANUP(StrElList, StrEL, StrTmp)	\
-	DL_FOREACH_SAFE(StrElList, StrEL, StrTmp)			\
-	{													\
-		DL_DELETE(StrElList, StrEL);					\
-		Mem_Free(&StrEL);								\
-	}
 
 typedef struct _KUSB_STR_EL
 {
@@ -82,21 +72,51 @@ typedef struct _KLST_NOTIFY_CONTEXT
 	PKUSB_STR_EL DevInstList;
 } KLST_NOTIFY_CONTEXT, *PKLST_NOTIFY_CONTEXT;
 
+typedef struct _KHOT_NOTIFIER_LIST
+{
+	volatile HWND Hwnd;
+	volatile long HotLockCount;
+	volatile long DevNodesChangePending;
+
+	ATOM WindowAtom;
+
+	KLST_HANDLE DeviceList;
+	ULONG MaxRefreshMS;
+
+	PKHOT_HANDLE_INTERNAL Items;
+
+	CHAR WindowName[32];
+	HINSTANCE hAppInstance;
+
+	HANDLE ThreadHandle;
+	UINT ThreadID;
+
+	PKHOT_BROADCAST_EL BroadcastList;
+
+} KHOT_NOTIFIER_LIST;
+typedef KHOT_NOTIFIER_LIST* PKHOT_NOTIFIER_LIST;
+
 static LPCSTR g_WindowClassHotK = "HotK_NotificationWindowClass";
-static KHOT_NOTIFIER_LIST g_HotNotifierList = {0, NULL, 1000, NULL, 0, {0}, NULL, NULL, 0, NULL, NULL, 0};
+static KHOT_NOTIFIER_LIST g_HotNotifierList = {NULL, 0, 0, 0, NULL, 1000, NULL, {0}, NULL, NULL, 0, NULL};
 
-static LRESULT CALLBACK hotk_WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
-static BOOL hotk_RegisterWindowClass(PKHOT_NOTIFIER_LIST NotifierList);
-static BOOL hotk_CreateWindow(PKHOT_NOTIFIER_LIST NotifierList);
-static BOOL hotk_CreateThread(PKHOT_NOTIFIER_LIST NotifierList);
-static unsigned _stdcall hotk_ThreadProc(PKHOT_NOTIFIER_LIST NotifierList);
+static LRESULT CALLBACK h_WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+static unsigned _stdcall h_ThreadProc(PKHOT_NOTIFIER_LIST NotifierList);
 
-static BOOL KUSB_API hotk_DevEnum_PlugWaiters(KLST_HANDLE DeviceList, PKLST_DEV_INFO DeviceInfo, PKLST_NOTIFY_CONTEXT Context);
-static BOOL KUSB_API hotk_DevEnum_PlugAllForWaiter(KLST_HANDLE DeviceList, PKLST_DEV_INFO DeviceInfo, PKLST_NOTIFY_CONTEXT Context);
-static BOOL KUSB_API hotk_DevEnum_ClearSyncResults(KLST_HANDLE DeviceList, PKLST_DEV_INFO DeviceInfo, PKLST_NOTIFY_CONTEXT Context);
-static BOOL hotk_NotifyWaiters(__in_opt PKHOT_HANDLE_INTERNAL HotHandle, BOOL ClearSyncResultsWhenComplete);
+static BOOL h_Register_Atom(PKHOT_NOTIFIER_LIST NotifierList);
+static BOOL h_Create_Thread(PKHOT_NOTIFIER_LIST NotifierList);
+static BOOL h_Create_Hwnd(PKHOT_NOTIFIER_LIST NotifierList, HWND* hwnd);
 
-static BOOL hotk_NotifyWaiters(__in_opt PKHOT_HANDLE_INTERNAL HotHandle, BOOL ClearSyncResultsWhenComplete)
+static BOOL KUSB_API h_DevEnum_PlugWaiters(KLST_HANDLE DeviceList, KLST_DEVINFO* DeviceInfo, PKLST_NOTIFY_CONTEXT Context);
+static BOOL KUSB_API h_DevEnum_ClearSyncResults(KLST_HANDLE DeviceList, KLST_DEVINFO* DeviceInfo, PKLST_NOTIFY_CONTEXT Context);
+static BOOL KUSB_API h_DevEnum_RegisterForBroadcast(KLST_HANDLE DeviceList, KLST_DEVINFO* DeviceInfo, PKHOT_HANDLE_INTERNAL Context);
+static BOOL KUSB_API h_DevEnum_UpdateForRemoval(KLST_HANDLE DeviceList, KLST_DEVINFO* DeviceInfo, PDEV_BROADCAST_DEVICEINTERFACE_A Context);
+
+static BOOL h_NotifyWaiters(__in_opt PKHOT_HANDLE_INTERNAL HotHandle, BOOL ClearSyncResultsWhenComplete);
+static BOOL h_RegisterForBroadcast(PKHOT_HANDLE_INTERNAL HotHandle);
+
+static BOOL h_IsHotMatch(PKHOT_HANDLE_INTERNAL HotHandle, KLST_DEVINFO* DeviceInfo);
+
+static BOOL h_NotifyWaiters(__in_opt PKHOT_HANDLE_INTERNAL HotHandle, BOOL ClearSyncResultsWhenComplete)
 {
 	PKUSB_STR_EL strEL, strTmp;
 	KLST_NOTIFY_CONTEXT hotCtx;
@@ -104,27 +124,36 @@ static BOOL hotk_NotifyWaiters(__in_opt PKHOT_HANDLE_INTERNAL HotHandle, BOOL Cl
 	memset(&hotCtx, 0, sizeof(hotCtx));
 	hotCtx.HotHandle = HotHandle;
 
-	LstK_Enumerate(g_HotNotifierList.DeviceList, hotk_DevEnum_PlugWaiters, &hotCtx);
+	LstK_Enumerate(g_HotNotifierList.DeviceList, h_DevEnum_PlugWaiters, &hotCtx);
 
 	if (ClearSyncResultsWhenComplete)
-		LstK_Enumerate(g_HotNotifierList.DeviceList, hotk_DevEnum_ClearSyncResults, &hotCtx);
+		LstK_Enumerate(g_HotNotifierList.DeviceList, h_DevEnum_ClearSyncResults, &hotCtx);
 
 	KUSB_STR_EL_CLEANUP(hotCtx.DevInstList, strEL, strTmp);
 
 	return TRUE;
 }
 
-#define IsPatternMatch(IsMatch,HotHandle,DeviceInfo,FieldName) if (strlen(HotHandle->Public.PatternMatch.FieldName)) {		\
-	if (!MatchInstanceID(HotHandle->Public.PatternMatch.FieldName, DeviceInfo->FieldName))									\
-		IsMatch = FALSE;																									\
+static void KUSB_API Cleanup_HotK(PKHOT_HANDLE_INTERNAL handle)
+{
+	PKHOT_HANDLE_INTERNAL nextHandle;
+	DL_FOREACH(g_HotNotifierList.Items, nextHandle)
+	{
+		if (nextHandle == handle)
+		{
+			PoolHandle_Dead_HotK(handle);
+			DL_DELETE(g_HotNotifierList.Items, handle);
+			break;
+		}
+	}
 }
 
-static BOOL KUSB_API hotk_DevEnum_UpdateForRemoval(KLST_HANDLE DeviceList, PKLST_DEV_INFO DeviceInfo, PDEV_BROADCAST_DEVICEINTERFACE_A Context)
+static BOOL KUSB_API h_DevEnum_UpdateForRemoval(KLST_HANDLE DeviceList, KLST_DEVINFO* DeviceInfo, PDEV_BROADCAST_DEVICEINTERFACE_A Context)
 {
 	UNREFERENCED_PARAMETER(DeviceList);
 
 	if (!DeviceInfo->Connected) return TRUE;
-	if (MatchInstanceID(DeviceInfo->SymbolicLink, Context->dbcc_name))
+	if (MatchPattern(DeviceInfo->SymbolicLink, Context->dbcc_name))
 	{
 		DeviceInfo->SyncResults.Removed = 1;
 		DeviceInfo->Connected = FALSE;
@@ -135,7 +164,7 @@ static BOOL KUSB_API hotk_DevEnum_UpdateForRemoval(KLST_HANDLE DeviceList, PKLST
 	return TRUE;
 }
 
-static BOOL KUSB_API hotk_DevEnum_ClearSyncResults(KLST_HANDLE DeviceList, PKLST_DEV_INFO DeviceInfo, PKLST_NOTIFY_CONTEXT Context)
+static BOOL KUSB_API h_DevEnum_ClearSyncResults(KLST_HANDLE DeviceList, KLST_DEVINFO* DeviceInfo, KLST_NOTIFY_CONTEXT* Context)
 {
 	UNREFERENCED_PARAMETER(DeviceList);
 	UNREFERENCED_PARAMETER(Context);
@@ -145,10 +174,7 @@ static BOOL KUSB_API hotk_DevEnum_ClearSyncResults(KLST_HANDLE DeviceList, PKLST
 	return TRUE;
 }
 
-#define GUID_MAXSIZE 38
-#define GUID_FORMAT_STRING "%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X"
-
-static BOOL GuidFromString(__inout GUID* GuidVal, __in LPCSTR GuidString)
+static BOOL h_String_To_Guid(__inout GUID* GuidVal, __in LPCSTR GuidString)
 {
 	int scanCount;
 	UCHAR guidChars[11 * sizeof(int)];
@@ -170,7 +196,7 @@ static BOOL GuidFromString(__inout GUID* GuidVal, __in LPCSTR GuidString)
 	return (scanCount == 11);
 }
 
-static BOOL GuidToString(__in GUID* Guid, __inout LPSTR GuidString)
+static BOOL h_Guid_To_String(__in GUID* Guid, __inout LPSTR GuidString)
 {
 	int guidLen;
 
@@ -184,7 +210,37 @@ static BOOL GuidToString(__in GUID* Guid, __inout LPSTR GuidString)
 	return (guidLen == GUID_MAXSIZE - 1);
 }
 
-static BOOL hotk_IsHotMatch(PKHOT_HANDLE_INTERNAL HotHandle, PKLST_DEV_INFO DeviceInfo)
+static BOOL h_Wait_Hwnd(BOOL WaitForExit)
+{
+	if (WaitForExit)
+	{
+		if (g_HotNotifierList.Hwnd)
+		{
+			while (InterlockedCompareExchangePointer(&g_HotNotifierList.Hwnd, NULL, NULL) != NULL)
+			{
+				SwitchToThread();
+				Sleep(0);
+			}
+		}
+		return TRUE;
+	}
+	else
+	{
+		if (!g_HotNotifierList.Hwnd)
+		{
+			while (g_HotNotifierList.ThreadHandle && InterlockedCompareExchangePointer(&g_HotNotifierList.Hwnd, NULL, NULL) == NULL)
+			{
+				SwitchToThread();
+				Sleep(0);
+			}
+			ErrorSetAction(!g_HotNotifierList.ThreadHandle, ERROR_THREAD_NOT_IN_PROCESS, return FALSE, "->InterlockedCompareExchangePointer");
+		}
+	}
+
+	return TRUE;
+}
+
+static BOOL h_IsHotMatch(PKHOT_HANDLE_INTERNAL HotHandle, KLST_DEVINFO* DeviceInfo)
 {
 	BOOL isMatch = TRUE;
 
@@ -199,20 +255,19 @@ static BOOL hotk_IsHotMatch(PKHOT_HANDLE_INTERNAL HotHandle, PKLST_DEV_INFO Devi
 
 	return isMatch;
 }
-#define hotk_CmpBroadcastGuid(BroadcastEL, DevIntfGUID) memcmp(&BroadcastEL->InterfaceGUID,&DevIntfGUID,sizeof(GUID))
 
-static BOOL KUSB_API hotk_DevEnum_RegisterForBroadcast(KLST_HANDLE DeviceList, PKLST_DEV_INFO DeviceInfo, PKHOT_HANDLE_INTERNAL Context)
+static BOOL KUSB_API h_DevEnum_RegisterForBroadcast(KLST_HANDLE DeviceList, KLST_DEVINFO* DeviceInfo, PKHOT_HANDLE_INTERNAL Context)
 {
 	UNREFERENCED_PARAMETER(DeviceList);
 
-	if (hotk_IsHotMatch(Context, DeviceInfo))
+	if (h_IsHotMatch(Context, DeviceInfo))
 	{
 		GUID guid;
 		PKHOT_BROADCAST_EL hotBroadcast;
 		DEV_BROADCAST_DEVICEINTERFACE_A devBroadcast;
-		if (!GuidFromString(&guid, DeviceInfo->DeviceInterfaceGUID))
+		if (!h_String_To_Guid(&guid, DeviceInfo->DeviceInterfaceGUID))
 		{
-			USBWRN("GuidFromString failed for %s\n", DeviceInfo->DeviceInterfaceGUID);
+			USBWRNN("h_String_To_Guid failed for %s", DeviceInfo->DeviceInterfaceGUID);
 			return TRUE;
 		}
 		DL_SEARCH(g_HotNotifierList.BroadcastList, hotBroadcast, guid, hotk_CmpBroadcastGuid);
@@ -233,10 +288,11 @@ static BOOL KUSB_API hotk_DevEnum_RegisterForBroadcast(KLST_HANDLE DeviceList, P
 		hotBroadcast->NotifyHandle = RegisterDeviceNotificationA(g_HotNotifierList.Hwnd, &devBroadcast, DEVICE_NOTIFY_WINDOW_HANDLE);
 		if (!hotBroadcast->NotifyHandle)
 		{
-			USBWRN("GuidFromString failed for %s\n", DeviceInfo->DeviceInterfaceGUID);
+			USBWRNN("h_String_To_Guid failed for %s", DeviceInfo->DeviceInterfaceGUID);
 			Mem_Free(&hotBroadcast);
 			return TRUE;
 		}
+		USBDBGN("Registered:hotBroadcast->NotifyHandle = %p", hotBroadcast->NotifyHandle);
 
 		DL_APPEND(g_HotNotifierList.BroadcastList, hotBroadcast);
 
@@ -247,36 +303,36 @@ Error:
 	return FALSE;
 }
 
-static BOOL hotk_RegisterForBroadcast(PKHOT_HANDLE_INTERNAL HotHandle)
+static BOOL h_RegisterForBroadcast(PKHOT_HANDLE_INTERNAL HotHandle)
 {
 
 #ifdef DEFER_THRU_TIMER
 	if (HotHandle)
-		return LstK_Enumerate(g_HotNotifierList.DeviceList, hotk_DevEnum_RegisterForBroadcast, HotHandle);
+		return LstK_Enumerate(g_HotNotifierList.DeviceList, h_DevEnum_RegisterForBroadcast, HotHandle);
 
-	USBDBG("Global %s broadcast re-registration. hot-count=%d\n", g_HotNotifierList.WindowName, g_HotNotifierList.Count);
+	USBDBGN("Global %s broadcast re-registration. hot-count=%d", g_HotNotifierList.WindowName, g_HotNotifierList.HotLockCount);
 
 	DL_FOREACH(g_HotNotifierList.Items, HotHandle)
 	{
-		LstK_Enumerate(g_HotNotifierList.DeviceList, hotk_DevEnum_RegisterForBroadcast, HotHandle);
+		LstK_Enumerate(g_HotNotifierList.DeviceList, h_DevEnum_RegisterForBroadcast, HotHandle);
 	}
 #endif
 
 	return TRUE;
 }
 
-static BOOL KUSB_API hotk_DevEnum_PlugWaiters(KLST_HANDLE DeviceList, PKLST_DEV_INFO DeviceInfo, PKLST_NOTIFY_CONTEXT Context)
+static BOOL KUSB_API h_DevEnum_PlugWaiters(KLST_HANDLE DeviceList, KLST_DEVINFO* DeviceInfo, KLST_NOTIFY_CONTEXT* Context)
 {
-	PKHOT_HANDLE_INTERNAL hotHandle;
+	PKHOT_HANDLE_INTERNAL handle;
 	PKUSB_STR_EL devInstEL = NULL;
 
 	UNREFERENCED_PARAMETER(DeviceList);
 
 	if (Context->HotHandle && !DeviceInfo->Connected) return TRUE;
 
-	DL_FOREACH(g_HotNotifierList.Items, hotHandle)
+	DL_FOREACH(g_HotNotifierList.Items, handle)
 	{
-		if (Context->HotHandle && Context->HotHandle != hotHandle)
+		if (Context->HotHandle && Context->HotHandle != handle)
 			continue;
 
 		if (Context->HotHandle)
@@ -286,7 +342,7 @@ static BOOL KUSB_API hotk_DevEnum_PlugWaiters(KLST_HANDLE DeviceList, PKLST_DEV_
 		if (DeviceInfo->SyncResults.SyncFlags == SYNC_FLAG_NONE)
 			continue;
 
-		if (hotk_IsHotMatch(hotHandle, DeviceInfo))
+		if (h_IsHotMatch(handle, DeviceInfo))
 		{
 			// A device instance will only be notified once per WM_DEVICECHANGE
 			DL_FOREACH(Context->DevInstList, devInstEL)
@@ -295,7 +351,7 @@ static BOOL KUSB_API hotk_DevEnum_PlugWaiters(KLST_HANDLE DeviceList, PKLST_DEV_
 					break;
 			}
 
-			if (devInstEL && !hotHandle->Public.Flags.AllowDupeInstanceIDs) continue;
+			if (devInstEL && !handle->Public.Flags.AllowDupeInstanceIDs) continue;
 
 			if (!devInstEL)
 			{
@@ -306,32 +362,32 @@ static BOOL KUSB_API hotk_DevEnum_PlugWaiters(KLST_HANDLE DeviceList, PKLST_DEV_
 
 			if (DeviceInfo->SyncResults.Added)
 			{
-				hotHandle->Public.MatchedInfo = DeviceInfo;
+				handle->Public.MatchedInfo = DeviceInfo;
 
-				if (hotHandle->Public.OnHotPlug)
-					hotHandle->Public.OnHotPlug(hotHandle, &hotHandle->Public, DeviceInfo, SYNC_FLAG_ADDED);
+				if (handle->Public.OnHotPlug)
+					handle->Public.OnHotPlug((KHOT_HANDLE)handle, &handle->Public, DeviceInfo, SYNC_FLAG_ADDED);
 
-				if (hotHandle->Public.UserHwnd && hotHandle->Public.UserMessage >= WM_USER)
+				if (handle->Public.UserHwnd && handle->Public.UserMessage >= WM_USER)
 				{
-					if (hotHandle->Public.Flags.PostUserMessage)
-						PostMessageA(hotHandle->Public.UserHwnd, hotHandle->Public.UserMessage, (WPARAM)&hotHandle->Public, (LPARAM)SYNC_FLAG_ADDED);
+					if (handle->Public.Flags.PostUserMessage)
+						PostMessageA(handle->Public.UserHwnd, handle->Public.UserMessage, (WPARAM)&handle->Public, (LPARAM)SYNC_FLAG_ADDED);
 					else
-						SendMessageA(hotHandle->Public.UserHwnd, hotHandle->Public.UserMessage, (WPARAM)&hotHandle->Public, (LPARAM)SYNC_FLAG_ADDED);
+						SendMessageA(handle->Public.UserHwnd, handle->Public.UserMessage, (WPARAM)&handle->Public, (LPARAM)SYNC_FLAG_ADDED);
 				}
 			}
 			else if (DeviceInfo->SyncResults.Removed)
 			{
-				hotHandle->Public.MatchedInfo = DeviceInfo;
+				handle->Public.MatchedInfo = DeviceInfo;
 
-				if (hotHandle->Public.OnHotPlug)
-					hotHandle->Public.OnHotPlug(hotHandle, &hotHandle->Public, DeviceInfo, SYNC_FLAG_REMOVED);
+				if (handle->Public.OnHotPlug)
+					handle->Public.OnHotPlug((KHOT_HANDLE)handle, &handle->Public, DeviceInfo, SYNC_FLAG_REMOVED);
 
-				if (hotHandle->Public.UserHwnd && hotHandle->Public.UserMessage >= WM_USER)
+				if (handle->Public.UserHwnd && handle->Public.UserMessage >= WM_USER)
 				{
-					if (hotHandle->Public.Flags.PostUserMessage)
-						PostMessageA(hotHandle->Public.UserHwnd, hotHandle->Public.UserMessage, (WPARAM)&hotHandle->Public, (LPARAM)SYNC_FLAG_REMOVED);
+					if (handle->Public.Flags.PostUserMessage)
+						PostMessageA(handle->Public.UserHwnd, handle->Public.UserMessage, (WPARAM)&handle->Public, (LPARAM)SYNC_FLAG_REMOVED);
 					else
-						SendMessageA(hotHandle->Public.UserHwnd, hotHandle->Public.UserMessage, (WPARAM)&hotHandle->Public, (LPARAM)SYNC_FLAG_REMOVED);
+						SendMessageA(handle->Public.UserHwnd, handle->Public.UserMessage, (WPARAM)&handle->Public, (LPARAM)SYNC_FLAG_REMOVED);
 				}
 			}
 		}
@@ -340,24 +396,54 @@ static BOOL KUSB_API hotk_DevEnum_PlugWaiters(KLST_HANDLE DeviceList, PKLST_DEV_
 	return TRUE;
 }
 
-
-#define HOTWND_LOCK_ACQUIRE()do {						\
-	SpinLock_Acquire(&g_HotNotifierList.Lock, TRUE);	\
-	if (!g_HotNotifierList.Hwnd)						\
-	{   												\
-		SpinLock_Release(&g_HotNotifierList.Lock);  	\
-		return (LRESULT)FALSE;  						\
-	}   												\
-}   													\
-while(0)
-#define HOTWND_LOCK_RELEASE() SpinLock_Release(&g_HotNotifierList.Lock)
-
-static LRESULT CALLBACK hotk_WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+static LRESULT CALLBACK h_WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	PDEV_BROADCAST_DEVICEINTERFACE_A devInterface;
+	KHOT_HANDLE Handle;
+	PKHOT_BROADCAST_EL hotBroadcast, hotBroadcastTmp;
+	PKHOT_HANDLE_INTERNAL handle = NULL;
+	PKHOT_HANDLE_INTERNAL handleTmp = NULL;
+	PKHOT_HANDLE_INTERNAL* handleRef;
+	KHOT_PARAMS* InitParams;
 
 	switch(msg)
 	{
+	case WM_USER_INIT_HOT_HANDLE:
+		handleRef	= (PKHOT_HANDLE_INTERNAL*)wParam;
+		InitParams	= (KHOT_PARAMS*)lParam;
+
+		ErrorHandleAction(!IsHandleValid(handleRef), "Handle", return (LRESULT)ERROR_INVALID_HANDLE);
+		ErrorParamAction(!IsHandleValid(InitParams), "InitParams", return (LRESULT)ERROR_INVALID_PARAMETER);
+
+		handle = PoolHandle_Acquire_HotK(NULL);
+		ErrorNoSetAction(!IsHandleValid(handle), return (LRESULT)GetLastError(), "->PoolHandle_Acquire_HotK");
+
+		memcpy(&handle->Public, InitParams, sizeof(handle->Public));
+		*handleRef = handle;
+
+		// Add to the list and set the cleaunup callback for the hot handle
+		handle->Base.Evt.Cleanup = Cleanup_HotK;
+		DL_APPEND(g_HotNotifierList.Items, handle);
+
+		h_RegisterForBroadcast(handle);
+		USBDBGN("h_RegisterForBroadcast(handle):WM_USER_INIT_HOT_HANDLE");
+
+		PoolHandle_Live_HotK(handle);
+
+		if (handle->Public.Flags.PlugAllOnInit)
+			h_NotifyWaiters(handle, TRUE);
+
+		return (LRESULT)ERROR_SUCCESS;
+
+	case WM_USER_FREE_HOT_HANDLE:
+		Handle = (KHOT_HANDLE)wParam;
+		Pub_To_Priv_HotK(Handle, handle, return (LRESULT)FALSE);
+		ErrorNoSetAction(!PoolHandle_Inc_HotK(handle), return (LRESULT)FALSE, "->PoolHandle_Inc_HotK");
+
+		PoolHandle_Dec_HotK(handle);
+		PoolHandle_Dec_HotK(handle);
+		return (LRESULT)TRUE;
+
 	case WM_TIMER:
 
 		// The WM_TIMER message is a low-priority message. The GetMessage and
@@ -375,23 +461,25 @@ static LRESULT CALLBACK hotk_WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
 			LstK_Sync(g_HotNotifierList.DeviceList, NULL, NULL);
 
 			// notify hot handle waiters
-			hotk_NotifyWaiters(NULL, TRUE);
+			h_NotifyWaiters(NULL, TRUE);
 
 			HOTWND_LOCK_RELEASE();
 			break;
 		case IDT_KHOT_DBT_DEVNODES_CHANGED:
 			KillTimer(hwnd, wParam);	// !!Kill Timer!!
-
 			HOTWND_LOCK_ACQUIRE();
+
+			InterlockedExchange(&g_HotNotifierList.DevNodesChangePending, 0);
 
 			// re/sync the device list
 			LstK_Sync(g_HotNotifierList.DeviceList, NULL, NULL);
 
 			// notify hot handle waiters
-			hotk_NotifyWaiters(NULL, TRUE);
+			h_NotifyWaiters(NULL, TRUE);
 
 			// dev broadcast re-registration
-			hotk_RegisterForBroadcast(NULL);
+			h_RegisterForBroadcast(NULL);
+			USBDBGN("h_RegisterForBroadcast(NULL):IDT_KHOT_DBT_DEVNODES_CHANGED");
 
 			HOTWND_LOCK_RELEASE();
 			break;
@@ -401,7 +489,7 @@ static LRESULT CALLBACK hotk_WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
 			HOTWND_LOCK_ACQUIRE();
 
 			// notify hot handle waiters
-			hotk_NotifyWaiters(NULL, TRUE);
+			h_NotifyWaiters(NULL, TRUE);
 
 			HOTWND_LOCK_RELEASE();
 			break;
@@ -437,14 +525,14 @@ static LRESULT CALLBACK hotk_WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
 				break;
 			if (!strlen(devInterface->dbcc_name))
 			{
-				USBWRN("Zero length devInterface->dbcc_name.\n");
+				USBWRNN("Zero length devInterface->dbcc_name.");
 				SetTimer(hwnd, IDT_KHOT_DBT_DEVICEARRIVAL, g_HotNotifierList.MaxRefreshMS, (TIMERPROC) NULL);
 				break;
 			}
 
 			HOTWND_LOCK_ACQUIRE();
 
-			LstK_Enumerate(g_HotNotifierList.DeviceList, hotk_DevEnum_UpdateForRemoval, devInterface);
+			LstK_Enumerate(g_HotNotifierList.DeviceList, h_DevEnum_UpdateForRemoval, devInterface);
 			SetTimer(hwnd, IDT_KHOT_DBT_DEVICEREMOVAL, 1, (TIMERPROC) NULL);
 
 			HOTWND_LOCK_RELEASE();
@@ -456,13 +544,16 @@ static LRESULT CALLBACK hotk_WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
 			// 2 second minimum DEVNODES_CHANGED delay.
 			HOTWND_LOCK_ACQUIRE();
 #ifdef DEFER_THRU_TIMER
-			SetTimer(hwnd, IDT_KHOT_DBT_DEVNODES_CHANGED, 2000, (TIMERPROC) NULL);
+			if (IncLock(g_HotNotifierList.DevNodesChangePending) == 1)
+			{
+				SetTimer(hwnd, IDT_KHOT_DBT_DEVNODES_CHANGED, 2000, (TIMERPROC) NULL);
+			}
 #else
-			hotk_RegisterForBroadcast(NULL);
+			h_RegisterForBroadcast(NULL);
 			// re/sync the device list
 			LstK_Sync(g_HotNotifierList.DeviceList, NULL, NULL);
 			// notify hot handle waiters
-			hotk_NotifyWaiters(NULL, TRUE);
+			h_NotifyWaiters(NULL, TRUE);
 #endif
 			HOTWND_LOCK_RELEASE();
 			break;
@@ -477,6 +568,32 @@ static LRESULT CALLBACK hotk_WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
 		DestroyWindow(hwnd);
 		break;
 	case WM_DESTROY:
+		// free remaining hot handles
+		DL_FOREACH_SAFE(g_HotNotifierList.Items, handle, handleTmp)
+		{
+			PoolHandle_Dec_HotK(handle);
+		}
+
+		// free remaining broadcast registrations
+		DL_FOREACH_SAFE(g_HotNotifierList.BroadcastList, hotBroadcast, hotBroadcastTmp)
+		{
+			if (UnregisterDeviceNotification(hotBroadcast->NotifyHandle))
+			{
+				USBDBGN("Unregistered:hotBroadcast->NotifyHandle = %p", hotBroadcast->NotifyHandle);
+			}
+			else
+			{
+				USBERRN("Failed unregistering hotBroadcast->NotifyHandle = %p", hotBroadcast->NotifyHandle);
+			}
+
+			DL_DELETE(g_HotNotifierList.BroadcastList, hotBroadcast);
+			Mem_Free(&hotBroadcast);
+		}
+
+		// free the master device list
+		LstK_Free(g_HotNotifierList.DeviceList);
+		g_HotNotifierList.DeviceList = NULL;
+		InterlockedExchangePointer(&g_HotNotifierList.Hwnd, NULL);
 		PostQuitMessage(0);
 		break;
 	default:
@@ -485,18 +602,18 @@ static LRESULT CALLBACK hotk_WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
 	return (LRESULT)FALSE;
 }
 
-static BOOL hotk_RegisterWindowClass(PKHOT_NOTIFIER_LIST NotifierList)
+static BOOL h_Register_Atom(PKHOT_NOTIFIER_LIST NotifierList)
 {
-	WNDCLASSEX wc;
+	WNDCLASSEXA wc;
 
-	UNREFERENCED_PARAMETER(NotifierList);
+	if (NotifierList->WindowAtom) return TRUE;
 
 	memset(&wc, 0, sizeof(wc));
 
 	// Registering the Window Class
 	wc.cbSize        = sizeof(wc);
 	wc.style         = 0;
-	wc.lpfnWndProc   = hotk_WndProc;
+	wc.lpfnWndProc   = h_WndProc;
 	wc.cbClsExtra    = 0;
 	wc.cbWndExtra    = 0;
 	wc.hInstance     = g_HotNotifierList.hAppInstance;
@@ -507,17 +624,20 @@ static BOOL hotk_RegisterWindowClass(PKHOT_NOTIFIER_LIST NotifierList)
 	wc.lpszClassName = g_WindowClassHotK;
 	wc.hIconSm       = NULL;
 
-	ErrorNoSet(!RegisterClassExA(&wc), Error, "RegisterClassEx failed.");
+	NotifierList->WindowAtom = RegisterClassExA(&wc);
+	ErrorNoSet(!NotifierList->WindowAtom, Error, "RegisterClassEx failed.");
 
 	return TRUE;
 Error:
 	return FALSE;
 }
 
-static BOOL hotk_CreateWindow(PKHOT_NOTIFIER_LIST NotifierList)
+static BOOL h_Create_Hwnd(PKHOT_NOTIFIER_LIST NotifierList, HWND* hwnd)
 {
 	ULONG count = 0;
 	UNREFERENCED_PARAMETER(NotifierList);
+
+	*hwnd = NULL;
 
 	do
 	{
@@ -532,21 +652,21 @@ static BOOL hotk_CreateWindow(PKHOT_NOTIFIER_LIST NotifierList)
 
 	if (count >= 128)
 	{
-		USBERR("Too many notification windows currently running. count=%u\n", count);
+		USBERRN("Too many notification windows currently running. count=%u", count);
 		return LusbwError(ERROR_TOO_MANY_MODULES);
 	}
 
-	g_HotNotifierList.Hwnd = CreateWindowExA(
-	                             WS_EX_CLIENTEDGE,
-	                             g_WindowClassHotK,
-	                             g_HotNotifierList.WindowName,
-	                             WS_OVERLAPPEDWINDOW,
-	                             -100, -100, 20, 20,
-	                             NULL, NULL, g_HotNotifierList.hAppInstance, NULL);
+	*hwnd = g_HotNotifierList.Hwnd = CreateWindowExA(
+	                                     WS_EX_CLIENTEDGE,
+	                                     g_WindowClassHotK,
+	                                     g_HotNotifierList.WindowName,
+	                                     WS_OVERLAPPEDWINDOW,
+	                                     -100, -100, 20, 20,
+	                                     NULL, NULL, g_HotNotifierList.hAppInstance, NULL);
 
 	if(!IsHandleValid(g_HotNotifierList.Hwnd))
 	{
-		USBERR("RegisterClassEx failed. ErrorCode=%08Xh\n", GetLastError());
+		USBERRN("RegisterClassEx failed. ErrorCode=%08Xh", GetLastError());
 		return FALSE;
 	}
 
@@ -556,182 +676,128 @@ static BOOL hotk_CreateWindow(PKHOT_NOTIFIER_LIST NotifierList)
 }
 
 
-static unsigned _stdcall hotk_ThreadProc(PKHOT_NOTIFIER_LIST NotifierList)
+static unsigned _stdcall h_ThreadProc(PKHOT_NOTIFIER_LIST NotifierList)
 {
+	HWND hwnd;
 	MSG msg;
 	DWORD exitCode = 0;
-	PKHOT_BROADCAST_EL hotBroadcast, tmp;
 
-	SpinLock_Acquire(&g_HotNotifierList.Lock, TRUE);
-
-	if (!hotk_RegisterWindowClass(NotifierList))
+	if (!h_Register_Atom(NotifierList))
 	{
 		exitCode = GetLastError();
-		SpinLock_Release(&g_HotNotifierList.Lock);
 		goto Done;
 	}
-	if (!hotk_CreateWindow(NotifierList))
+	if (!h_Create_Hwnd(NotifierList, &hwnd))
 	{
 		exitCode = GetLastError();
-		SpinLock_Release(&g_HotNotifierList.Lock);
 		goto Done;
 	}
 
-	if (!hotk_RegisterForBroadcast(g_HotNotifierList.Items))
-	{
-		USBWRN("hotk_RegisterForBroadcast Failed.\n");
-	}
-
-	SpinLock_Release(&g_HotNotifierList.Lock);
-
-	while(IsHandleValid(g_HotNotifierList.Hwnd) && GetMessageA(&msg, g_HotNotifierList.Hwnd, 0, 0))
+	while(GetMessageA(&msg, hwnd, 0, 0))
 	{
 		TranslateMessage(&msg);
 		DispatchMessageA(&msg);
 	}
 
-	SpinLock_Acquire(&g_HotNotifierList.Lock, TRUE);
-	DL_FOREACH_SAFE(g_HotNotifierList.BroadcastList, hotBroadcast, tmp)
-	{
-		UnregisterDeviceNotification(hotBroadcast->NotifyHandle);
-
-		DL_DELETE(g_HotNotifierList.BroadcastList, hotBroadcast);
-		Mem_Free(&hotBroadcast);
-	}
-	SpinLock_Release(&g_HotNotifierList.Lock);
-
 Done:
+	g_HotNotifierList.ThreadHandle = NULL;
 	_endthreadex(exitCode);
 	return exitCode;
 }
 
-static BOOL hotk_CreateThread(PKHOT_NOTIFIER_LIST NotifierList)
+static BOOL h_Create_Thread(PKHOT_NOTIFIER_LIST NotifierList)
 {
-	g_HotNotifierList.ThreadHandle = (HANDLE)_beginthreadex( NULL, 0, &hotk_ThreadProc, NotifierList, CREATE_SUSPENDED, &g_HotNotifierList.ThreadID);
+	g_HotNotifierList.ThreadHandle = (HANDLE)_beginthreadex( NULL, 0, &h_ThreadProc, NotifierList, CREATE_SUSPENDED, &g_HotNotifierList.ThreadID);
 	if (!IsHandleValid(g_HotNotifierList.ThreadHandle))
 	{
-		USBERR("_beginthreadex failed. ErrorCode=%08Xh\n", GetLastError());
+		USBERRN("_beginthreadex failed. ErrorCode=%08Xh", GetLastError());
 		return FALSE;
 	}
 
 	return TRUE;
 }
 
-VOID KUSB_API hotk_Free(PKHOT_HANDLE_INTERNAL hotHandle)
-{
-	SpinLock_Acquire(&g_HotNotifierList.Lock, TRUE);
-
-	ALLK_LOCK_HANDLE(hotHandle);
-	if (!ALLK_INUSE_HANDLE(hotHandle))
-	{
-		ALLK_UNLOCK_HANDLE(hotHandle);
-		goto Done;
-	}
-
-	// remove notifier
-	DL_DELETE(g_HotNotifierList.Items, hotHandle);
-
-	ALLK_UNLOCK_HANDLE(hotHandle);
-
-	if (!g_HotNotifierList.Items)
-	{
-		PostMessage(g_HotNotifierList.Hwnd, WM_DESTROY, (WPARAM)0, (LPARAM)0);
-		LstK_Free(&g_HotNotifierList.DeviceList);
-		g_HotNotifierList.Hwnd = NULL;
-	}
-Done:
-	SpinLock_Release(&g_HotNotifierList.Lock);
-}
-
 KUSB_EXP BOOL KUSB_API HotK_Init(
     __deref_out KHOT_HANDLE* Handle,
-    __in PKHOT_PARAMS InitParams)
+    __in KHOT_PARAMS* InitParams)
 {
-	PKHOT_NOTIFIER_LIST NotifierList = &g_HotNotifierList;
-	BOOL isLocked = FALSE;
-	PKHOT_HANDLE_INTERNAL hotHandle = NULL;
-
-	ErrorHandle(!IsHandleValid(Handle), Error, "Handle");
-	ErrorParam(!IsHandleValid(InitParams), Error, "InitParams");
-
-	isLocked = SpinLock_Acquire(&g_HotNotifierList.Lock, TRUE);
-
-	hotHandle = PoolHandle_Acquire_HotK(&hotk_Free);
-	ErrorNoSet(!IsHandleValid(hotHandle), Error, "->PoolHandle_Acquire_HotK");
-
-	memcpy(&hotHandle->Public, InitParams, sizeof(hotHandle->Public));
-
-	DL_APPEND(g_HotNotifierList.Items, hotHandle);
+	DWORD errorCode;
+	BOOL success;
 
 	// Create the top-level window for monitoring. WM_DEVICE_CHANGE.
-	if (!g_HotNotifierList.Hwnd)
+	if (IncLock(g_HotNotifierList.HotLockCount) == 1)
 	{
 		KLST_INIT_PARAMS listInit;
-
 		Mem_Zero(&listInit, sizeof(listInit));
 		listInit.ShowDisconnectedDevices = TRUE;
 
-		LstK_Init(&g_HotNotifierList.DeviceList, &listInit);
-		if (!g_HotNotifierList.hAppInstance)
-			g_HotNotifierList.hAppInstance = GetModuleHandle(NULL);
+		g_HotNotifierList.DevNodesChangePending = 0;
+		if (!g_HotNotifierList.hAppInstance) g_HotNotifierList.hAppInstance = GetModuleHandle(NULL);
 
-		ErrorNoSet(!hotk_CreateThread(NotifierList), Error, "->hotk_CreateThread");
+		success = LstK_Init(&g_HotNotifierList.DeviceList, &listInit);
+		ErrorNoSet(!success, Error, "Failed creating master device list.");
 
-		ResumeThread(g_HotNotifierList.ThreadHandle);
+		success = h_Create_Thread(&g_HotNotifierList);
+		ErrorNoSet(!success, Error, "->h_Create_Thread");
+
+		errorCode = ResumeThread(g_HotNotifierList.ThreadHandle);
+		ErrorNoSet(errorCode == ((DWORD) - 1), Error, "->ResumeThread");
+
+		// wait for the window to load
+		ErrorNoSet(!h_Wait_Hwnd(FALSE), Error, "->h_Wait_Hwnd");
 	}
 
-	if (InitParams->Flags.PlugAllOnInit)
+	errorCode = (DWORD)SendMessageA(g_HotNotifierList.Hwnd, WM_USER_INIT_HOT_HANDLE, (WPARAM)Handle, (LPARAM)InitParams);
+	if (errorCode != ERROR_SUCCESS)
 	{
-		hotk_NotifyWaiters(hotHandle, TRUE);
+		if (DecLock(g_HotNotifierList.HotLockCount) == 0)
+		{
+			HotK_FreeAll();
+			h_Wait_Hwnd(TRUE);
+		}
+		SetLastError(errorCode);
+		return FALSE;
 	}
 
-	g_HotNotifierList.Count++;
-	*Handle = (KHOT_HANDLE)hotHandle;
-	SpinLock_Release(&g_HotNotifierList.Lock);
-
-	return TRUE;
+	return errorCode == ERROR_SUCCESS;
 
 Error:
-	if (IsHandleValid(hotHandle))
-		DL_DELETE(g_HotNotifierList.Items, hotHandle);
-
-	if (isLocked)
-		SpinLock_Release(&g_HotNotifierList.Lock);
-
-	if (IsHandleValid(hotHandle))
-		PoolHandle_Dec_HotK(hotHandle);
-
+	LstK_Free(g_HotNotifierList.DeviceList);
+	g_HotNotifierList.DeviceList = NULL;
 	return FALSE;
 }
 
 KUSB_EXP BOOL KUSB_API HotK_Free(
-    __deref_inout KHOT_HANDLE* Handle)
+    __in KHOT_HANDLE Handle)
 {
-	PKHOT_HANDLE_INTERNAL hotHandle = *Handle;
+	PKHOT_HANDLE_INTERNAL handle;
+	long lockCnt;
 
-	ErrorParam(!IsHandleValid(Handle), Error, "Handle invalid");
-	ErrorParam(!IsHandleValid(hotHandle), Error, "Handle null");
-	ErrorHandle(!ALLK_VALID_HANDLE(hotHandle, HotK), Error, "Handle not hotk");
-	ErrorHandle(!ALLK_INUSE_HANDLE(hotHandle), Error, "Handle not in-use");
+	ErrorSetAction(!g_HotNotifierList.Hwnd, ERROR_NOT_FOUND, return FALSE, "The notifier window is not active.");
 
-	return PoolHandle_Dec_HotK(hotHandle) == FALSE;
-Error:
-	return FALSE;
+	Pub_To_Priv_HotK(Handle, handle, return FALSE);
+	if ((lockCnt = DecLock(g_HotNotifierList.HotLockCount)) < 0)
+	{
+		IncLock(g_HotNotifierList.HotLockCount);
+		return FALSE;
+	}
+
+	if (!SendMessageA(g_HotNotifierList.Hwnd, WM_USER_FREE_HOT_HANDLE, (WPARAM)handle, (LPARAM)NULL))
+		return FALSE;
+
+	if (lockCnt == 0)
+	{
+		USBMSGN("All not handles freed; closing notifier window...");
+		HotK_FreeAll();
+
+		// wait for the window to exit
+		h_Wait_Hwnd(TRUE);
+	}
+	return TRUE;
 }
 
 KUSB_EXP VOID KUSB_API HotK_FreeAll(VOID)
 {
-	PKHOT_HANDLE_INTERNAL hotHandle;
-	int count = g_HotNotifierList.Count;
-
-	while(count-- > 0)
-	{
-		DL_FOREACH(g_HotNotifierList.Items, hotHandle);
-		{
-			if (count-- <= 0) return;
-			if (!HotK_Free(&hotHandle)) return;
-
-			break;
-		}
-	}
+	ErrorSetAction(!g_HotNotifierList.Hwnd, ERROR_NOT_FOUND, return, "The notifier window is not active.");
+	SendMessageA(g_HotNotifierList.Hwnd, WM_DESTROY, (WPARAM)0, (LPARAM)0);
 }

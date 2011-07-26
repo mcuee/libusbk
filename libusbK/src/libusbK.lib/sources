@@ -25,8 +25,7 @@ TARGETLIBS=$(SDK_LIB_PATH)\kernel32.lib \
 INCLUDES=.\;..\;..\..\includes;$(DDK_INC_PATH);$(INCLUDES)
 
 SOURCES= \
-		..\lusbk_bknd.c \
-		..\lusbk_bknd_hid.c \
+		..\lusbk_bknd_unsupported.c \
 		..\lusbk_bknd_libusb0.c \
 		..\lusbk_bknd_libusbk.c \
 		..\lusbk_bknd_winusb.c \
