@@ -71,7 +71,7 @@ BYTE BenchmarkBuffers_INTF0[2][PP_COUNT][USBGEN_EP_SIZE_INTF0];
 BYTE BenchmarkBuffers_INTF1[2][PP_COUNT][USBGEN_EP_SIZE_INTF1];
 #endif
 
-#ifdef ENABLE_VENDOR_BUFFER_AND_SET_DESCRIPTOR
+#if defined(VENDOR_BUFFER_ENABLED)
 BYTE VendorBuffer[8];
 #endif
 
@@ -100,6 +100,11 @@ volatile BYTE NextPacketKey_INTF0;
 extern void BlinkUSBStatus(void);
 extern USB_VOLATILE BYTE USBAlternateInterface[USB_MAX_NUM_INT];
 extern volatile WORD led_count;
+
+#if defined(DESCRIPTOR_COUNTING_ENABLED)
+unsigned char gDeviceDescriptorCount = 0;
+unsigned char gConfigDescriptorCount = 0;
+#endif
 
 /** BMARK FUNCTIONS ************************************************/
 void doBenchmarkLoop_INTF0(void);
@@ -159,7 +164,7 @@ void fillBuffer(BYTE* pBuffer, WORD size);
 /** BMARK DECLARATIONS *********************************************/
 #pragma code
 
-#if defined(ENABLE_VENDOR_BUFFER_AND_SET_DESCRIPTOR)
+#if defined(VENDOR_BUFFER_ENABLED)
 
 void OnSetVendorBufferComplete(void)
 {
@@ -279,13 +284,17 @@ void USBCBCheckOtherReq(void)
 			inPipes[0].info.bits.busy = 1;
 		}
 		break;
-#if defined(ENABLE_VENDOR_BUFFER_AND_SET_DESCRIPTOR)
+#if defined(VENDOR_BUFFER_ENABLED)
 
 	case PICFW_SET_VENDOR_BUFFER:
 		PicFWSetVendorBufferHandler();
 		break;
 
 	case PICFW_GET_VENDOR_BUFFER:
+#if defined(DESCRIPTOR_COUNTING_ENABLED)
+		VendorBuffer[0]=gDeviceDescriptorCount;
+		VendorBuffer[1]=gConfigDescriptorCount;
+#endif
 		inPipes[0].pSrc.bRam = VendorBuffer;				// Set Source
 		inPipes[0].info.bits.ctrl_trf_mem = USB_EP0_RAM;	// Set memory type
 		
@@ -307,7 +316,7 @@ void USBCBCheckOtherReq(void)
 
 void USBCBStdSetDscHandler(void)
 {
-#if defined(ENABLE_VENDOR_BUFFER_AND_SET_DESCRIPTOR)
+#if defined(VENDOR_BUFFER_ENABLED)
 	if(SetupPkt.bDescriptorType == USB_DESCRIPTOR_STRING && SetupPkt.bDscIndex == 0x55)
 	{
 		PicFWSetVendorBufferHandler();

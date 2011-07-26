@@ -60,7 +60,7 @@
 // DUAL_INTERFACE_WITH_ASSOCIATION Selection:
 // If defined, creates a single device with two interfaces.
 //
-#define DUAL_INTERFACE_WITH_ASSOCIATION
+// #define DUAL_INTERFACE_WITH_ASSOCIATION
 
 // SINGLE_INTERFACE_WITH_ALTSETTINGS Selection:
 // If defined, creates a single interface device with an additional alt 
@@ -69,13 +69,22 @@
 // endpoints). The second alt setting exposes the interface with the actual 
 // wMaxPacketSize setting. 
 //
-// #define SINGLE_INTERFACE_WITH_ALTSETTINGS
+#define SINGLE_INTERFACE_WITH_ALTSETTINGS
 
-// ENABLE_VENDOR_BUFFER_AND_SET_DESCRIPTOR Selection:
-// Enables additinal control requests and an 8 byte buffer for storing and 
+// VENDOR_BUFFER_ENABLED Selection:
+// Enables additional control requests and an 8 byte buffer for storing and 
 // retrieving data. 
 //
-#define ENABLE_VENDOR_BUFFER_AND_SET_DESCRIPTOR
+#define VENDOR_BUFFER_ENABLED 1
+
+// DESCRIPTOR_COUNTING_ENABLED Selection:
+// uses the vendor buffer to store descriptor request count information 
+//
+#define DESCRIPTOR_COUNTING_ENABLED 1
+
+#if defined(DESCRIPTOR_COUNTING_ENABLED) && !defined(VENDOR_BUFFER_ENABLED)
+#define VENDOR_BUFFER_ENABLED
+#endif
 
 #if defined(DUAL_INTERFACE_WITH_ASSOCIATION) && !defined(DUAL_INTERFACE)
 #define DUAL_INTERFACE
@@ -128,7 +137,7 @@
 
 /////////////////////////////////////////////////////////////////////
 // ENDPOINT #1 (IN,OUT) Size & Type
-#define USBGEN_EP_SIZE_INTF0	32
+#define USBGEN_EP_SIZE_INTF0	64
 // #define INTF0				EP_ISO
 #define INTF0				EP_BULK
 // #define INTF0				EP_INT
@@ -227,10 +236,10 @@
 #if defined(__C32__)
   #define USB_PING_PONG_MODE USB_PING_PONG__FULL_PING_PONG
 #else
-  #define USB_PING_PONG_MODE USB_PING_PONG__NO_PING_PONG
+// #define USB_PING_PONG_MODE USB_PING_PONG__NO_PING_PONG
 // #define USB_PING_PONG_MODE USB_PING_PONG__FULL_PING_PONG
 // #define USB_PING_PONG_MODE USB_PING_PONG__EP0_OUT_ONLY
-// #define USB_PING_PONG_MODE USB_PING_PONG__ALL_BUT_EP0		//NOTE: This mode is not supported in PIC18F4550 family rev A3 devices
+#define USB_PING_PONG_MODE USB_PING_PONG__ALL_BUT_EP0		//NOTE: This mode is not supported in PIC18F4550 family rev A3 devices
 #endif
 
 
