@@ -604,6 +604,17 @@ address {
 	color: #2A3D61;
 }
 
+ol,ul {
+    margin-top: 0px;
+    margin-left: 0px;
+    padding: 0px;
+}
+
+li {
+    margin-left: 30px;
+    padding: 0px;
+}
+
 table.doxtable {
 	border-collapse:collapse;
 }
@@ -620,6 +631,25 @@ table.doxtable th {
 	padding-bottom: 4px;
 	padding-top: 5px;
 	text-align:left;
+}
+
+table.errortable {
+	border-collapse:collapse;
+	border: 1px solid #2D4068;
+}
+
+table.errortable th {
+	border: 0px;
+	background-color: #374F7F;
+	color: #FFFFFF;
+	padding: 2px 2px 2px 2px;
+	margin: 0px;
+}
+
+table.errortable td {
+	border: 0px;
+	border-bottom: 1px solid #2D4068;
+	padding: 3px 3px 0px 3px;
 }
 
 .tabsearch {

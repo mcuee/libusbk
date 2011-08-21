@@ -161,6 +161,8 @@ static BOOL u_Init_Handle(__out PKUSB_HANDLE_INTERNAL* Handle,
 {
 	PKUSB_HANDLE_INTERNAL handle = NULL;
 
+	UNREFERENCED_PARAMETER(DriverID);
+
 	ErrorHandle(!IsHandleValid(Handle), Error, "Handle");
 
 	handle = PoolHandle_Acquire_UsbK(Cleanup_UsbK);
@@ -177,7 +179,6 @@ static BOOL u_Init_Handle(__out PKUSB_HANDLE_INTERNAL* Handle,
 	{
 		handle->Device = PoolHandle_Acquire_DevK(Cleanup_DevK);
 		ErrorNoSet(!IsHandleValid(handle->Device), Error, "->PoolHandle_Acquire_DevK");
-		handle->Device->DriverID = DriverID;
 
 		if (Init_BackendCB)
 		{
@@ -221,7 +222,7 @@ BOOL UsbStack_Init(
 		{
 			DeviceHandle = CreateDeviceFile(DevInfo->DevicePath);
 			ErrorNoSet(!IsHandleValid(DeviceHandle), Error, "CreateDeviceFile failed.");
-			handle->Device->DriverID = DevInfo->DrvId;
+			DriverID = (KUSB_DRVID)DevInfo->DrvId;
 			handle->Device->DevicePath = Str_Dupe(DevInfo->DevicePath);
 		}
 
@@ -249,7 +250,7 @@ BOOL UsbStack_Init(
 		ErrorNoSet(!success, Error, "->u_Init_Config");
 
 		// load a driver API
-		LibK_LoadDriverApi(handle->Device->DriverAPI, handle->Device->DriverID, sizeof(*handle->Device->DriverAPI));
+		LibK_LoadDriverAPI(handle->Device->DriverAPI, DriverID);
 
 		if (handle->Device->UsbStack->UsePipeCache)
 			UsbStack_RefreshPipeCache(handle);
@@ -282,7 +283,7 @@ BOOL UsbStack_CloneHandle (
 
 	success = UsbStack_Init(
 	              (KUSB_HANDLE*)&clonedHandle,
-	              handle->Device->DriverID,
+	              handle->Device->DriverAPI->Info.DriverID,
 	              handle->Device->UsbStack->UsePipeCache,
 	              NULL,
 	              NULL,
@@ -379,7 +380,18 @@ BOOL UsbStack_Rebuild(
 {
 	BOOL success;
 
-	ErrorSetAction(!PoolHandle_Acquire_Spin_DevK(Handle->Device, FALSE), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Acquire_Spin_DevK");
+	if (DecLock(ALLK_GETREF_HANDLE(Handle->Device)) != 1)
+	{
+		IncLock(ALLK_GETREF_HANDLE(Handle->Device));
+		return LusbwError(ERROR_RESOURCE_NOT_AVAILABLE);
+	}
+
+	if (DecLock(ALLK_GETREF_HANDLE(Handle->Device)) != 0)
+	{
+		IncLock(ALLK_GETREF_HANDLE(Handle->Device));
+		IncLock(ALLK_GETREF_HANDLE(Handle->Device));
+		return LusbwError(ERROR_RESOURCE_NOT_AVAILABLE);
+	}
 
 	UsbStack_Clear(Handle->Device->UsbStack);
 	Mem_Free(&Handle->Device->ConfigDescriptor);
@@ -393,11 +405,13 @@ BOOL UsbStack_Rebuild(
 	success = u_Init_Config(Handle);
 	ErrorNoSet(!success, Error, "->u_Init_Config");
 
-	PoolHandle_Release_Spin_DevK(Handle->Device);
+	IncLock(ALLK_GETREF_HANDLE(Handle->Device));
+	IncLock(ALLK_GETREF_HANDLE(Handle->Device));
 	return TRUE;
 
 Error:
-	PoolHandle_Release_Spin_DevK(Handle->Device);
+	IncLock(ALLK_GETREF_HANDLE(Handle->Device));
+	IncLock(ALLK_GETREF_HANDLE(Handle->Device));
 	return FALSE;
 }
 
@@ -445,9 +459,47 @@ BOOL UsbStack_SelectInterface (
 	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
 
 	FindInterfaceEL(handle->Device->UsbStack, intfEL, IsIndex, IndexOrNumber);
-	ErrorSet(!intfEL, Error, ERROR_NO_MORE_ITEMS, "Failed locating interface %s %u.", IsIndex?"index":"number", IndexOrNumber);
+	ErrorSet(!intfEL, Error, ERROR_NO_MORE_ITEMS, "Failed locating interface %s %u.", IsIndex ? "index" : "number", IndexOrNumber);
 
 	InterlockedExchange(&handle->Selected_SharedInterface_Index, intfEL->Index);
+
+	PoolHandle_Dec_UsbK(handle);
+	return TRUE;
+
+Error:
+	PoolHandle_Dec_UsbK(handle);
+	return FALSE;
+}
+
+BOOL UsbStack_QuerySelectedEndpoint(
+    __in KUSB_HANDLE Handle,
+    __in UCHAR EndpointAddressOrIndex,
+    __in BOOL IsIndex,
+    __out PUSB_ENDPOINT_DESCRIPTOR EndpointDescriptor)
+{
+	PKUSB_HANDLE_INTERNAL handle;
+	PKUSB_INTERFACE_EL intfEL;
+	PKUSB_ALT_INTERFACE_EL altfEL;
+	PKUSB_PIPE_EL pipeEL;
+	UCHAR altSetting;
+
+	ErrorParamAction(!IsHandleValid(EndpointDescriptor), "EndpointDescriptor", return FALSE);
+
+	Pub_To_Priv_UsbK(Handle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
+
+	FindInterfaceEL(handle->Device->UsbStack, intfEL, TRUE, handle->Selected_SharedInterface_Index);
+	ErrorSet(!intfEL, Error, ERROR_NO_MORE_ITEMS, "Failed locating interface number %u.", handle->Selected_SharedInterface_Index);
+
+	altSetting = (UCHAR)handle->Device->SharedInterfaces[handle->Selected_SharedInterface_Index].CurrentAltSetting;
+
+	FindAltInterfaceEL(intfEL, altfEL, FALSE, altSetting);
+	ErrorSet(!altfEL, Error, ERROR_NO_MORE_ITEMS, "AltSettingNumber %u does not exists.", altSetting);
+
+	FindPipeEL(altfEL, pipeEL, IsIndex, EndpointAddressOrIndex);
+	ErrorSet(!pipeEL, Error, ERROR_NO_MORE_ITEMS, "Endpoint %s %u does not exists.", IsIndex ? "index" : "address", EndpointAddressOrIndex);
+
+	memcpy(EndpointDescriptor, pipeEL->Descriptor, sizeof(*EndpointDescriptor));
 
 	PoolHandle_Dec_UsbK(handle);
 	return TRUE;

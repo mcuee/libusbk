@@ -155,7 +155,7 @@ static BOOL KUSB_API h_DevEnum_UpdateForRemoval(KLST_HANDLE DeviceList, KLST_DEV
 	if (!DeviceInfo->Connected) return TRUE;
 	if (MatchPattern(DeviceInfo->SymbolicLink, Context->dbcc_name))
 	{
-		DeviceInfo->SyncResults.Removed = 1;
+		DeviceInfo->SyncFlags = KLST_SYNC_FLAG_REMOVED;
 		DeviceInfo->Connected = FALSE;
 
 		return FALSE;
@@ -169,7 +169,7 @@ static BOOL KUSB_API h_DevEnum_ClearSyncResults(KLST_HANDLE DeviceList, KLST_DEV
 	UNREFERENCED_PARAMETER(DeviceList);
 	UNREFERENCED_PARAMETER(Context);
 
-	DeviceInfo->SyncResults.SyncFlags = SYNC_FLAG_UNCHANGED;
+	DeviceInfo->SyncFlags = KLST_SYNC_FLAG_UNCHANGED;
 
 	return TRUE;
 }
@@ -336,10 +336,10 @@ static BOOL KUSB_API h_DevEnum_PlugWaiters(KLST_HANDLE DeviceList, KLST_DEVINFO*
 			continue;
 
 		if (Context->HotHandle)
-			DeviceInfo->SyncResults.Added = 1;
+			DeviceInfo->SyncFlags |= KLST_SYNC_FLAG_ADDED;
 
 		// Nothing to do for this element.
-		if (DeviceInfo->SyncResults.SyncFlags == SYNC_FLAG_NONE)
+		if (DeviceInfo->SyncFlags == KLST_SYNC_FLAG_NONE || DeviceInfo->SyncFlags == KLST_SYNC_FLAG_UNCHANGED)
 			continue;
 
 		if (h_IsHotMatch(handle, DeviceInfo))
@@ -351,7 +351,7 @@ static BOOL KUSB_API h_DevEnum_PlugWaiters(KLST_HANDLE DeviceList, KLST_DEVINFO*
 					break;
 			}
 
-			if (devInstEL && !handle->Public.Flags.AllowDupeInstanceIDs) continue;
+			if (devInstEL && !(handle->Public.Flags & KHOT_FLAG_PASS_DUPE_INSTANCE)) continue;
 
 			if (!devInstEL)
 			{
@@ -360,34 +360,30 @@ static BOOL KUSB_API h_DevEnum_PlugWaiters(KLST_HANDLE DeviceList, KLST_DEVINFO*
 				DL_APPEND(Context->DevInstList, devInstEL);
 			}
 
-			if (DeviceInfo->SyncResults.Added)
+			if (DeviceInfo->SyncFlags & KLST_SYNC_FLAG_ADDED)
 			{
-				handle->Public.MatchedInfo = DeviceInfo;
-
 				if (handle->Public.OnHotPlug)
-					handle->Public.OnHotPlug((KHOT_HANDLE)handle, &handle->Public, DeviceInfo, SYNC_FLAG_ADDED);
+					handle->Public.OnHotPlug((KHOT_HANDLE)handle, &handle->Public, DeviceInfo, KLST_SYNC_FLAG_ADDED);
 
 				if (handle->Public.UserHwnd && handle->Public.UserMessage >= WM_USER)
 				{
-					if (handle->Public.Flags.PostUserMessage)
-						PostMessageA(handle->Public.UserHwnd, handle->Public.UserMessage, (WPARAM)&handle->Public, (LPARAM)SYNC_FLAG_ADDED);
+					if (handle->Public.Flags & KHOT_FLAG_POST_USER_MESSAGE)
+						PostMessageA(handle->Public.UserHwnd, (UINT)handle->Public.UserMessage, (WPARAM)&handle->Public, (LPARAM)KLST_SYNC_FLAG_ADDED);
 					else
-						SendMessageA(handle->Public.UserHwnd, handle->Public.UserMessage, (WPARAM)&handle->Public, (LPARAM)SYNC_FLAG_ADDED);
+						SendMessageA(handle->Public.UserHwnd, (UINT)handle->Public.UserMessage, (WPARAM)&handle->Public, (LPARAM)KLST_SYNC_FLAG_ADDED);
 				}
 			}
-			else if (DeviceInfo->SyncResults.Removed)
+			else if (DeviceInfo->SyncFlags & KLST_SYNC_FLAG_REMOVED)
 			{
-				handle->Public.MatchedInfo = DeviceInfo;
-
 				if (handle->Public.OnHotPlug)
-					handle->Public.OnHotPlug((KHOT_HANDLE)handle, &handle->Public, DeviceInfo, SYNC_FLAG_REMOVED);
+					handle->Public.OnHotPlug((KHOT_HANDLE)handle, &handle->Public, DeviceInfo, KLST_SYNC_FLAG_REMOVED);
 
 				if (handle->Public.UserHwnd && handle->Public.UserMessage >= WM_USER)
 				{
-					if (handle->Public.Flags.PostUserMessage)
-						PostMessageA(handle->Public.UserHwnd, handle->Public.UserMessage, (WPARAM)&handle->Public, (LPARAM)SYNC_FLAG_REMOVED);
+					if (handle->Public.Flags & KHOT_FLAG_POST_USER_MESSAGE)
+						PostMessageA(handle->Public.UserHwnd, (UINT)handle->Public.UserMessage, (WPARAM)&handle->Public, (LPARAM)KLST_SYNC_FLAG_REMOVED);
 					else
-						SendMessageA(handle->Public.UserHwnd, handle->Public.UserMessage, (WPARAM)&handle->Public, (LPARAM)SYNC_FLAG_REMOVED);
+						SendMessageA(handle->Public.UserHwnd, (UINT)handle->Public.UserMessage, (WPARAM)&handle->Public, (LPARAM)KLST_SYNC_FLAG_REMOVED);
 				}
 			}
 		}
@@ -430,7 +426,7 @@ static LRESULT CALLBACK h_WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
 
 		PoolHandle_Live_HotK(handle);
 
-		if (handle->Public.Flags.PlugAllOnInit)
+		if (handle->Public.Flags & KHOT_FLAG_PLUG_ALL_ON_INIT)
 			h_NotifyWaiters(handle, TRUE);
 
 		return (LRESULT)ERROR_SUCCESS;
@@ -458,7 +454,7 @@ static LRESULT CALLBACK h_WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
 			HOTWND_LOCK_ACQUIRE();
 
 			// re/sync the device list
-			LstK_Sync(g_HotNotifierList.DeviceList, NULL, NULL);
+			LstK_Sync(g_HotNotifierList.DeviceList, NULL, KLST_SYNC_FLAG_MASK);
 
 			// notify hot handle waiters
 			h_NotifyWaiters(NULL, TRUE);
@@ -472,7 +468,7 @@ static LRESULT CALLBACK h_WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
 			InterlockedExchange(&g_HotNotifierList.DevNodesChangePending, 0);
 
 			// re/sync the device list
-			LstK_Sync(g_HotNotifierList.DeviceList, NULL, NULL);
+			LstK_Sync(g_HotNotifierList.DeviceList, NULL, KLST_SYNC_FLAG_MASK);
 
 			// notify hot handle waiters
 			h_NotifyWaiters(NULL, TRUE);
@@ -619,7 +615,9 @@ static BOOL h_Register_Atom(PKHOT_NOTIFIER_LIST NotifierList)
 	wc.hInstance     = g_HotNotifierList.hAppInstance;
 	wc.hIcon         = NULL;
 	wc.hCursor       = NULL;
+#pragma warning(disable:4306)
 	wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+#pragma warning(default:4306)
 	wc.lpszMenuName  = NULL;
 	wc.lpszClassName = g_WindowClassHotK;
 	wc.hIconSm       = NULL;
@@ -718,8 +716,8 @@ static BOOL h_Create_Thread(PKHOT_NOTIFIER_LIST NotifierList)
 }
 
 KUSB_EXP BOOL KUSB_API HotK_Init(
-    __deref_out KHOT_HANDLE* Handle,
-    __in KHOT_PARAMS* InitParams)
+    _out KHOT_HANDLE* Handle,
+    _ref PKHOT_PARAMS InitParams)
 {
 	DWORD errorCode;
 	BOOL success;
@@ -727,14 +725,12 @@ KUSB_EXP BOOL KUSB_API HotK_Init(
 	// Create the top-level window for monitoring. WM_DEVICE_CHANGE.
 	if (IncLock(g_HotNotifierList.HotLockCount) == 1)
 	{
-		KLST_INIT_PARAMS listInit;
-		Mem_Zero(&listInit, sizeof(listInit));
-		listInit.ShowDisconnectedDevices = TRUE;
+		KLST_FLAG listInit = KLST_FLAG_INCLUDE_DISCONNECT;
 
 		g_HotNotifierList.DevNodesChangePending = 0;
 		if (!g_HotNotifierList.hAppInstance) g_HotNotifierList.hAppInstance = GetModuleHandle(NULL);
 
-		success = LstK_Init(&g_HotNotifierList.DeviceList, &listInit);
+		success = LstK_Init(&g_HotNotifierList.DeviceList, listInit);
 		ErrorNoSet(!success, Error, "Failed creating master device list.");
 
 		success = h_Create_Thread(&g_HotNotifierList);
@@ -768,7 +764,7 @@ Error:
 }
 
 KUSB_EXP BOOL KUSB_API HotK_Free(
-    __in KHOT_HANDLE Handle)
+    _in KHOT_HANDLE Handle)
 {
 	PKHOT_HANDLE_INTERNAL handle;
 	long lockCnt;

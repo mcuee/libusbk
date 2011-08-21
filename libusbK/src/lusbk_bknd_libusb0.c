@@ -20,17 +20,4 @@ binary distributions.
 #include "lusbk_handles.h"
 #include "lusbk_stack_collection.h"
 
-BOOL GetProcAddress_LUsb0(__out KPROC* ProcAddress, __in ULONG FunctionID)
-{
-	switch(FunctionID)
-	{
-	case KUSB_FNID_IsoReadPipe:
-		GetProcAddress_Unsupported(ProcAddress, FunctionID);
-		return LusbwError(ERROR_NOT_SUPPORTED);
-	case KUSB_FNID_IsoWritePipe:
-		GetProcAddress_Unsupported(ProcAddress, FunctionID);
-		return LusbwError(ERROR_NOT_SUPPORTED);
-	default:
-		return GetProcAddress_UsbK(ProcAddress, FunctionID);
-	}
-}
+

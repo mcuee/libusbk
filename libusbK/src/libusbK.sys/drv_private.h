@@ -216,6 +216,8 @@ typedef struct _DEVICE_CONTEXT
 	ULONG							PowerPolicy[MAX_POLICY];
 	ULONG							DevicePolicy[MAX_POLICY];	// DeviceInformation (actually).
 	DEVICE_REGSETTINGS				DeviceRegSettings; // Device regisitry settings (from inf Dev_AddReq)
+
+	volatile long					OpenedFileHandleCount;
 } DEVICE_CONTEXT, *PDEVICE_CONTEXT;
 
 WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(DEVICE_CONTEXT,

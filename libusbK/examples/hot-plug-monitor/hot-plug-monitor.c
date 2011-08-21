@@ -25,7 +25,7 @@
 #include "examples.h"
 
 #ifndef UNIT_TEST_LOOP_COUNT
-#define UNIT_TEST_LOOP_COUNT 2
+#define UNIT_TEST_LOOP_COUNT 1
 static int gLoop = 0;
 #else
 extern int gLoop;
@@ -46,7 +46,7 @@ VOID KUSB_API OnHotPlug(
 	    "  DeviceInterfaceGUID : %s\n"
 	    "  DevicePath          : %s\n"
 	    "  \n",
-	    NotificationType == SYNC_FLAG_ADDED ? "ARRIVAL" : "REMOVAL",
+	    NotificationType == KLST_SYNC_FLAG_ADDED ? "ARRIVAL" : "REMOVAL",
 	    DeviceInfo->DeviceDesc,
 	    DeviceInfo->Mfg,
 	    DeviceInfo->Service,
@@ -66,8 +66,7 @@ DWORD __cdecl main(int argc, char* argv[])
 	{
 		memset(&hotParams, 0, sizeof(hotParams));
 		hotParams.OnHotPlug = OnHotPlug;
-		hotParams.Flags.PlugAllOnInit = 1;
-		hotParams.Flags.AllowDupeInstanceIDs = 1;
+		hotParams.Flags |= KHOT_FLAG_PLUG_ALL_ON_INIT;
 		strcpy(hotParams.PatternMatch.InstanceID, "*");
 
 		printf("Initialize a HotK device notification event monitor..\n");
@@ -76,9 +75,11 @@ DWORD __cdecl main(int argc, char* argv[])
 		if (!HotK_Init(&hotHandle, &hotParams))
 		{
 			errorCode = GetLastError();
-			printf("HotK_Init failed. Win32Error=%u (0x%08X)\n", errorCode, errorCode);
+			printf("HotK_Init failed. ErrorCode: %08Xh\n",  errorCode);
 			goto Done;
 		}
+
+		printf("HotK monitor initialized. ErrorCode: %08Xh\n",  errorCode);
 
 		for(;;)
 		{
@@ -93,17 +94,40 @@ DWORD __cdecl main(int argc, char* argv[])
 			}
 
 			Sleep(100);
-			SwitchToThread();
 		}
 
 		if (!HotK_Free(hotHandle))
 		{
 			errorCode = GetLastError();
-			printf("HotK_Free failed. Win32Error=%u (0x%08X)\n", errorCode, errorCode);
+			printf("HotK_Free failed. ErrorCode: %08Xh\n",  errorCode);
 			goto Done;
 		}
+
+		printf("HotK monitor closed. ErrorCode: %08Xh\n",  errorCode);
+
 	}
 
 Done:
 	return errorCode;
 }
+
+/*
+Initialize a HotK device notification event monitor..
+Looking for devices with instances IDs matching the pattern '*'..
+Press 'q' to exit..
+
+HotK monitor initialized. ErrorCode: 00000000h
+
+[ARRIVAL] Benchmark Device (Microchip Technology, Inc.) [libusbK]
+  InstanceID          : USB\VID_04D8&PID_FA2E\LUSBW1
+  DeviceInterfaceGUID : {716cdf1f-418b-4b80-a07d-1311dffdc8b8}
+  DevicePath          : \\?\USB#VID_04D8&PID_FA2E#LUSBW1#{716cdf1f-418b-4b80-a07d-1311dffdc8b8}
+
+
+[REMOVAL] Benchmark Device (Microchip Technology, Inc.) [libusbK]
+  InstanceID          : USB\VID_04D8&PID_FA2E\LUSBW1
+  DeviceInterfaceGUID : {716cdf1f-418b-4b80-a07d-1311dffdc8b8}
+  DevicePath          : \\?\USB#VID_04D8&PID_FA2E#LUSBW1#{716cdf1f-418b-4b80-a07d-1311dffdc8b8}
+
+HotK monitor closed. ErrorCode: 00000000h
+*/

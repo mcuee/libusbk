@@ -18,6 +18,7 @@ binary distributions.
 
 #include "lusbk_private.h"
 #include "lusbk_handles.h"
+#include "lusbk_bknd_unsupported.h"
 
 // Default loggging level
 ULONG DebugLevel = 4;
@@ -25,132 +26,244 @@ ULONG DebugLevel = 4;
 // warning C4127: conditional expression is constant.
 #pragma warning(disable: 4127)
 
-/*
-#define RET_DEF_USER_CONTEXT_SIZE(AllKSection)	\
-	return AllK.AllKSection.DefUserContextSize > sizeof(KLIB_USER_CONTEXT) ? AllK.AllKSection.DefUserContextSize : sizeof(KLIB_USER_CONTEXT)
-*/
+#define CASE_FNID_LOAD(FunctionName)															\
+	case KUSB_FNID_##FunctionName:  															\
+	if (LibK_GetProcAddress((KPROC*)&DriverAPI->FunctionName, DriverID, fnIdIndex) == FALSE)	\
+	{   																						\
+		USBWRNN("function id %u for driver id %u does not exist.",fnIdIndex,DriverID);  		\
+	}   																						\
+	else																						\
+		fnIdCount++;																			\
+	break
 
-#define RET_DEF_USER_CONTEXT_SIZE(AllKSection)	return (AllK.AllKSection.DefUserContextSize)
+VOID WUsb_Init_Library();
+BOOL GetProcAddress_Base(__out KPROC* ProcAddress, __in ULONG FunctionID);
+BOOL GetProcAddress_UsbK(__out KPROC* ProcAddress, __in ULONG FunctionID);
+BOOL GetProcAddress_WUsb(__out KPROC* ProcAddress, __in ULONG FunctionID);
 
-#define KLIB_SET_USER_CONTEXT_CB(AllKSection,mInit_User_ContextCB,mFree_User_ContextCB) do {		\
-	AllK.AllKSection.InitHandleCB = mInit_User_ContextCB;											\
-	AllK.AllKSection.FreeHandleCB = mFree_User_ContextCB;											\
-}while(0)
-
-#define GET_CONTEXT_CASE(AllKSection,Handle_Suffix)  						\
-	case KLIB_HANDLE_TYPE_##Handle_Suffix:   								\
-	Pub_To_Priv_##AllKSection(Handle,priv.AllKSection.Handle,return NULL)	\
- 
-#define GETRET_CONTEXT_CASE(AllKSection,Handle_Suffix)   					\
-	GET_CONTEXT_CASE(AllKSection,Handle_Suffix); 							\
-	return &priv.AllKSection.Handle->Base.User.Context   					\
- 
-#define GET_CONTEXTSIZE_CASE(AllKSection,Handle_Suffix)  					\
-	case KLIB_HANDLE_TYPE_##Handle_Suffix:   								\
-	Pub_To_Priv_##AllKSection(Handle,priv.AllKSection.Handle,return -1)		\
- 
-#define GETRET_CONTEXTSIZE_CASE(AllKSection,Handle_Suffix)   				\
-	GET_CONTEXTSIZE_CASE(AllKSection,Handle_Suffix); 						\
-	return (LONG)priv.AllKSection.Handle->Base.User.ContextSize
-
-
-typedef union  _KLIB_ALLK_PRIVATE_HANDLE
+BOOL GetProcAddress_Base(__out KPROC* ProcAddress, __in ULONG FunctionID)
 {
-	struct
+	// some function are the same for all apis; they are set here.
+	switch(FunctionID)
 	{
-		PKHOT_HANDLE_INTERNAL Handle;
-	} HotK;
-	struct
-	{
-		PKLST_HANDLE_INTERNAL Handle;
-	} LstK;
-	struct
-	{
-		PKLST_DEVINFO_HANDLE_INTERNAL Handle;
-	} LstInfoK;
-	struct
-	{
-		PKUSB_HANDLE_INTERNAL Handle;
-	} UsbK;
-	struct
-	{
-		PKOVL_HANDLE_INTERNAL Handle;
-	} OvlK;
-	struct
-	{
-		PKOVL_POOL_HANDLE_INTERNAL Handle;
-	} OvlPoolK;
-} KLIB_ALLK_PRIVATE_HANDLE;
+	case KUSB_FNID_Free:
+		*ProcAddress = (KPROC)UsbK_Free;
+		break;
+	case KUSB_FNID_GetAssociatedInterface:
+		*ProcAddress = (KPROC)UsbK_GetAssociatedInterface;
+		break;
+	case KUSB_FNID_QueryInterfaceSettings:
+		*ProcAddress = (KPROC)UsbK_QueryInterfaceSettings;
+		break;
+	case KUSB_FNID_QueryPipe:
+		*ProcAddress = (KPROC)UsbK_QueryPipe;
+		break;
+	case KUSB_FNID_Clone:
+		*ProcAddress = (KPROC)UsbK_Clone;
+		break;
+	case KUSB_FNID_SelectInterface:
+		*ProcAddress = (KPROC)UsbK_SelectInterface;
+		break;
+	case KUSB_FNID_GetProperty:
+		*ProcAddress = (KPROC)UsbK_GetProperty;
+		break;
+	default:
+		return FALSE;
+	}
+	return TRUE;
+}
 
-KUSB_EXP BOOL KUSB_API LibK_GetProcAddress(__out KPROC* ProcAddress, __in KUSB_DRVID DriverID, __in KUSB_FNID FunctionID)
+BOOL GetProcAddress_UsbK(__out KPROC* ProcAddress, __in ULONG FunctionID)
+{
+	switch(FunctionID)
+	{
+	case KUSB_FNID_Initialize:
+		*ProcAddress = (KPROC)UsbK_Initialize;
+		break;
+	case KUSB_FNID_GetDescriptor:
+		*ProcAddress = (KPROC)UsbK_GetDescriptor;
+		break;
+	case KUSB_FNID_QueryDeviceInformation:
+		*ProcAddress = (KPROC)UsbK_QueryDeviceInformation;
+		break;
+	case KUSB_FNID_SetCurrentAlternateSetting:
+		*ProcAddress = (KPROC)UsbK_SetCurrentAlternateSetting;
+		break;
+	case KUSB_FNID_GetCurrentAlternateSetting:
+		*ProcAddress = (KPROC)UsbK_GetCurrentAlternateSetting;
+		break;
+	case KUSB_FNID_SetPipePolicy:
+		*ProcAddress = (KPROC)UsbK_SetPipePolicy;
+		break;
+	case KUSB_FNID_GetPipePolicy:
+		*ProcAddress = (KPROC)UsbK_GetPipePolicy;
+		break;
+	case KUSB_FNID_ReadPipe:
+		*ProcAddress = (KPROC)UsbK_ReadPipe;
+		break;
+	case KUSB_FNID_WritePipe:
+		*ProcAddress = (KPROC)UsbK_WritePipe;
+		break;
+	case KUSB_FNID_ControlTransfer:
+		*ProcAddress = (KPROC)UsbK_ControlTransfer;
+		break;
+	case KUSB_FNID_ResetPipe:
+		*ProcAddress = (KPROC)UsbK_ResetPipe;
+		break;
+	case KUSB_FNID_AbortPipe:
+		*ProcAddress = (KPROC)UsbK_AbortPipe;
+		break;
+	case KUSB_FNID_FlushPipe:
+		*ProcAddress = (KPROC)UsbK_FlushPipe;
+		break;
+	case KUSB_FNID_SetPowerPolicy:
+		*ProcAddress = (KPROC)UsbK_SetPowerPolicy;
+		break;
+	case KUSB_FNID_GetPowerPolicy:
+		*ProcAddress = (KPROC)UsbK_GetPowerPolicy;
+		break;
+	case KUSB_FNID_GetOverlappedResult:
+		*ProcAddress = (KPROC)UsbK_GetOverlappedResult;
+		break;
+	case KUSB_FNID_ResetDevice:
+		*ProcAddress = (KPROC)UsbK_ResetDevice;
+		break;
+	case KUSB_FNID_Init:
+		*ProcAddress = (KPROC)UsbK_Init;
+		break;
+	case KUSB_FNID_SetConfiguration:
+		*ProcAddress = (KPROC)UsbK_SetConfiguration;
+		break;
+	case KUSB_FNID_GetConfiguration:
+		*ProcAddress = (KPROC)UsbK_GetConfiguration;
+		break;
+	case KUSB_FNID_ClaimInterface:
+		*ProcAddress = (KPROC)UsbK_ClaimInterface;
+		break;
+	case KUSB_FNID_ReleaseInterface:
+		*ProcAddress = (KPROC)UsbK_ReleaseInterface;
+		break;
+	case KUSB_FNID_SetAltInterface:
+		*ProcAddress = (KPROC)UsbK_SetAltInterface;
+		break;
+	case KUSB_FNID_GetAltInterface:
+		*ProcAddress = (KPROC)UsbK_GetAltInterface;
+		break;
+	case KUSB_FNID_IsoReadPipe:
+		*ProcAddress = (KPROC)UsbK_IsoReadPipe;
+		break;
+	case KUSB_FNID_IsoWritePipe:
+		*ProcAddress = (KPROC)UsbK_IsoWritePipe;
+		break;
+	case KUSB_FNID_GetCurrentFrameNumber:
+		*ProcAddress = (KPROC)UsbK_GetCurrentFrameNumber;
+		break;
+	default:
+		return FALSE;
+
+	}
+	return TRUE;
+}
+
+BOOL GetProcAddress_LUsb0(__out KPROC* ProcAddress, __in ULONG FunctionID)
+{
+	switch(FunctionID)
+	{
+	case KUSB_FNID_IsoReadPipe:
+		GetProcAddress_Unsupported(ProcAddress, FunctionID);
+		return LusbwError(ERROR_NOT_SUPPORTED);
+	case KUSB_FNID_IsoWritePipe:
+		GetProcAddress_Unsupported(ProcAddress, FunctionID);
+		return LusbwError(ERROR_NOT_SUPPORTED);
+	default:
+		return GetProcAddress_UsbK(ProcAddress, FunctionID);
+	}
+}
+
+KUSB_EXP BOOL KUSB_API LibK_GetProcAddress(
+    _out KPROC* ProcAddress,
+    _in ULONG DriverID,
+    _in ULONG FunctionID)
 {
 	CheckLibInit();
 
 	*ProcAddress = (KPROC)NULL;
 
+	if (GetProcAddress_Base(ProcAddress, FunctionID))
+		return TRUE;
+
 	switch(DriverID)
 	{
 	case KUSB_DRVID_LIBUSBK:
-		if (GetProcAddress_UsbK(ProcAddress, FunctionID) && *ProcAddress != NULL)
-			return TRUE;
+		if (GetProcAddress_UsbK(ProcAddress, FunctionID)) return TRUE;
 		break;
 
 	case KUSB_DRVID_LIBUSB0_FILTER:
 	case KUSB_DRVID_LIBUSB0:
-		if (GetProcAddress_LUsb0(ProcAddress, FunctionID) && *ProcAddress != NULL)
-			return TRUE;
+		if (GetProcAddress_LUsb0(ProcAddress, FunctionID)) return TRUE;
 		break;
 
 	case KUSB_DRVID_WINUSB:
-		if (GetProcAddress_WUsb(ProcAddress, FunctionID) && *ProcAddress != NULL)
-			return TRUE;
-
-	default:
-		if (GetProcAddress_Unsupported(ProcAddress, FunctionID) && *ProcAddress != NULL)
-			return TRUE;
+		if (GetProcAddress_WUsb(ProcAddress, FunctionID)) return TRUE;
 		break;
 	}
 
+	GetProcAddress_Unsupported(ProcAddress, FunctionID);
 	return LusbwError(ERROR_NOT_SUPPORTED);
 }
 
-
-KUSB_EXP BOOL KUSB_API LibK_LoadDriverApi(
-    __inout KUSB_DRIVER_API* DriverAPI,
-    __in ULONG DriverID,
-    __in ULONG SizeofDriverAPI)
+KUSB_EXP BOOL KUSB_API LibK_CopyDriverAPI(
+    _out PKUSB_DRIVER_API DriverAPI,
+    _in KUSB_HANDLE UsbHandle)
 {
+	PKUSB_HANDLE_INTERNAL handle;
 
-#define CASE_FNID_LOAD(FunctionName)																\
-		case KUSB_FNID_##FunctionName:																\
-		if (LibK_GetProcAddress((KPROC*)&tempDriverAPI.FunctionName, DriverID, fnIdIndex) == FALSE)	\
-		{																							\
-			USBWRNN("function id %u for driver id %u does not exist.",fnIdIndex,DriverID);			\
-		}else {fnIdCount++;}																		\
-		break
+	Pub_To_Priv_UsbK(UsbHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
 
-	KUSB_DRIVER_API tempDriverAPI;
+	memcpy(DriverAPI, handle->Device->DriverAPI, sizeof(*DriverAPI));
+
+	PoolHandle_Dec_UsbK(handle);
+	return TRUE;
+}
+
+KUSB_EXP BOOL KUSB_API LibK_LoadDriverAPI(
+    _out PKUSB_DRIVER_API DriverAPI,
+    _in ULONG DriverID)
+{
 	int fnIdIndex;
 	int fnIdCount = 0;
 
 	CheckLibInit();
-
-	Mem_Zero(&tempDriverAPI, sizeof(tempDriverAPI));
 
 	if (!IsHandleValid(DriverAPI))
 	{
 		SetLastError(ERROR_INVALID_HANDLE);
 		return FALSE;
 	}
+	Mem_Zero(DriverAPI, sizeof(*DriverAPI));
 
 	for (fnIdIndex = 0; fnIdIndex < KUSB_FNID_COUNT; fnIdIndex++)
 	{
 		switch(fnIdIndex)
 		{
+			CASE_FNID_LOAD(Init);
+			CASE_FNID_LOAD(ClaimInterface);
+			CASE_FNID_LOAD(ReleaseInterface);
+			CASE_FNID_LOAD(SetAltInterface);
+			CASE_FNID_LOAD(GetAltInterface);
+			CASE_FNID_LOAD(GetDescriptor);
+			CASE_FNID_LOAD(ControlTransfer);
+			CASE_FNID_LOAD(SetPowerPolicy);
+			CASE_FNID_LOAD(GetPowerPolicy);
+			CASE_FNID_LOAD(SetConfiguration);
+			CASE_FNID_LOAD(GetConfiguration);
+			CASE_FNID_LOAD(ResetDevice);
 			CASE_FNID_LOAD(Initialize);
 			CASE_FNID_LOAD(Free);
+			CASE_FNID_LOAD(SelectInterface);
 			CASE_FNID_LOAD(GetAssociatedInterface);
-			CASE_FNID_LOAD(GetDescriptor);
+			CASE_FNID_LOAD(Clone);
 			CASE_FNID_LOAD(QueryInterfaceSettings);
 			CASE_FNID_LOAD(QueryDeviceInformation);
 			CASE_FNID_LOAD(SetCurrentAlternateSetting);
@@ -160,27 +273,14 @@ KUSB_EXP BOOL KUSB_API LibK_LoadDriverApi(
 			CASE_FNID_LOAD(GetPipePolicy);
 			CASE_FNID_LOAD(ReadPipe);
 			CASE_FNID_LOAD(WritePipe);
-			CASE_FNID_LOAD(ControlTransfer);
 			CASE_FNID_LOAD(ResetPipe);
 			CASE_FNID_LOAD(AbortPipe);
 			CASE_FNID_LOAD(FlushPipe);
-			CASE_FNID_LOAD(SetPowerPolicy);
-			CASE_FNID_LOAD(GetPowerPolicy);
-			CASE_FNID_LOAD(GetOverlappedResult);
-			CASE_FNID_LOAD(ResetDevice);
-			CASE_FNID_LOAD(Open);
-			CASE_FNID_LOAD(Close);
-			CASE_FNID_LOAD(SetConfiguration);
-			CASE_FNID_LOAD(GetConfiguration);
-			CASE_FNID_LOAD(ClaimInterface);
-			CASE_FNID_LOAD(ReleaseInterface);
-			CASE_FNID_LOAD(SetAltInterface);
-			CASE_FNID_LOAD(GetAltInterface);
 			CASE_FNID_LOAD(IsoReadPipe);
 			CASE_FNID_LOAD(IsoWritePipe);
 			CASE_FNID_LOAD(GetCurrentFrameNumber);
-			CASE_FNID_LOAD(Clone);
-			CASE_FNID_LOAD(SelectInterface);
+			CASE_FNID_LOAD(GetOverlappedResult);
+			CASE_FNID_LOAD(GetProperty);
 
 		default:
 			USBERRN("undeclared api function %u!", fnIdIndex);
@@ -188,213 +288,103 @@ KUSB_EXP BOOL KUSB_API LibK_LoadDriverApi(
 		}
 	}
 
-	memcpy(DriverAPI, &tempDriverAPI, SizeofDriverAPI);
+	DriverAPI->Info.FunctionCount = fnIdCount;
+	DriverAPI->Info.DriverID = (KUSB_DRVID)DriverID;
+
 	return fnIdCount > 0 ? (BOOL)fnIdCount : FALSE;
 }
 
-KUSB_EXP PKLIB_USER_CONTEXT KUSB_API LibK_GetContext(KLIB_HANDLE Handle, KLIB_HANDLE_TYPE HandleType)
+static PKOBJ_BASE Lib_GetBase(KLIB_HANDLE Handle, KLIB_HANDLE_TYPE HandleType)
 {
-	KLIB_ALLK_PRIVATE_HANDLE priv;
-
-	switch (HandleType)
-	{
-		GETRET_CONTEXT_CASE(HotK, HOTK);
-
-		GETRET_CONTEXT_CASE(UsbK, USBK);
-
-		GET_CONTEXT_CASE(UsbK, USBSHAREDK);
-		return &priv.UsbK.Handle->Device->Base.User.Context;
-
-		GETRET_CONTEXT_CASE(LstK, LSTK);
-
-		GETRET_CONTEXT_CASE(LstInfoK, LSTINFOK);
-
-		GETRET_CONTEXT_CASE(OvlK, OVLK);
-
-		GETRET_CONTEXT_CASE(OvlPoolK, OVLPOOLK);
-	}
-
-	LusbwError(ERROR_INVALID_HANDLE);
-	return NULL;
-}
-
-
-KUSB_EXP LONG KUSB_API LibK_GetContextSize(KLIB_HANDLE Handle, KLIB_HANDLE_TYPE HandleType)
-{
-	KLIB_ALLK_PRIVATE_HANDLE priv;
-
-	switch (HandleType)
-	{
-		GETRET_CONTEXTSIZE_CASE(HotK, HOTK);
-
-		GETRET_CONTEXTSIZE_CASE(UsbK, USBK);
-
-		GET_CONTEXTSIZE_CASE(UsbK, USBSHAREDK);
-		return priv.UsbK.Handle->Device->Base.User.ContextSize;
-
-		GETRET_CONTEXTSIZE_CASE(LstK, LSTK);
-
-		GETRET_CONTEXTSIZE_CASE(LstInfoK, LSTINFOK);
-
-		GETRET_CONTEXTSIZE_CASE(OvlK, OVLK);
-
-		GETRET_CONTEXTSIZE_CASE(OvlPoolK, OVLPOOLK);
-	}
-
-	LusbwError(ERROR_INVALID_HANDLE);
-	return -1;
-}
-
-KUSB_EXP BOOL KUSB_API LibK_SetHandleCallbacks(
-    KLIB_HANDLE_TYPE HandleType,
-    KLIB_INIT_HANDLE_CB* InitHandleCB,
-    KLIB_FREE_HANDLE_CB* FreeHandleCB)
-{
-	switch(HandleType)
-	{
-	case KLIB_HANDLE_TYPE_HOTK:
-		KLIB_SET_USER_CONTEXT_CB(HotK, InitHandleCB, FreeHandleCB);
-		return TRUE;
-	case KLIB_HANDLE_TYPE_USBK:
-		KLIB_SET_USER_CONTEXT_CB(UsbK, InitHandleCB, FreeHandleCB);
-		return TRUE;
-	case KLIB_HANDLE_TYPE_USBSHAREDK:
-		KLIB_SET_USER_CONTEXT_CB(DevK, InitHandleCB, FreeHandleCB);
-		return TRUE;
-	case KLIB_HANDLE_TYPE_LSTK:
-		KLIB_SET_USER_CONTEXT_CB(LstK, InitHandleCB, FreeHandleCB);
-		return TRUE;
-	case KLIB_HANDLE_TYPE_LSTINFOK:
-		KLIB_SET_USER_CONTEXT_CB(LstInfoK, InitHandleCB, FreeHandleCB);
-		return TRUE;
-	case KLIB_HANDLE_TYPE_OVLK:
-		KLIB_SET_USER_CONTEXT_CB(OvlK, InitHandleCB, FreeHandleCB);
-		return TRUE;
-	case KLIB_HANDLE_TYPE_OVLPOOLK:
-		KLIB_SET_USER_CONTEXT_CB(OvlPoolK, InitHandleCB, FreeHandleCB);
-		return TRUE;
-	}
-	LusbwError(ERROR_INVALID_PARAMETER);
-	return FALSE;
-}
-
-KUSB_EXP BOOL KUSB_API LibK_SetContextSize(KLIB_HANDLE Handle, KLIB_HANDLE_TYPE HandleType, ULONG ContextSize)
-{
-	KLIB_ALLK_PRIVATE_HANDLE priv;
 	PKOBJ_BASE base = NULL;
-
-	ErrorParamAction(ContextSize != 0 || ContextSize <= sizeof(KLIB_USER_CONTEXT), "ContextSize", return FALSE);
-
-
 	switch (HandleType)
 	{
-		GET_CONTEXTSIZE_CASE(HotK, HOTK);
-		base = &priv.HotK.Handle->Base;
+	case KLIB_HANDLE_TYPE_HOTK:
+		base = (PKOBJ_BASE)Handle;
 		break;
 
-		GET_CONTEXTSIZE_CASE(UsbK, USBK);
-		base = &priv.UsbK.Handle->Base;
-		break;
-		GET_CONTEXTSIZE_CASE(UsbK, USBSHAREDK);
-		base = &priv.UsbK.Handle->Device->Base;
+	case KLIB_HANDLE_TYPE_USBK:
+		base = (PKOBJ_BASE)Handle;
 		break;
 
-		GET_CONTEXTSIZE_CASE(LstK, LSTK);
-		base = &priv.LstK.Handle->Base;
+	case KLIB_HANDLE_TYPE_USBSHAREDK:
+		base = (PKOBJ_BASE) & (((PKUSB_HANDLE_INTERNAL)Handle)->Device->Base);
 		break;
 
-		GET_CONTEXTSIZE_CASE(LstInfoK, LSTINFOK);
-		base = &priv.LstInfoK.Handle->Base;
+	case KLIB_HANDLE_TYPE_LSTK:
+		base = (PKOBJ_BASE)Handle;
 		break;
 
-		GET_CONTEXTSIZE_CASE(OvlK, OVLK);
-		base = &priv.OvlK.Handle->Base;
+	case KLIB_HANDLE_TYPE_LSTINFOK:
+		base = (PKOBJ_BASE) & (((PKLST_DEVINFO_EL)Handle)->DevInfoHandle->Base);
 		break;
 
-		GET_CONTEXTSIZE_CASE(OvlPoolK, OVLPOOLK);
-		base = &priv.OvlPoolK.Handle->Base;
+	case KLIB_HANDLE_TYPE_OVLK:
+		base = (PKOBJ_BASE) & (((PKOVL_HANDLE_INTERNAL)Handle)->Base);
+		break;
+
+	case KLIB_HANDLE_TYPE_OVLPOOLK:
+		base = (PKOBJ_BASE)Handle;
+		break;
+
+	case KLIB_HANDLE_TYPE_STMK:
+		base = (PKOBJ_BASE)Handle;
 		break;
 	}
-
-	if (!base)
-	{
-		LusbwError(ERROR_INVALID_HANDLE);
-		return FALSE;
-	}
-
-	ErrorHandleAction(base->Disposing || !base->Count.Use || base->Count.Ref < 1, "Handle", return FALSE);
-
-	if (base->User.ContextAllocated && ContextSize != base->User.ContextSize)
-	{
-		Mem_Free(&base->User.Context.Custom);
-		base->User.ContextAllocated = FALSE;
-		base->User.ContextSize = 0;
-		base->User.Context.Custom = NULL;
-	}
-	if (!base->User.ContextAllocated && ContextSize)
-	{
-		base->User.ContextAllocated = TRUE;
-		base->User.ContextSize = ContextSize;
-		base->User.Context.Custom = Mem_Alloc(ContextSize);
-	}
-
-	return TRUE;
+	return base;
 }
 
-KUSB_EXP LONG KUSB_API LibK_GetDefaultContextSize(KLIB_HANDLE_TYPE HandleType)
+KUSB_EXP KLIB_USER_CONTEXT KUSB_API LibK_GetContext(
+    _in KLIB_HANDLE Handle,
+    _in KLIB_HANDLE_TYPE HandleType)
 {
+	PKOBJ_BASE base = Lib_GetBase(Handle, HandleType);
 
-	switch(HandleType)
-	{
-	case KLIB_HANDLE_TYPE_HOTK:
-		RET_DEF_USER_CONTEXT_SIZE(HotK);
-	case KLIB_HANDLE_TYPE_USBK:
-		RET_DEF_USER_CONTEXT_SIZE(UsbK);
-	case KLIB_HANDLE_TYPE_USBSHAREDK:
-		RET_DEF_USER_CONTEXT_SIZE(DevK);
-	case KLIB_HANDLE_TYPE_LSTK:
-		RET_DEF_USER_CONTEXT_SIZE(LstK);
-	case KLIB_HANDLE_TYPE_LSTINFOK:
-		RET_DEF_USER_CONTEXT_SIZE(LstInfoK);
-	case KLIB_HANDLE_TYPE_OVLK:
-		RET_DEF_USER_CONTEXT_SIZE(OvlK);
-	case KLIB_HANDLE_TYPE_OVLPOOLK:
-		RET_DEF_USER_CONTEXT_SIZE(OvlPoolK);
-	}
+	if (base != NULL && base->Count.Ref >= 1 && base->Count.Use == SPINLOCK_HELD)
+		return base->User.Context;
 
-	LusbwError(ERROR_INVALID_PARAMETER);
+	LusbwError(ERROR_INVALID_HANDLE);
 	return 0;
 }
 
-KUSB_EXP BOOL KUSB_API LibK_SetDefaultContextSize(KLIB_HANDLE_TYPE HandleType, ULONG ContextSize)
+KUSB_EXP BOOL KUSB_API LibK_SetContext(
+    _in KLIB_HANDLE Handle,
+    _in KLIB_HANDLE_TYPE HandleType,
+    _in KLIB_USER_CONTEXT ContextValue)
 {
-	ErrorParamAction(ContextSize != 0 || ContextSize <= sizeof(KLIB_USER_CONTEXT), "ContextSize", return FALSE);
+	PKOBJ_BASE base = Lib_GetBase(Handle, HandleType);
 
-	switch(HandleType)
+	if (base != NULL && base->Count.Ref >= 1 && base->Count.Use == SPINLOCK_HELD)
 	{
-	case KLIB_HANDLE_TYPE_HOTK:
-		AllK.HotK.DefUserContextSize = ContextSize;
-		return TRUE;
-	case KLIB_HANDLE_TYPE_USBK:
-		AllK.UsbK.DefUserContextSize = ContextSize;
-		return TRUE;
-	case KLIB_HANDLE_TYPE_USBSHAREDK:
-		AllK.DevK.DefUserContextSize = ContextSize;
-		return TRUE;
-	case KLIB_HANDLE_TYPE_LSTK:
-		AllK.LstK.DefUserContextSize = ContextSize;
-		return TRUE;
-	case KLIB_HANDLE_TYPE_LSTINFOK:
-		AllK.LstInfoK.DefUserContextSize = ContextSize;
-		return TRUE;
-	case KLIB_HANDLE_TYPE_OVLK:
-		AllK.OvlK.DefUserContextSize = ContextSize;
-		return TRUE;
-	case KLIB_HANDLE_TYPE_OVLPOOLK:
-		AllK.OvlPoolK.DefUserContextSize = ContextSize;
+		base->User.Context = ContextValue;
 		return TRUE;
 	}
-	LusbwError(ERROR_INVALID_PARAMETER);
+	LusbwError(ERROR_INVALID_HANDLE);
 	return FALSE;
 }
 
+KUSB_EXP BOOL KUSB_API LibK_SetCleanupCallback(
+    _in KLIB_HANDLE Handle,
+    _in KLIB_HANDLE_TYPE HandleType,
+    _in PKLIB_HANDLE_CB CleanupCB)
+{
+	PKOBJ_BASE base = Lib_GetBase(Handle, HandleType);
+
+	if (base != NULL && base->Count.Ref >= 1 && base->Count.Use == SPINLOCK_HELD)
+	{
+		base->User.CleanupCB = CleanupCB;
+		return TRUE;
+	}
+	LusbwError(ERROR_INVALID_HANDLE);
+	return FALSE;
+}
+
+KUSB_EXP VOID KUSB_API LibK_GetVersion(
+    _out PKLIB_VERSION Version)
+{
+	ErrorParamAction(!IsHandleValid(Version), "Version", return);
+	Version->Major = VERSION_MAJOR;
+	Version->Minor = VERSION_MINOR;
+	Version->Micro = VERSION_MICRO;
+	Version->Nano = VERSION_NANO;
+}

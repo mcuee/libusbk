@@ -32,14 +32,14 @@ BOOL Examples_GetTestDevice( __deref_out KLST_HANDLE* DeviceList,
 	                                DeviceInfo,
 	                                argc,
 	                                argv,
-	                                NULL);
+	                                0);
 
 }
 BOOL Examples_GetTestDeviceEx( __deref_out KLST_HANDLE* DeviceList,
                                __deref_out KLST_DEVINFO_HANDLE* DeviceInfo,
                                __in int argc,
                                __in char* argv[],
-                               __in_opt PKLST_INIT_PARAMS InitParams)
+                               __in_opt KLST_FLAG Flags)
 {
 	ULONG vidArg = EXAMPLE_VID;
 	ULONG pidArg = EXAMPLE_PID;
@@ -60,7 +60,7 @@ BOOL Examples_GetTestDeviceEx( __deref_out KLST_HANDLE* DeviceList,
 	}
 
 	// Get the device list
-	if (!LstK_Init(&deviceList, InitParams))
+	if (!LstK_Init(&deviceList, Flags))
 	{
 		printf("Error initializing device list.\n");
 		return FALSE;
@@ -115,4 +115,31 @@ BOOL Examples_GetTestDeviceEx( __deref_out KLST_HANDLE* DeviceList,
 
 		return FALSE;
 	}
+}
+
+BOOL Bench_Configure(__in KUSB_HANDLE UsbHandle,
+                     __in BM_COMMAND Command,
+                     __in UCHAR InterfaceNumber,
+                     __in_opt PKUSB_DRIVER_API DriverAPI,
+                     __deref_inout PBM_TEST_TYPE TestType)
+{
+	DWORD transferred = 0;
+	BOOL success;
+	WINUSB_SETUP_PACKET Pkt;
+	KUSB_SETUP_PACKET* defPkt = (KUSB_SETUP_PACKET*)&Pkt;
+
+	memset(&Pkt, 0, sizeof(Pkt));
+	defPkt->BmRequest.Dir	= BMREQUEST_DEVICE_TO_HOST;
+	defPkt->BmRequest.Type	= BMREQUEST_VENDOR;
+	defPkt->Request			= (UCHAR) Command;
+	defPkt->Value			= (UCHAR) * TestType;
+	defPkt->Index			= InterfaceNumber;
+	defPkt->Length			= 1;
+
+	if (DriverAPI)
+		success = DriverAPI->ControlTransfer(UsbHandle, Pkt, (PUCHAR)TestType, 1, &transferred, NULL);
+	else
+		success = UsbK_ControlTransfer(UsbHandle, Pkt, (PUCHAR)TestType, 1, &transferred, NULL);
+
+	return success;
 }

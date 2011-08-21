@@ -22,52 +22,59 @@
 - \subpage usbk_building
   <BR>Methods for building the libusbK user mode library and driver from source code.
   <HR>
+- \subpage usbk_mailing_list
+  <BR>All libusbK rleated questions and issues.
+  <HR>
 */
 
-/*! \addtogroup genk UsbK General
-* \brief \ref genk \copybrief lusbk_common.h
-*
+/*! \addtogroup libk USB General
+* \brief General function/typdef/defines.
+* \brief LibK Dynamic Driver API module.
 *  @{
 */
 
 /*! @} */
 
-/*! \addtogroup usbk UsbK Core API
-* \brief \ref usbk \copybrief libusbk.h
-*
+/*! \addtogroup usbk USB Core
+* \brief Module for core UsbK device functions.
 *  @{
 */
 
 /*! @} */
 
-/*! \addtogroup lstk Device List API
-* \brief \ref lstk \copybrief lusbk_device_list.h
-*
+/*! \addtogroup lstk Device List
+* \brief Module for USB device discovery and enumeration.
 *  @{
 */
 
 /*! @} */
 
-/*! \addtogroup ovlk OverlappedK API
-* \brief \ref ovlk \copybrief lusbk_overlapped.h
-*
+/*! \addtogroup ovlk Overlapped I/O
+* \brief Module for USB pipe specific async I/O.
 *  @{
 */
 
 /*! @} */
 
-/*! \addtogroup isok Isochronous Management API
-* \brief \ref isok structs, typedefs, enums, defines, and functions for isochronous context management.
-*
+/*! \addtogroup hotk Hotplug Event Notifier
+* \brief Module for USB device notification.
 *  @{
 */
 
 /*! @} */
 
-/*! \addtogroup libk Dynamic Driver API
-* \brief \ref libk \copybrief lusbk_dynamic.h
-*
+
+/*! \addtogroup stmk Pipe Stream
+* \brief Module for thread assisted USB pipe streaming transfers.
 *  @{
 */
 
 /*! @} */
+
+/*! \addtogroup isok Advanced ISO
+* \brief Module for advanced isochronous transfers.
+*  @{
+*/
+
+/*! @} */
+

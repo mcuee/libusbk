@@ -148,6 +148,25 @@ PPOLICY_DEFAULT Policy_GetDeviceDefault(__in ULONG policyType)
 		return NULL;
 	return &DevicePolicyDefaults[policyType];
 }
+VOID Policy_SetAllPipesToDefault(__in PDEVICE_CONTEXT deviceContext)
+{
+	PPIPE_CONTEXT pipeContext = NULL;
+	UCHAR interfaceIndex, pipeIndex;
+	UCHAR interfaceCount, pipeCount;
+
+	PAGED_CODE();
+
+	interfaceCount = deviceContext->InterfaceCount;
+	for (interfaceIndex = 0; interfaceIndex < interfaceCount; interfaceIndex++)
+	{
+		pipeCount = deviceContext->InterfaceContext[interfaceIndex].PipeCount;
+		for (pipeIndex = 0; pipeIndex < pipeCount; pipeIndex++)
+		{
+			pipeContext = deviceContext->InterfaceContext[interfaceIndex].PipeContextByIndex[pipeIndex];
+			Policy_InitPipe(pipeContext);
+		}
+	}
+}
 
 VOID Policy_InitPipe(__inout PPIPE_CONTEXT pipeContext)
 {

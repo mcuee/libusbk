@@ -27,6 +27,16 @@ extern ULONG DebugLevel;
 
 #ifndef LIBUSBK0_SYNC_TRANSFER_HELPER_DEFINES__________________________
 
+#define AllocRequest(RequiredDataLength) Mem_Alloc(sizeof(libusb_request) + RequiredDataLength)
+
+#define GetRequestDataPtr(LibusbRequestPtr) (&(((PUCHAR)LibusbRequestPtr)[sizeof(libusb_request)]))
+
+#define GetRequestData(LibusbRequestPtr,OutputBuffer,OutputBufferLength)	\
+	if ( (LibusbRequestPtr) && (OutputBuffer) && (OutputBufferLength) ) memcpy(OutputBuffer, GetRequestDataPtr(LibusbRequestPtr), (size_t)OutputBufferLength)
+
+#define SetRequestData(LibusbRequestPtr,InputBuffer,InputBufferLength)	\
+	if ( (LibusbRequestPtr) && (InputBuffer) && (InputBufferLength) ) memcpy(GetRequestDataPtr(LibusbRequestPtr), InputBuffer, (size_t)InputBufferLength)
+
 #define SubmitSyncBufferRequest(IoControlCode)					\
 	Ioctl_Sync(Dev_Handle(),IoControlCode,&request,sizeof(request),Buffer,*BufferLength, BufferLength);
 
@@ -40,121 +50,6 @@ extern ULONG DebugLevel;
 	Ioctl_Sync(DeviceHandle, IoControlCode, &request, sizeof(request), &request, sizeof(request), NULL)
 #define SubmitSimpleSyncRequest(IoControlCode)					\
 	SubmitSimpleSyncRequestEx(Dev_Handle(),IoControlCode)
-#endif
-
-#ifndef OVLK_OVERLAPPED_XFER_DEFINES___________________________________
-
-#define OVLK_CHECK_SUBMIT(mJump, mOverlapped, mPipeID, mBuffer, mBufferLength, mDeviceHandle, mPacketSize, mIoCtl)	\
-	if (IS_OVLK(mOverlapped))																					\
-	{																											\
-		PKOVL_OVERLAPPED_INFO ovlkInfo = KOVL_GET_PRIVATE_INFO(mOverlapped);									\
-																												\
-		Mem_Zero(&ovlkInfo->Backend.request, sizeof(ovlkInfo->Backend.request));								\
-		ovlkInfo->Backend.request.endpoint.endpoint = mPipeID;													\
-		ovlkInfo->Backend.request.endpoint.packet_size = mPacketSize;											\
-																												\
-		ovlkInfo->DataBuffer = mBuffer;																			\
-		ovlkInfo->DataBufferSize = mBufferLength;																\
-		ovlkInfo->DeviceHandle = mDeviceHandle;																	\
-		ovlkInfo->mPipeID = mPipeID;																			\
-		ovlkInfo->Cancel = k_CancelOverlappedK;																	\
-																												\
-		success = Ioctl_Async(ovlkInfo->DeviceHandle,															\
-		                      mIoCtl,																			\
-		                      &ovlkInfo->Backend.request, sizeof(ovlkInfo->Backend.request),					\
-		                      mBuffer, mBufferLength,															\
-		                      mOverlapped);																		\
-		goto mJump;																								\
-	}
-
-#define OVLK_ISO_SUBMIT(mOverlapped, mIsoContext, mIsoContextSize, mBuffer, mBufferLength, mDeviceHandle, mIoCtl)	\
-	do																											\
-	{																											\
-		PKOVL_OVERLAPPED_INFO ovlkInfo = KOVL_GET_PRIVATE_INFO(mOverlapped);									\
-																												\
-		Mem_Zero(&ovlkInfo->Backend.request, sizeof(ovlkInfo->Backend.request));								\
-		ovlkInfo->Backend.request.IsoEx.PipeID = mIsoContext->PipeID;											\
-		ovlkInfo->Backend.request.IsoEx.IsoContext = mIsoContext;												\
-		ovlkInfo->Backend.request.IsoEx.IsoContextSize = mIsoContextSize;										\
-																												\
-		ovlkInfo->DataBuffer = mBuffer;																			\
-		ovlkInfo->DataBufferSize = mBufferLength;																\
-		ovlkInfo->DeviceHandle = mDeviceHandle;																	\
-		ovlkInfo->PipeID = mIsoContext->PipeID;																	\
-		ovlkInfo->Cancel = k_CancelOverlappedK;																	\
-																												\
-		success = Ioctl_Async(ovlkInfo->DeviceHandle,															\
-		                      mIoCtl,																			\
-		                      &ovlkInfo->Backend.request, sizeof(ovlkInfo->Backend.request),					\
-		                      mBuffer, mBufferLength,															\
-		                      mOverlapped);																		\
-	}while(0)
-
-#define OVLK_CONTROL_CHECK_SUBMIT(mJump, mOverlapped, mSetupPacket, mBuffer, mBufferLength, mDeviceHandle, mIoCtl)	\
-	if (IS_OVLK(mOverlapped))																					\
-	{																											\
-		PKOVL_OVERLAPPED_INFO ovlkInfo = KOVL_GET_PRIVATE_INFO(mOverlapped);									\
-																												\
-		Mem_Zero(&ovlkInfo->Backend.request, sizeof(ovlkInfo->Backend.request));								\
-		memcpy(&ovlkInfo->Backend.request.control, &mSetupPacket, sizeof(ovlkInfo->Backend.request.control));	\
-																												\
-		ovlkInfo->DataBuffer = mBuffer;																			\
-		ovlkInfo->DataBufferSize = mBufferLength;																\
-		ovlkInfo->DeviceHandle = mDeviceHandle;																	\
-		ovlkInfo->Cancel = k_CancelOverlappedK_Control;															\
-																												\
-		success = Ioctl_Async(ovlkInfo->DeviceHandle,															\
-		                      mIoCtl,																			\
-		                      &ovlkInfo->Backend.request, sizeof(ovlkInfo->Backend.request),					\
-		                      mBuffer, mBufferLength,															\
-		                      mOverlapped);																		\
-		goto mJump;																								\
-	}
-
-static BOOL KUSB_API k_CancelOverlappedK(__in KOVL_HANDLE Overlapped)
-{
-	BOOL success;
-	PKOVL_OVERLAPPED_INFO ovlkInfo = KOVL_GET_PRIVATE_INFO(Overlapped);
-	if (AllK.CancelIoEx)
-	{
-		success = AllK.CancelIoEx(ovlkInfo->DeviceHandle, Overlapped);
-	}
-	else if (ovlkInfo->PipeID & USB_ENDPOINT_ADDRESS_MASK)
-	{
-		libusb_request request;
-		Mem_Zero(&request, sizeof(request));
-		request.endpoint.endpoint = ovlkInfo->PipeID;
-
-		success = Ioctl_Sync(ovlkInfo->DeviceHandle,
-		                     LIBUSB_IOCTL_ABORT_ENDPOINT,
-		                     &request, sizeof(request),
-		                     NULL, 0,
-		                     NULL);
-	}
-	else
-	{
-		success = CancelIo(ovlkInfo->DeviceHandle);
-	}
-
-	return success;
-}
-
-static BOOL KUSB_API k_CancelOverlappedK_Control(__in KOVL_HANDLE Overlapped)
-{
-	BOOL success;
-	PKOVL_OVERLAPPED_INFO ovlkInfo = KOVL_GET_PRIVATE_INFO(Overlapped);
-	if (AllK.CancelIoEx)
-	{
-		success = AllK.CancelIoEx(ovlkInfo->DeviceHandle, Overlapped);
-	}
-	else
-	{
-		success = CancelIo(ovlkInfo->DeviceHandle);
-	}
-
-	return success;
-}
-
 #endif
 
 #ifndef HANDLE_CLEANUP_________________________________________________
@@ -308,7 +203,8 @@ Error:
 	return success;
 }
 
-KUSB_EXP BOOL KUSB_API UsbK_Free (__in KUSB_HANDLE InterfaceHandle)
+KUSB_EXP BOOL KUSB_API UsbK_Free(
+    _in KUSB_HANDLE InterfaceHandle)
 {
 	PKUSB_HANDLE_INTERNAL handle;
 
@@ -318,44 +214,33 @@ KUSB_EXP BOOL KUSB_API UsbK_Free (__in KUSB_HANDLE InterfaceHandle)
 	return TRUE;
 }
 
-KUSB_EXP BOOL KUSB_API UsbK_GetAssociatedInterface (
-    __in KUSB_HANDLE InterfaceHandle,
-    __in UCHAR AssociatedInterfaceIndex,
-    __out KUSB_HANDLE* AssociatedInterfaceHandle)
+KUSB_EXP BOOL KUSB_API UsbK_GetAssociatedInterface(
+    _in KUSB_HANDLE InterfaceHandle,
+    _in UCHAR AssociatedInterfaceIndex,
+    _out KUSB_HANDLE* AssociatedInterfaceHandle)
 {
 	return UsbStack_GetAssociatedInterface(InterfaceHandle, AssociatedInterfaceIndex, AssociatedInterfaceHandle);
 }
 
-KUSB_EXP BOOL KUSB_API UsbK_Clone (
-    __in KUSB_HANDLE InterfaceHandle,
-    __out KUSB_HANDLE* DstInterfaceHandle)
+KUSB_EXP BOOL KUSB_API UsbK_Clone(
+    _in KUSB_HANDLE InterfaceHandle,
+    _out KUSB_HANDLE* DstInterfaceHandle)
 {
 	return UsbStack_CloneHandle(InterfaceHandle, DstInterfaceHandle);
 }
 
 KUSB_EXP BOOL KUSB_API UsbK_Initialize(
-    __in HANDLE DeviceHandle,
-    __out KUSB_HANDLE* InterfaceHandle)
+    _in HANDLE DeviceHandle,
+    _out KUSB_HANDLE* InterfaceHandle)
 {
-	CheckLibInit();
-
 	return UsbStack_Init(InterfaceHandle, KUSB_DRVID_LIBUSBK, FALSE, DeviceHandle, NULL, NULL, k_Init_Config, k_Init_Backend, k_Cleanup_UsbK, k_Cleanup_DevK);
 }
 
-KUSB_EXP BOOL KUSB_API UsbK_Open(
-    __in KLST_DEVINFO* DevInfo,
-    __out KUSB_HANDLE* InterfaceHandle)
+KUSB_EXP BOOL KUSB_API UsbK_Init(
+    _out KUSB_HANDLE* InterfaceHandle,
+    _in KLST_DEVINFO_HANDLE DevInfo)
 {
-	CheckLibInit();
-
 	return UsbStack_Init(InterfaceHandle, KUSB_DRVID_LIBUSBK, FALSE, NULL, DevInfo, NULL, k_Init_Config, k_Init_Backend, k_Cleanup_UsbK, k_Cleanup_DevK);
-
-}
-
-KUSB_EXP BOOL KUSB_API UsbK_Close(
-    __in KUSB_HANDLE InterfaceHandle)
-{
-	return UsbK_Free(InterfaceHandle);
 }
 
 #endif
@@ -363,8 +248,8 @@ KUSB_EXP BOOL KUSB_API UsbK_Close(
 #ifndef DEVICE_AND_INTERFACE_FUNCTIONS_________________________________
 
 KUSB_EXP BOOL KUSB_API UsbK_SetConfiguration(
-    __in KUSB_HANDLE InterfaceHandle,
-    __in UCHAR ConfigurationNumber)
+    _in KUSB_HANDLE InterfaceHandle,
+    _in UCHAR ConfigurationNumber)
 {
 
 	libusb_request request;
@@ -406,8 +291,8 @@ Error:
 }
 
 KUSB_EXP BOOL KUSB_API UsbK_GetConfiguration(
-    __in KUSB_HANDLE InterfaceHandle,
-    __out PUCHAR ConfigurationNumber)
+    _in KUSB_HANDLE InterfaceHandle,
+    _out PUCHAR ConfigurationNumber)
 {
 	PKUSB_HANDLE_INTERNAL handle;
 
@@ -423,14 +308,14 @@ KUSB_EXP BOOL KUSB_API UsbK_GetConfiguration(
 	return TRUE;
 }
 
-KUSB_EXP BOOL KUSB_API UsbK_GetDescriptor (
-    __in KUSB_HANDLE InterfaceHandle,
-    __in UCHAR DescriptorType,
-    __in UCHAR Index,
-    __in USHORT LanguageID,
-    __out_opt PUCHAR Buffer,
-    __in ULONG BufferLength,
-    __out PULONG LengthTransferred)
+KUSB_EXP BOOL KUSB_API UsbK_GetDescriptor(
+    _in KUSB_HANDLE InterfaceHandle,
+    _in UCHAR DescriptorType,
+    _in UCHAR Index,
+    _in USHORT LanguageID,
+    _out PUCHAR Buffer,
+    _in ULONG BufferLength,
+    _outopt PULONG LengthTransferred)
 {
 	libusb_request request;
 	PKUSB_HANDLE_INTERNAL handle;
@@ -460,20 +345,20 @@ Error:
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API UsbK_QueryInterfaceSettings (
-    __in KUSB_HANDLE InterfaceHandle,
-    __in UCHAR AltSettingNumber,
-    __out PUSB_INTERFACE_DESCRIPTOR UsbAltInterfaceDescriptor)
+KUSB_EXP BOOL KUSB_API UsbK_QueryInterfaceSettings(
+    _in KUSB_HANDLE InterfaceHandle,
+    _in UCHAR AltSettingNumber,
+    _out PUSB_INTERFACE_DESCRIPTOR UsbAltInterfaceDescriptor)
 {
 
 	return UsbStack_QueryInterfaceSettings(InterfaceHandle, AltSettingNumber, UsbAltInterfaceDescriptor);
 }
 
-KUSB_EXP BOOL KUSB_API UsbK_QueryDeviceInformation (
-    __in KUSB_HANDLE InterfaceHandle,
-    __in ULONG InformationType,
-    __inout PULONG BufferLength,
-    __out PVOID Buffer)
+KUSB_EXP BOOL KUSB_API UsbK_QueryDeviceInformation(
+    _in KUSB_HANDLE InterfaceHandle,
+    _in ULONG InformationType,
+    _ref PULONG BufferLength,
+    _ref PVOID Buffer)
 {
 	libusb_request request;
 	PKUSB_HANDLE_INTERNAL handle;
@@ -490,9 +375,9 @@ KUSB_EXP BOOL KUSB_API UsbK_QueryDeviceInformation (
 	return success;
 }
 
-KUSB_EXP BOOL KUSB_API UsbK_SetCurrentAlternateSetting (
-    __in KUSB_HANDLE InterfaceHandle,
-    __in UCHAR AltSettingNumber)
+KUSB_EXP BOOL KUSB_API UsbK_SetCurrentAlternateSetting(
+    _in KUSB_HANDLE InterfaceHandle,
+    _in UCHAR AltSettingNumber)
 {
 	libusb_request request;
 	PKUSB_HANDLE_INTERNAL handle;
@@ -520,9 +405,9 @@ Error:
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API UsbK_GetCurrentAlternateSetting (
-    __in KUSB_HANDLE InterfaceHandle,
-    __out PUCHAR AltSettingNumber)
+KUSB_EXP BOOL KUSB_API UsbK_GetCurrentAlternateSetting(
+    _in KUSB_HANDLE InterfaceHandle,
+    _out PUCHAR AltSettingNumber)
 {
 	libusb_request request;
 	PKUSB_HANDLE_INTERNAL handle;
@@ -549,11 +434,11 @@ Error:
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API UsbK_QueryPipe (
-    __in KUSB_HANDLE InterfaceHandle,
-    __in UCHAR AltSettingNumber,
-    __in UCHAR PipeIndex,
-    __out PWINUSB_PIPE_INFORMATION PipeInformation)
+KUSB_EXP BOOL KUSB_API UsbK_QueryPipe(
+    _in KUSB_HANDLE InterfaceHandle,
+    _in UCHAR AltSettingNumber,
+    _in UCHAR PipeIndex,
+    _out PWINUSB_PIPE_INFORMATION PipeInformation)
 {
 
 	return UsbStack_QueryPipe(
@@ -563,12 +448,12 @@ KUSB_EXP BOOL KUSB_API UsbK_QueryPipe (
 	           PipeInformation);
 }
 
-KUSB_EXP BOOL KUSB_API UsbK_SetPipePolicy (
-    __in KUSB_HANDLE InterfaceHandle,
-    __in UCHAR PipeID,
-    __in ULONG PolicyType,
-    __in ULONG ValueLength,
-    __in PVOID Value)
+KUSB_EXP BOOL KUSB_API UsbK_SetPipePolicy(
+    _in KUSB_HANDLE InterfaceHandle,
+    _in UCHAR PipeID,
+    _in ULONG PolicyType,
+    _in ULONG ValueLength,
+    _in PVOID Value)
 {
 	ULONG requestLength = sizeof(libusb_request) + ValueLength;
 	libusb_request* request = NULL;
@@ -583,6 +468,7 @@ KUSB_EXP BOOL KUSB_API UsbK_SetPipePolicy (
 
 	request->pipe_policy.pipe_id = PipeID;
 	request->pipe_policy.policy_type = PolicyType;
+	SetRequestData(request, Value, ValueLength);
 
 	if (handle->Device->Backend.CtxK->Version.major > 2)
 	{
@@ -633,12 +519,12 @@ Error:
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API UsbK_GetPipePolicy (
-    __in KUSB_HANDLE InterfaceHandle,
-    __in UCHAR PipeID,
-    __in ULONG PolicyType,
-    __inout PULONG ValueLength,
-    __out PVOID Value)
+KUSB_EXP BOOL KUSB_API UsbK_GetPipePolicy(
+    _in KUSB_HANDLE InterfaceHandle,
+    _in UCHAR PipeID,
+    _in ULONG PolicyType,
+    _ref PULONG ValueLength,
+    _out PVOID Value)
 {
 
 	libusb_request request;
@@ -700,11 +586,11 @@ KUSB_EXP BOOL KUSB_API UsbK_GetPipePolicy (
 	return success;
 }
 
-KUSB_EXP BOOL KUSB_API UsbK_SetPowerPolicy (
-    __in KUSB_HANDLE InterfaceHandle,
-    __in ULONG PolicyType,
-    __in ULONG ValueLength,
-    __in PVOID Value)
+KUSB_EXP BOOL KUSB_API UsbK_SetPowerPolicy(
+    _in KUSB_HANDLE InterfaceHandle,
+    _in ULONG PolicyType,
+    _in ULONG ValueLength,
+    _in PVOID Value)
 {
 	ULONG requestLength = sizeof(libusb_request) + ValueLength;
 	libusb_request* request = NULL;
@@ -738,11 +624,11 @@ Error:
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API UsbK_GetPowerPolicy (
-    __in KUSB_HANDLE InterfaceHandle,
-    __in ULONG PolicyType,
-    __inout PULONG ValueLength,
-    __out PVOID Value)
+KUSB_EXP BOOL KUSB_API UsbK_GetPowerPolicy(
+    _in KUSB_HANDLE InterfaceHandle,
+    _in ULONG PolicyType,
+    _ref PULONG ValueLength,
+    _out PVOID Value)
 {
 	libusb_request request;
 	PKUSB_HANDLE_INTERNAL handle;
@@ -803,36 +689,36 @@ Done:
 	return success;
 }
 
-KUSB_EXP BOOL KUSB_API UsbK_ClaimInterface (
-    __in KUSB_HANDLE InterfaceHandle,
-    __in UCHAR NumberOrIndex,
-    __in BOOL IsIndex)
+KUSB_EXP BOOL KUSB_API UsbK_ClaimInterface(
+    _in KUSB_HANDLE InterfaceHandle,
+    _in UCHAR NumberOrIndex,
+    _in BOOL IsIndex)
 {
 	return k_ClaimOrReleaseInterface(InterfaceHandle, NumberOrIndex, TRUE, (UCHAR)IsIndex);
 }
 
-KUSB_EXP BOOL KUSB_API UsbK_SelectInterface (
-    __in KUSB_HANDLE InterfaceHandle,
-    __in UCHAR NumberOrIndex,
-    __in BOOL IsIndex)
+KUSB_EXP BOOL KUSB_API UsbK_SelectInterface(
+    _in KUSB_HANDLE InterfaceHandle,
+    _in UCHAR NumberOrIndex,
+    _in BOOL IsIndex)
 {
 	return UsbStack_SelectInterface(InterfaceHandle, NumberOrIndex, IsIndex);
 }
 
 KUSB_EXP BOOL KUSB_API UsbK_ReleaseInterface(
-    __in KUSB_HANDLE InterfaceHandle,
-    __in UCHAR NumberOrIndex,
-    __in BOOL IsIndex)
+    _in KUSB_HANDLE InterfaceHandle,
+    _in UCHAR NumberOrIndex,
+    _in BOOL IsIndex)
 {
 	return k_ClaimOrReleaseInterface(InterfaceHandle, NumberOrIndex, FALSE, (UCHAR)IsIndex);
 }
 
 
 KUSB_EXP BOOL KUSB_API UsbK_SetAltInterface(
-    __in KUSB_HANDLE InterfaceHandle,
-    __in UCHAR NumberOrIndex,
-    __in BOOL IsIndex,
-    __in UCHAR AltSettingNumber)
+    _in KUSB_HANDLE InterfaceHandle,
+    _in UCHAR NumberOrIndex,
+    _in BOOL IsIndex,
+    _in UCHAR AltSettingNumber)
 {
 	libusb_request request;
 	PKUSB_HANDLE_INTERNAL handle;
@@ -867,10 +753,10 @@ Error:
 }
 
 KUSB_EXP BOOL KUSB_API UsbK_GetAltInterface(
-    __in KUSB_HANDLE InterfaceHandle,
-    __in UCHAR NumberOrIndex,
-    __in BOOL IsIndex,
-    __out PUCHAR AltSettingNumber)
+    _in KUSB_HANDLE InterfaceHandle,
+    _in UCHAR NumberOrIndex,
+    _in BOOL IsIndex,
+    _out PUCHAR AltSettingNumber)
 {
 	libusb_request request;
 	PKUSB_HANDLE_INTERNAL handle;
@@ -903,9 +789,9 @@ Error:
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API UsbK_GetCurrentFrameNumber (
-    __in KUSB_HANDLE InterfaceHandle,
-    __out PULONG FrameNumber)
+KUSB_EXP BOOL KUSB_API UsbK_GetCurrentFrameNumber(
+    _in KUSB_HANDLE InterfaceHandle,
+    _out PULONG FrameNumber)
 {
 	libusb_request request;
 	PKUSB_HANDLE_INTERNAL handle;
@@ -922,8 +808,8 @@ KUSB_EXP BOOL KUSB_API UsbK_GetCurrentFrameNumber (
 	return success;
 }
 
-KUSB_EXP BOOL KUSB_API UsbK_ResetDevice (
-    __in KUSB_HANDLE InterfaceHandle)
+KUSB_EXP BOOL KUSB_API UsbK_ResetDevice(
+    _in KUSB_HANDLE InterfaceHandle)
 {
 	libusb_request request;
 	PKUSB_HANDLE_INTERNAL handle;
@@ -939,13 +825,13 @@ KUSB_EXP BOOL KUSB_API UsbK_ResetDevice (
 	return success;
 }
 
-KUSB_EXP BOOL KUSB_API UsbK_ControlTransfer (
-    __in KUSB_HANDLE InterfaceHandle,
-    __in WINUSB_SETUP_PACKET SetupPacket,
-    __out_opt PUCHAR Buffer,
-    __in ULONG BufferLength,
-    __out_opt PULONG LengthTransferred,
-    __in_opt  LPOVERLAPPED Overlapped)
+KUSB_EXP BOOL KUSB_API UsbK_ControlTransfer(
+    _in KUSB_HANDLE InterfaceHandle,
+    _in WINUSB_SETUP_PACKET SetupPacket,
+    _refopt PUCHAR Buffer,
+    _in ULONG BufferLength,
+    _outopt PULONG LengthTransferred,
+    _inopt LPOVERLAPPED Overlapped)
 {
 	libusb_request request;
 	INT ioctlCode;
@@ -956,8 +842,6 @@ KUSB_EXP BOOL KUSB_API UsbK_ControlTransfer (
 	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
 
 	ioctlCode = (SetupPacket.RequestType & USB_ENDPOINT_DIRECTION_MASK) ? LIBUSB_IOCTL_CONTROL_READ : LIBUSB_IOCTL_CONTROL_WRITE;
-
-	OVLK_CONTROL_CHECK_SUBMIT(Done, Overlapped, SetupPacket, Buffer, BufferLength, Dev_Handle(), ioctlCode);
 
 	if (Overlapped)
 	{
@@ -976,16 +860,15 @@ KUSB_EXP BOOL KUSB_API UsbK_ControlTransfer (
 		success = Ioctl_Sync(Dev_Handle(), ioctlCode, &request, sizeof(request), Buffer, BufferLength, LengthTransferred);
 	}
 
-Done:
 	PoolHandle_Dec_UsbK(handle);
 	return success;
 }
 
-KUSB_EXP BOOL KUSB_API UsbK_GetOverlappedResult (
-    __in KUSB_HANDLE InterfaceHandle,
-    __in LPOVERLAPPED lpOverlapped,
-    __out LPDWORD lpNumberOfBytesTransferred,
-    __in BOOL bWait)
+KUSB_EXP BOOL KUSB_API UsbK_GetOverlappedResult(
+    _in KUSB_HANDLE InterfaceHandle,
+    _in LPOVERLAPPED lpOverlapped,
+    _out LPDWORD lpNumberOfBytesTransferred,
+    _in BOOL bWait)
 {
 	PKUSB_HANDLE_INTERNAL handle;
 	BOOL success;
@@ -1003,9 +886,9 @@ KUSB_EXP BOOL KUSB_API UsbK_GetOverlappedResult (
 
 #ifndef PIPE_IO_FUNCTIONS______________________________________________
 
-KUSB_EXP BOOL KUSB_API UsbK_ResetPipe (
-    __in KUSB_HANDLE InterfaceHandle,
-    __in UCHAR PipeID)
+KUSB_EXP BOOL KUSB_API UsbK_ResetPipe(
+    _in KUSB_HANDLE InterfaceHandle,
+    _in UCHAR PipeID)
 {
 	libusb_request request;
 	PKUSB_HANDLE_INTERNAL handle;
@@ -1023,9 +906,9 @@ KUSB_EXP BOOL KUSB_API UsbK_ResetPipe (
 	return success;
 }
 
-KUSB_EXP BOOL KUSB_API UsbK_AbortPipe (
-    __in KUSB_HANDLE InterfaceHandle,
-    __in UCHAR PipeID)
+KUSB_EXP BOOL KUSB_API UsbK_AbortPipe(
+    _in KUSB_HANDLE InterfaceHandle,
+    _in UCHAR PipeID)
 {
 	libusb_request request;
 	PKUSB_HANDLE_INTERNAL handle;
@@ -1043,9 +926,9 @@ KUSB_EXP BOOL KUSB_API UsbK_AbortPipe (
 	return success;
 }
 
-KUSB_EXP BOOL KUSB_API UsbK_FlushPipe (
-    __in KUSB_HANDLE InterfaceHandle,
-    __in UCHAR PipeID)
+KUSB_EXP BOOL KUSB_API UsbK_FlushPipe(
+    _in KUSB_HANDLE InterfaceHandle,
+    _in UCHAR PipeID)
 {
 	libusb_request request;
 	PKUSB_HANDLE_INTERNAL handle;
@@ -1063,21 +946,19 @@ KUSB_EXP BOOL KUSB_API UsbK_FlushPipe (
 	return success;
 }
 
-KUSB_EXP BOOL KUSB_API UsbK_ReadPipe (
-    __in KUSB_HANDLE InterfaceHandle,
-    __in UCHAR PipeID,
-    __out_opt PUCHAR Buffer,
-    __in ULONG BufferLength,
-    __out_opt PULONG LengthTransferred,
-    __in_opt LPOVERLAPPED Overlapped)
+KUSB_EXP BOOL KUSB_API UsbK_ReadPipe(
+    _in KUSB_HANDLE InterfaceHandle,
+    _in UCHAR PipeID,
+    _out PUCHAR Buffer,
+    _in ULONG BufferLength,
+    _outopt PULONG LengthTransferred,
+    _inopt LPOVERLAPPED Overlapped)
 {
 	PKUSB_HANDLE_INTERNAL handle;
 	BOOL success;
 
 	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
 	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
-
-	OVLK_CHECK_SUBMIT(Done, Overlapped, PipeID, Buffer, BufferLength, Dev_Handle(), 0, LIBUSB_IOCTL_INTERRUPT_OR_BULK_READ);
 
 	if (Overlapped)
 	{
@@ -1104,26 +985,23 @@ KUSB_EXP BOOL KUSB_API UsbK_ReadPipe (
 		                                LengthTransferred);
 	}
 
-Done:
 	PoolHandle_Dec_UsbK(handle);
 	return success;
 }
 
-KUSB_EXP BOOL KUSB_API UsbK_WritePipe (
-    __in KUSB_HANDLE InterfaceHandle,
-    __in UCHAR PipeID,
-    __in PUCHAR Buffer,
-    __in ULONG BufferLength,
-    __out_opt PULONG LengthTransferred,
-    __in_opt LPOVERLAPPED Overlapped)
+KUSB_EXP BOOL KUSB_API UsbK_WritePipe(
+    _in KUSB_HANDLE InterfaceHandle,
+    _in UCHAR PipeID,
+    _in PUCHAR Buffer,
+    _in ULONG BufferLength,
+    _outopt PULONG LengthTransferred,
+    _inopt LPOVERLAPPED Overlapped)
 {
 	PKUSB_HANDLE_INTERNAL handle;
 	BOOL success;
 
 	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
 	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
-
-	OVLK_CHECK_SUBMIT(Done, Overlapped, PipeID, Buffer, BufferLength, Dev_Handle(), 0, LIBUSB_IOCTL_INTERRUPT_OR_BULK_WRITE);
 
 	if (Overlapped)
 	{
@@ -1150,61 +1028,18 @@ KUSB_EXP BOOL KUSB_API UsbK_WritePipe (
 		                                LengthTransferred);
 	}
 
-Done:
 	PoolHandle_Dec_UsbK(handle);
 	return success;
 }
 
-KUSB_EXP BOOL KUSB_API UsbK_IsoReadPipe (
-    __in KUSB_HANDLE InterfaceHandle,
-    __inout PKISO_CONTEXT IsoContext,
-    __out_opt PUCHAR Buffer,
-    __in ULONG BufferLength,
-    __in LPOVERLAPPED Overlapped)
+KUSB_EXP BOOL KUSB_API UsbK_IsoReadPipe(
+    _in KUSB_HANDLE InterfaceHandle,
+    _ref PKISO_CONTEXT IsoContext,
+    _out PUCHAR Buffer,
+    _in ULONG BufferLength,
+    _in LPOVERLAPPED Overlapped)
 {
-	ULONG IsoContextSize;
-	PKUSB_HANDLE_INTERNAL handle;
-	BOOL success;
-
-	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
-	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
-
-	ErrorParam(!IsHandleValid(Overlapped), Error, "Overlapped");
-	ErrorParam(!IsHandleValid(IsoContext), Error, "IsoContext");
-
-	IsoContextSize = sizeof(KISO_CONTEXT) + (IsoContext->NumberOfPackets * sizeof(KISO_PACKET));
-	if (IS_OVLK(Overlapped))
-	{
-		OVLK_ISO_SUBMIT(Overlapped, IsoContext, IsoContextSize, Buffer, BufferLength, Dev_Handle(), LIBUSBK_IOCTL_ISOEX_READ);
-	}
-	else
-	{
-		libusb_request request;
-		Mem_Zero(&request, sizeof(request));
-		request.IsoEx.IsoContext = IsoContext;
-		request.IsoEx.IsoContextSize = IsoContextSize;
-		request.IsoEx.PipeID = IsoContext->PipeID;
-
-		success = Ioctl_Async(Dev_Handle(), LIBUSBK_IOCTL_ISOEX_READ,
-		                      &request, sizeof(request),
-		                      Buffer, BufferLength,
-		                      Overlapped);
-	}
-
-	PoolHandle_Dec_UsbK(handle);
-	return success;
-Error:
-	PoolHandle_Dec_UsbK(handle);
-	return FALSE;
-}
-
-KUSB_EXP BOOL KUSB_API UsbK_IsoWritePipe (
-    __in KUSB_HANDLE InterfaceHandle,
-    __inout PKISO_CONTEXT IsoContext,
-    __in PUCHAR Buffer,
-    __in ULONG BufferLength,
-    __in LPOVERLAPPED Overlapped)
-{
+	libusb_request request;
 	ULONG IsoContextSize;
 	PKUSB_HANDLE_INTERNAL handle;
 	BOOL success;
@@ -1217,147 +1052,88 @@ KUSB_EXP BOOL KUSB_API UsbK_IsoWritePipe (
 
 	IsoContextSize = sizeof(KISO_CONTEXT) + (IsoContext->NumberOfPackets * sizeof(KISO_PACKET));
 
-	if (IS_OVLK(Overlapped))
-	{
-		OVLK_ISO_SUBMIT(Overlapped, IsoContext, IsoContextSize, Buffer, BufferLength, Dev_Handle(), LIBUSBK_IOCTL_ISOEX_WRITE);
-	}
-	else
-	{
-		libusb_request request;
-		Mem_Zero(&request, sizeof(request));
-		request.IsoEx.IsoContext = IsoContext;
-		request.IsoEx.IsoContextSize = IsoContextSize;
-		request.IsoEx.PipeID = IsoContext->PipeID;
+	Mem_Zero(&request, sizeof(request));
+	request.IsoEx.IsoContext = IsoContext;
+	request.IsoEx.IsoContextSize = IsoContextSize;
+	request.IsoEx.PipeID = IsoContext->PipeID;
 
-		success = Ioctl_Async(Dev_Handle(), LIBUSBK_IOCTL_ISOEX_WRITE,
-		                      &request, sizeof(request),
-		                      Buffer, BufferLength,
-		                      Overlapped);
-	}
+	success = Ioctl_Async(Dev_Handle(), LIBUSBK_IOCTL_ISOEX_READ,
+	                      &request, sizeof(request),
+	                      Buffer, BufferLength,
+	                      Overlapped);
 
 	PoolHandle_Dec_UsbK(handle);
 	return success;
 Error:
 	PoolHandle_Dec_UsbK(handle);
 	return FALSE;
+}
+
+KUSB_EXP BOOL KUSB_API UsbK_IsoWritePipe(
+    _in KUSB_HANDLE InterfaceHandle,
+    _ref PKISO_CONTEXT IsoContext,
+    _in PUCHAR Buffer,
+    _in ULONG BufferLength,
+    _in LPOVERLAPPED Overlapped)
+{
+	libusb_request request;
+	ULONG IsoContextSize;
+	PKUSB_HANDLE_INTERNAL handle;
+	BOOL success;
+
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
+
+	ErrorParam(!IsHandleValid(Overlapped), Error, "Overlapped");
+	ErrorParam(!IsHandleValid(IsoContext), Error, "IsoContext");
+
+	IsoContextSize = sizeof(KISO_CONTEXT) + (IsoContext->NumberOfPackets * sizeof(KISO_PACKET));
+
+	Mem_Zero(&request, sizeof(request));
+	request.IsoEx.IsoContext = IsoContext;
+	request.IsoEx.IsoContextSize = IsoContextSize;
+	request.IsoEx.PipeID = IsoContext->PipeID;
+
+	success = Ioctl_Async(Dev_Handle(), LIBUSBK_IOCTL_ISOEX_WRITE,
+	                      &request, sizeof(request),
+	                      Buffer, BufferLength,
+	                      Overlapped);
+
+	PoolHandle_Dec_UsbK(handle);
+	return success;
+Error:
+	PoolHandle_Dec_UsbK(handle);
+	return FALSE;
+}
+
+KUSB_EXP BOOL KUSB_API UsbK_GetProperty(
+    _in KUSB_HANDLE InterfaceHandle,
+    _in KUSB_PROPERTY PropertyType,
+    _ref PULONG PropertySize,
+    _out PVOID Property)
+{
+	PKUSB_HANDLE_INTERNAL handle;
+	BOOL success = TRUE;
+
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorParamAction(!PropertySize, "PropertySize", return FALSE);
+	ErrorParamAction(!Property, "Property", return FALSE);
+
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
+
+	switch (PropertyType)
+	{
+	case KUSB_PROPERTY_DEVICE_FILE_HANDLE:
+		if ((*PropertySize) < sizeof(HANDLE))
+			success = LusbwError(ERROR_MORE_DATA);
+		else
+			((HANDLE*)Property)[0] = handle->Device->MasterDeviceHandle;
+
+		*PropertySize = sizeof(HANDLE);
+		break;
+	}
+	PoolHandle_Dec_UsbK(handle);
+	return success;
 }
 
 #endif
-
-BOOL GetProcAddress_UsbK(__out KPROC* ProcAddress, __in ULONG FunctionID)
-{
-	DWORD rtn = ERROR_SUCCESS;
-
-	switch(FunctionID)
-	{
-	case KUSB_FNID_Initialize:
-		*ProcAddress = (KPROC)UsbK_Initialize;
-		break;
-	case KUSB_FNID_Free:
-		*ProcAddress = (KPROC)UsbK_Free;
-		break;
-	case KUSB_FNID_GetAssociatedInterface:
-		*ProcAddress = (KPROC)UsbK_GetAssociatedInterface;
-		break;
-	case KUSB_FNID_GetDescriptor:
-		*ProcAddress = (KPROC)UsbK_GetDescriptor;
-		break;
-	case KUSB_FNID_QueryInterfaceSettings:
-		*ProcAddress = (KPROC)UsbK_QueryInterfaceSettings;
-		break;
-	case KUSB_FNID_QueryDeviceInformation:
-		*ProcAddress = (KPROC)UsbK_QueryDeviceInformation;
-		break;
-	case KUSB_FNID_SetCurrentAlternateSetting:
-		*ProcAddress = (KPROC)UsbK_SetCurrentAlternateSetting;
-		break;
-	case KUSB_FNID_GetCurrentAlternateSetting:
-		*ProcAddress = (KPROC)UsbK_GetCurrentAlternateSetting;
-		break;
-	case KUSB_FNID_QueryPipe:
-		*ProcAddress = (KPROC)UsbK_QueryPipe;
-		break;
-	case KUSB_FNID_SetPipePolicy:
-		*ProcAddress = (KPROC)UsbK_SetPipePolicy;
-		break;
-	case KUSB_FNID_GetPipePolicy:
-		*ProcAddress = (KPROC)UsbK_GetPipePolicy;
-		break;
-	case KUSB_FNID_ReadPipe:
-		*ProcAddress = (KPROC)UsbK_ReadPipe;
-		break;
-	case KUSB_FNID_WritePipe:
-		*ProcAddress = (KPROC)UsbK_WritePipe;
-		break;
-	case KUSB_FNID_ControlTransfer:
-		*ProcAddress = (KPROC)UsbK_ControlTransfer;
-		break;
-	case KUSB_FNID_ResetPipe:
-		*ProcAddress = (KPROC)UsbK_ResetPipe;
-		break;
-	case KUSB_FNID_AbortPipe:
-		*ProcAddress = (KPROC)UsbK_AbortPipe;
-		break;
-	case KUSB_FNID_FlushPipe:
-		*ProcAddress = (KPROC)UsbK_FlushPipe;
-		break;
-	case KUSB_FNID_SetPowerPolicy:
-		*ProcAddress = (KPROC)UsbK_SetPowerPolicy;
-		break;
-	case KUSB_FNID_GetPowerPolicy:
-		*ProcAddress = (KPROC)UsbK_GetPowerPolicy;
-		break;
-	case KUSB_FNID_GetOverlappedResult:
-		*ProcAddress = (KPROC)UsbK_GetOverlappedResult;
-		break;
-	case KUSB_FNID_ResetDevice:
-		*ProcAddress = (KPROC)UsbK_ResetDevice;
-		break;
-	case KUSB_FNID_Open:
-		*ProcAddress = (KPROC)UsbK_Open;
-		break;
-	case KUSB_FNID_Close:
-		*ProcAddress = (KPROC)UsbK_Close;
-		break;
-	case KUSB_FNID_SetConfiguration:
-		*ProcAddress = (KPROC)UsbK_SetConfiguration;
-		break;
-	case KUSB_FNID_GetConfiguration:
-		*ProcAddress = (KPROC)UsbK_GetConfiguration;
-		break;
-	case KUSB_FNID_ClaimInterface:
-		*ProcAddress = (KPROC)UsbK_ClaimInterface;
-		break;
-	case KUSB_FNID_ReleaseInterface:
-		*ProcAddress = (KPROC)UsbK_ReleaseInterface;
-		break;
-	case KUSB_FNID_SetAltInterface:
-		*ProcAddress = (KPROC)UsbK_SetAltInterface;
-		break;
-	case KUSB_FNID_GetAltInterface:
-		*ProcAddress = (KPROC)UsbK_GetAltInterface;
-		break;
-	case KUSB_FNID_IsoReadPipe:
-		*ProcAddress = (KPROC)UsbK_IsoReadPipe;
-		break;
-	case KUSB_FNID_IsoWritePipe:
-		*ProcAddress = (KPROC)UsbK_IsoWritePipe;
-		break;
-	case KUSB_FNID_GetCurrentFrameNumber:
-		*ProcAddress = (KPROC)UsbK_GetCurrentFrameNumber;
-		break;
-	case KUSB_FNID_Clone:
-		*ProcAddress = (KPROC)UsbK_Clone;
-		break;
-	case KUSB_FNID_SelectInterface:
-		*ProcAddress = (KPROC)UsbK_SelectInterface;
-		break;
-
-	default:
-		GetProcAddress_Unsupported(ProcAddress, FunctionID);
-		return LusbwError(ERROR_NOT_SUPPORTED);
-		break;
-
-	}
-	return LusbwError(rtn);
-}

@@ -71,4 +71,10 @@ BOOL UsbStack_SelectInterface (
 
 BOOL UsbStack_RefreshPipeCache(PKUSB_HANDLE_INTERNAL Handle);
 
+BOOL UsbStack_QuerySelectedEndpoint(
+    __in KUSB_HANDLE Handle,
+    __in UCHAR EndpointAddressOrIndex,
+    __in BOOL IsIndex,
+    __out PUSB_ENDPOINT_DESCRIPTOR EndpointDescriptor);
+
 #endif

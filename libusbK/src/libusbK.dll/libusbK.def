@@ -1,86 +1,92 @@
 LIBRARY
 EXPORTS
-	LibK_GetProcAddress
-	LibK_LoadDriverApi
-	LibK_SetHandleCallbacks
-	LibK_GetContext
-	LibK_GetContextSize
-	LibK_SetContextSize
-	LibK_GetDefaultContextSize
-	LibK_SetDefaultContextSize
+    
+    LibK_GetVersion
+    LibK_GetContext
+    LibK_SetContext
+    LibK_SetCleanupCallback
+    LibK_LoadDriverAPI
+    LibK_CopyDriverAPI
+    LibK_GetProcAddress
+    
+    UsbK_Init
+    UsbK_ClaimInterface
+    UsbK_ReleaseInterface
+    UsbK_SetAltInterface
+    UsbK_GetAltInterface
+    UsbK_GetDescriptor
+    UsbK_ControlTransfer
+    UsbK_SetPowerPolicy
+    UsbK_GetPowerPolicy
+    UsbK_SetConfiguration
+    UsbK_GetConfiguration
+    UsbK_ResetDevice
+    UsbK_Initialize
+    UsbK_Free
+    UsbK_SelectInterface
+    UsbK_GetAssociatedInterface
+    UsbK_Clone
+    UsbK_QueryInterfaceSettings
+    UsbK_QueryDeviceInformation
+    UsbK_SetCurrentAlternateSetting
+    UsbK_GetCurrentAlternateSetting
+    UsbK_QueryPipe
+    UsbK_SetPipePolicy
+    UsbK_GetPipePolicy
+    UsbK_ReadPipe
+    UsbK_WritePipe
+    UsbK_ResetPipe
+    UsbK_AbortPipe
+    UsbK_FlushPipe
+    UsbK_IsoReadPipe
+    UsbK_IsoWritePipe
+    UsbK_GetCurrentFrameNumber
+    UsbK_GetOverlappedResult
+    UsbK_GetProperty
+    
+    LstK_Init
+    LstK_Free
+    LstK_Enumerate
+    LstK_Current
+    LstK_MoveNext
+    LstK_MoveReset
+    LstK_FindByVidPid
+    LstK_Count
+    LstK_Sync
+    LstK_Clone
+    LstK_CloneInfo
+    LstK_DetachInfo
+    LstK_AttachInfo
+    LstK_FreeInfo
+    
+    HotK_Init
+    HotK_Free
+    
+    OvlK_Acquire
+    OvlK_Release
+    OvlK_InitPool
+    OvlK_FreePool
+    OvlK_GetEventHandle
+    OvlK_Wait
+    OvlK_WaitOrCancel
+    OvlK_WaitAndRelease
+    OvlK_IsComplete
+    OvlK_ReUse
+    
+    StmK_Init
+    StmK_Free
+    StmK_Start
+    StmK_Stop
+    StmK_Read
+    StmK_Write
 
-	LstK_Init
-	LstK_Free
-	LstK_Enumerate
-	LstK_Current
-	LstK_MoveNext
-	LstK_MoveReset
-	LstK_FindByVidPid
-	LstK_Count
-	LstK_Sync
-	LstK_Clone
-	LstK_CloneInfo
-	LstK_DetachInfo
-	LstK_AttachInfo
-	LstK_FreeInfo	
-
-	OvlK_Acquire
-	OvlK_Release
-	OvlK_InitPool
-	OvlK_FreePool
-	OvlK_GetEventHandle
-	OvlK_Wait
-	OvlK_WaitOrCancel
-	OvlK_WaitAndRelease
-	OvlK_IsComplete
-	OvlK_ReUse
-
-	UsbK_Initialize
-	UsbK_Free
-	UsbK_GetAssociatedInterface
-	UsbK_GetDescriptor
-	UsbK_QueryInterfaceSettings
-	UsbK_QueryDeviceInformation
-	UsbK_SetCurrentAlternateSetting
-	UsbK_GetCurrentAlternateSetting
-	UsbK_QueryPipe
-	UsbK_SetPipePolicy
-	UsbK_GetPipePolicy
-	UsbK_ReadPipe
-	UsbK_WritePipe
-	UsbK_ControlTransfer
-	UsbK_ResetPipe
-	UsbK_AbortPipe
-	UsbK_FlushPipe
-	UsbK_SetPowerPolicy
-	UsbK_GetPowerPolicy
-	UsbK_GetOverlappedResult
-	UsbK_ResetDevice
-	UsbK_Open
-	UsbK_Close
-	UsbK_SetConfiguration
-	UsbK_GetConfiguration
-	UsbK_ClaimInterface
-	UsbK_ReleaseInterface
-	UsbK_SetAltInterface
-	UsbK_GetAltInterface
-	UsbK_IsoReadPipe
-	UsbK_IsoWritePipe
-	UsbK_GetCurrentFrameNumber
-	UsbK_Clone
-	UsbK_SelectInterface
-
-	IsoK_Init
-	IsoK_Free
-	IsoK_SetPackets
-	IsoK_SetPacket
-	IsoK_GetPacket
-	IsoK_EnumPackets
-	IsoK_ReUse
-	
-	HotK_Init
-	HotK_Free
-	HotK_FreeAll
+    IsoK_Init
+    IsoK_Free
+    IsoK_SetPackets
+    IsoK_SetPacket
+    IsoK_GetPacket
+    IsoK_EnumPackets
+    IsoK_ReUse
 
 	WinUsb_Initialize
 	WinUsb_Free
@@ -102,17 +108,4 @@ EXPORTS
 	WinUsb_SetPowerPolicy
 	WinUsb_GetPowerPolicy
 	WinUsb_GetOverlappedResult
-	WinUsb_ResetDevice
-	WinUsb_Open
-	WinUsb_Close
-	WinUsb_SetConfiguration
-	WinUsb_GetConfiguration
-	WinUsb_ClaimInterface
-	WinUsb_ReleaseInterface
-	WinUsb_SetAltInterface
-	WinUsb_GetAltInterface
-	WinUsb_IsoReadPipe
-	WinUsb_IsoWritePipe
-	WinUsb_GetCurrentFrameNumber
-	WinUsb_Clone
-	WinUsb_SelectInterface
+

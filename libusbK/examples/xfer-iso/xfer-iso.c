@@ -33,52 +33,6 @@
 #define ISO_CALC_CONTEXT_SIZE(mNumOfIsoPackets) (sizeof(KISO_CONTEXT)+(sizeof(KISO_PACKET)*(mNumOfIsoPackets)))
 #define ISO_CALC_DATABUFFER_SIZE(mNumOfIsoPackets, mIsoPacketSize) (mNumOfIsoPackets*mIsoPacketSize)
 
-// Custom vendor requests that must be implemented in the benchmark firmware.
-// Test selection can be bypassed with the "notestselect" argument.
-//
-typedef enum _BENCHMARK_DEVICE_COMMAND
-{
-    SET_TEST = 0x0E,
-    GET_TEST = 0x0F,
-} BENCHMARK_DEVICE_COMMAND, *PBENCHMARK_DEVICE_COMMAND;
-
-// Tests supported by the official benchmark firmware.
-//
-typedef enum _BENCHMARK_DEVICE_TEST_TYPE
-{
-    TestTypeNone	= 0x00,
-    TestTypeRead	= 0x01,
-    TestTypeWrite	= 0x02,
-    TestTypeLoop	= TestTypeRead | TestTypeWrite,
-} BENCHMARK_DEVICE_TEST_TYPE, *PBENCHMARK_DEVICE_TEST_TYPE;
-
-BOOL Bench_Configure(__in KUSB_HANDLE handle,
-                     __in BENCHMARK_DEVICE_COMMAND command,
-                     __in UCHAR intf,
-                     __deref_inout PBENCHMARK_DEVICE_TEST_TYPE testType)
-{
-	UCHAR buffer[1];
-	DWORD transferred = 0;
-	WINUSB_SETUP_PACKET Pkt;
-	KUSB_SETUP_PACKET* defPkt = (KUSB_SETUP_PACKET*)&Pkt;
-
-	memset(&Pkt, 0, sizeof(Pkt));
-	defPkt->BmRequest.Dir = BMREQUEST_DEVICE_TO_HOST;
-	defPkt->BmRequest.Type = BMREQUEST_VENDOR;
-	defPkt->Request = (UCHAR)command;
-	defPkt->Value = (UCHAR) * testType;
-	defPkt->Index = intf;
-	defPkt->wLength = 1;
-
-	if (UsbK_ControlTransfer(handle, Pkt, buffer, 1, &transferred, NULL))
-	{
-		if (transferred)
-			return TRUE;
-	}
-
-	return FALSE;
-}
-
 DWORD __cdecl main(int argc, char* argv[])
 {
 	KLST_HANDLE deviceList = NULL;
@@ -86,14 +40,17 @@ DWORD __cdecl main(int argc, char* argv[])
 	KUSB_HANDLE handle = NULL;
 	DWORD errorCode = ERROR_SUCCESS;
 
+	BM_TEST_TYPE testType = BM_TEST_TYPE_READ;
+	UCHAR pipeID = testType == BM_TEST_TYPE_READ ? EP_RX : EP_TX;
+
 	BOOL success;
 	UCHAR dataBuffer[ISO_CALC_DATABUFFER_SIZE(ISO_PACKETS_PER_XFER, EP_PACKET_SIZE)];
 	ULONG transferred = 0;
 	PKISO_CONTEXT isoCtx = NULL;
 	KOVL_HANDLE ovlkHandle = NULL;
-	BENCHMARK_DEVICE_TEST_TYPE testType = TestTypeRead;
 	ULONG posPacket;
 	ULONG currentFrameNumber;
+	KOVL_POOL_HANDLE ovlPool = NULL;
 
 	UNREFERENCED_PARAMETER(currentFrameNumber);
 
@@ -105,28 +62,35 @@ DWORD __cdecl main(int argc, char* argv[])
 		return GetLastError();
 
 	/*!
-	Open the device. This creates the physical USB device handle.
+	Initialize the device. This creates the physical usb handle.
 	*/
-	if (!UsbK_Open(deviceInfo, &handle))
+	if (!UsbK_Init(&handle, deviceInfo))
 	{
 		errorCode = GetLastError();
-		printf("Open device failed. Win32Error=%u (0x%08X)\n", errorCode, errorCode);
+		printf("Init device failed. ErrorCode: %08Xh\n",  errorCode);
 		goto Done;
 	}
 	printf("Device opened successfully!\n");
 
-	success = Bench_Configure(handle, SET_TEST, 0, &testType);
+	/*!
+	Configure the benchmark test device to accept/send data.
+	*/
+	success = Bench_Configure(handle, BM_COMMAND_SET_TEST, 0, NULL, &testType);
 	if (!success)
 	{
 		errorCode = GetLastError();
-		printf("Bench_Configure failed. Win32Error=%u (0x%08X)\n", errorCode, errorCode);
+		printf("Bench_Configure failed. ErrorCode: %08Xh\n",  errorCode);
 		goto Done;
 	}
 
-	IsoK_Init(&isoCtx, ISO_PACKETS_PER_XFER, testType == TestTypeRead ? EP_RX : EP_TX, 0);
+	IsoK_Init(&isoCtx, ISO_PACKETS_PER_XFER, pipeID, 0);
 	IsoK_SetPackets(isoCtx, EP_PACKET_SIZE);
 
-	OvlK_Acquire(&ovlkHandle, gPool);
+	/*!
+	Initialize a new OvlK pool handle.
+	*/
+	OvlK_InitPool(&ovlPool, handle, 4, 0);
+	OvlK_Acquire(&ovlkHandle, ovlPool);
 
 	UsbK_ResetPipe(handle, isoCtx->PipeID);
 
@@ -135,14 +99,14 @@ DWORD __cdecl main(int argc, char* argv[])
 	if (!success)
 	{
 		errorCode = GetLastError();
-		printf("UsbK_GetCurrentFrameNumber failed. Win32Error=%u (0x%08X)\n", errorCode, errorCode);
+		printf("UsbK_GetCurrentFrameNumber failed. ErrorCode: %08Xh\n",  errorCode);
 		goto Done;
 	}
 
 	isoCtx->StartFrame = currentFrameNumber + 8 + (currentFrameNumber % 8);
 #endif
 
-	if (testType == TestTypeRead)
+	if (testType == BM_TEST_TYPE_READ)
 		UsbK_IsoReadPipe(handle, isoCtx, dataBuffer, sizeof(dataBuffer), ovlkHandle);
 	else
 		UsbK_IsoWritePipe(handle, isoCtx, dataBuffer, sizeof(dataBuffer), ovlkHandle);
@@ -151,7 +115,7 @@ DWORD __cdecl main(int argc, char* argv[])
 	if (!success)
 	{
 		errorCode = GetLastError();
-		printf("IsoReadPipe failed. Win32Error=%u (0x%08X)\n", errorCode, errorCode);
+		printf("IsoReadPipe failed. ErrorCode: %08Xh\n",  errorCode);
 		goto Done;
 	}
 
@@ -181,17 +145,22 @@ DWORD __cdecl main(int argc, char* argv[])
 
 Done:
 	/*!
-	Close the device handle. If handle is invalid (NULL), has no effect.
+	Close the device handle.
 	*/
-	UsbK_Close(handle);
+	UsbK_Free(handle);
 	/*!
-	Free the device list. If deviceList is invalid (NULL), has no effect.
+	Free the device list.
 	*/
 	LstK_Free(&deviceList);
 	/*!
 	Free the iso context.
 	*/
 	IsoK_Free(isoCtx);
+
+	/*!
+	Free the overlapped pool.
+	*/
+	OvlK_FreePool(ovlPool);
 
 	return errorCode;
 }

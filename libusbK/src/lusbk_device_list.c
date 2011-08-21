@@ -39,7 +39,7 @@ typedef struct _KUSB_ENUM_REGKEY_PARAMS
 	// assigned by LstK_Init, copied by sub enumeration routines
 	// (global)
 	PKLST_HANDLE_INTERNAL DeviceList;
-	KLST_INIT_PARAMS* InitParams;
+	KLST_FLAG Flags;
 
 	// required before calling l_Enum_RegKey
 	HKEY hParentKey;
@@ -67,7 +67,7 @@ typedef struct _KLST_SYNC_CONTEXT
 {
 	PKLST_HANDLE_INTERNAL Master;
 	PKLST_HANDLE_INTERNAL Slave;
-	KLST_SYNC_PARAMS* Params;
+	KLST_SYNC_FLAG SyncFlags;
 } KLST_SYNC_CONTEXT;
 
 typedef struct _SERVICE_DRVID_MAP
@@ -286,9 +286,9 @@ static BOOL KUSB_API l_DevEnum_Clone_All(
 static BOOL KUSB_API l_DevEnum_Apply_Filter(
     __in KLST_HANDLE DeviceList,
     __in KLST_DEVINFO* DeviceInfo,
-    __in KLST_INIT_PARAMS* InitParams)
+    __in KLST_FLAG* Flags)
 {
-	if (!InitParams->EnableRawDeviceInterfaceGuid)
+	if (!(*Flags & KLST_FLAG_INCLUDE_RAWGUID))
 	{
 		if (_stricmp(DeviceInfo->DeviceInterfaceGUID, RawDeviceGuidA) == 0)
 		{
@@ -323,7 +323,7 @@ static BOOL KUSB_API l_DevEnum_SyncPrep(
 	UNREFERENCED_PARAMETER(DeviceList);
 	UNREFERENCED_PARAMETER(Context);
 
-	DeviceInfo->SyncResults.SyncFlags = SYNC_FLAG_NONE;
+	DeviceInfo->SyncFlags = KLST_SYNC_FLAG_NONE;
 
 	return TRUE;
 }
@@ -339,7 +339,7 @@ static BOOL KUSB_API l_DevEnum_Sync_Master(
 	UNREFERENCED_PARAMETER(DeviceList);
 
 	// Skip elements already processed by previous sync operations.
-	if (masterDevInfo->Public.SyncResults.SyncFlags != SYNC_FLAG_NONE) return TRUE;
+	if (masterDevInfo->Public.SyncFlags != KLST_SYNC_FLAG_NONE) return TRUE;
 	DL_SEARCH(Context->Slave->head, slaveDevInfo, masterDevInfo, lstk_DL_MatchSymbolicLink);
 	if (slaveDevInfo)
 	{
@@ -348,17 +348,17 @@ static BOOL KUSB_API l_DevEnum_Sync_Master(
 		if (slaveDevInfo->Public.Connected != masterDevInfo->Public.Connected)
 		{
 			// Connected/Disconnected.
-			masterDevInfo->Public.SyncResults.ConnectChange = 1;
+			masterDevInfo->Public.SyncFlags |= (KLST_SYNC_FLAG_CONNECT_CHANGE & Context->SyncFlags);
 			masterDevInfo->Public.Connected = slaveDevInfo->Public.Connected;
 			if (slaveDevInfo->Public.Connected)
-				masterDevInfo->Public.SyncResults.Added = 1;
+				masterDevInfo->Public.SyncFlags |= (KLST_SYNC_FLAG_ADDED & Context->SyncFlags);
 			else
-				masterDevInfo->Public.SyncResults.Removed = 1;
+				masterDevInfo->Public.SyncFlags |= (KLST_SYNC_FLAG_REMOVED & Context->SyncFlags);
 		}
 		else
 		{
 			// Unchanged.
-			masterDevInfo->Public.SyncResults.Unchanged = 1;
+			masterDevInfo->Public.SyncFlags = KLST_SYNC_FLAG_UNCHANGED;
 		}
 
 	}
@@ -367,12 +367,13 @@ static BOOL KUSB_API l_DevEnum_Sync_Master(
 		// This element exists in the master list only.
 		if (masterDevInfo->Public.Connected)
 		{
-			masterDevInfo->Public.SyncResults.Removed = 1;
+			masterDevInfo->Public.SyncFlags |= (KLST_SYNC_FLAG_REMOVED & Context->SyncFlags);
+			if (!masterDevInfo->Public.SyncFlags) masterDevInfo->Public.SyncFlags = KLST_SYNC_FLAG_UNCHANGED;
 			masterDevInfo->Public.Connected = FALSE;
 		}
 		else
 		{
-			masterDevInfo->Public.SyncResults.Unchanged = 1;
+			masterDevInfo->Public.SyncFlags = KLST_SYNC_FLAG_UNCHANGED;
 		}
 
 		// LstK_DetachInfo(DeviceList, DeviceInfo);
@@ -396,7 +397,7 @@ static BOOL KUSB_API l_DevEnum_Sync_Slave(
 	if (masterDevInfo)
 	{
 		// Skip elements already processed by previous sync operations.
-		if (masterDevInfo->Public.SyncResults.SyncFlags != SYNC_FLAG_NONE) return TRUE;
+		if (masterDevInfo->Public.SyncFlags != KLST_SYNC_FLAG_NONE) return TRUE;
 
 		// always use the new DevicePath from the slave list
 		memcpy(masterDevInfo->Public.DevicePath, slaveDevInfo->Public.DevicePath, KLST_STRING_MAX_LEN);
@@ -404,29 +405,32 @@ static BOOL KUSB_API l_DevEnum_Sync_Slave(
 		if (slaveDevInfo->Public.Connected != masterDevInfo->Public.Connected)
 		{
 			// Connected/Disconnected.
-			masterDevInfo->Public.SyncResults.ConnectChange = 1;
+			masterDevInfo->Public.SyncFlags |= (KLST_SYNC_FLAG_CONNECT_CHANGE & Context->SyncFlags);
 			masterDevInfo->Public.Connected = slaveDevInfo->Public.Connected;
 			if (slaveDevInfo->Public.Connected)
-				masterDevInfo->Public.SyncResults.Added = 1;
+				masterDevInfo->Public.SyncFlags |= (KLST_SYNC_FLAG_ADDED & Context->SyncFlags);
 			else
-				masterDevInfo->Public.SyncResults.Removed = 1;
+				masterDevInfo->Public.SyncFlags |= (KLST_SYNC_FLAG_REMOVED & Context->SyncFlags);
 		}
 		else
 		{
 			// Unchanged.
-			masterDevInfo->Public.SyncResults.Unchanged = 1;
+			masterDevInfo->Public.SyncFlags = KLST_SYNC_FLAG_UNCHANGED;
 		}
 	}
 	else
 	{
-		// Added.
-		if (LstK_CloneInfo((KLST_DEVINFO*)slaveDevInfo, (KLST_DEVINFO**)&masterDevInfo))
+		if ((KLST_SYNC_FLAG_ADDED & Context->SyncFlags))
 		{
-			LstK_AttachInfo((KLST_HANDLE)Context->Master, (KLST_DEVINFO*)masterDevInfo);
-			if (slaveDevInfo->Public.Connected)
-				masterDevInfo->Public.SyncResults.SyncFlags = SYNC_FLAG_ADDED;
-			else
-				masterDevInfo->Public.SyncResults.SyncFlags = SYNC_FLAG_UNCHANGED;
+			// Added.
+			if (LstK_CloneInfo((KLST_DEVINFO*)slaveDevInfo, (KLST_DEVINFO**)&masterDevInfo))
+			{
+				LstK_AttachInfo((KLST_HANDLE)Context->Master, (KLST_DEVINFO*)masterDevInfo);
+				if (slaveDevInfo->Public.Connected)
+					masterDevInfo->Public.SyncFlags = KLST_SYNC_FLAG_ADDED;
+				else
+					masterDevInfo->Public.SyncFlags = KLST_SYNC_FLAG_UNCHANGED;
+			}
 		}
 	}
 
@@ -672,7 +676,7 @@ static BOOL l_EnumKey_Instances(LPCSTR Name, KUSB_ENUM_REGKEY_PARAMS* RegEnumPar
 	if (status != ERROR_SUCCESS)
 		return TRUE;
 
-	if (!referenceCount && !RegEnumParams->InitParams->ShowDisconnectedDevices)
+	if (!referenceCount && (!(RegEnumParams->Flags & KLST_FLAG_INCLUDE_DISCONNECT)))
 		return TRUE;
 
 	RegEnumParams->TempItem->Connected = referenceCount > 0;
@@ -736,8 +740,8 @@ static BOOL l_EnumKey_Guids(LPCSTR Name, KUSB_ENUM_REGKEY_PARAMS* RegEnumParams)
 }
 
 KUSB_EXP BOOL KUSB_API LstK_Count(
-    __in KLST_HANDLE DeviceList,
-    __inout PULONG Count)
+    _in KLST_HANDLE DeviceList,
+    _ref PULONG Count)
 {
 	PKLST_HANDLE_INTERNAL handle;
 	PKLST_DEVINFO_EL nextItem = NULL;
@@ -759,7 +763,8 @@ KUSB_EXP BOOL KUSB_API LstK_Count(
 	return TRUE;
 }
 
-KUSB_EXP BOOL KUSB_API LstK_Free(__inout KLST_HANDLE DeviceList)
+KUSB_EXP BOOL KUSB_API LstK_Free(
+    _in KLST_HANDLE DeviceList)
 {
 	PKLST_HANDLE_INTERNAL handle;
 
@@ -771,31 +776,23 @@ KUSB_EXP BOOL KUSB_API LstK_Free(__inout KLST_HANDLE DeviceList)
 	return TRUE;
 }
 
-KUSB_EXP BOOL KUSB_API LstK_Init(__deref_out KLST_HANDLE* DeviceList,
-                                 __in_opt KLST_INIT_PARAMS* InitParams)
+KUSB_EXP BOOL KUSB_API LstK_Init(
+    _out KLST_HANDLE* DeviceList,
+    _in KLST_FLAG Flags)
 {
-	KLST_INIT_PARAMS defInitParams;
-	KLST_INIT_PARAMS* initParams = InitParams;
 	KUSB_ENUM_REGKEY_PARAMS enumParams;
 	BOOL success = FALSE;
 	PKLST_HANDLE_INTERNAL handle = NULL;
 	KLST_DEVINFO TempItem;
 
-	CheckLibInit();
-
 	handle = PoolHandle_Acquire_LstK(&Cleanup_DeviceList);
 	ErrorNoSetAction(!IsHandleValid(handle), return FALSE, "->PoolHandle_Acquire_LstK");
-
-	memset(&defInitParams, 0, sizeof(defInitParams));
-
-	if (!initParams)
-		initParams = &defInitParams;
 
 	Mem_Zero(&enumParams, sizeof(enumParams));
 
 	Mem_Zero(&TempItem, sizeof(TempItem));
 	enumParams.DeviceList		= handle;
-	enumParams.InitParams		= initParams;
+	enumParams.Flags			= Flags;
 	enumParams.EnumRegKeyCB		= l_EnumKey_Guids;
 	enumParams.hParentKey		= HKEY_LOCAL_MACHINE;
 	enumParams.SubKey			= KEY_DEVICECLASSES;
@@ -807,7 +804,7 @@ KUSB_EXP BOOL KUSB_API LstK_Init(__deref_out KLST_HANDLE* DeviceList,
 	{
 		if (handle->head)
 		{
-			LstK_Enumerate((KLST_HANDLE)enumParams.DeviceList, l_DevEnum_Apply_Filter, enumParams.InitParams);
+			LstK_Enumerate((KLST_HANDLE)enumParams.DeviceList, l_DevEnum_Apply_Filter, &enumParams.Flags);
 		}
 
 		success = TRUE;
@@ -826,8 +823,9 @@ KUSB_EXP BOOL KUSB_API LstK_Init(__deref_out KLST_HANDLE* DeviceList,
 	return success;
 }
 
-KUSB_EXP BOOL KUSB_API LstK_MoveNext(__inout KLST_HANDLE DeviceList,
-                                     __deref_out_opt KLST_DEVINFO** DeviceInfo)
+KUSB_EXP BOOL KUSB_API LstK_MoveNext(
+    _in KLST_HANDLE DeviceList,
+    _outopt KLST_DEVINFO_HANDLE* DeviceInfo)
 {
 	PKLST_HANDLE_INTERNAL handle;
 
@@ -864,8 +862,9 @@ KUSB_EXP BOOL KUSB_API LstK_MoveNext(__inout KLST_HANDLE DeviceList,
 	return TRUE;
 }
 
-KUSB_EXP BOOL KUSB_API LstK_Current(__in KLST_HANDLE DeviceList,
-                                    __deref_out KLST_DEVINFO** DeviceInfo)
+KUSB_EXP BOOL KUSB_API LstK_Current(
+    _in KLST_HANDLE DeviceList,
+    _out KLST_DEVINFO_HANDLE* DeviceInfo)
 {
 	PKLST_HANDLE_INTERNAL handle;
 
@@ -885,7 +884,8 @@ KUSB_EXP BOOL KUSB_API LstK_Current(__in KLST_HANDLE DeviceList,
 	return TRUE;
 }
 
-KUSB_EXP VOID KUSB_API LstK_MoveReset(__inout KLST_HANDLE DeviceList)
+KUSB_EXP VOID KUSB_API LstK_MoveReset(
+    _in KLST_HANDLE DeviceList)
 {
 	PKLST_HANDLE_INTERNAL handle;
 
@@ -899,9 +899,10 @@ KUSB_EXP VOID KUSB_API LstK_MoveReset(__inout KLST_HANDLE DeviceList)
 	return;
 }
 
-KUSB_EXP BOOL KUSB_API LstK_Enumerate(__in KLST_HANDLE DeviceList,
-                                      __in KLST_ENUM_DEVINFO_CB* EnumDevListCB,
-                                      __in_opt PVOID Context)
+KUSB_EXP BOOL KUSB_API LstK_Enumerate(
+    _in KLST_HANDLE DeviceList,
+    _in PKLST_ENUM_DEVINFO_CB EnumDevListCB,
+    _inopt PVOID Context)
 {
 	PKLST_DEVINFO_EL check, tmp;
 	PKLST_HANDLE_INTERNAL handle;
@@ -924,10 +925,11 @@ Error:
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API LstK_FindByVidPid(__in KLST_HANDLE DeviceList,
-        __in UINT Vid,
-        __in UINT Pid,
-        __deref_out KLST_DEVINFO** DeviceInfo)
+KUSB_EXP BOOL KUSB_API LstK_FindByVidPid(
+    _in KLST_HANDLE DeviceList,
+    _in UINT Vid,
+    _in UINT Pid,
+    _out KLST_DEVINFO_HANDLE* DeviceInfo)
 {
 	PKLST_DEVINFO_EL check = NULL;
 	PKLST_HANDLE_INTERNAL handle;
@@ -957,22 +959,24 @@ Error:
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API LstK_Clone(__in KLST_HANDLE src, __out KLST_HANDLE* dst)
+KUSB_EXP BOOL KUSB_API LstK_Clone(
+    _in KLST_HANDLE SrcList,
+    _out KLST_HANDLE* DstList)
 {
 	PKLST_HANDLE_INTERNAL handle;
 	PKLST_HANDLE_INTERNAL newDeviceList = NULL;
 	BOOL success;
 
-	Pub_To_Priv_LstK(src, handle, return FALSE);
-	ErrorParamAction(!IsHandleValid(dst), "dst", return FALSE);
+	Pub_To_Priv_LstK(SrcList, handle, return FALSE);
+	ErrorParamAction(!IsHandleValid(DstList), "dst", return FALSE);
 	ErrorSetAction(!PoolHandle_Inc_LstK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_LstK");
 
 	newDeviceList = PoolHandle_Acquire_LstK(Cleanup_DeviceList);
 	ErrorNoSet(!IsHandleValid(newDeviceList), Error, "->PoolHandle_Acquire_LstK");
 
-	success = LstK_Enumerate(src, l_DevEnum_Clone_All, newDeviceList);
+	success = LstK_Enumerate(SrcList, l_DevEnum_Clone_All, newDeviceList);
 
-	*dst = (KLST_HANDLE)newDeviceList;
+	*DstList = (KLST_HANDLE)newDeviceList;
 	PoolHandle_Dec_LstK(handle);
 	return success;
 Error:
@@ -982,27 +986,24 @@ Error:
 }
 
 KUSB_EXP BOOL KUSB_API LstK_Sync(
-    __inout KLST_HANDLE MasterList,
-    __in_opt KLST_HANDLE SlaveList,
-    __in_opt KLST_SYNC_PARAMS* SyncParams)
+    _in KLST_HANDLE MasterList,
+    _in KLST_HANDLE SlaveList,
+    _inopt KLST_SYNC_FLAG SyncFlags)
 {
 	KLST_SYNC_CONTEXT context;
-	KLST_SYNC_PARAMS defSyncParams;
 
 	Mem_Zero(&context, sizeof(context));
 
 	Pub_To_Priv_LstK(MasterList, context.Master, return FALSE);
 	ErrorSetAction(!PoolHandle_Inc_LstK(context.Master), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_LstK");
-	context.Params = IsHandleValid(SyncParams) ? SyncParams : Mem_Zero(&defSyncParams, sizeof(defSyncParams));
+	context.SyncFlags = SyncFlags;
 
+	if (!context.SyncFlags) context.SyncFlags = KLST_SYNC_FLAG_MASK;
 	if (!SlaveList)
 	{
 		// Use a new list for the slave list
-		KLST_INIT_PARAMS slaveListInit;
-		memset(&slaveListInit, 0, sizeof(slaveListInit));
-
-		slaveListInit.ShowDisconnectedDevices = TRUE;
-		ErrorNoSetAction(!LstK_Init(&SlaveList, &slaveListInit), goto Error_IncRefSlave, "->PoolHandle_Inc_LstK");
+		KLST_FLAG slaveListInit = KLST_FLAG_INCLUDE_DISCONNECT;
+		ErrorNoSetAction(!LstK_Init(&SlaveList, slaveListInit), goto Error_IncRefSlave, "->PoolHandle_Inc_LstK");
 		context.Slave = (PKLST_HANDLE_INTERNAL)SlaveList;
 	}
 	else
@@ -1030,8 +1031,8 @@ Error_IncRefSlave:
 }
 
 KUSB_EXP BOOL KUSB_API LstK_CloneInfo(
-    __in KLST_DEVINFO* SrcInfo,
-    __deref_inout KLST_DEVINFO** DstInfo)
+    _in KLST_DEVINFO_HANDLE SrcInfo,
+    _out KLST_DEVINFO_HANDLE* DstInfo)
 {
 	PKLST_DEVINFO_HANDLE_INTERNAL clonedHandle = NULL;
 	PKLST_DEVINFO_HANDLE_INTERNAL handle;
@@ -1059,8 +1060,8 @@ Error:
 }
 
 KUSB_EXP BOOL KUSB_API LstK_DetachInfo(
-    __inout KLST_HANDLE DeviceList,
-    __in KLST_DEVINFO* DeviceInfo)
+    _in KLST_HANDLE DeviceList,
+    _in KLST_DEVINFO_HANDLE DeviceInfo)
 {
 	PKLST_HANDLE_INTERNAL handle;
 	PKLST_DEVINFO_HANDLE_INTERNAL devInfoHandle;
@@ -1097,8 +1098,8 @@ Error_IncRef_DevInfo:
 }
 
 KUSB_EXP BOOL KUSB_API LstK_AttachInfo(
-    __inout KLST_HANDLE DeviceList,
-    __in KLST_DEVINFO* DeviceInfo)
+    _in KLST_HANDLE DeviceList,
+    _in KLST_DEVINFO_HANDLE DeviceInfo)
 {
 	PKLST_HANDLE_INTERNAL handle;
 	PKLST_DEVINFO_HANDLE_INTERNAL devInfoHandle;
@@ -1136,7 +1137,7 @@ Error_IncRef_DevInfo:
 }
 
 KUSB_EXP BOOL KUSB_API LstK_FreeInfo(
-    __in KLST_DEVINFO* DeviceInfo)
+    _in KLST_DEVINFO_HANDLE DeviceInfo)
 {
 	PKLST_DEVINFO_EL deviceInfo = (PKLST_DEVINFO_EL) DeviceInfo;
 	PKLST_DEVINFO_HANDLE_INTERNAL devInfoHandle;

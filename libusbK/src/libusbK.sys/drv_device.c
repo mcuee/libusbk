@@ -503,6 +503,10 @@ Return Value:
 		}
 	}
 
+	if (InterlockedIncrement(&deviceContext->OpenedFileHandleCount) == 1)
+	{
+		Policy_SetAllPipesToDefault(deviceContext);
+	}
 	WdfRequestComplete(Request, status);
 
 	USBMSG("ends\n");
@@ -523,6 +527,8 @@ VOID Device_OnFileClose(__in WDFFILEOBJECT FileObject)
 	if (pFileContext && pFileContext->DeviceContext)
 	{
 		Interface_ReleaseAll(pFileContext->DeviceContext, WdfFileObjectWdmGetFileObject(FileObject));
+		InterlockedDecrement(&pFileContext->DeviceContext->OpenedFileHandleCount);
+
 	}
 	USBMSG("ends\n");
 }
@@ -559,7 +565,7 @@ Return Value:
 	deviceContext = GetDeviceContext(Device);
 
 	//
-	// Create a USB device handle so that we can communicate with the
+	// Create a usb handle so that we can communicate with the
 	// underlying USB stack. The WDFUSBDEVICE handle is used to query,
 	// configure, and manage all aspects of the USB device.
 	// These aspects include device properties, bus properties,

@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="9.00"
 	Name="config-interface"
-	ProjectGUID="{AC19FF1F-F7E2-8439-19E2-E7B6E7E35BEC}"
+	ProjectGUID="{0C9F7065-7446-95FB-B59F-D60BD114E835}"
 	RootNamespace="config_interface"
 	Keyword="Win32Proj"
 	TargetFrameworkVersion="196613"
@@ -348,7 +348,7 @@
 				RelativePath="..\examples.c"
 				>
 			</File>
-			</Filter>
+		</Filter>
 		<Filter
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
@@ -364,10 +364,6 @@
 			</File>
 			<File
 				RelativePath="..\..\includes\lusbk_shared.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\includes\lusbk_linked_list.h"
 				>
 			</File>
 		</Filter>

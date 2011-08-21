@@ -39,10 +39,10 @@ DWORD __cdecl main(int argc, char* argv[])
 
 	// load a dynamic driver api for this device.  The dynamic driver api
 	// is more versatile because it adds support for winusb.sys devices.
-	if (!LibK_LoadDriverApi(&K, deviceInfo->DrvId, sizeof(K)))
+	if (!LibK_LoadDriverAPI(&K, deviceInfo->DrvId))
 	{
 		errorCode = GetLastError();
-		printf("Loading driver api failed. Win32Error=%u (0x%08X)\n", errorCode, errorCode);
+		printf("Loading driver api failed. ErrorCode: %08Xh\n",  errorCode);
 		goto Done;
 	}
 
@@ -68,11 +68,11 @@ DWORD __cdecl main(int argc, char* argv[])
 	use the functions in the driver api initialized above.
 	*/
 
-	// Open the device with the "dynamic" Open function
-	if (!K.Open(deviceInfo, &handle))
+	// Initialize the device with the "dynamic" Open function
+	if (!K.Init(&handle, deviceInfo))
 	{
 		errorCode = GetLastError();
-		printf("Open device failed. Win32Error=%u (0x%08X)\n", errorCode, errorCode);
+		printf("Init device failed. ErrorCode: %08Xh\n",  errorCode);
 		goto Done;
 	}
 	printf("Device opened successfully!\n");
@@ -80,7 +80,7 @@ DWORD __cdecl main(int argc, char* argv[])
 Done:
 	// Close the device handle
 	// if handle is invalid (NULL), has no effect
-	UsbK_Close(handle);
+	UsbK_Free(handle);
 
 	// Free the device list
 	// if deviceList is invalid (NULL), has no effect

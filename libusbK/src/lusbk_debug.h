@@ -39,7 +39,7 @@ extern ULONG DebugLevel;
 #endif
 
 #define IFDBGLVL(level) if (DebugLevel > level)
-#define USB_LN "\r\n"
+#define USB_LN "\n"
 
 #define USBLOG_PRINTLN(format,...) DebugOutputFunction(format USB_LN,__VA_ARGS__)
 #define USBLOG_PRINT(format,...) DebugOutputFunction(format,__VA_ARGS__)
@@ -80,6 +80,6 @@ extern ULONG DebugLevel;
 
 #endif // defined(DBG) || defined (_DEBUG)
 
-FORCEINLINE VOID USB_LOG_NOP() {}
+#define USB_LOG_NOP() NOP_FUNCTION
 
 #endif // __KUSB_DEBUG_H__

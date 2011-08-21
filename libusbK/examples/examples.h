@@ -18,6 +18,22 @@
 //! Default example product id
 #define EXAMPLE_PID 0xFA2E
 
+//! Custom vendor requests that must be implemented in the benchmark firmware.
+typedef enum _BM_COMMAND
+{
+    BM_COMMAND_SET_TEST = 0x0E,
+    BM_COMMAND_GET_TEST = 0x0F,
+} BM_COMMAND;
+
+//! Tests supported by the official benchmark firmware.
+typedef enum _BM_TEST_TYPE
+{
+    BM_TEST_TYPE_NONE	= 0x00,
+    BM_TEST_TYPE_READ	= 0x01,
+    BM_TEST_TYPE_WRITE	= 0x02,
+    BM_TEST_TYPE_LOOP	= BM_TEST_TYPE_READ | BM_TEST_TYPE_WRITE,
+} BM_TEST_TYPE, *PBM_TEST_TYPE;
+
 //! Helper function for examples; searches a command line argument list for devices matching a specific vid/pid.
 /*!
 * Arguments are interpreted as follows:
@@ -49,7 +65,46 @@ BOOL Examples_GetTestDeviceEx( __deref_out KLST_HANDLE* DeviceList,
                                __deref_out KLST_DEVINFO_HANDLE* DeviceInfo,
                                __in int argc,
                                __in char* argv[],
-                               __in_opt PKLST_INIT_PARAMS InitParams);
+                               __in_opt KLST_FLAG Flags);
+
+BOOL Bench_Configure(__in KUSB_HANDLE UsbHandle,
+                     __in BM_COMMAND Command,
+                     __in UCHAR InterfaceNumber,
+                     __in_opt PKUSB_DRIVER_API DriverAPI,
+                     __deref_inout PBM_TEST_TYPE TestType);
+
+
+typedef struct _DATA_COUNTER_STATS
+{
+	LARGE_INTEGER Freq;
+	LARGE_INTEGER Start;
+	LARGE_INTEGER Stop;
+
+	LONGLONG TotalBytes;
+	DOUBLE Bps;
+	DOUBLE dFreq;
+	DOUBLE Duration;
+
+} DATA_COUNTER_STATS, *PDATA_COUNTER_STATS;
+
+#define mDcs_Init(mDataCounterStats) do {																		\
+	memset((mDataCounterStats),0,sizeof(DATA_COUNTER_STATS));													\
+	QueryPerformanceFrequency(&((mDataCounterStats)->Freq)); 													\
+	(mDataCounterStats)->dFreq = 1.0/(DOUBLE)(mDataCounterStats)->Freq.QuadPart; 								\
+	QueryPerformanceCounter(&((mDataCounterStats)->Start));  													\
+}while(0)
+
+#define mDcs_MarkStop(mDataCounterStats,mAddTransferLength) do { 												\
+	QueryPerformanceCounter(&((mDataCounterStats)->Stop));   													\
+	(mDataCounterStats)->TotalBytes+=(LONG)(mAddTransferLength); 												\
+	(mDataCounterStats)->Duration =  																			\
+		((mDataCounterStats)->dFreq) *   																		\
+		((DOUBLE) ((mDataCounterStats)->Stop.QuadPart - (mDataCounterStats)->Start.QuadPart));   				\
+	if ((mDataCounterStats)->Duration != 0.0)																	\
+		(mDataCounterStats)->Bps = ((DOUBLE)(mDataCounterStats)->TotalBytes) / (mDataCounterStats)->Duration;	\
+}while(0)
+
+
 #endif
 
 
@@ -57,8 +112,8 @@ BOOL Examples_GetTestDeviceEx( __deref_out KLST_HANDLE* DeviceList,
 #ifndef UTLIST_H
 #define UTLIST_H
 
-/*! \file lusbk_linked_list.h
-* \brief Linked list macros for C structures. <A href="http://uthash.sourceforge.net/utlist.html">utlist.h</A>
+/*!
+* \brief Doubly linked list macro for C structures. <A href="http://uthash.sourceforge.net/utlist.html">utlist.h</A>
 * \brief Provided by <A href="http://uthash.sourceforge.net">Troy D. Hanson</A>
 *
 * \attention
@@ -71,8 +126,8 @@ BOOL Examples_GetTestDeviceEx( __deref_out KLST_HANDLE* DeviceList,
 *
 * \note
 * Only a small subset of the \c utlist.h macros are documented.
-* Undocumented macros will not appear in this documentation but \ref lusbk_linked_list.h
-* contains the entire <A href="http://uthash.sourceforge.net/utlist.html">utlist.h</A>.
+* Undocumented macros will not appear in this documentation but can be downloaded here:
+* - <A href="http://uthash.sourceforge.net/utlist.html">utlist.h</A>.
 *
 * \note
 * To use singly-linked lists, your structure must have a "next" pointer.
