@@ -25,8 +25,8 @@
 #include "examples.h"
 BOOL Examples_GetTestDevice(KLST_HANDLE* DeviceList,
                             KLST_DEVINFO_HANDLE* DeviceInfo,
-                           int argc,
-                           char* argv[])
+                            int argc,
+                            char* argv[])
 {
 	return Examples_GetTestDeviceEx(DeviceList,
 	                                DeviceInfo,
@@ -37,9 +37,9 @@ BOOL Examples_GetTestDevice(KLST_HANDLE* DeviceList,
 }
 BOOL Examples_GetTestDeviceEx(KLST_HANDLE* DeviceList,
                               KLST_DEVINFO_HANDLE* DeviceInfo,
-                             int argc,
-                             char* argv[],
-                             KLST_FLAG Flags)
+                              int argc,
+                              char* argv[],
+                              KLST_FLAG Flags)
 {
 	ULONG vidArg = EXAMPLE_VID;
 	ULONG pidArg = EXAMPLE_PID;
@@ -118,10 +118,10 @@ BOOL Examples_GetTestDeviceEx(KLST_HANDLE* DeviceList,
 }
 
 BOOL Bench_Configure(KUSB_HANDLE UsbHandle,
-                   BM_COMMAND Command,
-                   UCHAR InterfaceNumber,
-                   PKUSB_DRIVER_API DriverAPI,
-                   PBM_TEST_TYPE TestType)
+                     BM_COMMAND Command,
+                     UCHAR InterfaceNumber,
+                     PKUSB_DRIVER_API DriverAPI,
+                     PBM_TEST_TYPE TestType)
 {
 	DWORD transferred = 0;
 	BOOL success;
