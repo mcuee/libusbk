@@ -38,12 +38,7 @@ binary distributions.
 
 #define ALLK_INIT_SECTION(AllKSection) 	\
 /* AllKSection			= */{			\
-/* BusyLock				= */	0,  	\
-/* DefUserContextSize	= */	0,		\
-/* CurrentPos			= */	0,		\
-/* NextPos				= */	0,   	\
-/* InitUserContext		= */	NULL,	\
-/* FreeUserContext		= */	NULL,	\
+/* Index				= */	-1,		\
 /* Handles				= */	{0}, 	\
 							}
 ALLK_CONTEXT AllK =
@@ -62,11 +57,11 @@ ALLK_CONTEXT AllK =
 	ALLK_INIT_SECTION(DevK),
 	ALLK_INIT_SECTION(OvlK),
 	ALLK_INIT_SECTION(OvlPoolK),
+	ALLK_INIT_SECTION(StmK),
 };
 
 BOOL MatchPattern(LPCSTR Pattern, LPCSTR File)
 {
-	CheckLibInit();
 	return AllK.PathMatchSpec(File, Pattern);
 }
 
@@ -85,6 +80,7 @@ static BOOL AllK_Context_Initialize(ALLK_CONTEXT* AllK)
 	ALLK_DBG_PRINT_SECTION(DevK);
 	ALLK_DBG_PRINT_SECTION(OvlK);
 	ALLK_DBG_PRINT_SECTION(OvlPoolK);
+	ALLK_DBG_PRINT_SECTION(StmK);
 	USBLOG_PRINTLN("");
 
 	ALLK_HANDLES_INIT(HotK);
@@ -94,12 +90,12 @@ static BOOL AllK_Context_Initialize(ALLK_CONTEXT* AllK)
 	ALLK_HANDLES_INIT(DevK);
 	ALLK_HANDLES_INIT(OvlK);
 	ALLK_HANDLES_INIT(OvlPoolK);
+	ALLK_HANDLES_INIT(StmK);
 
 	AllK->PathMatchSpec = (KDYN_PathMatchSpec*)GetProcAddress(shlwapi_dll, "PathMatchSpecA");
 	AllK->CancelIoEx	= (KDYN_CancelIoEx*)GetProcAddress(kernel32_dll, "CancelIoEx");
 
 	USBLOG_PRINTLN("KLST_DEVINFO = %u bytes", sizeof(KLST_DEVINFO));
-	USBLOG_PRINTLN("KOVL_OVERLAPPED_INFO = %u bytes", sizeof(KOVL_OVERLAPPED_INFO));
 	return TRUE;
 }
 
@@ -107,46 +103,41 @@ void CheckLibInit()
 {
 	if (AllK.Valid) return;
 
-	SpinLock_Acquire(&AllK.InitLock, TRUE);
+	mSpin_Acquire(&AllK.InitLock);
 	if (AllK.Valid)
 	{
-		SpinLock_Release(&AllK.InitLock);
+		mSpin_Release(&AllK.InitLock);
 		return;
 	}
 	AllK.Heap = GetProcessHeap();
 	AllK.Valid = AllK_Context_Initialize(&AllK);
-	SpinLock_Release(&AllK.InitLock);
+	mSpin_Release(&AllK.InitLock);
 }
 
 #define POOLHANDLE_ACQUIRE(ReturnHandle,AllKSection) do { 																\
-	CheckLibInit();   																									\
-  																														\
-	SpinLock_Acquire(&AllK.AllKSection.BusyLock, TRUE);   																\
-  																														\
-	AllK.AllKSection.NextPos = AllK.AllKSection.CurrentPos;   															\
-	while  ((AllK.AllKSection.NextPos = ((AllK.AllKSection.NextPos + 1) % ALLK_HANDLE_COUNT(AllKSection))) != 			\
-			AllK.AllKSection.CurrentPos)  																				\
+	long nextPos,startPos;																								\
+	if (!AllK.Valid) CheckLibInit();   																					\
+	nextPos = startPos = (IncLock(AllK.AllKSection.Index)) % ALLK_HANDLE_COUNT(AllKSection);							\
+	do																													\
 	{ 																													\
-		(ReturnHandle) = &AllK.AllKSection.Handles[AllK.AllKSection.NextPos]; 											\
-		if (SpinLock_Acquire(&(ReturnHandle)->Base.Count.Use, FALSE)) 													\
+		(ReturnHandle) = &AllK.AllKSection.Handles[nextPos];  															\
+		if (mSpin_Try_Acquire(&(ReturnHandle)->Base.Count.Use)) 														\
 		{ 																												\
-			AllK.AllKSection.CurrentPos = AllK.AllKSection.NextPos;   													\
-			SpinLock_Release(&AllK.AllKSection.BusyLock); 																\
 			Init_Handle_ObjK(&(ReturnHandle)->Base,AllKSection);  														\
 			Init_Handle_##AllKSection((ReturnHandle));																	\
 			break;																										\
 		} 																												\
 		(ReturnHandle) = NULL;																							\
-	} 																													\
-  																														\
+		nextPos = (IncLock(AllK.AllKSection.Index)) % ALLK_HANDLE_COUNT(AllKSection);   								\
+	}while(nextPos!=startPos);																							\
   																														\
 	if (!(ReturnHandle))  																								\
 	{ 																													\
-		SpinLock_Release(&AllK.AllKSection.BusyLock); 																	\
 		USBERRN("no more internal " DEFINE_TO_STR(AllKSection) " handles! (max=%d)",  ALLK_HANDLE_COUNT(AllKSection));	\
 		LusbwError(ERROR_OUT_OF_STRUCTURES);  																			\
 	} 																													\
 }while(0)
+
 
 #define FN_POOLHANDLE(AllKSection,HandleType)											\
 	P##HandleType PoolHandle_Acquire_##AllKSection(PKOBJ_CB EvtCleanup)					\
@@ -166,6 +157,18 @@ void CheckLibInit()
 		ALLK_DECREF_HANDLE(PoolHandle);													\
 		return FALSE;																	\
 	}																					\
+	BOOL PoolHandle_IncEx_##AllKSection(P##HandleType PoolHandle, long* lockCount)		\
+	{																					\
+		*lockCount=-1;																	\
+		if (!ALLK_INUSE_HANDLE(PoolHandle)) return FALSE;								\
+		*lockCount=0;																	\
+		if (PoolHandle->Base.Disposing)													\
+			return PoolHandle->Base.Disposing == GetCurrentThreadId() ? TRUE : FALSE;	\
+		if ((*lockCount = ALLK_INCREF_HANDLE(PoolHandle)) > 1)							\
+			return TRUE;																\
+		*lockCount = ALLK_DECREF_HANDLE(PoolHandle);									\
+		return FALSE;																	\
+	}																					\
 	BOOL PoolHandle_Dec_##AllKSection(P##HandleType PoolHandle)							\
 	{																					\
 		long lockCnt;																	\
@@ -180,11 +183,13 @@ void CheckLibInit()
 				PoolHandle->Base.Evt.Cleanup(PoolHandle);								\
 				PoolHandle->Base.Evt.Cleanup=NULL;										\
 			}																			\
-			SpinLock_Release(&PoolHandle->Base.Count.Use);								\
+			mSpin_Release(&PoolHandle->Base.Count.Use);								\
 			return FALSE;																\
 		}																				\
 		return (lockCnt > 0);															\
-	}																					\
+	}
+
+/*
 	BOOL PoolHandle_Acquire_Spin_##AllKSection(P##HandleType PoolHandle, BOOL Required)	\
 	{																					\
 		if (PoolHandle->Base.Disposing)													\
@@ -204,6 +209,10 @@ void CheckLibInit()
 		ALLK_UNLOCK_HANDLE(PoolHandle);													\
 		return PoolHandle_Dec_##AllKSection(PoolHandle);								\
 	}
+*/
+
+ALDEF_LIST_FUNCTIONS(ALC, KSTM_XFER, XferLink);
+ALDEF_LIST_FUNCTIONS(ALC, KOVL, Ovl);
 
 FN_POOLHANDLE(HotK, KHOT_HANDLE_INTERNAL)
 FN_POOLHANDLE(LstK, KLST_HANDLE_INTERNAL)
@@ -212,3 +221,4 @@ FN_POOLHANDLE(UsbK, KUSB_HANDLE_INTERNAL)
 FN_POOLHANDLE(DevK, KDEV_HANDLE_INTERNAL)
 FN_POOLHANDLE(OvlK, KOVL_HANDLE_INTERNAL)
 FN_POOLHANDLE(OvlPoolK, KOVL_POOL_HANDLE_INTERNAL)
+FN_POOLHANDLE(StmK, KSTM_HANDLE_INTERNAL)

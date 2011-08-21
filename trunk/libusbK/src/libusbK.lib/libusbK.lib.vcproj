@@ -330,6 +330,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\lusbk_queued_stream.c"
+				>
+			</File>
+			<File
 				RelativePath="..\lusbk_stack_collection.c"
 				>
 			</File>
@@ -377,6 +381,10 @@
 			</File>
 			<File
 				RelativePath="..\lusbk_linked_list.h"
+				>
+			</File>
+			<File
+				RelativePath="..\lusbk_lockedarray_list.h"
 				>
 			</File>
 			<File

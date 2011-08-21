@@ -25,6 +25,8 @@ extern POLICY_DEFAULT DevicePolicyDefaults[MAX_POLICY];
 #if 1
 VOID Policy_InitPipe(__inout PPIPE_CONTEXT pipeContext);
 
+VOID Policy_SetAllPipesToDefault(__in PDEVICE_CONTEXT deviceContext);
+
 NTSTATUS Policy_SetPipe(__inout PDEVICE_CONTEXT devContext,
                         __in UCHAR pipeID,
                         __in ULONG policyType,

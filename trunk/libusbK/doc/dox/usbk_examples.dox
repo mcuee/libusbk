@@ -1,3 +1,36 @@
+//! Registers a hot plug handle for USB device notification of any supported device.
+/*!
+* \example hot-plug-monitor.c
+*
+* \par hot-plug-monitor example:
+* -# Initializes a new HotK handle.
+* -# Writes arrival/removal event notifications to console output as they occur. 
+* -# Repeats step #2 until the \b Q key is pressed.
+* -# Frees the HotK handle created in step #1
+*
+\par Console Output
+\verbatim
+Initialize a HotK device notification event monitor..
+Looking for devices with instances IDs matching the pattern '*'..
+Press 'q' to exit..
+
+HotK monitor initialized. ErrorCode: 00000000h
+
+[ARRIVAL] Benchmark Device (Microchip Technology, Inc.) [libusbK]
+  InstanceID          : USB\VID_04D8&PID_FA2E\LUSBW1
+  DeviceInterfaceGUID : {716cdf1f-418b-4b80-a07d-1311dffdc8b8}
+  DevicePath          : \\?\USB#VID_04D8&PID_FA2E#LUSBW1#{716cdf1f-418b-4b80-a07d-1311dffdc8b8}
+
+
+[REMOVAL] Benchmark Device (Microchip Technology, Inc.) [libusbK]
+  InstanceID          : USB\VID_04D8&PID_FA2E\LUSBW1
+  DeviceInterfaceGUID : {716cdf1f-418b-4b80-a07d-1311dffdc8b8}
+  DevicePath          : \\?\USB#VID_04D8&PID_FA2E#LUSBW1#{716cdf1f-418b-4b80-a07d-1311dffdc8b8}
+
+HotK monitor closed. ErrorCode: 00000000h
+\endverbatim
+*/
+
 //! Displays the connected devices that can be used by libusbK.
 /*!
 * \example show-device.c
@@ -9,8 +42,8 @@
 * -# Prints example device connection status.
 * -# Destroys the usb device list created in step #1
 *
-\par Console Output
-\verbatim
+* \par Console Output
+* \verbatim
 USB\VID_04D8&PID_FA2E\LUSBW1: Benchmark Device (Travis Robinson)
 Example device connected!
 \endverbatim
@@ -24,17 +57,37 @@ Example device connected!
 * -# Finds a device by vid/pid (use vid=hhhh, pid=hhhhh and the command line).
 * -# Opens the device.
 * -# Prints pipe information.
-* -# Closes the device.
+* -# Frees the usb device.
 * -# Destroys the usb device list created in step #1
 *
-\par Console Output
-\verbatim
+* \par Console Output
+* \verbatim
 Looking for device vid/pid 04D8/FA2E..
 Using 04D8:FA2E (LUSBW1): Benchmark Device - Microchip Technology, Inc.
 Device opened successfully!
 Pipe Information:
   PipeId=0x01 PipeType=0x02 Interval=0 MaximumPacketSize=32
   PipeId=0x81 PipeType=0x02 Interval=0 MaximumPacketSize=32
+\endverbatim
+*/
+
+//! Loads a dynamic driver api for use with all drivers and opens the device.
+/*!
+* \example load-driver-api.c
+*
+* \par load-driver-api example:
+* -# Finds a device by vid/pid (use vid=hhhh, pid=hhhhh and the command line).
+* -# Loads a dynamic driver API set specific to the devices driver.
+* -# Opens the device.
+* -# Frees the usb device.
+* -# Destroys the usb device list created in step #1
+*
+* \par Console Output
+* \verbatim
+Looking for device vid/pid 04D8/FA2E..
+Using 04D8:FA2E (LUSBW1): Benchmark Device - Microchip Technology, Inc.
+libusbK driver api loaded!
+Device opened successfully!
 \endverbatim
 */
 
@@ -49,11 +102,11 @@ Pipe Information:
 * -# Finds the specified interface/alt setting. (re-define at top of example)
 * -# Finds the specified read and write pipes. (re-define at top of example)
 * -# Sets the specified alternate setting as the "active" interface.
-* -# Closes the device.
+* -# Frees the usb device.
 * -# Destroys the usb device list created in step #1
 *
-\par Console Output
-\verbatim
+* \par Console Output
+* \verbatim
 Looking for device vid/pid 04D8/FA2E..
 Using 04D8:FA2E (LUSBW1): Benchmark Device - Microchip Technology, Inc.
 Device opened successfully!
@@ -64,43 +117,20 @@ Alternate setting 00h selected!
 \endverbatim
 */
 
-//! Loads a dynamic driver api for use with all drivers and opens the device.
+//! Asynchronously loops data from one endpoint to another.
 /*!
-* \example load-driver-api.c
+* \example xfer-async-loop.c
 *
-* \par load-driver-api example:
-* -# Finds a device by vid/pid (use vid=hhhh, pid=hhhhh and the command line).
-* -# Loads a dynamic driver API set specific to the devices driver.
-* -# Opens the device.
-* -# Closes the device.
-* -# Destroys the usb device list created in step #1
-*
-\par Console Output
-\verbatim
-Looking for device vid/pid 04D8/FA2E..
-Using 04D8:FA2E (LUSBW1): Benchmark Device - Microchip Technology, Inc.
-libusbK driver api loaded!
-Device opened successfully!
-\endverbatim
-*/
-
-//! Asynchronously streams data from/to read/write pipes.
-/*!
-* \example xfer-stream-rw.c
-*
-* \note
-* \b -stream- examples support isochronous endpoints but are not limited for 
-*  use \b only with isochronous endpoints.
-*
-* \par xfer-stream-rw example:
+* \par xfer-async-loop example:
 * -# Finds a device by vid/pid (use vid=hhhh, pid=hhhhh and the command line).
 * -# Opens the device.
-* -# Streams a specifed number of samples from/to read/write pipes. (see example comments)
-* -# Closes the device.
+* -# Transfers an application defined number of packets from a read pipe to a write pipe.
+     (see example comments)
+* -# Frees the usb device.
 * -# Destroys the usb device list created in step #1
 *
-\par Console Output
-\verbatim
+* \par Console Output
+* \verbatim
 Looking for device vid/pid 04D8/FA2E..
 Using 04D8:FA2E (LUSBW1): Benchmark Device - Microchip Technology, Inc.
 Device opened successfully!
@@ -128,5 +158,151 @@ Device opened successfully!
 [Rx-010] PipeID=81h Length=512
 [Rx-011] PipeID=81h Length=512
 [Rx-012] PipeID=81h Length=512
+\endverbatim
+*/
+
+//! Synchronously completes an application defined number of transfers.
+/*!
+* \example xfer-sync.c
+*
+* \par xfer-sync example:
+* -# Finds a device by vid/pid (use vid=hhhh, pid=hhhhh and the command line).
+* -# Opens the device.
+* -# Configures the benchmark test device to accept/send data.
+* -# Submits/Completes \c SYNC_TRANSFER_COUNT number of I/O request one at a time.
+* -# Frees the usb device.
+* -# Frees the usb device list created in step #1
+*
+* \par Console Output
+* \verbatim
+Looking for device vid/pid 04D8/FA2E..
+Using 04D8:FA2E (LUSBW1): Benchmark Device - Microchip Technology, Inc.
+Device opened successfully!
+Transfer #0 completed with 4096 bytes.
+Transfer #1 completed with 4096 bytes.
+Transfer #2 completed with 4096 bytes.
+Transferred 12288 bytes in 3 transfers. errorCode=00000000h
+\endverbatim
+*/
+
+//! Asynchronously submits an application defined number of transfers.
+/*!
+* \example xfer-async.c
+*
+* \par xfer-async example:
+* -# Finds a device by vid/pid (use vid=hhhh, pid=hhhhh and the command line).
+* -# Opens the device.
+* -# Configures the benchmark test device to accept/send data.
+* -# Initializes a new OvlK pool handle.
+* -# Submits \c ASYNC_PENDING_IO_COUNT number of I/O request.
+* -# Completes all I/O request submitted above.
+* -# Frees the usb device.
+* -# Frees the overlapped pool.
+* -# Frees the usb device list created in step #1
+*
+* \par Console Output
+* \verbatim
+Looking for device vid/pid 04D8/FA2E..
+Using 04D8:FA2E (LUSBW1): Benchmark Device - Microchip Technology, Inc.
+Device opened successfully!
+Transfer #0 submitted for 4096 bytes.
+Transfer #1 submitted for 4096 bytes.
+Transfer #2 submitted for 4096 bytes.
+Transfer #0 completed with 4096 bytes.
+Transfer #1 completed with 4096 bytes.
+Transfer #2 completed with 4096 bytes.
+Transferred 12288 bytes in 3 transfers. errorCode=00000000h
+\endverbatim
+*/
+
+//! Asynchronously streams data to or from and endpoint.
+/*!
+* \example xfer-stream.c
+*
+* \par xfer-stream example:
+* -# Finds a device by vid/pid (use vid=hhhh, pid=hhhhh and the command line).
+* -# Opens the device.
+* -# Configures the benchmark test device to accept/send data.
+* -# Initializes a new stream handle.
+* -# Starts the stream.
+* -# Continually transfers data until a user defined stop/start point is reached.
+* -# Stops and starts the stream.
+* -# Repeats the above two steps until a key is pressed.
+* -# Stops and frees the stream.
+* -# Frees the usb device list created in step #1
+*
+* \par Console Output
+* \verbatim
+Looking for device vid/pid 04D8/FA2E..
+Using 04D8:FA2E (LUSBW1): Benchmark Device - Microchip Technology, Inc.
+Device opened successfully!
+[Init  Stream] result = 00000000h
+[Start Stream] result = 00000000h
+Transferred bytes:524288 BPS:185559705.08
+Transferred bytes:159744 BPS:3444001.36
+Transferred bytes:159744 BPS:2128927.06
+Transferred bytes:167936 BPS:1694587.83
+Transferred bytes:163840 BPS:1473756.41
+Transferred bytes:163840 BPS:1343928.97
+Transferred bytes:167936 BPS:1259668.21
+Transferred bytes:167936 BPS:1199183.22
+[StreamResult] Bytes-total:1675264 Seconds-total:1.397 BPS-average:1199183.22
+Transferred bytes:172032 BPS:876132.77
+Transferred bytes:167936 BPS:858126.93
+Transferred bytes:163840 BPS:843762.19
+Transferred bytes:163840 BPS:838453.05
+Transferred bytes:163840 BPS:834713.10
+Transferred bytes:163840 BPS:832090.60
+Transferred bytes:163840 BPS:830226.44
+Transferred bytes:163840 BPS:828502.37
+Transferred bytes:167936 BPS:829741.23
+Transferred bytes:163840 BPS:828706.57
+[StreamResult] Bytes-total:1654784 Seconds-total:1.997 BPS-average:828706.57
+Transferred bytes:167936 BPS:860579.17
+Transferred bytes:159744 BPS:828717.06
+Transferred bytes:159744 BPS:819513.85
+Transferred bytes:163840 BPS:819588.39
+Transferred bytes:159744 BPS:815706.23
+Transferred bytes:163840 BPS:816251.25
+Transferred bytes:159744 BPS:813581.03
+Transferred bytes:163840 BPS:814108.63
+Transferred bytes:163840 BPS:815067.72
+Transferred bytes:163840 BPS:815427.14
+[StreamResult] Bytes-total:1626112 Seconds-total:1.994 BPS-average:815427.14
+[Stop  Stream] result = 00000000h
+\endverbatim
+*/
+
+//! Gets, sets, and tests the \c PIPE_TRANSFER_TIMEOUT policy.
+/*!
+* \example pipe-policy-timeout.c
+*
+* \par pipe-policy-timeout example:
+* -# Finds a device by vid/pid (use vid=hhhh, pid=hhhhh and the command line).
+* -# Opens the device.
+* -# Gets the pipe transfer timeout policy value, sets it, and gets it a second time.
+* -# Configures the benchmark test device to not accept/send data.
+* -# Initializes a new OvlK pool handle.
+* -# Submits transfers and estimates the compeletion timeout duration. 
+* -# Frees the overlapped pool.
+* -# Frees the usb device list created in step #1
+*
+* \par Console Output
+* \verbatim
+Looking for device vid/pid 04D8/FA2E..
+Using 04D8:FA2E (LUSBW1): Benchmark Device - Microchip Technology, Inc.
+Device opened successfully!
+[81h] Getting Pipe-Timeout..
+[81h] Pipe-Timeout is 0
+[81h] Setting Pipe-Timeout to 10..
+[81h] Getting Pipe-Timeout..
+[81h] Pipe-Timeout is 10
+[81h] Transfer-Begin #1..
+[81h] Transfer-Begin #2..
+[81h] Transfer-Duration: 9.66 ms
+[81h] Transfer-Begin #3..
+[81h] Transfer-Duration: 8.94 ms
+[81h] Transfer-Begin #4..
+[81h] Transfer-Duration: 9.24 ms
 \endverbatim
 */

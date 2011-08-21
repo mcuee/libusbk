@@ -20,6 +20,7 @@ binary distributions.
 #define __LUSBK_HANDLES_H_
 
 #include "lusbk_private.h"
+#include "lusbk_lockedarray_list.h"
 
 #define KHOT_HANDLE_COUNT				8
 #define KLST_HANDLE_COUNT				64
@@ -29,6 +30,7 @@ binary distributions.
 #define KDEV_SHARED_INTERFACE_COUNT		128
 #define KOVL_HANDLE_COUNT				1024
 #define KOVL_POOL_HANDLE_COUNT			64
+#define KSTM_HANDLE_COUNT				32
 
 #define DL_MatchPattern(FilePattern,FilePath) (MatchPattern(FilePattern,FilePath)?0:-1)
 
@@ -84,14 +86,16 @@ binary distributions.
 #define Pub_To_Priv_OvlPoolK(KOvl_Pool_Handle,KOvl_Pool_Handle_Internal,ErrorAction)						\
 	PUB_TO_PRIV(OvlPoolK,KOVL_POOL_HANDLE_INTERNAL,KOvl_Pool_Handle,KOvl_Pool_Handle_Internal,ErrorAction)
 
+#define Pub_To_Priv_StmK(KStm_Pool_Handle,KStm_Pool_Handle_Internal,ErrorAction)						\
+	PUB_TO_PRIV(StmK,KSTM_HANDLE_INTERNAL,KStm_Pool_Handle,KStm_Pool_Handle_Internal,ErrorAction)
+
 #define PROTO_POOLHANDLE(AllKSection,HandleType)											\
 	PKLIB_USER_CONTEXT PoolHandle_GetContext_##AllKSection(P##HandleType PoolHandle);		\
 	P## HandleType PoolHandle_Acquire_##AllKSection(PKOBJ_CB EvtCleanup);					\
 	BOOL PoolHandle_Inc_##AllKSection(P##HandleType PoolHandle);							\
+	BOOL PoolHandle_IncEx_##AllKSection(P##HandleType PoolHandle, long* lockCount);			\
 	BOOL PoolHandle_Dec_##AllKSection(P##HandleType PoolHandle);							\
-	BOOL PoolHandle_Acquire_Spin_##AllKSection(P##HandleType PoolHandle, BOOL Required);	\
-	BOOL PoolHandle_Release_Spin_##AllKSection(P##HandleType PoolHandle)
-
+ 
 
 #define FindInterfaceEL(mUsbStack,mInterfaceEL,mIsIndex,mNumberOrIndex)	if (mIsIndex)		\
 	{																						\
@@ -212,53 +216,6 @@ typedef struct _KUSB_INTERFACE_STACK
 } KUSB_INTERFACE_STACK;
 typedef KUSB_INTERFACE_STACK* PKUSB_INTERFACE_STACK;
 
-//! Structure representing internal \ref KOVL_HANDLE information.
-/*
-*
-* \note
-* This structure is populated after it is passes through one of the
-* libusbK \ref \c UsbK core transfer functions such as \ref UsbK_ReadPipe
-* or \ref UsbK_WritePipe
-*
-*/
-typedef struct _KOVL_OVERLAPPED_INFO
-{
-	//! Device file handle.
-	HANDLE DeviceHandle;
-
-	//! Back-end specific interface handle.
-	HANDLE InterfaceHandle;
-
-	//! USB endpoint address for the i/o operation. (if applicable)
-	UCHAR PipeID;
-
-	//! Data buffer used for i/o operations.
-	PUCHAR DataBuffer;
-
-	//! Size in bytes of \c DataBuffer.
-	ULONG DataBufferSize;
-
-	//! Reserved storage space for the various libusbK driver back-ends. (for internal use only).
-	union
-	{
-		libusb_request request;
-	} Backend;
-
-	//! Callback function used to abort the i/o operation. (for internal use only).
-	KOVL_OVERLAPPED_CANCEL_CB* Cancel;
-
-} KOVL_OVERLAPPED_INFO;
-typedef KOVL_OVERLAPPED_INFO* PKOVL_OVERLAPPED_INFO;
-
-typedef struct _KOVL_LINK_EL
-{
-	struct _KOVL_HANDLE_INTERNAL* OverlappedK;
-	struct _KOVL_LINK_EL* next;
-	struct _KOVL_LINK_EL* prev;
-
-} KOVL_LINK_EL, *PKOVL_LINK_EL;
-
-
 typedef struct _KLST_DEVINFO_EL
 {
 	KLST_DEVINFO Public;
@@ -283,8 +240,44 @@ typedef struct _WINUSB_BKND_CONTEXT
 	DWORD _unused;
 }* PWINUSB_BKND_CONTEXT, WINUSB_BKND_CONTEXT;
 
+
+typedef struct _KSTM_XFER_LINK_EL
+{
+	struct _KSTM_XFER_INTERNAL* Xfer;
+
+	struct _KSTM_XFER_LINK_EL* next;
+	struct _KSTM_XFER_LINK_EL* prev;
+
+} KSTM_XFER_LINK_EL, *PKSTM_XFER_LINK_EL;
+typedef KSTM_XFER_LINK_EL KSTM_XFER_ITEM, *PKSTM_XFER_ITEM;
+ALDEF_LIST_HDR(KSTM_XFER, XferLink);
+
+typedef struct _KSTM_OVERLAPPED_EL
+{
+	OVERLAPPED Overlapped;
+
+	struct _KSTM_OVERLAPPED_EL* next;
+	struct _KSTM_OVERLAPPED_EL* prev;
+
+} KSTM_OVERLAPPED_EL, *PKSTM_OVERLAPPED_EL;
+
+typedef struct _KSTM_XFER_INTERNAL
+{
+	LPOVERLAPPED Overlapped;
+
+	KSTM_XFER_CONTEXT Public;
+
+	KSTM_XFER_LINK_EL Link;
+
+	struct _KSTM_HANDLE_INTERNAL* StreamHandle;
+
+	ULONG BufferSize;
+	PUCHAR Buffer;
+
+} KSTM_XFER_INTERNAL, *PKSTM_XFER_INTERNAL;
+
+
 #define Init_Handle_ObjK(BaseObjPtr,AllKSection) do {			\
-	memset(&((BaseObjPtr)->Lock),0,sizeof((BaseObjPtr)->Lock));	\
 	memset(&((BaseObjPtr)->User),0,sizeof((BaseObjPtr)->User));	\
 	(BaseObjPtr)->Evt.Cleanup = NULL;							\
 	(BaseObjPtr)->Count.Ref = 1;								\
@@ -293,7 +286,6 @@ typedef struct _WINUSB_BKND_CONTEXT
 typedef struct _KOBJ_BASE
 {
 	// Generally used as a spin-lock at a api-backend defined level
-	SPIN_LOCK_EX Lock;
 	DWORD Disposing;
 
 	struct
@@ -312,8 +304,7 @@ typedef struct _KOBJ_BASE
 	struct
 	{
 		BOOL Valid;
-		BOOL ContextAllocated;
-		ULONG ContextSize;
+		PKLIB_HANDLE_CB CleanupCB;
 		KLIB_USER_CONTEXT Context;
 	} User;
 } KOBJ_BASE, *PKOBJ_BASE;
@@ -326,7 +317,6 @@ typedef struct _KOBJ_BASE
 	(HandlePtr)->DevicePath = NULL;							\
 	(HandlePtr)->ConfigDescriptor = NULL;					\
 	(HandlePtr)->SharedInterfaces = NULL;					\
-	(HandlePtr)->DriverID = KUSB_DRVID_INVALID;				\
 	(HandlePtr)->DriverAPI = NULL;							\
 	(HandlePtr)->UsbStack = NULL;							\
 	(HandlePtr)->Backend.Ctx = NULL;						\
@@ -343,7 +333,6 @@ typedef struct _KDEV_HANDLE_INTERNAL
 
 	PKDEV_SHARED_INTERFACE SharedInterfaces;
 
-	KUSB_DRVID			DriverID;
 	KUSB_DRIVER_API*	DriverAPI;
 
 	PKUSB_INTERFACE_STACK UsbStack;
@@ -387,7 +376,6 @@ typedef KUSB_HANDLE_INTERNAL* PKUSB_HANDLE_INTERNAL;
 
 #define Init_Handle_OvlK(HandlePtr) do {										\
 	memset(&((HandlePtr)->Overlapped), 0, sizeof((HandlePtr)->Overlapped));		\
-	(HandlePtr)->Private = NULL;												\
 	(HandlePtr)->Pool = NULL;													\
 	(HandlePtr)->IsAcquired = 0;												\
 }while(0)
@@ -395,36 +383,30 @@ typedef struct _KOVL_HANDLE_INTERNAL
 {
 	OVERLAPPED Overlapped;
 
-	PKOVL_OVERLAPPED_INFO Private;
-	KOVL_LINK_EL Link;
-	KOVL_LINK_EL MasterLink;
 	struct _KOVL_POOL_HANDLE_INTERNAL* Pool;
 
 	volatile long IsAcquired;
 
 	KOBJ_BASE Base;
-} KOVL_HANDLE_INTERNAL;
-typedef KOVL_HANDLE_INTERNAL* PKOVL_HANDLE_INTERNAL;
+} KOVL_HANDLE_INTERNAL, *PKOVL_HANDLE_INTERNAL;
+typedef KOVL_HANDLE_INTERNAL KOVL_ITEM, *PKOVL_ITEM;
+ALDEF_LIST_HDR(KOVL, Ovl);
 
 
 #define Init_Handle_OvlPoolK(HandlePtr) do {	\
-	(HandlePtr)->ReleasedList = NULL;   		\
-	(HandlePtr)->AcquiredList = NULL;   		\
-	(HandlePtr)->MasterList = NULL; 			\
-	(HandlePtr)->MaxCount = 0;  				\
-	(HandlePtr)->Count = 0; 					\
+	(HandlePtr)->List = NULL; 					\
+	(HandlePtr)->Flags = 0; 					\
+	(HandlePtr)->UsbHandle = NULL; 				\
 }while(0)
 typedef struct _KOVL_POOL_HANDLE_INTERNAL
 {
 	KOBJ_BASE Base;
 
-	PKOVL_LINK_EL ReleasedList;
-	PKOVL_LINK_EL AcquiredList;
-	PKOVL_LINK_EL MasterList;
+	PKOVL_LIST MasterList;
+	PKOVL_LIST List;
 
-	ULONG MaxCount;
-	ULONG Count;
-
+	KOVL_POOL_FLAG Flags;
+	PKUSB_HANDLE_INTERNAL UsbHandle;
 } KOVL_POOL_HANDLE_INTERNAL;
 typedef KOVL_POOL_HANDLE_INTERNAL* PKOVL_POOL_HANDLE_INTERNAL;
 
@@ -471,17 +453,65 @@ typedef struct _KLST_DEVINFO_HANDLE_INTERNAL
 } KLST_DEVINFO_HANDLE_INTERNAL;
 typedef KLST_DEVINFO_HANDLE_INTERNAL* PKLST_DEVINFO_HANDLE_INTERNAL;
 
+#define KSTM_THREADSTATE_STOPPED	(0)
+#define KSTM_THREADSTATE_STARTED	(1 << 0)
+#define KSTM_THREADSTATE_STARTING	(1 << 1)
+#define KSTM_THREADSTATE_STOPPING	(1 << 2)
+
+#define Init_Handle_StmK(HandlePtr) do {							\
+	(HandlePtr)->Heap = NULL;										\
+	(HandlePtr)->Info = NULL;										\
+	(HandlePtr)->Flags = 0;											\
+	(HandlePtr)->UserCB = NULL;										\
+	(HandlePtr)->PendingTransfers = 0;								\
+	(HandlePtr)->PendingIO = 0;										\
+	(HandlePtr)->TimeoutCancelMS = 0;								\
+	memset(&((HandlePtr)->Thread), 0, sizeof((HandlePtr)->Thread));	\
+	memset(&((HandlePtr)->List), 0, sizeof((HandlePtr)->List));		\
+}while(0)
+typedef struct _KSTM_HANDLE_INTERNAL
+{
+	KOBJ_BASE Base;
+
+	HANDLE			Heap;
+	PKSTM_INFO		Info;
+	KSTM_FLAG		Flags;
+	PKSTM_CALLBACK	UserCB;
+
+	volatile long PendingTransfers;
+	volatile long PendingIO;
+
+	HANDLE IoPendingEvent;
+
+	ULONG TimeoutCancelMS;
+
+	struct
+	{
+		volatile long State;
+
+		UINT Id;
+		HANDLE Handle;
+		HANDLE StartedEvent;
+		HANDLE StoppedEvent;
+	} Thread;
+
+	struct
+	{
+		PKSTM_XFER_LIST Idle;
+		PKSTM_XFER_LIST Finished;
+		PKSTM_XFER_LINK_EL Queued;
+
+	} List;
+
+} KSTM_HANDLE_INTERNAL;
+typedef KSTM_HANDLE_INTERNAL* PKSTM_HANDLE_INTERNAL;
+
 #endif
 
 #define DEF_POOLED_HANDLE_STRUCT(AllKSection,HandleType,HandlePoolCount)	\
 	struct  																\
 	{   																	\
-		volatile long BusyLock; 											\
-		ULONG DefUserContextSize;   										\
-		ULONG CurrentPos;   												\
-		ULONG NextPos;  													\
-		KLIB_INIT_HANDLE_CB* InitHandleCB;  								\
-		KLIB_FREE_HANDLE_CB* FreeHandleCB;  								\
+		volatile long Index; 												\
 		HandleType Handles[HandlePoolCount];								\
 	} AllKSection
 
@@ -493,7 +523,8 @@ typedef struct
 
 	HANDLE Heap;
 
-	KDYN_CancelIoEx* CancelIoEx;
+	BOOL (WINAPI* CancelIoEx)(HANDLE DeviceHandle, KOVL_HANDLE Overlapped);
+
 	KDYN_PathMatchSpec* PathMatchSpec;
 
 	DEF_POOLED_HANDLE_STRUCT(HotK,		KHOT_HANDLE_INTERNAL,			KHOT_HANDLE_COUNT);
@@ -503,6 +534,7 @@ typedef struct
 	DEF_POOLED_HANDLE_STRUCT(DevK,		KDEV_HANDLE_INTERNAL,			KDEV_HANDLE_COUNT);
 	DEF_POOLED_HANDLE_STRUCT(OvlK,		KOVL_HANDLE_INTERNAL,			KOVL_HANDLE_COUNT);
 	DEF_POOLED_HANDLE_STRUCT(OvlPoolK,	KOVL_POOL_HANDLE_INTERNAL,		KOVL_POOL_HANDLE_COUNT);
+	DEF_POOLED_HANDLE_STRUCT(StmK,		KSTM_HANDLE_INTERNAL,			KSTM_HANDLE_COUNT);
 } ALLK_CONTEXT;
 
 extern ALLK_CONTEXT AllK;
@@ -554,35 +586,31 @@ PROTO_POOLHANDLE(UsbK, KUSB_HANDLE_INTERNAL);
 PROTO_POOLHANDLE(DevK, KDEV_HANDLE_INTERNAL);
 PROTO_POOLHANDLE(OvlK, KOVL_HANDLE_INTERNAL);
 PROTO_POOLHANDLE(OvlPoolK, KOVL_POOL_HANDLE_INTERNAL);
+PROTO_POOLHANDLE(StmK, KSTM_HANDLE_INTERNAL);
 
-#define PoolHandle_Live(KLib_Handle_Internal,AllKSection,KLib_Handle_Type) do { 														\
-	if (!(KLib_Handle_Internal)->Base.User.Valid)   																					\
-	{   																																\
-		(KLib_Handle_Internal)->Base.User.Valid = TRUE; 																				\
-		if (AllK.AllKSection.DefUserContextSize > 0)																					\
-		{   																															\
-			(KLib_Handle_Internal)->Base.User.ContextAllocated = TRUE;  																\
-			(KLib_Handle_Internal)->Base.User.ContextSize = AllK.AllKSection.DefUserContextSize;										\
-			(KLib_Handle_Internal)->Base.User.Context.Custom = Mem_Alloc(AllK.AllKSection.DefUserContextSize);  						\
-		}   																															\
-		if (AllK.AllKSection.InitHandleCB)  																							\
-			AllK.AllKSection.InitHandleCB((KLib_Handle_Internal), (KLib_Handle_Type), &((KLib_Handle_Internal)->Base.User.Context));	\
-	}   																																\
+#define PoolHandle_Live(KLib_Handle_Internal,AllKSection,KLib_Handle_Type) do {	\
+	if (!(KLib_Handle_Internal)->Base.User.Valid)  								\
+	{  																			\
+		(KLib_Handle_Internal)->Base.User.Valid = TRUE;							\
+	}  																			\
 }while(0)
 
-#define PoolHandle_Dead(KLib_Handle_Internal,AllKSection,KLib_Handle_Type) do { 														\
-	if ((KLib_Handle_Internal)->Base.User.Valid)																						\
-	{   																																\
-		(KLib_Handle_Internal)->Base.User.Valid = FALSE;																				\
-		if (AllK.AllKSection.FreeHandleCB)  																							\
-			AllK.AllKSection.FreeHandleCB((KLib_Handle_Internal), (KLib_Handle_Type), &((KLib_Handle_Internal)->Base.User.Context));	\
-		if ((KLib_Handle_Internal)->Base.User.ContextAllocated) 																		\
-		{   																															\
-			(KLib_Handle_Internal)->Base.User.ContextAllocated = FALSE;   																\
-			Mem_Free(&((KLib_Handle_Internal)->Base.User.Context.Custom));  															\
-		}   																															\
-	}   																																\
+#define PoolHandle_Dead(KLib_Handle_Internal,AllKSection,KLib_Handle_Type) do {	\
+	if ((KLib_Handle_Internal)->Base.User.Valid)   								\
+	{  																			\
+		(KLib_Handle_Internal)->Base.User.Valid = FALSE;   						\
+		if ((KLib_Handle_Internal)->Base.User.CleanupCB)  						\
+		{  																		\
+			(KLib_Handle_Internal)->Base.User.CleanupCB(   					\
+				(KLib_Handle_Internal),    										\
+				(KLib_Handle_Type),    											\
+				&((KLib_Handle_Internal)->Base.User.Context)); 					\
+   																				\
+			(KLib_Handle_Internal)->Base.User.CleanupCB = NULL;				\
+		}  																		\
+	}  																			\
 }while(0)
+
 
 #define PoolHandle_Dead_HotK(KLib_Handle_Internal) PoolHandle_Dead(KLib_Handle_Internal,HotK,KLIB_HANDLE_TYPE_HOTK)
 #define PoolHandle_Dead_LstK(KLib_Handle_Internal) PoolHandle_Dead(KLib_Handle_Internal,LstK,KLIB_HANDLE_TYPE_LSTK)
@@ -591,6 +619,7 @@ PROTO_POOLHANDLE(OvlPoolK, KOVL_POOL_HANDLE_INTERNAL);
 #define PoolHandle_Dead_DevK(KLib_Handle_Internal) PoolHandle_Dead(KLib_Handle_Internal,DevK,KLIB_HANDLE_TYPE_USBSHAREDK)
 #define PoolHandle_Dead_OvlK(KLib_Handle_Internal) PoolHandle_Dead(KLib_Handle_Internal,OvlK,KLIB_HANDLE_TYPE_OVLK)
 #define PoolHandle_Dead_OvlPoolK(KLib_Handle_Internal) PoolHandle_Dead(KLib_Handle_Internal,OvlPoolK,KLIB_HANDLE_TYPE_OVLPOOLK)
+#define PoolHandle_Dead_StmK(KLib_Handle_Internal) PoolHandle_Dead(KLib_Handle_Internal,StmK,KLIB_HANDLE_TYPE_STMK)
 
 #define PoolHandle_Live_HotK(KLib_Handle_Internal) PoolHandle_Live(KLib_Handle_Internal,HotK,KLIB_HANDLE_TYPE_HOTK)
 #define PoolHandle_Live_LstK(KLib_Handle_Internal) PoolHandle_Live(KLib_Handle_Internal,LstK,KLIB_HANDLE_TYPE_LSTK)
@@ -599,5 +628,6 @@ PROTO_POOLHANDLE(OvlPoolK, KOVL_POOL_HANDLE_INTERNAL);
 #define PoolHandle_Live_DevK(KLib_Handle_Internal) PoolHandle_Live(KLib_Handle_Internal,DevK,KLIB_HANDLE_TYPE_USBSHAREDK)
 #define PoolHandle_Live_OvlK(KLib_Handle_Internal) PoolHandle_Live(KLib_Handle_Internal,OvlK,KLIB_HANDLE_TYPE_OVLK)
 #define PoolHandle_Live_OvlPoolK(KLib_Handle_Internal) PoolHandle_Live(KLib_Handle_Internal,OvlPoolK,KLIB_HANDLE_TYPE_OVLPOOLK)
+#define PoolHandle_Live_StmK(KLib_Handle_Internal) PoolHandle_Live(KLib_Handle_Internal,StmK,KLIB_HANDLE_TYPE_STMK)
 
 #endif

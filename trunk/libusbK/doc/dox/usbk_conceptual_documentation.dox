@@ -1,368 +1,67 @@
-//! Explanation of the libusbK project, the user mode library, and its \ref usbk_drivers
-/*! \page usbk_about About
+//! Where to begin and how to get started writing your new libusbK based application.
+/*!
 
-libusbK can be separated into two major components:
-- A Windows user mode USB library (libusbK.dll)
-- A Windows kernel mode USB driver (libusbK.sys)
+\page usbk_usage Using the Library
 
-\section usbk_about_dll libusbK.dll (libusbK user library)
-libusbK.dll is a generic user mode usb library for
-the Microsoft Windows Operating System family. (Windows XP and up)
-
-Windows 2000 is currently not supported by the release builds or driver installer packages
-but can still be achieved with manual builds and custom driver installations.
+<TABLE>
+	<TR><TH colspan=2>This library is divided into the following sections</TH></TR>
+	<TR><TD>\ref libk (\b LibK)</TD><TD>\copybrief libk</TD></TR>
+	<TR><TD>\ref usbk (\b UsbK)</TD><TD>\copybrief usbk</TD></TR>
+	<TR><TD>\ref lstk (\b LstK)</TD><TD>\copybrief lstk</TD></TR>
+	<TR><TD>\ref ovlk (\b OvlK)</TD><TD>\copybrief ovlk</TD></TR>
+	<TR><TD>\ref hotk (\b HotK)</TD><TD>\copybrief hotk</TD></TR>
+	<TR><TD>\ref stmk (\b StmK)</TD><TD>\copybrief stmk</TD></TR>
+	<TR><TD>\ref isok (\b IsoK)</TD><TD>\copybrief isok</TD></TR>
+</TABLE>
+  
+<H2>Getting Started</H2>
 
 \note
-The libusbK library allows developers to target multiple drivers using the same set of api function declarations.
+Before you begin, connect your device and use the \b kList test application to verify one of the
+\ref usbk_drivers has been properly installed. If kList cannot find your device then refer back to
+\ref usbk_installing.
 
-\par
-\subsection usbk_drivers Supported Drivers
-The following usb kernel drivers are supported by the libusbK library:
-- \b libusbK.sys
-- \b libusb0.sys
-  - Using the api functions exported by the libusbK library (functions beginning with with \b UsbK_)
-  - Using dynamically loaded functions based on the devices driver type. see \ref libk
-- \b WinUSB.sys
-  - Using dynamically loaded functions based on the devices driver type. see \ref libk
+There are several examples to help along the way, but the following are meant for user new to the library.
+These examples show basic library functionality like finding and opening a device:
+-# \b show-device.c
+-# \b open-device.c
+-# \b load-driver-api.c
 
-\par
-\subsection usbk_winusb_compat WinUSB Compatibility Layer
-The libusbK library includes a \c Winusb.dll compatiblity layer.
-This makes libusbK a drop-in replacement for an existing WinUSB application.
-Developers can make use of this functionality in two ways:
-- Using the \b WinUsb_ prefixed function which are directly exported by libusbK.dll
-  - Usage of the \c WinUsb_ prefixed functions is intended for developers who want to switch away from the
-    \c WinUSB.sys driver without modifying application code.
-  - The \c WinUsb_ prefixed functions must \b not be used for devices installed with the WinUSB.sys driver.
-  - The \c WinUsb_ prefixed functions are identical to the exported \c UsbK_ prefixed functions, thus \b must
-    be installed with either the \c libusbK.sys or \c libusb0.sys driver.
-- Using the \ref libk
-  - This option allows users to target any of the \ref usbk_drivers
-    but requires small modifications to the applications source code.
+<HR>
 
-\section usbk_about_sys libusbK.sys (libusbK kernel driver)
+<B>Writing the code:</B><BR>
+-# Init and Free
+   - All modules except \ref isok implement an \b Init and a \b Free function for creating and and detroying a
+     handle specific to the module.
+-# Handles
+   - Each \ref KLIB_HANDLE implements a user assignable cleanup callback function and a user context pointer.
+     See \ref LibK_SetCleanupCallback, \ref LibK_SetContext, \ref LibK_GetContext.
+-# Function Returns
+   - Nearly all function have a \c BOOL return type. If a function does not complete as expected it returns
+     FALSE (0). To get extended error information, the user must call the \c GetLastError() Windows API
+     function. These are very generalized errors, the Windows API/MSDN provides ways to lookup error strings
+     for the extended error number but is advisable not to use them! Instead refer to this documentation
+     under the function that caused the error.
 
-libusbK.sys is a KMDF based usb device kernel driver for
-the Microsoft Windows Operating System family. (Windows XP and up)
+<HR>
 
-Windows 2000 is currently not supported by the release builds or driver installer packages
-but can still be achieved with manual builds and custom driver installations.
+<B>Building the examples:</B><BR>
+-# Examples should be built from the dev-kit package. If you have not allready downloaded it, get it now.
+-# Choose your compiler/IDE:
+   - <B>VStudio 2008</B>: Each example has a project file. All examples are contained within an examples solution.
+   - <B>WDK</B>: Each example has a WDK sources file. You can use standard WDK building conventions to build all or a
+     single example.
+     - Get and install \wdk.
+     - Open a build environment command prompt
+     - Navigate to the \b examples folder to build all or the examples project to build one.
+     - Execute: <B>build /cegZ</B>
+   - <B>Mingw64</B>: Each example has a Mingw64 build script for 32bit or 64bit GCC builds. All examples are
+     contained in a single solution-like build script which can be used to build all or any of the examples.
+     - Get and install <A href="http://tdm-gcc.tdragon.net/download">TDM64-GCC</A>
+     - Open a Mingw64 build command prompt.
+     - Navigate to the \b examples folder.
 
-The libusbK kernel driver uses an extended libusb-win32 (libusb0.sys) compatible
-driver api and provides higher-level functionality when compared to libusb0.sys.
-
-libusbK.sys advantages when compared to libusb0.sys:
-- Winusb-like power management
-- Winusb-like pipe policies
-- Driver-level asynchronous transfer timeouts
-- Improved isochronous transfer support
-- Newer, more robust KMDF based design
-
-libusbK.sys disadvantages when compared to libusb0.sys:
-- Does not support multiple configurations
-- Does not support a "filter driver" mode
-- Significantly larger device driver installation packages
-- Less tolerant of usb devices which or not fully compliant with usb specifications
-
-The following user mode usb libraries support the \c libusbK.sys kernel driver:
-- \b libusbK.dll
-- \b libusb0.dll
-
-*/
-
-//! Methods for installing the libusbK binaries and drivers.
-/*! \page usbk_installing Installation
-*/
-
-//! Methods for building the libusbK user mode library and driver from source code.
-/*! \page usbk_building Building from source
-- \subpage usbk_building_make_cmd
-  <BR>Building and packaging with the automated MSDOS script \b make.cmd.
-  <HR>
-- \subpage usbk_building_wdk
-  <BR>Building with a <A href="http://msdn.microsoft.com/en-us/windows/hardware/gg487463">Windows Driver Kit</A>.
-  <HR>
-- \subpage usbk_building_msvc
-  <BR>Building with Microsoft Visual Studios 2008/Express Editions.
-  <HR>
-
-*/
-
-//! Building and packaging with the automated MSDOS script \b make.cmd.
-/*! \page usbk_building_make_cmd Building with make.cmd
-*
-* On this page:
-* - \ref usbk_building_make_cmd_about
-*   - \ref usbk_building_make_cmd_about_features
-*   - \ref usbk_building_make_cmd_about_requirements
-* - \ref usbk_building_make_cmd_config
-*   - \ref usbk_building_make_cmd_config_wdk
-* - \ref usbk_building_make_cmd_usage
-*   - \ref usbk_building_make_cmd_usage_syntax
-*   - \ref usbk_building_make_cmd_usage_commands
-* - \ref usbk_building_make_cmd_usage_examples
-*   - \ref usbk_building_make_cmd_usage_example_build
-*   - \ref usbk_building_make_cmd_usage_example_dist
-*   - \ref usbk_building_make_cmd_usage_example_clean
-* - \ref usbk_building_make_cmd_config_examples
-*   - \ref usbk_building_make_cmd_config_example_make_cfg
-*   - \ref usbk_building_make_cmd_config_example_make_versions
-*
-* <HR>
-* \section usbk_building_make_cmd_about About
-* \b make.cmd is a MSDOS (extended mode) batch file which fully automates several tasks.
-*
-* \note
-* \b make.cmd is non-specific to libusbK.
-* It is fully configurable from its \b make.cfg configuration.
-*
-* \subsection usbk_building_make_cmd_about_features Features
-*  - Generates WDK "sources" from custom ".sources" file templates
-*    - By design, WDK allows only one project (or sources file) per directory.
-*      The \b make.cmd custom ".sources" file templates eliminate this restriction.
-*    - Provides pre-tagging functionality for WDK "sources" files.
-*  - Code signing
-*  - INNO setup installer creation
-*  - Version control
-*  - Binary package creation
-*  - Source package creation
-*  - Regular expression based cleaning
-*  - Source code re/formatting
-*
-* \subsection usbk_building_make_cmd_about_requirements Requirements
-*  - <A href="http://msdn.microsoft.com/en-us/windows/hardware/gg487463.aspx">Windows Driver Kit</A> (6001.18002 or greater)
-*  - <A href="http://www.jrsoftware.org/isdl.php">INNO Setup</A>
-*  - <A href="http://astyle.sourceforge.net/">Astyle</A> (optional)
-*  - 7Zip (included is src package)
-*
-*
-* <HR>
-* \section usbk_building_make_cmd_config Initial Setup and Configuration
-* After installing the required software, make.cfg must be configured to use it.
-* Generally this only requires modifying the WDK SETUP section so make.cmd can locate your WDK installation.
-* See the comments in \b make.cfg for more information.
-*
-* \subsection usbk_building_make_cmd_config_wdk Automatically configuring make.cmd with a WDK installation
-* -# From the start menu, locate the WDK installation programs folder
-* -# Open a build window for the build environment that will be used as the default.
-* -# Execute <TT>make.cmd build</TT>
-* -# Close the build window and open a \b normal command prompt
-* -# Verify propper operation by repeating step #3
-*
-* <HR>
-* \section usbk_building_make_cmd_usage make.cmd Command Line Usage
-*
-* \subsection usbk_building_make_cmd_usage_syntax Syntax
-* \verbatim make.cmd command[=value] <command-specific-arguments> \endverbatim
-*
-* \subsection usbk_building_make_cmd_usage_commands Commands
-<TABLE>
-<TR>
-	<TH>Command[=value]</TH>
-	<TH>command-specific-arguments</TH>
-</TR>
-<TR>
-	<TD>
-		\par BUILD
-		Builds all projects defined in \b WDK_SOURCES_LIST for a single environment/architecture combination.
-		See the <B>WDK SETUP</B> and \b BUILD sections in \b make.cfg.
-
-		If no \b setenv.bat command-specific arguments are specified,
-		\b make.cmd will use the defaults defined by \b WDK_DEF_ENV_OPTIONS.
-		See the <B>WDK SETUP</B> section in \b make.cfg.
-
-	</TD>
-	<TD>
-		For more information, see
-		<A href="http://msdn.microsoft.com/en-us/library/ff554139%28v=vs.85%29.aspx">Using the SetEnv.bat</A>
-		\par [fre|chk]
-		For release builds use the \c fre, for debug builds use \c chk.<BR>
-		NOTE: Debug builds include log messages.
-
-		\par [64|x64]:
-		Build architecture:
-		- \b x64 = AMD64
-		- \b 64  = IA64 (rare)
-
-		\par [WIN7|WLH|WXP|WNET|W2K]
-		Specifies the Build environment:
-		- WIN7 = Windows 7
-		- WLH  = Windows Vista
-		- WXP  = Windows XP
-		- WNET = Windows Server 2003
-		- W2K  = Windows 2000
-		  W2K is Only supported with WDK version 6001.18002
-
-		\par [no_oacr]
-		Disables OACR (Microsoft Auto Code Review)
-
-		<HR>
-		\par [sign]
-		Sign dll, sys, and exe files with a code signing certificate after compiling.<BR>
-		See the \b SIGN section in \b make.cfg.
-	</TD>
-</TR>
-<TR>
-	<TD>
-		\par DIST
-		Build all projects for all environment/architecture combinations defined in \b DIST_BUILD_LIST.
-		See the \b DIST section in \b make.cfg.
-
-		\par dist=finalize
-		Used for official release builds.<BR>Build additional components and installers.
-		Requires additional configuration.  See \b post_build_libusbK_dll.cfg
-	</TD>
-	<TD>
-		\par [fre|chk]
-		For release builds use the \c fre, for debug builds use \c chk.<BR>
-		NOTE: chk builds include debug log messages.
-
-		\par [sign]
-		Sign dll, sys, and exe files with a code signing certificate after compiling.<BR>
-		See the \b SIGN section in \b make.cfg.
-	</TD>
-</TR>
-<TR>
-	<TD>
-		\par CLEAN
-		Cleans the source and output directories.
-		See the \b CLEAN section in \b make.cfg
-
-		\par clean=bin
-		Removes temporary files and directories from the output directory.
-		See \b CLEAN_BIN_EXP in \b make.cfg.
-
-		\par clean=src
-		Removes temporary files and directories from the source directory.
-		See \b CLEAN_SRC_EXP in \b make.cfg.
-
-		\par clean=full
-		Cleans the source directory.  Removes the output directory entirely.
-
-	</TD>
-	<TD>&nbsp;</TD>
-</TR>
-<TR>
-	<TD>
-		\par version=package;inc
-		Increment the package \b nano version number.
-
-		\par version=package;dec
-		Decrement the package \b nano version number.
-
-		\par version=[package|project name]; [inc|dec|set]; [major|macro|minor|nano]; [set value];
-		Full package/project version control
-
-	</TD>
-	<TD>&nbsp;</TD>
-</TR>
-<TR>
-	<TD>
-		\par ZIP
-		Create a combined binary and source package.
-
-		\par zip=bin
-		Create a binary zip package from the output directory.
-
-		\par zip=src
-		Create a source zip package from the source directory.
-	</TD>
-	<TD>&nbsp;</TD>
-</TR>
-<TR>
-	<TD>
-		\par FORMATCODE
-		Format source code. (Uses Astyle by default)
-		See the \b FORMATCODE section in \b make.cfg
-	</TD>
-	<TD>&nbsp;</TD>
-</TR>
-</TABLE>
-*
-* <HR>
-* \section usbk_building_make_cmd_usage_examples Usage Examples
-*
-
-* \subsection usbk_building_make_cmd_usage_example_build BUILD examples
-\verbatim
-make.cmd build
-make.cmd build chk
-make.cmd build sign
-make.cmd build wxp chk sign
-\endverbatim
-
-* \subsection usbk_building_make_cmd_usage_example_dist DIST examples
-\verbatim
-make.cmd dist
-make.cmd dist chk
-make.cmd dist=finalize chk sign
-\endverbatim
-
-* \subsection usbk_building_make_cmd_usage_example_clean CLEAN examples
-\verbatim
-make.cmd clean
-make.cmd clean=full
-\endverbatim
-
-*
-* <HR>
-* \section usbk_building_make_cmd_config_examples Configuration Examples
-*
-* \subsection usbk_building_make_cmd_config_example_make_cfg make.cfg example
-\verbinclude make.cfg
-
-* \subsection usbk_building_make_cmd_config_example_make_versions make.versions example
-\verbinclude make.versions
-
-*/
-
-//! Building with a <A href="http://msdn.microsoft.com/en-us/windows/hardware/gg487463">Windows Driver Kit</A>.
-/*! \page usbk_building_wdk Building with WDK
-libusbK source code and examples can be built with WDK in the same way as WDK examples:
-- From the start menu, locate the <TT>Windows Driver Kits</TT> folder and open the desired build environment command prompt.\n
-  e.g. <TT>Windows XP x86 Free Build Environment</TT>
-- Navigvate to any folder with a \b sources file and execute the WDK \c build application.
-  - This is also any folder with a \b .sln solution file or \b .vcproj project file.
-
-\par Build all libusbK modules (dll,lib,sys,kList,kBench)
-\verbatim
-cd \libusbK-3.0.2.4-src
-build /cegZ
-\endverbatim
-
-\par Build libusbK.dll only
-\verbatim
-cd \libusbK-3.0.2.4-src\src\libusbK.dll
-build /cegZ
-\endverbatim
-  
-MSDN Link: <A href="http://msdn.microsoft.com/en-us/library/ff542420%28v=VS.85%29.aspx" target="kMSDN">Build Utility Command-Line Parameters</A>
-*/
-
-//! Building with Microsoft Visual Studios 2008/2010/Express Editions.
-/*! \page usbk_building_msvc Building with MSVC
-
-Visual Studio solution and project files are included for all libusbK modules and examples.
-\attention
-The libusbK driver can only be built with WDK.  A Visual Studio project file exist but it is
-a \c makefile project which uses \c make.cmd for it's building tasks. See \ref usbk_building_make_cmd
-
-*/
-
-//! Where to begin and how to get started writing your new libusbK based application.
-/*! \page usbk_usage Using the Library
-
-The libusbK library documentation is divided into the following sections:
-- \copybrief genk
-  <HR>
-- \copybrief usbk
-  <HR>
-- \copybrief lstk
-  <HR>
-- \copybrief libk
-  <HR>
-- \copybrief ovlk
-  <HR>
-- \copybrief isok
-  <HR>
+\htmlonly
+<P>&nbsp;</P><P>&nbsp;</P><P>&nbsp;</P><P>&nbsp;</P><P>&nbsp;</P><P>&nbsp;</P><P>&nbsp;</P><P>&nbsp;</P>
+\endhtmlonly
 */

@@ -124,7 +124,7 @@ typedef struct _BENCHMARK_TEST_PARAM
 
 	BYTE* VerifyBuffer;		// Stores the verify test pattern for 1 packet.
 	WORD VerifyBufferSize;	// Size of VerifyBuffer
-	BOOL Use_UsbK_Open;
+	BOOL Use_UsbK_Init;
 	BOOL ListDevicesOnly;
 	ULONG DeviceSpeed;
 
@@ -293,13 +293,13 @@ BOOL Bench_Open(__in PBENCHMARK_TEST_PARAM test)
 
 	while (LstK_MoveNext(test->DeviceList, &deviceInfo))
 	{
-		if (!LibK_LoadDriverApi(&K, deviceInfo->DrvId, sizeof(K)))
+		if (!LibK_LoadDriverAPI(&K, deviceInfo->DrvId))
 		{
 			WinError(0);
 			CONWRN("could not load driver api %s.\n", GetDrvIdString(deviceInfo->DrvId));
 			continue;
 		}
-		if (!test->Use_UsbK_Open)
+		if (!test->Use_UsbK_Init)
 		{
 			test->DeviceHandle = CreateFileA(deviceInfo->DevicePath,
 			                                 GENERIC_READ | GENERIC_WRITE,
@@ -329,7 +329,7 @@ BOOL Bench_Open(__in PBENCHMARK_TEST_PARAM test)
 		}
 		else
 		{
-			if (!K.Open(deviceInfo, &test->InterfaceHandle))
+			if (!K.Init(&test->InterfaceHandle, deviceInfo))
 			{
 				WinError(0);
 				test->DeviceHandle = NULL;
@@ -352,7 +352,7 @@ BOOL Bench_Open(__in PBENCHMARK_TEST_PARAM test)
 			K.Free(test->InterfaceHandle);
 			test->InterfaceHandle = NULL;
 
-			if (!test->Use_UsbK_Open)
+			if (!test->Use_UsbK_Init)
 			{
 				CloseHandle(test->DeviceHandle);
 				test->DeviceHandle = NULL;
@@ -733,8 +733,7 @@ DWORD TransferThreadProc(PBENCHMARK_TRANSFER_PARAM transferParam)
 			if (transferParam->Test->IsUserAborted) break;
 
 			// Transfer timed out
-			if (ret == ERROR_SEM_TIMEOUT ||
-			        ret == ERROR_OPERATION_ABORTED)
+			if (ret == ERROR_SEM_TIMEOUT || ret == ERROR_OPERATION_ABORTED || ret == ERROR_CANCELLED)
 			{
 				transferParam->TotalTimeoutCount++;
 				transferParam->RunningTimeoutCount++;
@@ -1024,7 +1023,7 @@ int ParseBenchmarkArgs(PBENCHMARK_TEST_PARAM testParams, int argc, char** argv)
 		}
 		else if (!_stricmp(arg, "composite"))
 		{
-			testParams->Use_UsbK_Open = TRUE;
+			testParams->Use_UsbK_Init = TRUE;
 		}
 		else
 		{
@@ -1472,7 +1471,6 @@ int __cdecl main(int argc, char** argv)
 	BENCHMARK_TEST_PARAM Test;
 	PBENCHMARK_TRANSFER_PARAM ReadTest	= NULL;
 	PBENCHMARK_TRANSFER_PARAM WriteTest	= NULL;
-	KLST_INIT_PARAMS searchParams = {0};
 	int key;
 	LONG ec;
 	ULONG count, length;
@@ -1496,7 +1494,7 @@ int __cdecl main(int argc, char** argv)
 	//
 	InitializeCriticalSection(&DisplayCriticalSection);
 
-	if (!LstK_Init(&Test.DeviceList, &searchParams))
+	if (!LstK_Init(&Test.DeviceList, 0))
 	{
 		ec = GetLastError();
 		CONERR("failed getting device list ec=%08Xh\n", ec);
@@ -1724,7 +1722,7 @@ Done:
 		K.Free(Test.InterfaceHandle);
 		Test.InterfaceHandle = NULL;
 	}
-	if (!Test.Use_UsbK_Open)
+	if (!Test.Use_UsbK_Init)
 	{
 		if (Test.DeviceHandle)
 		{

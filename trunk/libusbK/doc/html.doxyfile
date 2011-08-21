@@ -182,7 +182,7 @@ MULTILINE_CPP_IS_BRIEF = NO
 # member inherits the documentation from any documented member that it 
 # re-implements.
 
-INHERIT_DOCS           = YES
+INHERIT_DOCS           = NO
 
 # If the SEPARATE_MEMBER_PAGES tag is set to YES, then doxygen will produce 
 # a new page for each member. If set to NO, the documentation of a member will 
@@ -202,7 +202,14 @@ TAB_SIZE               = 4
 # will result in a user-defined paragraph with heading "Side Effects:". 
 # You can put \n's in the value part of an alias to insert newlines.
 
-ALIASES                = 
+ALIASES                = "readonly=<B>[</B><SPAN class=\"paramname\">ReadOnly</SPAN><B>]</B>" \
+                         "fixedstruct{1}=<B>[</B><SPAN class=\"paramname\">Fixed structure size of \1 bytes</SPAN><B>]</B>" \
+                         "WINERRORTABLE=<TABLE class=\"errortable\"><TR><TH colspan=2>Error codes relevant to this function</TH></TR>" \
+                         "WINERROR{2}=<TR><TD><SPAN class=\"paramname\">\1</SPAN><BR>(<B>\2</B>)</TD><TD>" \
+                         ENDWINERROR=</TD></TR> \
+                         ENDWINERRORTABLE=</TABLE> \
+                         "mailinglist=<A href=\"https://lists.sourceforge.net/lists/listinfo/libusb-win32-devel\" target=\"_blank\">https://lists.sourceforge.net/lists/listinfo/libusb-win32-devel</A>" \
+                         "wdk=<A href=\"http://msdn.microsoft.com/en-us/windows/hardware/gg487463.aspx\" target=\"_blank\">Windows Driver Kit</A>"
 
 # Set the OPTIMIZE_OUTPUT_FOR_C tag to YES if your project consists of C 
 # sources only. Doxygen will then generate output that is more tailored for C. 
@@ -269,7 +276,7 @@ SIP_SUPPORT            = NO
 # setting a simple type. If this is not the case, or you want to show the 
 # methods anyway, you should set this option to NO.
 
-IDL_PROPERTY_SUPPORT   = YES
+IDL_PROPERTY_SUPPORT   = NO
 
 # If member grouping is used in the documentation and the DISTRIBUTE_GROUP_DOC 
 # tag is set to YES, then doxygen will reuse the documentation of the first 
@@ -620,11 +627,15 @@ WARN_LOGFILE           =
 # with spaces.
 
 INPUT                  = dox/usbk_mainpage.dox \
+                         dox/usbk_installing.dox \
+                         dox/usbk_about.dox \
                          dox/usbk_conceptual_documentation.dox \
                          dox/usbk_pipe_power_management.dox \
                          dox/usbk_examples.dox \
-                         ../includes \
-                         ../examples/examples.h
+                         ../includes/libusbk.h \
+                         ../includes/lusbk_shared.h \
+                         ../examples/examples.h \
+                         dox/usbk_mailing_list.dox
 
 # This tag can be used to specify the character encoding of the source files 
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding, which is 
@@ -1155,7 +1166,7 @@ MATHJAX_RELPATH        = http://www.mathjax.org/mathjax
 # typically be disabled. For large projects the javascript based search engine 
 # can be slow, then enabling SERVER_BASED_SEARCH may provide a better solution.
 
-SEARCHENGINE           = YES
+SEARCHENGINE           = NO
 
 # When the SERVER_BASED_SEARCH tag is enabled the search engine will be 
 # implemented using a PHP enabled web server instead of at the web client 
@@ -1474,7 +1485,7 @@ EXPAND_AS_DEFINED      =
 # that are alone on a line, have an all uppercase name, and do not end with a 
 # semicolon, because these will confuse the parser if not removed.
 
-SKIP_FUNCTION_MACROS   = NO
+SKIP_FUNCTION_MACROS   = YES
 
 #---------------------------------------------------------------------------
 # Configuration::additions related to external references

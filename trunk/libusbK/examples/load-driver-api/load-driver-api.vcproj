@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="9.00"
 	Name="load-driver-api"
-	ProjectGUID="{AC19FF1F-1E02-D7F2-19E2-E7B65976E27C}"
+	ProjectGUID="{0C9F7065-5EB3-F937-B59F-D60B61097D77}"
 	RootNamespace="load_driver_api"
 	Keyword="Win32Proj"
 	TargetFrameworkVersion="196613"
@@ -341,14 +341,14 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\load-driver-api.c"
-				>
-			</File>
-			<File
 				RelativePath="..\examples.c"
 				>
 			</File>
-			</Filter>
+			<File
+				RelativePath=".\load-driver-api.c"
+				>
+			</File>
+		</Filter>
 		<Filter
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
@@ -364,10 +364,6 @@
 			</File>
 			<File
 				RelativePath="..\..\includes\lusbk_shared.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\includes\lusbk_linked_list.h"
 				>
 			</File>
 		</Filter>

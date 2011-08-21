@@ -41,7 +41,7 @@ BOOL UnitK_GetTestDeviceEx( __deref_out KLST_HANDLE* DeviceList,
                             __deref_out KLST_DEVINFO_HANDLE* DeviceInfo,
                             __in int argc,
                             __in char* argv[],
-                            __in_opt PKLST_INIT_PARAMS InitParams)
+                            __in_opt KLST_FLAG Flags)
 {
 	ULONG vidArg = UNIT_TEST_VID;
 	ULONG pidArg = UNIT_TEST_PID;

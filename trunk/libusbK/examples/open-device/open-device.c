@@ -38,11 +38,11 @@ DWORD __cdecl main(int argc, char* argv[])
 	if (!Examples_GetTestDevice(&deviceList, &deviceInfo, argc, argv))
 		return GetLastError();
 
-	// Open the device
-	if (!UsbK_Open(deviceInfo, &handle))
+	// Initialize the device
+	if (!UsbK_Init(&handle, deviceInfo))
 	{
 		ec = GetLastError();
-		printf("Open device failed. Win32Error=%u (0x%08X)\n", ec, ec);
+		printf("Init device failed. Win32Error=%u (0x%08X)\n", ec, ec);
 		goto Done;
 	}
 	printf("Device opened successfully!\n");
@@ -59,7 +59,7 @@ DWORD __cdecl main(int argc, char* argv[])
 Done:
 	// Close the device handle
 	// if handle is invalid (NULL), has no effect
-	UsbK_Close(handle);
+	UsbK_Free(handle);
 
 	// Free the device list
 	// if deviceList is invalid (NULL), has no effect

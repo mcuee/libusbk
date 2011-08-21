@@ -10,24 +10,6 @@
 
 #include "lusbk_shared.h"
 
-#ifndef __deref_inout
-
-#define __in
-#define __in_opt
-#define __deref_in
-
-#define __out
-#define __out_opt
-#define __deref_out
-
-#define __inout
-#define __inout_opt
-#define __deref_inout
-
-#define __deref_out_opt
-
-#endif
-
 ///////////////////////////////////////////////////////////////////////
 // L I B U S B K  PUBLIC STRUCTS, DEFINES, AND ENUMS //////////////////
 ///////////////////////////////////////////////////////////////////////
@@ -38,21 +20,15 @@
 * @{
 */
 
-/*! \struct OVERLAPPED
-* \brief
-* A standard Windows \c OVERLAPPED structure.
-* see \htmlonly
-* <A href="http://msdn.microsoft.com/en-us/library/ms684342%28v=vs.85%29.aspx">OVERLAPPED Structure</A>
-* \endhtmlonly
-*/
 
-/*! \typedef OVERLAPPED* LPOVERLAPPED
-* \brief Pointer to a standard Windows \ref OVERLAPPED structure.
-*/
+#define _in
+#define _inopt
+#define _out
+#define _outopt
+#define _ref
+#define _refopt
 
-//! Indicates the size in bytes of a \ref KLIB_USER_CONTEXT structure.
-#define KLIB_CONTEXT_SIZE 8
-
+//! UsbK base function pointer, See \ref LibK_GetProcAddress.
 typedef INT_PTR (FAR WINAPI* KPROC)();
 
 //! Indicates that a function is an exported API call.
@@ -76,24 +52,16 @@ typedef INT_PTR (FAR WINAPI* KPROC)();
 #pragma warning (disable:4201)
 #pragma warning(disable:4214) // named type definition in parentheses
 
-//! Managed user defined storage space.
-/*!
-* By default, All libusbK handles contain 8 bytes of user-defined storage space.
-*
-*/
-typedef union _KLIB_USER_CONTEXT
-{
-	PVOID	Custom;
-	UINT64	Value;
-	UCHAR	ValueBytes[8];
-} KLIB_USER_CONTEXT;
-C_ASSERT(sizeof(KLIB_USER_CONTEXT) == 8);
+//! User defined handle context space, see \ref LibK_GetContext.
+typedef UINT_PTR KLIB_USER_CONTEXT;
+
+//! Pointer to a KLIB_USER_CONTEXT structure.
 typedef KLIB_USER_CONTEXT* PKLIB_USER_CONTEXT;
 
-//! USB control setup packet
+//! KUSB control setup packet.
 /*!
-* This structure is identical in size to a \ref WINUSB_SETUP_PACKET,
-* but provides additional user friendly members.
+* This union structure is identical in size to a \ref WINUSB_SETUP_PACKET,
+* but provides additional field accessors. (see \ref libusbk.h for structure details)
 */
 typedef union _KUSB_SETUP_PACKET
 {
@@ -165,102 +133,81 @@ C_ASSERT(sizeof(KUSB_SETUP_PACKET) == 8);
 
 #include <poppack.h>
 
+//! Base handle type for all library handles.
 typedef void* KLIB_HANDLE;
-#define DECLARE_KLIB_HANDLE(name) struct name##__ { int unused; }; typedef struct name##__ *name
-#define DECLARE_KLIB_SEMI_OPAQUE_HANDLE(Pub_Type_Def_Name) typedef Pub_Type_Def_Name*Pub_Type_Def_Name##_HANDLE
 
-//! libusbK interfacing handle.
-/*!
-* This handle is required by other libusbK routines that perform
-* operations on a device. The handle is opaque. To release this handle,
-* call the \ref UsbK_Close or \ref UsbK_Free function.
-*
-* A \ref KUSB_HANDLE differs from a \c
-* WINUSB_INTERFACE_HANDLE in the following ways:
-* - libusbK handles have no "master" handle. All libusbK handles can operate
-*   as a master handles. This means all handles work with all API functions.
-*
-* - libusbK handles encompass then entire set of interfaces available to a
-*   usb device file handle. For most users there is no need to use the \ref
-*   UsbK_GetAssociatedInterface function. Instead, they can use the \ref
-*   UsbK_ClaimInterface and \ref UsbK_ReleaseInterface functions. libusbK
-*   will maintain all interface settings on one (1) handle.
-*
-* - Legacy WinUSB functions (all are supported by the libusbK api) do
-*   not provide an interface number/index parameter. (e.g. \ref
-*   UsbK_QueryInterfaceSettings, \ref UsbK_SetCurrentAlternateSetting, etc.)
-*   libusbK deals with these functions as follows:
-*   - The most recent interface claimed with \ref UsbK_ClaimInterface becomes
-*     the default interface.
-*   - When \ref UsbK_ReleaseInterface is called the previously claimed
-*     interface becomes the default interface.
-*   - \ref UsbK_GetAssociatedInterface clones the source libusbK handle and
-*     changes the default interface of the clones handle to the index
-*     specified by the user.
-*
-*/
-DECLARE_KLIB_HANDLE(KUSB_HANDLE);
+//! Opaque UsbK handle, see \ref UsbK_Init.
+typedef KLIB_HANDLE KUSB_HANDLE;
 
-//! Pointer to a device list handle.
-/*!
-* \attention This is an opaque pointer.
-*/
-DECLARE_KLIB_HANDLE(KLST_HANDLE);
+//! Opaque LstK handle, see \ref LstK_Init.
+typedef KLIB_HANDLE KLST_HANDLE;
 
-//! Pointer to a hot-plug handle.
-/*!
-* \attention This is an opaque pointer.
-*/
-DECLARE_KLIB_HANDLE(KHOT_HANDLE);
+//! Opaque HotK handle, see \ref HotK_Init.
+typedef KLIB_HANDLE KHOT_HANDLE;
 
-//! pointer to an OverlappedK structure.
-/*!
-*
-* To acquire an OverlappedK for use, call \ref OvlK_Acquire. To release an
-* OverlappedK back to its associated pool, call \ref OvlK_Release.
-*
-* \remarks
-* OverlappedK structures contain a "standard" windows \c OVERLAPPED
-* structure as their first member. This makes them compatible with windows
-* API function which take a \ref LPOVERLAPPED as a parameter. However,
-* in-order to make use of the OverlappedK functions (such as \ref
-* OvlK_Wait and \ref OvlK_IsComplete) the \ref KOVL_HANDLE must pass
-* through one of the libusbK \ref usbk transfer functions. e.g. \ref
-* UsbK_ReadPipe and \ref UsbK_WritePipe
-*
-*/
-DECLARE_KLIB_HANDLE(KOVL_HANDLE);
+//! Opaque OvlK handle, see \ref OvlK_Acquire.
+typedef KLIB_HANDLE KOVL_HANDLE;
 
 
-//! pointer to an OverlappedK pool structure.
-/*!
-* An OverlappedK pool encompasses an array of OverlappedK structures.
-*
-*/
-DECLARE_KLIB_HANDLE(KOVL_POOL_HANDLE);
+//! Opaque OvlPoolK handle, see \ref OvlK_InitPool.
+typedef KLIB_HANDLE KOVL_POOL_HANDLE;
 
+//! Opaque StmK handle, see \ref StmK_Init.
+typedef KLIB_HANDLE KSTM_HANDLE;
+
+//! Handle type enumeration.
 typedef enum _KLIB_HANDLE_TYPE
 {
+    //! Hot plug handle. \ref KHOT_HANDLE
     KLIB_HANDLE_TYPE_HOTK,
+
+    //! USB handle. \ref KUSB_HANDLE
     KLIB_HANDLE_TYPE_USBK,
+
+    //! Shared USB handle. \ref KUSB_HANDLE
     KLIB_HANDLE_TYPE_USBSHAREDK,
+
+    //! Device list handle. \ref KLST_HANDLE
     KLIB_HANDLE_TYPE_LSTK,
+
+    //! Device info handle. \ref KLST_DEVINFO_HANDLE
     KLIB_HANDLE_TYPE_LSTINFOK,
+
+    //! Overlapped handle. \ref KOVL_HANDLE
     KLIB_HANDLE_TYPE_OVLK,
+
+    //! Overlapped pool handle. \ref KOVL_POOL_HANDLE
     KLIB_HANDLE_TYPE_OVLPOOLK,
 
+    //! Pipe stream handle. \ref KSTM_HANDLE
+    KLIB_HANDLE_TYPE_STMK,
+
+    //! Max handle type count.
     KLIB_HANDLE_TYPE_COUNT
 } KLIB_HANDLE_TYPE;
 
-typedef LONG KUSB_API KLIB_INIT_HANDLE_CB (
-    __in KLIB_HANDLE Handle,
-    __in KLIB_HANDLE_TYPE HandleType,
-    __in PKLIB_USER_CONTEXT UserContext);
+//! Function typedef for \ref LibK_SetCleanupCallback.
+typedef LONG KUSB_API KLIB_HANDLE_CB (_in KLIB_HANDLE Handle, _in KLIB_HANDLE_TYPE HandleType, _in PKLIB_USER_CONTEXT UserState);
+//! Function pointer to a \ref KLIB_HANDLE_CB.
+typedef KLIB_HANDLE_CB* PKLIB_HANDLE_CB;
 
-typedef LONG KUSB_API KLIB_FREE_HANDLE_CB (
-    __in KLIB_HANDLE Handle,
-    __in KLIB_HANDLE_TYPE HandleType,
-    __in PKLIB_USER_CONTEXT UserContext);
+//! libusbK verson information structure.
+typedef struct _KLIB_VERSION
+{
+	//! Major version number.
+	UINT Major;
+
+	//! Minor version number.
+	UINT Minor;
+
+	//! Micro version number.
+	UINT Micro;
+
+	//! Nano version number.
+	UINT Nano;
+} KLIB_VERSION;
+//! Pointer to a \copybrief KLIB_VERSION
+typedef KLIB_VERSION* PKLIB_VERSION;
 
 /*! @} */
 
@@ -269,7 +216,7 @@ typedef LONG KUSB_API KLIB_FREE_HANDLE_CB (
 #ifndef _LIBUSBK_ISOK_TYPES
 
 //! Callback function typedef for \ref IsoK_EnumPackets
-typedef BOOL KUSB_API KISO_ENUM_PACKETS_CB (__in ULONG PacketIndex, __inout PKISO_PACKET IsoPacket, __inout PVOID UserContext);
+typedef BOOL KUSB_API KISO_ENUM_PACKETS_CB (_in ULONG PacketIndex, _in PKISO_PACKET IsoPacket, _in PVOID UserState);
 //! Pointer to a \ref KISO_ENUM_PACKETS_CB.
 typedef KISO_ENUM_PACKETS_CB* PKISO_ENUM_PACKETS_CB;
 
@@ -286,21 +233,33 @@ typedef KISO_ENUM_PACKETS_CB* PKISO_ENUM_PACKETS_CB;
 //!  Allocated length for all strings in a \ref KLST_DEVINFO structure.
 #define KLST_STRING_MAX_LEN 256
 
+//! Device list sync flags.
+/*!
+* These sync flags are also use by the hot plug module to indicate device
+* arrival/removal notifications:
+* - \b DeviceArrival = KLST_SYNC_FLAG_ADDED
+* - \b DeviceRemoval = KLST_SYNC_FLAG_REMOVED
+*/
 typedef enum _KLST_SYNC_FLAG
 {
-    SYNC_FLAG_NONE				= 0,
-    SYNC_FLAG_UNCHANGED			= 1 << 0,
-    SYNC_FLAG_ADDED				= 1 << 1,
-    SYNC_FLAG_REMOVED			= 1 << 2,
-    SYNC_FLAG_CONNECT_CHANGE	= 1 << 3,
-    SYNC_FLAG_MASK				= (SYNC_FLAG_CONNECT_CHANGE - 1) | SYNC_FLAG_CONNECT_CHANGE,
-} KLST_SYNC_FLAG;
+    //! Cleared/invalid state.
+    KLST_SYNC_FLAG_NONE				= 0,
 
-typedef struct _KLST_SYNC_PARAMS
-{
-	ULONG _ununsed;
-} KLST_SYNC_PARAMS;
-typedef KLST_SYNC_PARAMS* PKLST_SYNC_PARAMS;
+    //! Unchanged state,
+    KLST_SYNC_FLAG_UNCHANGED		= 1 << 0,
+
+    //! Added (Arrival) state,
+    KLST_SYNC_FLAG_ADDED			= 1 << 1,
+
+    //! Removed (Unplugged) state,
+    KLST_SYNC_FLAG_REMOVED			= 1 << 2,
+
+    //! Connect changed state.
+    KLST_SYNC_FLAG_CONNECT_CHANGE	= 1 << 3,
+
+    //! All states.
+    KLST_SYNC_FLAG_MASK				= (KLST_SYNC_FLAG_CONNECT_CHANGE - 1) | KLST_SYNC_FLAG_CONNECT_CHANGE,
+} KLST_SYNC_FLAG;
 
 //! Common usb device information structure
 typedef struct _KLST_DEV_COMMON_INFO
@@ -321,14 +280,11 @@ typedef struct _KLST_DEV_COMMON_INFO
 //! Pointer to a \c KLST_DEV_COMMON_INFO structure.
 typedef KLST_DEV_COMMON_INFO* PKLST_DEV_COMMON_INFO;
 
-//! USB device information element of a \ref KLST_DEV_LIST collection.
+//! Semi-opaque device information structure of a device list.
 /*!
-* Contains information about a USB device retrieved from the windows
 *
 * \attention This structure is semi-opaque.
 *
-* All \ref KLST_DEVINFO elements contain a \ref KLIB_USER_CONTEXT.
-* This 32 bytes of user context space can be used by you, the developer, for any desired purpose.
 */
 typedef struct _KLST_DEVINFO
 {
@@ -341,7 +297,7 @@ typedef struct _KLST_DEVINFO
 	//! Device interface GUID
 	CHAR DeviceInterfaceGUID[KLST_STRING_MAX_LEN];
 
-	//! Device instance ID
+	//! Device instance ID.
 	/*!
 	* A Device instance ID has the following format:
 	* [enumerator]\[enumerator-specific-device-ID]\[instance-specific-ID]
@@ -357,76 +313,57 @@ typedef struct _KLST_DEVINFO
 	*/
 	CHAR InstanceID[KLST_STRING_MAX_LEN];
 
-	//! Class GUID
+	//! Class GUID.
 	CHAR ClassGUID[KLST_STRING_MAX_LEN];
 
-	//! Manufacturer name as specified in the INF file
+	//! Manufacturer name as specified in the INF file.
 	CHAR Mfg[KLST_STRING_MAX_LEN];
 
-	//! Device description as specified in the INF file
+	//! Device description as specified in the INF file.
 	CHAR DeviceDesc[KLST_STRING_MAX_LEN];
 
-	//! Driver service name
+	//! Driver service name.
 	CHAR Service[KLST_STRING_MAX_LEN];
 
-	//! Unique symbolic link identifier
-	/*!
-	* The \c SymbolicLink can be used to uniquely distinguish between device list elements.
-	*/
+	//! Unique identifier.
 	CHAR SymbolicLink[KLST_STRING_MAX_LEN];
 
-	//! physical device filename.
-	/*!
-	* This path is used with the Windows \c CreateFile() function to obtain on opened device handle.
-	*/
+	//! physical device filename used with the Windows \c CreateFile()
 	CHAR DevicePath[KLST_STRING_MAX_LEN];
 
 	//! libusb-win32 filter index id.
-	DWORD LUsb0FilterIndex;
+	ULONG LUsb0FilterIndex;
 
 	//! Indicates the devices connection state.
 	BOOL Connected;
 
-	union
-	{
-		struct
-		{
-			KLST_SYNC_FLAG SyncFlags;
-			ULONG UserFlags;
-		};
-		struct
-		{
-			unsigned Unchanged: 1;
-			unsigned Added: 1;
-			unsigned Removed: 1;
-			unsigned ConnectChange: 1;
-		};
-	} SyncResults;
-} KLST_DEVINFO;
+	//! Synchronization flags populates by \ref LstK_Sync.
+	KLST_SYNC_FLAG SyncFlags;
 
-//! pointer to a \ref KLST_DEVINFO.
-//! Pointer to a device information handle.
-/*!
-* \attention This is a  semi-opaque pointer.
-*/
-DECLARE_KLIB_SEMI_OPAQUE_HANDLE(KLST_DEVINFO);
+} KLST_DEVINFO;
+//! Pointer to a \ref KLST_DEVINFO structure. (semi-opaque)
+typedef KLST_DEVINFO* KLST_DEVINFO_HANDLE;
 
 //! Initialization parameters for \ref LstK_Init
-typedef struct _KLST_INIT_PARAMS
+typedef enum _KLST_FLAG
 {
-	//! Enable listings for the raw device interface GUID.{A5DCBF10-6530-11D2-901F-00C04FB951ED}
-	BOOL EnableRawDeviceInterfaceGuid;
+    //! No flags (or 0)
+    KLST_FLAG_NONE,
 
-	BOOL ShowDisconnectedDevices;
+    //! Enable listings for the raw device interface GUID.{A5DCBF10-6530-11D2-901F-00C04FB951ED}
+    KLST_FLAG_INCLUDE_RAWGUID = (1 << 0),
 
-} KLST_INIT_PARAMS, *PKLST_INIT_PARAMS;
+    //! List libusbK devices that not currently connected.
+    KLST_FLAG_INCLUDE_DISCONNECT = (1 << 1),
 
-#include <POPPACK.H>
+} KLST_FLAG;
+
+#include <poppack.h>
 
 
-//! Enumeration callback typedef (or delegate).
+//! Device list enumeration function callback typedef.
 /*!
-* Use this typedef as a prototype for an enumeration function in \ref LstK_Enumerate.
+*
 * \param DeviceList
 * The device list \c DeviceInfo belongs to
 *
@@ -436,11 +373,13 @@ typedef struct _KLST_INIT_PARAMS
 * \param Context
 * User context that was passed into \ref LstK_Enumerate
 *
+* Use this typedef as a prototype for an enumeration function with \ref LstK_Enumerate.
+*
 */
 typedef BOOL KUSB_API KLST_ENUM_DEVINFO_CB (
-    __in KLST_HANDLE DeviceList,
-    __in KLST_DEVINFO_HANDLE DeviceInfo,
-    __in PVOID Context);
+    _in KLST_HANDLE DeviceList,
+    _in KLST_DEVINFO_HANDLE DeviceInfo,
+    _in PVOID Context);
 
 //! Pointer to a \c KLST_ENUM_DEVINFO_CB
 typedef KLST_ENUM_DEVINFO_CB* PKLST_ENUM_DEVINFO_CB;
@@ -536,7 +475,7 @@ enum USB_DESCRIPTOR_TYPE_ENUM
     USB_INTERFACE_ASSOCIATION_DESCRIPTOR_TYPE = 0x0B,
 };
 
-//! Makes the \ref KUSB_SETUP_PACKET::_wValue for a \ref USB_REQUEST_GET_DESCRIPTOR or \ref USB_REQUEST_SET_DESCRIPTOR request.
+//! Makes \c wValue for a \ref USB_REQUEST_GET_DESCRIPTOR or \ref USB_REQUEST_SET_DESCRIPTOR request.
 #define USB_DESCRIPTOR_MAKE_TYPE_AND_INDEX(d, i)	\
 	((USHORT)((USHORT)d<<8 | i))
 
@@ -763,9 +702,12 @@ typedef struct _USB_ENDPOINT_DESCRIPTOR
 //! pointer to a \c USB_ENDPOINT_DESCRIPTOR
 typedef USB_ENDPOINT_DESCRIPTOR* PUSB_ENDPOINT_DESCRIPTOR;
 
-/** A structure representing the standard USB configuration descriptor.
+//! A structure representing the standard USB configuration descriptor.
+/*
+*
 * This descriptor is documented in section 9.6.3 of the USB 2.0 specification.
 * All multiple-byte fields are represented in host-endian format.
+*
 */
 typedef struct _USB_CONFIGURATION_DESCRIPTOR
 {
@@ -876,16 +818,19 @@ typedef USB_COMMON_DESCRIPTOR* PUSB_COMMON_DESCRIPTOR;
 #pragma warning (disable:4201)
 #pragma warning(disable:4214) // named type definition in parentheses
 
-//! The ECN specifies a USB descriptor, called the Interface Association
-//! Descriptor (IAD), that allows hardware manufacturers to define groupings
-//! of interfaces.
+//! Allows hardware manufacturers to define groupings of interfaces.
 /*!
+*
+* The ECN specifies a USB descriptor, called the Interface Association
+* Descriptor (IAD).
+*
 * The Universal Serial Bus Specification, revision 2.0, does not support
 * grouping more than one interface of a composite device within a single
 * function. However, the USB Device Working Group (DWG) created USB device
 * classes that allow for functions with multiple interfaces, and the USB
 * Implementor's Forum issued an Engineering Change Notification (ECN) that
 * defines a mechanism for grouping interfaces.
+*
 */
 typedef struct _USB_INTERFACE_ASSOCIATION_DESCRIPTOR
 {
@@ -921,7 +866,7 @@ typedef USB_INTERFACE_ASSOCIATION_DESCRIPTOR* PUSB_INTERFACE_ASSOCIATION_DESCRIP
 #pragma warning(pop)
 #endif
 
-#include <POPPACK.H>
+#include <poppack.h>
 
 #if _MSC_VER >= 1200
 #pragma warning(push)
@@ -967,6 +912,18 @@ typedef OS_STRING* POS_STRING;
 * @{
 */
 
+//! Usb handle specific properties that can be retrieved with \ref UsbK_GetProperty.
+typedef enum _KUSB_PROPERTY
+{
+    KUSB_PROPERTY_INVALID = (ULONG) - 1,
+
+    //! Get the internal device file handle used for operations such as GetOverlappedResult or DeviceIoControl.
+    KUSB_PROPERTY_DEVICE_FILE_HANDLE,
+
+    KUSB_PROPERTY_COUNT
+
+} KUSB_PROPERTY;
+
 //! Supported driver id enumeration.
 typedef enum _KUSB_DRVID
 {
@@ -996,331 +953,540 @@ typedef enum _KUSB_FNID
     //! Invalid function ID
     KUSB_FNID_INVALID = -1L,
 
-    //! \ref UsbK_Initialize function id
-    KUSB_FNID_Initialize,
+    //! \ref UsbK_Init dynamic driver function id.
+    KUSB_FNID_Init,
 
-    //! \ref UsbK_Free function id
-    KUSB_FNID_Free,
-
-    //! \ref UsbK_GetAssociatedInterface function id
-    KUSB_FNID_GetAssociatedInterface,
-
-    //! \ref UsbK_GetDescriptor function id
-    KUSB_FNID_GetDescriptor,
-
-    //! \ref UsbK_QueryInterfaceSettings function id
-    KUSB_FNID_QueryInterfaceSettings,
-
-    //! \ref UsbK_QueryDeviceInformation function id
-    KUSB_FNID_QueryDeviceInformation,
-
-    //! \ref UsbK_SetCurrentAlternateSetting function id
-    KUSB_FNID_SetCurrentAlternateSetting,
-
-    //! \ref UsbK_GetCurrentAlternateSetting function id
-    KUSB_FNID_GetCurrentAlternateSetting,
-
-    //! \ref UsbK_QueryPipe function id
-    KUSB_FNID_QueryPipe,
-
-    //! \ref UsbK_SetPipePolicy function id
-    KUSB_FNID_SetPipePolicy,
-
-    //! \ref UsbK_GetPipePolicy function id
-    KUSB_FNID_GetPipePolicy,
-
-    //! \ref UsbK_ReadPipe function id
-    KUSB_FNID_ReadPipe,
-
-    //! \ref UsbK_WritePipe function id
-    KUSB_FNID_WritePipe,
-
-    //! \ref UsbK_ControlTransfer function id
-    KUSB_FNID_ControlTransfer,
-
-    //! \ref UsbK_ResetPipe function id
-    KUSB_FNID_ResetPipe,
-
-    //! \ref UsbK_AbortPipe function id
-    KUSB_FNID_AbortPipe,
-
-    //! \ref UsbK_FlushPipe function id
-    KUSB_FNID_FlushPipe,
-
-    //! \ref UsbK_SetPowerPolicy function id
-    KUSB_FNID_SetPowerPolicy,
-
-    //! \ref UsbK_GetPowerPolicy function id
-    KUSB_FNID_GetPowerPolicy,
-
-    //! \ref UsbK_GetOverlappedResult function id
-    KUSB_FNID_GetOverlappedResult,
-
-    //! \ref UsbK_ResetDevice function id
-    KUSB_FNID_ResetDevice,
-
-    //! \ref UsbK_Open function id
-    KUSB_FNID_Open,
-
-    //! \ref UsbK_Close function id
-    KUSB_FNID_Close,
-
-    //! \ref UsbK_SetConfiguration function id
-    KUSB_FNID_SetConfiguration,
-
-    //! \ref UsbK_GetConfiguration function id
-    KUSB_FNID_GetConfiguration,
-
-    //! \ref UsbK_ClaimInterface function id
+    //! \ref UsbK_ClaimInterface dynamic driver function id.
     KUSB_FNID_ClaimInterface,
 
-    //! \ref UsbK_ReleaseInterface function id
+    //! \ref UsbK_ReleaseInterface dynamic driver function id.
     KUSB_FNID_ReleaseInterface,
 
-    //! \ref UsbK_SetAltInterface function id
+    //! \ref UsbK_SetAltInterface dynamic driver function id.
     KUSB_FNID_SetAltInterface,
 
-    //! \ref UsbK_GetAltInterface function id
+    //! \ref UsbK_GetAltInterface dynamic driver function id.
     KUSB_FNID_GetAltInterface,
 
-    //! \ref UsbK_IsoReadPipe function id
-    KUSB_FNID_IsoReadPipe,
+    //! \ref UsbK_GetDescriptor dynamic driver function id.
+    KUSB_FNID_GetDescriptor,
 
-    //! \ref UsbK_IsoWritePipe function id
-    KUSB_FNID_IsoWritePipe,
+    //! \ref UsbK_ControlTransfer dynamic driver function id.
+    KUSB_FNID_ControlTransfer,
 
-    //! \ref UsbK_GetCurrentFrameNumber function id
-    KUSB_FNID_GetCurrentFrameNumber,
+    //! \ref UsbK_SetPowerPolicy dynamic driver function id.
+    KUSB_FNID_SetPowerPolicy,
 
-    //! \ref UsbK_Clone function id
-    KUSB_FNID_Clone,
+    //! \ref UsbK_GetPowerPolicy dynamic driver function id.
+    KUSB_FNID_GetPowerPolicy,
 
-     //! \ref UsbK_SelectInterface function id
+    //! \ref UsbK_SetConfiguration dynamic driver function id.
+    KUSB_FNID_SetConfiguration,
+
+    //! \ref UsbK_GetConfiguration dynamic driver function id.
+    KUSB_FNID_GetConfiguration,
+
+    //! \ref UsbK_ResetDevice dynamic driver function id.
+    KUSB_FNID_ResetDevice,
+
+    //! \ref UsbK_Initialize dynamic driver function id.
+    KUSB_FNID_Initialize,
+
+    //! \ref UsbK_Free dynamic driver function id.
+    KUSB_FNID_Free,
+
+    //! \ref UsbK_SelectInterface dynamic driver function id.
     KUSB_FNID_SelectInterface,
 
-   //! Supported function count
-    KUSB_FNID_COUNT
+    //! \ref UsbK_GetAssociatedInterface dynamic driver function id.
+    KUSB_FNID_GetAssociatedInterface,
+
+    //! \ref UsbK_Clone dynamic driver function id.
+    KUSB_FNID_Clone,
+
+    //! \ref UsbK_QueryInterfaceSettings dynamic driver function id.
+    KUSB_FNID_QueryInterfaceSettings,
+
+    //! \ref UsbK_QueryDeviceInformation dynamic driver function id.
+    KUSB_FNID_QueryDeviceInformation,
+
+    //! \ref UsbK_SetCurrentAlternateSetting dynamic driver function id.
+    KUSB_FNID_SetCurrentAlternateSetting,
+
+    //! \ref UsbK_GetCurrentAlternateSetting dynamic driver function id.
+    KUSB_FNID_GetCurrentAlternateSetting,
+
+    //! \ref UsbK_QueryPipe dynamic driver function id.
+    KUSB_FNID_QueryPipe,
+
+    //! \ref UsbK_SetPipePolicy dynamic driver function id.
+    KUSB_FNID_SetPipePolicy,
+
+    //! \ref UsbK_GetPipePolicy dynamic driver function id.
+    KUSB_FNID_GetPipePolicy,
+
+    //! \ref UsbK_ReadPipe dynamic driver function id.
+    KUSB_FNID_ReadPipe,
+
+    //! \ref UsbK_WritePipe dynamic driver function id.
+    KUSB_FNID_WritePipe,
+
+    //! \ref UsbK_ResetPipe dynamic driver function id.
+    KUSB_FNID_ResetPipe,
+
+    //! \ref UsbK_AbortPipe dynamic driver function id.
+    KUSB_FNID_AbortPipe,
+
+    //! \ref UsbK_FlushPipe dynamic driver function id.
+    KUSB_FNID_FlushPipe,
+
+    //! \ref UsbK_IsoReadPipe dynamic driver function id.
+    KUSB_FNID_IsoReadPipe,
+
+    //! \ref UsbK_IsoWritePipe dynamic driver function id.
+    KUSB_FNID_IsoWritePipe,
+
+    //! \ref UsbK_GetCurrentFrameNumber dynamic driver function id.
+    KUSB_FNID_GetCurrentFrameNumber,
+
+    //! \ref UsbK_GetOverlappedResult dynamic driver function id.
+    KUSB_FNID_GetOverlappedResult,
+
+    //! \ref UsbK_GetProperty dynamic driver function id.
+    KUSB_FNID_GetProperty,
+
+
+    //! Supported function count
+    KUSB_FNID_COUNT,
+
 } KUSB_FNID;
 
-typedef BOOL KUSB_API KUSB_Initialize (
-    __in HANDLE DeviceHandle,
-    __out KUSB_HANDLE* InterfaceHandle);
-
-typedef BOOL KUSB_API KUSB_Free (
-    __in KUSB_HANDLE InterfaceHandle);
-
-typedef BOOL KUSB_API KUSB_GetAssociatedInterface (
-    __in KUSB_HANDLE InterfaceHandle,
-    __in UCHAR AssociatedInterfaceIndex,
-    __out KUSB_HANDLE* AssociatedInterfaceHandle);
-
-typedef BOOL KUSB_API KUSB_GetDescriptor (
-    __in KUSB_HANDLE InterfaceHandle,
-    __in UCHAR DescriptorType,
-    __in UCHAR Index,
-    __in USHORT LanguageID,
-    __out_opt PUCHAR Buffer,
-    __in ULONG BufferLength,
-    __out PULONG LengthTransferred);
-
-typedef BOOL KUSB_API KUSB_QueryInterfaceSettings (
-    __in KUSB_HANDLE InterfaceHandle,
-    __in UCHAR AltSettingNumber,
-    __out PUSB_INTERFACE_DESCRIPTOR UsbAltInterfaceDescriptor);
-
-typedef BOOL KUSB_API KUSB_QueryDeviceInformation (
-    __in KUSB_HANDLE InterfaceHandle,
-    __in ULONG InformationType,
-    __inout PULONG BufferLength,
-    __out PVOID Buffer);
-
-typedef BOOL KUSB_API KUSB_SetCurrentAlternateSetting (
-    __in KUSB_HANDLE InterfaceHandle,
-    __in UCHAR AltSettingNumber);
-
-typedef BOOL KUSB_API KUSB_GetCurrentAlternateSetting (
-    __in KUSB_HANDLE InterfaceHandle,
-    __out PUCHAR AltSettingNumber);
-
-typedef BOOL KUSB_API KUSB_QueryPipe (
-    __in KUSB_HANDLE InterfaceHandle,
-    __in UCHAR AltSettingNumber,
-    __in UCHAR PipeIndex,
-    __out PWINUSB_PIPE_INFORMATION PipeInformation);
-
-typedef BOOL KUSB_API KUSB_SetPipePolicy (
-    __in KUSB_HANDLE InterfaceHandle,
-    __in UCHAR PipeID,
-    __in ULONG PolicyType,
-    __in ULONG ValueLength,
-    __in PVOID Value);
-
-typedef BOOL KUSB_API KUSB_GetPipePolicy (
-    __in KUSB_HANDLE InterfaceHandle,
-    __in UCHAR PipeID,
-    __in ULONG PolicyType,
-    __inout PULONG ValueLength,
-    __out PVOID Value);
-
-typedef BOOL KUSB_API KUSB_ReadPipe (
-    __in KUSB_HANDLE InterfaceHandle,
-    __in UCHAR PipeID,
-    __out_opt PUCHAR Buffer,
-    __in ULONG BufferLength,
-    __out_opt PULONG LengthTransferred,
-    __in_opt LPOVERLAPPED Overlapped);
-
-typedef BOOL KUSB_API KUSB_WritePipe (
-    __in KUSB_HANDLE InterfaceHandle,
-    __in UCHAR PipeID,
-    __in PUCHAR Buffer,
-    __in ULONG BufferLength,
-    __out_opt PULONG LengthTransferred,
-    __in_opt LPOVERLAPPED Overlapped);
-
-typedef BOOL KUSB_API KUSB_ControlTransfer (
-    __in KUSB_HANDLE InterfaceHandle,
-    __in WINUSB_SETUP_PACKET SetupPacket,
-    __out_opt PUCHAR Buffer,
-    __in ULONG BufferLength,
-    __out_opt PULONG LengthTransferred,
-    __in_opt LPOVERLAPPED Overlapped);
-
-typedef BOOL KUSB_API KUSB_ResetPipe (
-    __in KUSB_HANDLE InterfaceHandle,
-    __in UCHAR PipeID);
-
-typedef BOOL KUSB_API KUSB_AbortPipe (
-    __in KUSB_HANDLE InterfaceHandle,
-    __in UCHAR PipeID);
-
-typedef BOOL KUSB_API KUSB_FlushPipe (
-    __in KUSB_HANDLE InterfaceHandle,
-    __in UCHAR PipeID);
-
-typedef BOOL KUSB_API KUSB_SetPowerPolicy (
-    __in KUSB_HANDLE InterfaceHandle,
-    __in ULONG PolicyType,
-    __in ULONG ValueLength,
-    __in PVOID Value);
-
-typedef BOOL KUSB_API KUSB_GetPowerPolicy (
-    __in KUSB_HANDLE InterfaceHandle,
-    __in ULONG PolicyType,
-    __inout PULONG ValueLength,
-    __out PVOID Value);
-
-typedef BOOL KUSB_API KUSB_GetOverlappedResult (
-    __in KUSB_HANDLE InterfaceHandle,
-    __in LPOVERLAPPED lpOverlapped,
-    __out LPDWORD lpNumberOfBytesTransferred,
-    __in BOOL bWait);
-
-typedef BOOL KUSB_API KUSB_ResetDevice (
-    __in KUSB_HANDLE InterfaceHandle);
-
-typedef BOOL KUSB_API KUSB_Open (
-    __in KLST_DEVINFO* DevInfo,
-    __out KUSB_HANDLE* InterfaceHandle);
-
-typedef BOOL KUSB_API KUSB_Close (
-    __in KUSB_HANDLE InterfaceHandle);
-
-typedef BOOL KUSB_API KUSB_SetConfiguration (
-    __in KUSB_HANDLE InterfaceHandle,
-    __in UCHAR ConfigurationNumber);
-
-typedef BOOL KUSB_API KUSB_GetConfiguration (
-    __in KUSB_HANDLE InterfaceHandle,
-    __out PUCHAR ConfigurationNumber);
+typedef BOOL KUSB_API KUSB_Init (
+    _out KUSB_HANDLE* InterfaceHandle,
+    _in KLST_DEVINFO_HANDLE DevInfo);
 
 typedef BOOL KUSB_API KUSB_ClaimInterface (
-    __in KUSB_HANDLE InterfaceHandle,
-    __in UCHAR NumberOrIndex,
-    __in BOOL IsIndex);
+    _in KUSB_HANDLE InterfaceHandle,
+    _in UCHAR NumberOrIndex,
+    _in BOOL IsIndex);
 
 typedef BOOL KUSB_API KUSB_ReleaseInterface (
-    __in KUSB_HANDLE InterfaceHandle,
-    __in UCHAR NumberOrIndex,
-    __in BOOL IsIndex);
+    _in KUSB_HANDLE InterfaceHandle,
+    _in UCHAR NumberOrIndex,
+    _in BOOL IsIndex);
 
 typedef BOOL KUSB_API KUSB_SetAltInterface (
-    __in KUSB_HANDLE InterfaceHandle,
-    __in UCHAR NumberOrIndex,
-    __in BOOL IsIndex,
-    __in UCHAR AltSettingNumber);
+    _in KUSB_HANDLE InterfaceHandle,
+    _in UCHAR NumberOrIndex,
+    _in BOOL IsIndex,
+    _in UCHAR AltSettingNumber);
 
 typedef BOOL KUSB_API KUSB_GetAltInterface (
-    __in KUSB_HANDLE InterfaceHandle,
-    __in UCHAR NumberOrIndex,
-    __in BOOL IsIndex,
-    __out PUCHAR AltSettingNumber);
+    _in KUSB_HANDLE InterfaceHandle,
+    _in UCHAR NumberOrIndex,
+    _in BOOL IsIndex,
+    _out PUCHAR AltSettingNumber);
 
-typedef BOOL KUSB_API KUSB_IsoReadPipe (
-    __in KUSB_HANDLE InterfaceHandle,
-    __inout PKISO_CONTEXT IsoContext,
-    __out_opt PUCHAR Buffer,
-    __in ULONG BufferLength,
-    __in LPOVERLAPPED Overlapped);
+typedef BOOL KUSB_API KUSB_GetDescriptor (
+    _in KUSB_HANDLE InterfaceHandle,
+    _in UCHAR DescriptorType,
+    _in UCHAR Index,
+    _in USHORT LanguageID,
+    _out PUCHAR Buffer,
+    _in ULONG BufferLength,
+    _outopt PULONG LengthTransferred);
 
-typedef BOOL KUSB_API KUSB_IsoWritePipe (
-    __in KUSB_HANDLE InterfaceHandle,
-    __inout PKISO_CONTEXT IsoContext,
-    __in PUCHAR Buffer,
-    __in ULONG BufferLength,
-    __in LPOVERLAPPED Overlapped);
+typedef BOOL KUSB_API KUSB_ControlTransfer (
+    _in KUSB_HANDLE InterfaceHandle,
+    _in WINUSB_SETUP_PACKET SetupPacket,
+    _refopt PUCHAR Buffer,
+    _in ULONG BufferLength,
+    _outopt PULONG LengthTransferred,
+    _inopt LPOVERLAPPED Overlapped);
 
-typedef BOOL KUSB_API KUSB_GetCurrentFrameNumber (
-    __in KUSB_HANDLE InterfaceHandle,
-    __out PULONG FrameNumber);
+typedef BOOL KUSB_API KUSB_SetPowerPolicy (
+    _in KUSB_HANDLE InterfaceHandle,
+    _in ULONG PolicyType,
+    _in ULONG ValueLength,
+    _in PVOID Value);
 
-typedef BOOL KUSB_API KUSB_Clone (
-    __in KUSB_HANDLE InterfaceHandle,
-    __out KUSB_HANDLE* DstInterfaceHandle);
+typedef BOOL KUSB_API KUSB_GetPowerPolicy (
+    _in KUSB_HANDLE InterfaceHandle,
+    _in ULONG PolicyType,
+    _ref PULONG ValueLength,
+    _out PVOID Value);
+
+typedef BOOL KUSB_API KUSB_SetConfiguration (
+    _in KUSB_HANDLE InterfaceHandle,
+    _in UCHAR ConfigurationNumber);
+
+typedef BOOL KUSB_API KUSB_GetConfiguration (
+    _in KUSB_HANDLE InterfaceHandle,
+    _out PUCHAR ConfigurationNumber);
+
+typedef BOOL KUSB_API KUSB_ResetDevice (
+    _in KUSB_HANDLE InterfaceHandle);
+
+typedef BOOL KUSB_API KUSB_Initialize (
+    _in HANDLE DeviceHandle,
+    _out KUSB_HANDLE* InterfaceHandle);
+
+typedef BOOL KUSB_API KUSB_Free (
+    _in KUSB_HANDLE InterfaceHandle);
 
 typedef BOOL KUSB_API KUSB_SelectInterface (
-    __in KUSB_HANDLE InterfaceHandle,
-    __in UCHAR IndexOrNumber,
-    __in BOOL IsIndex);
+    _in KUSB_HANDLE InterfaceHandle,
+    _in UCHAR NumberOrIndex,
+    _in BOOL IsIndex);
+
+typedef BOOL KUSB_API KUSB_GetAssociatedInterface (
+    _in KUSB_HANDLE InterfaceHandle,
+    _in UCHAR AssociatedInterfaceIndex,
+    _out KUSB_HANDLE* AssociatedInterfaceHandle);
+
+typedef BOOL KUSB_API KUSB_Clone (
+    _in KUSB_HANDLE InterfaceHandle,
+    _out KUSB_HANDLE* DstInterfaceHandle);
+
+typedef BOOL KUSB_API KUSB_QueryInterfaceSettings (
+    _in KUSB_HANDLE InterfaceHandle,
+    _in UCHAR AltSettingNumber,
+    _out PUSB_INTERFACE_DESCRIPTOR UsbAltInterfaceDescriptor);
+
+typedef BOOL KUSB_API KUSB_QueryDeviceInformation (
+    _in KUSB_HANDLE InterfaceHandle,
+    _in ULONG InformationType,
+    _ref PULONG BufferLength,
+    _ref PVOID Buffer);
+
+typedef BOOL KUSB_API KUSB_SetCurrentAlternateSetting (
+    _in KUSB_HANDLE InterfaceHandle,
+    _in UCHAR AltSettingNumber);
+
+typedef BOOL KUSB_API KUSB_GetCurrentAlternateSetting (
+    _in KUSB_HANDLE InterfaceHandle,
+    _out PUCHAR AltSettingNumber);
+
+typedef BOOL KUSB_API KUSB_QueryPipe (
+    _in KUSB_HANDLE InterfaceHandle,
+    _in UCHAR AltSettingNumber,
+    _in UCHAR PipeIndex,
+    _out PWINUSB_PIPE_INFORMATION PipeInformation);
+
+typedef BOOL KUSB_API KUSB_SetPipePolicy (
+    _in KUSB_HANDLE InterfaceHandle,
+    _in UCHAR PipeID,
+    _in ULONG PolicyType,
+    _in ULONG ValueLength,
+    _in PVOID Value);
+
+typedef BOOL KUSB_API KUSB_GetPipePolicy (
+    _in KUSB_HANDLE InterfaceHandle,
+    _in UCHAR PipeID,
+    _in ULONG PolicyType,
+    _ref PULONG ValueLength,
+    _out PVOID Value);
+
+typedef BOOL KUSB_API KUSB_ReadPipe (
+    _in KUSB_HANDLE InterfaceHandle,
+    _in UCHAR PipeID,
+    _out PUCHAR Buffer,
+    _in ULONG BufferLength,
+    _outopt PULONG LengthTransferred,
+    _inopt LPOVERLAPPED Overlapped);
+
+typedef BOOL KUSB_API KUSB_WritePipe (
+    _in KUSB_HANDLE InterfaceHandle,
+    _in UCHAR PipeID,
+    _in PUCHAR Buffer,
+    _in ULONG BufferLength,
+    _outopt PULONG LengthTransferred,
+    _inopt LPOVERLAPPED Overlapped);
+
+typedef BOOL KUSB_API KUSB_ResetPipe (
+    _in KUSB_HANDLE InterfaceHandle,
+    _in UCHAR PipeID);
+
+typedef BOOL KUSB_API KUSB_AbortPipe (
+    _in KUSB_HANDLE InterfaceHandle,
+    _in UCHAR PipeID);
+
+typedef BOOL KUSB_API KUSB_FlushPipe (
+    _in KUSB_HANDLE InterfaceHandle,
+    _in UCHAR PipeID);
+
+typedef BOOL KUSB_API KUSB_IsoReadPipe (
+    _in KUSB_HANDLE InterfaceHandle,
+    _ref PKISO_CONTEXT IsoContext,
+    _out PUCHAR Buffer,
+    _in ULONG BufferLength,
+    _in LPOVERLAPPED Overlapped);
+
+typedef BOOL KUSB_API KUSB_IsoWritePipe (
+    _in KUSB_HANDLE InterfaceHandle,
+    _ref PKISO_CONTEXT IsoContext,
+    _in PUCHAR Buffer,
+    _in ULONG BufferLength,
+    _in LPOVERLAPPED Overlapped);
+
+typedef BOOL KUSB_API KUSB_GetCurrentFrameNumber (
+    _in KUSB_HANDLE InterfaceHandle,
+    _out PULONG FrameNumber);
+
+typedef BOOL KUSB_API KUSB_GetOverlappedResult (
+    _in KUSB_HANDLE InterfaceHandle,
+    _in LPOVERLAPPED lpOverlapped,
+    _out LPDWORD lpNumberOfBytesTransferred,
+    _in BOOL bWait);
+
+typedef BOOL KUSB_API KUSB_GetProperty (
+    _in KUSB_HANDLE InterfaceHandle,
+    _in KUSB_PROPERTY PropertyType,
+    _ref PULONG PropertySize,
+    _out PVOID Property);
+
+//! USB core driver API structure.
+/*!
+* This structure is part of \ref KUSB_DRIVER_API and contains
+* driver and user specific information.
+*
+* \note
+* This structure has a fixed 64 byte structure size.
+*/
+typedef struct _KUSB_DRIVER_API_INFO
+{
+	//! \readonly Driver id of the driver api.
+	KUSB_DRVID DriverID;
+
+	//! \readonly Number of valid functions contained in the driver API.
+	UINT FunctionCount;
+
+	//! User-defined state.
+	UINT_PTR UserState;
+
+} KUSB_DRIVER_API_INFO;
 
 //! Driver API function set structure.
+/*!
+* \fixedstruct{512}
+*
+* Contains the driver specific USB core function pointer set.
+*
+*/
 typedef struct _KUSB_DRIVER_API
 {
-	BOOL (KUSB_API* Initialize)				(__in HANDLE DeviceHandle, __out KUSB_HANDLE* InterfaceHandle);
-	BOOL (KUSB_API* Free)					(__in KUSB_HANDLE InterfaceHandle);
-	BOOL (KUSB_API* GetAssociatedInterface)	(__in KUSB_HANDLE InterfaceHandle, __in UCHAR AssociatedInterfaceIndex, __out KUSB_HANDLE* AssociatedInterfaceHandle);
-	BOOL (KUSB_API* GetDescriptor)			(__in KUSB_HANDLE InterfaceHandle, __in UCHAR DescriptorType, __in UCHAR Index, __in USHORT LanguageID, __out_opt PUCHAR Buffer, __in ULONG BufferLength, __out PULONG LengthTransferred);
-	BOOL (KUSB_API* QueryInterfaceSettings)	(__in KUSB_HANDLE InterfaceHandle, __in UCHAR AltSettingNumber, __out PUSB_INTERFACE_DESCRIPTOR UsbAltInterfaceDescriptor);
-	BOOL (KUSB_API* QueryDeviceInformation)	(__in KUSB_HANDLE InterfaceHandle, __in ULONG InformationType, __inout PULONG BufferLength, __out PVOID Buffer);
-	BOOL (KUSB_API* SetCurrentAlternateSetting)	(__in KUSB_HANDLE InterfaceHandle, __in UCHAR AltSettingNumber);
-	BOOL (KUSB_API* GetCurrentAlternateSetting)	(__in KUSB_HANDLE InterfaceHandle, __out PUCHAR AltSettingNumber);
-	BOOL (KUSB_API* QueryPipe)				(__in KUSB_HANDLE InterfaceHandle, __in UCHAR AltSettingNumber, __in UCHAR PipeIndex, __out PWINUSB_PIPE_INFORMATION PipeInformation);
-	BOOL (KUSB_API* SetPipePolicy)			(__in KUSB_HANDLE InterfaceHandle, __in UCHAR PipeID, __in ULONG PolicyType, __in ULONG ValueLength, __in PVOID Value);
-	BOOL (KUSB_API* GetPipePolicy)			(__in KUSB_HANDLE InterfaceHandle, __in UCHAR PipeID, __in ULONG PolicyType, __inout PULONG ValueLength, __out PVOID Value);
-	BOOL (KUSB_API* ReadPipe)				(__in KUSB_HANDLE InterfaceHandle, __in UCHAR PipeID, __out_opt PUCHAR Buffer, __in ULONG BufferLength, __out_opt PULONG LengthTransferred, __in_opt LPOVERLAPPED Overlapped);
-	BOOL (KUSB_API* WritePipe)				(__in KUSB_HANDLE InterfaceHandle, __in UCHAR PipeID, __in PUCHAR Buffer, __in ULONG BufferLength, __out_opt PULONG LengthTransferred, __in_opt LPOVERLAPPED Overlapped);
-	BOOL (KUSB_API* ControlTransfer)		(__in KUSB_HANDLE InterfaceHandle, __in WINUSB_SETUP_PACKET SetupPacket, __out_opt PUCHAR Buffer, __in ULONG BufferLength, __out_opt PULONG LengthTransferred, __in_opt LPOVERLAPPED Overlapped);
-	BOOL (KUSB_API* ResetPipe)				(__in KUSB_HANDLE InterfaceHandle, __in UCHAR PipeID);
-	BOOL (KUSB_API* AbortPipe)				(__in KUSB_HANDLE InterfaceHandle, __in UCHAR PipeID);
-	BOOL (KUSB_API* FlushPipe)				(__in KUSB_HANDLE InterfaceHandle, __in UCHAR PipeID);
-	BOOL (KUSB_API* SetPowerPolicy)			(__in KUSB_HANDLE InterfaceHandle, __in ULONG PolicyType, __in ULONG ValueLength, __in PVOID Value);
-	BOOL (KUSB_API* GetPowerPolicy)			(__in KUSB_HANDLE InterfaceHandle, __in ULONG PolicyType, __inout PULONG ValueLength, __out PVOID Value);
-	BOOL (KUSB_API* GetOverlappedResult)	(__in KUSB_HANDLE InterfaceHandle, __in LPOVERLAPPED lpOverlapped, __out LPDWORD lpNumberOfBytesTransferred, __in BOOL bWait);
-	BOOL (KUSB_API* ResetDevice)			(__in KUSB_HANDLE InterfaceHandle);
-	BOOL (KUSB_API* Open)					(__in KLST_DEVINFO* DevInfo, __out KUSB_HANDLE* InterfaceHandle);
-	BOOL (KUSB_API* Close)					(__in KUSB_HANDLE InterfaceHandle);
-	BOOL (KUSB_API* SetConfiguration)		(__in KUSB_HANDLE InterfaceHandle, __in UCHAR ConfigurationNumber);
-	BOOL (KUSB_API* GetConfiguration)		(__in KUSB_HANDLE InterfaceHandle, __out PUCHAR ConfigurationNumber);
-	BOOL (KUSB_API* ClaimInterface)			(__in KUSB_HANDLE InterfaceHandle, __in UCHAR NumberOrIndex, __in BOOL IsIndex);
-	BOOL (KUSB_API* ReleaseInterface)		(__in KUSB_HANDLE InterfaceHandle, __in UCHAR NumberOrIndex, __in BOOL IsIndex);
-	BOOL (KUSB_API* SetAltInterface)		(__in KUSB_HANDLE InterfaceHandle, __in UCHAR NumberOrIndex, __in BOOL IsIndex, __in UCHAR AltSettingNumber);
-	BOOL (KUSB_API* GetAltInterface)		(__in KUSB_HANDLE InterfaceHandle, __in UCHAR NumberOrIndex, __in BOOL IsIndex, __out PUCHAR AltSettingNumber);
-	BOOL (KUSB_API* IsoReadPipe)			(__in KUSB_HANDLE InterfaceHandle, __inout PKISO_CONTEXT IsoContext, __out_opt PUCHAR Buffer, __in ULONG BufferLength, __in LPOVERLAPPED Overlapped);
-	BOOL (KUSB_API* IsoWritePipe)			(__in KUSB_HANDLE InterfaceHandle, __inout PKISO_CONTEXT IsoContext, __in PUCHAR Buffer, __in ULONG BufferLength, __in LPOVERLAPPED Overlapped);
-	BOOL (KUSB_API* GetCurrentFrameNumber)	(__in KUSB_HANDLE InterfaceHandle, __out PULONG FrameNumber);
-	BOOL (KUSB_API* Clone)					(__in KUSB_HANDLE InterfaceHandle, __out KUSB_HANDLE* DstInterfaceHandle);
-	BOOL (KUSB_API* SelectInterface)		(__in KUSB_HANDLE InterfaceHandle, __out KUSB_HANDLE* DstInterfaceHandle, __in UCHAR NumberOrIndex, __in BOOL IsIndex);
+	KUSB_DRIVER_API_INFO Info;
+
+	/*! \fn BOOL KUSB_API Init (_out KUSB_HANDLE* InterfaceHandle, _in KLST_DEVINFO_HANDLE DevInfo)
+		* \memberof KUSB_DRIVER_API
+		* \copydoc UsbK_Init
+		*/
+	BOOL (KUSB_API* Init) (_out KUSB_HANDLE* InterfaceHandle, _in KLST_DEVINFO_HANDLE DevInfo);
+
+	/*! \fn BOOL KUSB_API ClaimInterface (_in KUSB_HANDLE InterfaceHandle, _in UCHAR NumberOrIndex, _in BOOL IsIndex)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_ClaimInterface
+	*/
+	BOOL (KUSB_API* ClaimInterface) (_in KUSB_HANDLE InterfaceHandle, _in UCHAR NumberOrIndex, _in BOOL IsIndex);
+
+	/*! \fn BOOL KUSB_API ReleaseInterface (_in KUSB_HANDLE InterfaceHandle, _in UCHAR NumberOrIndex, _in BOOL IsIndex)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_ReleaseInterface
+	*/
+	BOOL (KUSB_API* ReleaseInterface) (_in KUSB_HANDLE InterfaceHandle, _in UCHAR NumberOrIndex, _in BOOL IsIndex);
+
+	/*! \fn BOOL KUSB_API SetAltInterface (_in KUSB_HANDLE InterfaceHandle, _in UCHAR NumberOrIndex, _in BOOL IsIndex, _in UCHAR AltSettingNumber)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_SetAltInterface
+	*/
+	BOOL (KUSB_API* SetAltInterface) (_in KUSB_HANDLE InterfaceHandle, _in UCHAR NumberOrIndex, _in BOOL IsIndex, _in UCHAR AltSettingNumber);
+
+	/*! \fn BOOL KUSB_API GetAltInterface (_in KUSB_HANDLE InterfaceHandle, _in UCHAR NumberOrIndex, _in BOOL IsIndex, _out PUCHAR AltSettingNumber)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_GetAltInterface
+	*/
+	BOOL (KUSB_API* GetAltInterface) (_in KUSB_HANDLE InterfaceHandle, _in UCHAR NumberOrIndex, _in BOOL IsIndex, _out PUCHAR AltSettingNumber);
+
+	/*! \fn BOOL KUSB_API GetDescriptor (_in KUSB_HANDLE InterfaceHandle, _in UCHAR DescriptorType, _in UCHAR Index, _in USHORT LanguageID, _out PUCHAR Buffer, _in ULONG BufferLength, _outopt PULONG LengthTransferred)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_GetDescriptor
+	*/
+	BOOL (KUSB_API* GetDescriptor) (_in KUSB_HANDLE InterfaceHandle, _in UCHAR DescriptorType, _in UCHAR Index, _in USHORT LanguageID, _out PUCHAR Buffer, _in ULONG BufferLength, _outopt PULONG LengthTransferred);
+
+	/*! \fn BOOL KUSB_API ControlTransfer (_in KUSB_HANDLE InterfaceHandle, _in WINUSB_SETUP_PACKET SetupPacket, _refopt PUCHAR Buffer, _in ULONG BufferLength, _outopt PULONG LengthTransferred, _inopt LPOVERLAPPED Overlapped)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_ControlTransfer
+	*/
+	BOOL (KUSB_API* ControlTransfer) (_in KUSB_HANDLE InterfaceHandle, _in WINUSB_SETUP_PACKET SetupPacket, _refopt PUCHAR Buffer, _in ULONG BufferLength, _outopt PULONG LengthTransferred, _inopt LPOVERLAPPED Overlapped);
+
+	/*! \fn BOOL KUSB_API SetPowerPolicy (_in KUSB_HANDLE InterfaceHandle, _in ULONG PolicyType, _in ULONG ValueLength, _in PVOID Value)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_SetPowerPolicy
+	*/
+	BOOL (KUSB_API* SetPowerPolicy) (_in KUSB_HANDLE InterfaceHandle, _in ULONG PolicyType, _in ULONG ValueLength, _in PVOID Value);
+
+	/*! \fn BOOL KUSB_API GetPowerPolicy (_in KUSB_HANDLE InterfaceHandle, _in ULONG PolicyType, _ref PULONG ValueLength, _out PVOID Value)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_GetPowerPolicy
+	*/
+	BOOL (KUSB_API* GetPowerPolicy) (_in KUSB_HANDLE InterfaceHandle, _in ULONG PolicyType, _ref PULONG ValueLength, _out PVOID Value);
+
+	/*! \fn BOOL KUSB_API SetConfiguration (_in KUSB_HANDLE InterfaceHandle, _in UCHAR ConfigurationNumber)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_SetConfiguration
+	*/
+	BOOL (KUSB_API* SetConfiguration) (_in KUSB_HANDLE InterfaceHandle, _in UCHAR ConfigurationNumber);
+
+	/*! \fn BOOL KUSB_API GetConfiguration (_in KUSB_HANDLE InterfaceHandle, _out PUCHAR ConfigurationNumber)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_GetConfiguration
+	*/
+	BOOL (KUSB_API* GetConfiguration) (_in KUSB_HANDLE InterfaceHandle, _out PUCHAR ConfigurationNumber);
+
+	/*! \fn BOOL KUSB_API ResetDevice (_in KUSB_HANDLE InterfaceHandle)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_ResetDevice
+	*/
+	BOOL (KUSB_API* ResetDevice) (_in KUSB_HANDLE InterfaceHandle);
+
+	/*! \fn BOOL KUSB_API Initialize (_in HANDLE DeviceHandle, _out KUSB_HANDLE* InterfaceHandle)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_Initialize
+	*/
+	BOOL (KUSB_API* Initialize) (_in HANDLE DeviceHandle, _out KUSB_HANDLE* InterfaceHandle);
+
+	/*! \fn BOOL KUSB_API Free (_in KUSB_HANDLE InterfaceHandle)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_Free
+	*/
+	BOOL (KUSB_API* Free) (_in KUSB_HANDLE InterfaceHandle);
+
+	/*! \fn BOOL KUSB_API SelectInterface (_in KUSB_HANDLE InterfaceHandle, _in UCHAR NumberOrIndex, _in BOOL IsIndex)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_SelectInterface
+	*/
+	BOOL (KUSB_API* SelectInterface) (_in KUSB_HANDLE InterfaceHandle, _in UCHAR NumberOrIndex, _in BOOL IsIndex);
+
+	/*! \fn BOOL KUSB_API GetAssociatedInterface (_in KUSB_HANDLE InterfaceHandle, _in UCHAR AssociatedInterfaceIndex, _out KUSB_HANDLE* AssociatedInterfaceHandle)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_GetAssociatedInterface
+	*/
+	BOOL (KUSB_API* GetAssociatedInterface) (_in KUSB_HANDLE InterfaceHandle, _in UCHAR AssociatedInterfaceIndex, _out KUSB_HANDLE* AssociatedInterfaceHandle);
+
+	/*! \fn BOOL KUSB_API Clone (_in KUSB_HANDLE InterfaceHandle, _out KUSB_HANDLE* DstInterfaceHandle)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_Clone
+	*/
+	BOOL (KUSB_API* Clone) (_in KUSB_HANDLE InterfaceHandle, _out KUSB_HANDLE* DstInterfaceHandle);
+
+	/*! \fn BOOL KUSB_API QueryInterfaceSettings (_in KUSB_HANDLE InterfaceHandle, _in UCHAR AltSettingNumber, _out PUSB_INTERFACE_DESCRIPTOR UsbAltInterfaceDescriptor)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_QueryInterfaceSettings
+	*/
+	BOOL (KUSB_API* QueryInterfaceSettings) (_in KUSB_HANDLE InterfaceHandle, _in UCHAR AltSettingNumber, _out PUSB_INTERFACE_DESCRIPTOR UsbAltInterfaceDescriptor);
+
+	/*! \fn BOOL KUSB_API QueryDeviceInformation (_in KUSB_HANDLE InterfaceHandle, _in ULONG InformationType, _ref PULONG BufferLength, _ref PVOID Buffer)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_QueryDeviceInformation
+	*/
+	BOOL (KUSB_API* QueryDeviceInformation) (_in KUSB_HANDLE InterfaceHandle, _in ULONG InformationType, _ref PULONG BufferLength, _ref PVOID Buffer);
+
+	/*! \fn BOOL KUSB_API SetCurrentAlternateSetting (_in KUSB_HANDLE InterfaceHandle, _in UCHAR AltSettingNumber)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_SetCurrentAlternateSetting
+	*/
+	BOOL (KUSB_API* SetCurrentAlternateSetting) (_in KUSB_HANDLE InterfaceHandle, _in UCHAR AltSettingNumber);
+
+	/*! \fn BOOL KUSB_API GetCurrentAlternateSetting (_in KUSB_HANDLE InterfaceHandle, _out PUCHAR AltSettingNumber)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_GetCurrentAlternateSetting
+	*/
+	BOOL (KUSB_API* GetCurrentAlternateSetting) (_in KUSB_HANDLE InterfaceHandle, _out PUCHAR AltSettingNumber);
+
+	/*! \fn BOOL KUSB_API QueryPipe (_in KUSB_HANDLE InterfaceHandle, _in UCHAR AltSettingNumber, _in UCHAR PipeIndex, _out PWINUSB_PIPE_INFORMATION PipeInformation)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_QueryPipe
+	*/
+	BOOL (KUSB_API* QueryPipe) (_in KUSB_HANDLE InterfaceHandle, _in UCHAR AltSettingNumber, _in UCHAR PipeIndex, _out PWINUSB_PIPE_INFORMATION PipeInformation);
+
+	/*! \fn BOOL KUSB_API SetPipePolicy (_in KUSB_HANDLE InterfaceHandle, _in UCHAR PipeID, _in ULONG PolicyType, _in ULONG ValueLength, _in PVOID Value)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_SetPipePolicy
+	*/
+	BOOL (KUSB_API* SetPipePolicy) (_in KUSB_HANDLE InterfaceHandle, _in UCHAR PipeID, _in ULONG PolicyType, _in ULONG ValueLength, _in PVOID Value);
+
+	/*! \fn BOOL KUSB_API GetPipePolicy (_in KUSB_HANDLE InterfaceHandle, _in UCHAR PipeID, _in ULONG PolicyType, _ref PULONG ValueLength, _out PVOID Value)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_GetPipePolicy
+	*/
+	BOOL (KUSB_API* GetPipePolicy) (_in KUSB_HANDLE InterfaceHandle, _in UCHAR PipeID, _in ULONG PolicyType, _ref PULONG ValueLength, _out PVOID Value);
+
+	/*! \fn BOOL KUSB_API ReadPipe (_in KUSB_HANDLE InterfaceHandle, _in UCHAR PipeID, _out PUCHAR Buffer, _in ULONG BufferLength, _outopt PULONG LengthTransferred, _inopt LPOVERLAPPED Overlapped)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_ReadPipe
+	*/
+	BOOL (KUSB_API* ReadPipe) (_in KUSB_HANDLE InterfaceHandle, _in UCHAR PipeID, _out PUCHAR Buffer, _in ULONG BufferLength, _outopt PULONG LengthTransferred, _inopt LPOVERLAPPED Overlapped);
+
+	/*! \fn BOOL KUSB_API WritePipe (_in KUSB_HANDLE InterfaceHandle, _in UCHAR PipeID, _in PUCHAR Buffer, _in ULONG BufferLength, _outopt PULONG LengthTransferred, _inopt LPOVERLAPPED Overlapped)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_WritePipe
+	*/
+	BOOL (KUSB_API* WritePipe) (_in KUSB_HANDLE InterfaceHandle, _in UCHAR PipeID, _in PUCHAR Buffer, _in ULONG BufferLength, _outopt PULONG LengthTransferred, _inopt LPOVERLAPPED Overlapped);
+
+	/*! \fn BOOL KUSB_API ResetPipe (_in KUSB_HANDLE InterfaceHandle, _in UCHAR PipeID)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_ResetPipe
+	*/
+	BOOL (KUSB_API* ResetPipe) (_in KUSB_HANDLE InterfaceHandle, _in UCHAR PipeID);
+
+	/*! \fn BOOL KUSB_API AbortPipe (_in KUSB_HANDLE InterfaceHandle, _in UCHAR PipeID)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_AbortPipe
+	*/
+	BOOL (KUSB_API* AbortPipe) (_in KUSB_HANDLE InterfaceHandle, _in UCHAR PipeID);
+
+	/*! \fn BOOL KUSB_API FlushPipe (_in KUSB_HANDLE InterfaceHandle, _in UCHAR PipeID)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_FlushPipe
+	*/
+	BOOL (KUSB_API* FlushPipe) (_in KUSB_HANDLE InterfaceHandle, _in UCHAR PipeID);
+
+	/*! \fn BOOL KUSB_API IsoReadPipe (_in KUSB_HANDLE InterfaceHandle, _ref PKISO_CONTEXT IsoContext, _out PUCHAR Buffer, _in ULONG BufferLength, _in LPOVERLAPPED Overlapped)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_IsoReadPipe
+	*/
+	BOOL (KUSB_API* IsoReadPipe) (_in KUSB_HANDLE InterfaceHandle, _ref PKISO_CONTEXT IsoContext, _out PUCHAR Buffer, _in ULONG BufferLength, _in LPOVERLAPPED Overlapped);
+
+	/*! \fn BOOL KUSB_API IsoWritePipe (_in KUSB_HANDLE InterfaceHandle, _ref PKISO_CONTEXT IsoContext, _in PUCHAR Buffer, _in ULONG BufferLength, _in LPOVERLAPPED Overlapped)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_IsoWritePipe
+	*/
+	BOOL (KUSB_API* IsoWritePipe) (_in KUSB_HANDLE InterfaceHandle, _ref PKISO_CONTEXT IsoContext, _in PUCHAR Buffer, _in ULONG BufferLength, _in LPOVERLAPPED Overlapped);
+
+	/*! \fn BOOL KUSB_API GetCurrentFrameNumber (_in KUSB_HANDLE InterfaceHandle, _out PULONG FrameNumber)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_GetCurrentFrameNumber
+	*/
+	BOOL (KUSB_API* GetCurrentFrameNumber) (_in KUSB_HANDLE InterfaceHandle, _out PULONG FrameNumber);
+
+	/*! \fn BOOL KUSB_API GetOverlappedResult (_in KUSB_HANDLE InterfaceHandle, _in LPOVERLAPPED lpOverlapped, _out LPDWORD lpNumberOfBytesTransferred, _in BOOL bWait)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_GetOverlappedResult
+	*/
+	BOOL (KUSB_API* GetOverlappedResult) (_in KUSB_HANDLE InterfaceHandle, _in LPOVERLAPPED lpOverlapped, _out LPDWORD lpNumberOfBytesTransferred, _in BOOL bWait);
+
+	/*! \fn BOOL KUSB_API GetProperty (_in KUSB_HANDLE InterfaceHandle, _in KUSB_PROPERTY PropertyType, _ref PULONG PropertySize, _out PVOID Property)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_GetProperty
+	*/
+	BOOL (KUSB_API* GetProperty) (_in KUSB_HANDLE InterfaceHandle, _in KUSB_PROPERTY PropertyType, _ref PULONG PropertySize, _out PVOID Property);
+
+	//! fixed structure padding.
+	UCHAR z_F_i_x_e_d[512 - sizeof(KUSB_DRIVER_API_INFO) -  sizeof(UINT_PTR) * KUSB_FNID_COUNT];
+
 } KUSB_DRIVER_API;
+typedef KUSB_DRIVER_API* PKUSB_DRIVER_API;
+C_ASSERT(sizeof(KUSB_DRIVER_API) == 512);
 
 /**@}*/
 
@@ -1333,48 +1499,90 @@ typedef struct _KUSB_DRIVER_API
 */
 #include <pshpack1.h>
 
-#define HOTK_PLUG_EVENT VOID
+//! Hot plug config flags.
+typedef enum _KHOT_FLAG
+{
+    //! No flags (or 0)
+    KHOT_FLAG_NONE,
 
+    //! Notify all devices which match upon a succuessful call to \ref HotK_Init.
+    KHOT_FLAG_PLUG_ALL_ON_INIT				= (1 << 0),
+
+    //! Allow other \ref KHOT_HANDLE instances to consume this match.
+    KHOT_FLAG_PASS_DUPE_INSTANCE			= (1 << 1),
+
+    //! If a \c UserHwnd is specified, use \c PostMessage instead of \c SendMessage.
+    KHOT_FLAG_POST_USER_MESSAGE				= (1 << 2),
+} KHOT_FLAG;
+
+//! Hot plug parameter structure.
+/*!
+* \fixedstruct{1024}
+*
+* This structure is member of \ref KHOT_PARAMS.
+*
+* These ansi char strings are used to restrict which devices are matched/consumed by a \ref KHOT_HANDLE.
+* All strings are treated as file pattern match strings allowing asterisk or question mark chars as wildcards.
+*
+*/
+typedef struct _KHOT_PATTERN_MATCH
+{
+	//! Pattern match a device instance id.
+	CHAR InstanceID[KLST_STRING_MAX_LEN];
+
+	//! Pattern match a device interface guid.
+	CHAR DeviceInterfaceGUID[KLST_STRING_MAX_LEN];
+
+	//! Pattern match a device path.
+	CHAR DevicePath[KLST_STRING_MAX_LEN];
+
+	//! fixed structure padding.
+	UCHAR z_F_i_x_e_d[1024 - KLST_STRING_MAX_LEN * 3];
+
+} KHOT_PATTERN_MATCH;
+C_ASSERT(sizeof(KHOT_PATTERN_MATCH) == 1024);
+
+//! Hot plug parameter structure.
+/*!
+* \fixedstruct{2048}
+*
+* This structure is intially passed as a parameter to \ref HotK_Init.
+*
+*/
 typedef struct _KHOT_PARAMS
 {
-	PVOID Context;
+	//! User defined context pointer.
+	UINT_PTR UserState;
 
-	HOTK_PLUG_EVENT (KUSB_API* OnHotPlug)(
-	    KHOT_HANDLE HotHandle,
-	    struct _KHOT_PARAMS* HotParams,
-	    KLST_DEVINFO_HANDLE DeviceInfo,
-	    KLST_SYNC_FLAG PlugType);
-
+	//! Hot plug event window handle to send/post messages when notifications occur.
 	HWND UserHwnd;
+
+	//! WM_USER message used when sending/posting messages.
 	UINT UserMessage;
 
-	struct
-	{
-		CHAR InstanceID[KLST_STRING_MAX_LEN];
-		CHAR DeviceInterfaceGUID[KLST_STRING_MAX_LEN];
-		CHAR DevicePath[KLST_STRING_MAX_LEN];
-	} PatternMatch;
+	//! Additional init/config parameters
+	KHOT_FLAG Flags;
 
-	union
-	{
-		ULONG Value;
-		struct
-		{
-			unsigned PlugAllOnInit: 1;
-			unsigned AllowDupeInstanceIDs: 1;
-			unsigned PostUserMessage: 1;
-		};
-	} Flags;
+	//! File pattern matches for restricting notifcations to a single/group or all supported usb devices.
+	KHOT_PATTERN_MATCH PatternMatch;
 
-	KLST_DEVINFO_HANDLE MatchedInfo;
+	//! Hot plug event callback function invoked when notifications occur.
+	/*! \fn VOID KUSB_API OnHotPlug (KHOT_HANDLE HotHandle, PKHOT_PARAMS HotParams, KLST_DEVINFO_HANDLE DeviceInfo, KLST_SYNC_FLAG PlugType)
+	* \memberof KHOT_PARAMS
+	*/
+	VOID (KUSB_API* OnHotPlug)(KHOT_HANDLE HotHandle, struct _KHOT_PARAMS* HotParams, KLST_DEVINFO_HANDLE DeviceInfo, KLST_SYNC_FLAG PlugType);
+
+	//! fixed structure padding.
+	UCHAR z_F_i_x_e_d[2048 - sizeof(KHOT_PATTERN_MATCH) - sizeof(UINT_PTR) * 3 - sizeof(UINT) * 2];
 
 } KHOT_PARAMS;
+C_ASSERT(sizeof(KHOT_PARAMS) == 2048);
 
-typedef VOID KUSB_API KHOT_PLUG_EVENT(
-    KHOT_HANDLE HotHandle,
-    KHOT_PARAMS* HotParams,
-    KLST_DEVINFO_HANDLE DeviceInfo,
-    KLST_SYNC_FLAG PlugType);
+//! Pointer to a \ref KHOT_PARAMS structure.
+typedef KHOT_PARAMS* PKHOT_PARAMS;
+
+//! Callback function typedef for hot plug events.
+typedef VOID KUSB_API KHOT_PLUG_CB(KHOT_HANDLE HotHandle, PKHOT_PARAMS HotParams, KLST_DEVINFO_HANDLE DeviceInfo, KLST_SYNC_FLAG PlugType);
 
 #include <poppack.h>
 
@@ -1392,35 +1600,168 @@ typedef VOID KUSB_API KHOT_PLUG_EVENT(
 /*!
 *
 */
-typedef enum _KOVL_WAIT_FLAGS
+typedef enum _KOVL_WAIT_FLAG
 {
     //! Do not perform any additional actions upon exiting \ref OvlK_Wait.
-    WAIT_FLAGS_NONE							= 0,
+    KOVL_WAIT_FLAG_NONE							= 0,
 
     //! If the i/o operation completes successfully, release the OverlappedK back to it's pool.
-    WAIT_FLAGS_RELEASE_ON_SUCCESS			= 0x0001,
+    KOVL_WAIT_FLAG_RELEASE_ON_SUCCESS			= 0x0001,
 
     //! If the i/o operation fails, release the OverlappedK back to it's pool.
-    WAIT_FLAGS_RELEASE_ON_FAIL				= 0x0002,
+    KOVL_WAIT_FLAG_RELEASE_ON_FAIL				= 0x0002,
 
     //! If the i/o operation fails or completes successfully, release the OverlappedK back to its pool. Perform no actions if it times-out.
-    WAIT_FLAGS_RELEASE_ON_SUCCESS_FAIL		= 0x0003,
+    KOVL_WAIT_FLAG_RELEASE_ON_SUCCESS_FAIL		= 0x0003,
 
     //! If the i/o operation times-out cancel it, but do not release the OverlappedK back to its pool.
-    WAIT_FLAGS_CANCEL_ON_TIMEOUT			= 0x0004,
+    KOVL_WAIT_FLAG_CANCEL_ON_TIMEOUT			= 0x0004,
 
     //! If the i/o operation times-out, cancel it and release the OverlappedK back to its pool.
-    WAIT_FLAGS_RELEASE_ON_TIMEOUT			= WAIT_FLAGS_CANCEL_ON_TIMEOUT | 0x0008,
+    KOVL_WAIT_FLAG_RELEASE_ON_TIMEOUT			= KOVL_WAIT_FLAG_CANCEL_ON_TIMEOUT | 0x0008,
 
     //! Always release the OverlappedK back to its pool.  If the operation timed-out, cancel it before releasing back to its pool.
-    WAIT_FLAGS_RELEASE_ALWAYS				= WAIT_FLAGS_RELEASE_ON_SUCCESS_FAIL | WAIT_FLAGS_RELEASE_ON_TIMEOUT,
+    KOVL_WAIT_FLAG_RELEASE_ALWAYS				= KOVL_WAIT_FLAG_RELEASE_ON_SUCCESS_FAIL | KOVL_WAIT_FLAG_RELEASE_ON_TIMEOUT,
 
-} KOVL_WAIT_FLAGS;
+} KOVL_WAIT_FLAG;
+
+//! \c Overlapped pool config flags.
+/*!
+* \attention Currently not used.
+*/
+typedef enum _KOVL_POOL_FLAG
+{
+    KOVL_POOL_FLAG_NONE	= 0,
+} KOVL_POOL_FLAG;
 
 /**@}*/
 
 #endif
 
+#ifndef _LIBUSBK_STMK_TYPES
+#include <pshpack1.h>
+
+/*! \addtogroup stmk
+*  @{
+*/
+//! Stream config flags.
+/*!
+* \attention Currently not used.
+*/
+typedef enum _KSTM_FLAG
+{
+    KSTM_FLAG_NONE		= 0,
+} KSTM_FLAG;
+
+//! Stream transfer context structure.
+/*!
+* This structure is passed into the stream callback functions.
+* The stream transfer context list is allocated upon a successful call to \ref StmK_Init.  There is one
+* transfer context for each transfer. (0 to \c MaxPendingTransfers).
+*
+*/
+typedef struct _KSTM_XFER_CONTEXT
+{
+
+	//! Internal stream buffer.
+	PUCHAR Buffer;
+
+	//! Size of internal stream buffer.
+	ULONG BufferSize;
+
+	//! Number of bytes to write or number of bytes read.
+	ULONG TransferLength;
+
+	//! User defined state.
+	PVOID UserState;
+
+} KSTM_XFER_CONTEXT;
+//! Pointer to a \ref KSTM_XFER_CONTEXT structure.
+typedef KSTM_XFER_CONTEXT* PKSTM_XFER_CONTEXT;
+
+//! Stream information structure.
+/*!
+* This structure is passed into the stream callback functions.
+* The stream context is allocated upon a successful call to \ref StmK_Init.  There is only one
+* stream context per stream.
+*
+*/
+typedef struct _KSTM_INFO
+{
+	//! \ref KUSB_HANDLE this stream uses.
+	KUSB_HANDLE UsbHandle;
+
+	//! This parameter corresponds to the bEndpointAddress field in the endpoint descriptor.
+	UCHAR PipeID;
+
+	//! Maximum transfer read/write request allowed pending.
+	ULONG MaxPendingTransfers;
+
+	//! Maximum transfer sage size.
+	ULONG MaxTransferSize;
+
+	//! Maximum number of I/O request allowed pending.
+	ULONG MaxPendingIO;
+
+	//! Populated with the endpoint descriptor for the specified \c PipeID.
+	USB_ENDPOINT_DESCRIPTOR EndpointDescriptor;
+
+	//! Populated with the driver api for the specified \c UsbHandle.
+	KUSB_DRIVER_API DriverAPI;
+
+	//! Populated with the device file handle for the specified \c UsbHandle.
+	HANDLE DeviceHandle;
+} KSTM_INFO;
+//! Pointer to a \ref KSTM_INFO structure.
+typedef KSTM_INFO* PKSTM_INFO;
+
+
+//! Stream callback structure.
+/*!
+* \fixedstruct{64}
+*
+* These callback functions are executed from the streams internal thread at various stages of a transfer.
+* Thier purpose is to allow a high level of configurability of the stream transfer proccess.
+*
+*/
+typedef struct _KSTM_CALLBACK
+{
+	//! Executed when a transfer error occurs.
+	/*! \fn ULONG KUSB_API Error (_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in ULONG ErrorCode)
+	* \memberof KSTM_CALLBACK
+	*/
+	ULONG (KUSB_API* Error) (_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in ULONG ErrorCode);
+
+	//! Executed to submit a transfer.
+	/*! \fn ULONG KUSB_API Submit (_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LPOVERLAPPED Overlapped)
+	* \memberof KSTM_CALLBACK
+	*/
+	ULONG (KUSB_API* Submit) (_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LPOVERLAPPED Overlapped);
+
+	//! Executed when a new transfer context is initialized.
+	/*! \fn ULONG KUSB_API Initialize (_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext)
+	* \memberof KSTM_CALLBACK
+	*/
+	ULONG (KUSB_API* Initialize) (_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext);
+
+	//! Executed when a transfer competes.
+	/*! \fn ULONG KUSB_API Complete (_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext)
+	* \memberof KSTM_CALLBACK
+	*/
+	ULONG (KUSB_API* Complete) (_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext);
+
+	//! fixed structure padding.
+	UCHAR z_F_i_x_e_d[64 - sizeof(UINT_PTR) * 4];
+
+} KSTM_CALLBACK;
+//! Pointer to a \ref KSTM_CALLBACK structure.
+typedef KSTM_CALLBACK* PKSTM_CALLBACK;
+C_ASSERT(sizeof(KSTM_CALLBACK) == 64);
+
+/**@}*/
+
+#include <poppack.h>
+#endif
 ///////////////////////////////////////////////////////////////////////
 // L I B U S B K  PUBLIC FUNCTIONS ////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////
@@ -1429,239 +1770,129 @@ typedef enum _KOVL_WAIT_FLAGS
 extern "C" {
 #endif
 
-#ifndef _LIBUSBK_ISOK_FUNCTIONS
-	/*! \addtogroup isok
-	*  @{
-	*/
-
-	//! Creates a new isochronous transfer context.
-	/*!
-	*
-	* \param IsoContext
-	* Receives a new isochronous transfer context.
-	*
-	* \param NumberOfPackets
-	* The number of \ref KISO_PACKET structures allocated to \c
-	* IsoContext. Assigned to \ref KISO_CONTEXT::NumberOfPackets. The \ref
-	* KISO_CONTEXT::NumberOfPackets field is assignable by \c IsoK_Init
-	* only and must not be changed by the user.
-	*
-	* \param PipeID
-	* The USB endpoint address assigned to \ref KISO_CONTEXT::PipeID. The
-	* driver uses this field to determine which pipe will receive the transfer
-	* request. The \ref KISO_CONTEXT::PipeID may be chamged by the user in
-	* subsequent request.
-	*
-	* \param StartFrame
-	* The USB frame number this request must start on (or \b 0 for ASAP) and
-	* assigned to \ref KISO_CONTEXT::StartFrame. The \ref
-	* KISO_CONTEXT::StartFrame may be chamged by the user in subsequent
-	* request. For more information, see \ref KISO_CONTEXT::StartFrame.
-	*
-	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get
-	* extended error information.
-	*
-	* \c IsoK_Init is performs the following tasks in order:
-	* -# Allocates the \c IsoContext and the required \ref KISO_PACKET structures.
-	* -# Zero-initializes all ISO context memory.
-	* -# Assigns \b NumberOfPackets, \b PipeID, and \b StartFrame to \c IsoContext.
-	*
-	*/
-	KUSB_EXP BOOL KUSB_API IsoK_Init (
-	    __deref_out PKISO_CONTEXT* IsoContext,
-	    __in ULONG NumberOfPackets,
-	    __in_opt UCHAR PipeID,
-	    __in_opt ULONG StartFrame);
-
-	//! Destroys an isochronous transfer context.
-	/*!
-	* \param IsoContext
-	* A pointer to an isochronous transfer context created with \ref IsoK_Init.
-	*
-	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get
-	* extended error information.
-	*/
-	KUSB_EXP BOOL KUSB_API IsoK_Free(
-	    __in PKISO_CONTEXT IsoContext);
-
-	//! Convenience function for setting the offset of all ISO packets of an isochronous transfer context.
-	/*!
-	* \param IsoContext
-	* A pointer to an isochronous transfer context.
-	*
-	* \param PacketSize
-	* The packet size used to calculate and assign the absolute data offset for each \ref KISO_PACKET in \c IsoContext.
-	*
-	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get
-	* extended error information.
-	*
-	* \c IsoK_SetPackets updates all \ref KISO_PACKET::Offset fields in a \ref KISO_CONTEXT
-	* so all offset are \c PacketSize apart.
-	* For example:
-	* - The offset of the first  (0-index) packet is 0.
-	* - The offset of the second (1-index) packet is PacketSize.
-	* - The offset of the third  (2-index) packet is PacketSize*2.
-	*
-	*/
-	KUSB_EXP BOOL KUSB_API IsoK_SetPackets(
-	    __inout PKISO_CONTEXT IsoContext,
-	    __in ULONG PacketSize);
-
-	//! Convenience function for setting all fields of a \ref KISO_PACKET.
-	/*!
-	* \param IsoContext
-	* A pointer to an isochronous transfer context.
-	*
-	* \param PacketIndex
-	* The packet index to set.
-	*
-	* \param IsoPacket
-	* Pointer to a user allocated \c KISO_PACKET which is copied into
-	* the PKISO_CONTEXT::IsoPackets array at the specified index.
-	*
-	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get
-	* extended error information.
-	*/
-	KUSB_EXP BOOL KUSB_API IsoK_SetPacket(
-	    __in PKISO_CONTEXT IsoContext,
-	    __in ULONG PacketIndex,
-	    __in PKISO_PACKET IsoPacket);
-
-	//! Convenience function for getting all fields of a \ref KISO_PACKET.
-	/*!
-	* \param IsoContext
-	* A pointer to an isochronous transfer context.
-	*
-	* \param PacketIndex
-	* The packet index to get.
-	*
-	* \param IsoPacket
-	* Pointer to a user allocated \c KISO_PACKET which receives a copy of
-	* the ISO packet in the PKISO_CONTEXT::IsoPackets array at the specified
-	* index.
-	*
-	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get
-	* extended error information.
-	*/
-	KUSB_EXP BOOL KUSB_API IsoK_GetPacket(
-	    __in PKISO_CONTEXT IsoContext,
-	    __in ULONG PacketIndex,
-	    __out PKISO_PACKET IsoPacket);
-
-	//! Convenience function for enumerating ISO packets of an isochronous transfer context.
-	/*!
-	* \param IsoContext
-	* A pointer to an isochronous transfer context.
-	*
-	* \param EnumPackets
-	* Pointer to a user supplied callback function which is executed for all ISO packets
-	* in \c IsoContext or until the user supplied callback function returns \c FALSE.
-	*
-	* \param StartPacketIndex
-	* The zero-based ISO packet index to begin enumeration at.
-	*
-	* \param UserContext
-	* A user defined value which is passed as a parameter to the user supplied callback function.
-	*
-	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get
-	* extended error information.
-	*/
-	KUSB_EXP BOOL KUSB_API IsoK_EnumPackets(
-	    __in PKISO_CONTEXT IsoContext,
-	    __in PKISO_ENUM_PACKETS_CB EnumPackets,
-	    __in_opt ULONG StartPacketIndex,
-	    __in_opt PVOID UserContext);
-
-	//! Convenience function for re-using an isochronous transfer context in a subsequent request.
-	/*!
-	* \param IsoContext
-	* A pointer to an isochronous transfer context.
-	*
-	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get
-	* extended error information.
-	*
-	* \c IsoK_ReUse is performs the following tasks in order:
-	* -# Zero-initializes the \b Length and \b Status fields of all \ref KISO_PACKET structures.
-	* -# Zero-initializes the \b StartFrame and \b ErrorCount of the \ref KISO_CONTEXT.
-	*
-	*/
-	KUSB_EXP BOOL KUSB_API IsoK_ReUse(
-	    __inout PKISO_CONTEXT IsoContext);
-
-	/*! @} */
-
-#endif
-
 #ifndef _LIBUSBK_LIBK_FUNCTIONS
 	/*! \addtogroup libk
 	* @{
 	*/
 
-	KUSB_EXP PKLIB_USER_CONTEXT KUSB_API LibK_GetContext(
-	    KLIB_HANDLE Handle,
-	    KLIB_HANDLE_TYPE HandleType);
-
-	KUSB_EXP LONG KUSB_API LibK_GetContextSize(
-	    KLIB_HANDLE Handle,
-	    KLIB_HANDLE_TYPE HandleType);
-
-	KUSB_EXP BOOL KUSB_API LibK_SetContextSize(
-	    KLIB_HANDLE Handle,
-	    KLIB_HANDLE_TYPE HandleType,
-	    ULONG ContextSize);
-
-	KUSB_EXP BOOL KUSB_API LibK_SetHandleCallbacks(
-	    KLIB_HANDLE_TYPE HandleType,
-	    KLIB_INIT_HANDLE_CB* InitHandleCB,
-	    KLIB_FREE_HANDLE_CB* FreeHandleCB);
-
-	KUSB_EXP LONG KUSB_API LibK_GetDefaultContextSize(
-	    KLIB_HANDLE_TYPE HandleType);
-
-	KUSB_EXP BOOL KUSB_API LibK_SetDefaultContextSize(
-	    KLIB_HANDLE_TYPE HandleType,
-	    ULONG ContextSize);
-
-	//! Initialize a driver API set.
+//! Gets the internal user context for the specified \ref KLIB_HANDLE.
 	/*!
 	*
-	* \param DriverAPI
-	* A driver API structure to populate.
+	* \param[out] Version
+	* Receives the libusbK library verson information.
 	*
-	* \param DriverID
-	* The driver id of the API set to retrieve. See \ref KUSB_DRVID
+	* \returns NONE
+	*/
+	KUSB_EXP VOID KUSB_API LibK_GetVersion(_out PKLIB_VERSION Version);
+
+//! Gets the internal user context for the specified \ref KLIB_HANDLE.
+	/*!
 	*
-	* \param SizeofDriverAPI
-	* Should always be set to the \b sizeof the driver API struct \ref KUSB_DRIVER_API
+	* \param[in] Handle
+	* The handle containg the context to retrieve.
 	*
-	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get
-	* extended error information.
+	* \param[in] HandleType
+	* Handle tyoe of \c Handle.
+	*
+	* \returns
+	* - on success, The user context value.
+	* - On failure, returns NULL and sets last error to \c ERROR_INVALID_HANDLE.
 	*
 	*/
-	KUSB_EXP BOOL KUSB_API LibK_LoadDriverApi(
-	    __inout KUSB_DRIVER_API* DriverAPI,
-	    __in ULONG DriverID,
-	    __in ULONG SizeofDriverAPI);
+	KUSB_EXP KLIB_USER_CONTEXT KUSB_API LibK_GetContext(
+	    _in KLIB_HANDLE Handle,
+	    _in KLIB_HANDLE_TYPE HandleType);
 
-	//! Initialize a driver API function.
+//! Sets internal user context for the specified \ref KLIB_HANDLE.
 	/*!
-	* \param ProcAddress
+	*
+	* \param[in] Handle
+	* The handle containg the context to set.
+	*
+	* \param[in] HandleType
+	* Handle type of \c Handle.
+	*
+	* \param[in] ContextValue
+	* Value to assign to the handle user context space.
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
+	*/
+	KUSB_EXP BOOL KUSB_API LibK_SetContext(
+	    _in KLIB_HANDLE Handle,
+	    _in KLIB_HANDLE_TYPE HandleType,
+	    _in KLIB_USER_CONTEXT ContextValue);
+
+//! Assigns a cleanup callback function to a \ref KLIB_HANDLE.
+	/*!
+	*
+	* \param[in] Handle
+	* The handle containg the cleanup callback function to set.
+	*
+	* \param[in] HandleType
+	* Handle type of \c Handle.
+	*
+	* \param[in] CleanupCB
+	* User supplied callback function to execute when the handles internal reference count reaches 0.
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
+	*/
+	KUSB_EXP BOOL KUSB_API LibK_SetCleanupCallback(
+	    _in KLIB_HANDLE Handle,
+	    _in KLIB_HANDLE_TYPE HandleType,
+	    _in PKLIB_HANDLE_CB CleanupCB);
+
+//! Initialize a driver API set.
+	/*!
+	*
+	* \param[out] DriverAPI
+	* A driver API structure to populate.
+	*
+	* \param[in] DriverID
+	* The driver id of the API set to retrieve. See \ref KUSB_DRVID
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
+	*/
+	KUSB_EXP BOOL KUSB_API LibK_LoadDriverAPI(
+	    _out PKUSB_DRIVER_API DriverAPI,
+	    _in ULONG DriverID);
+
+//! Copies the driver API set out of a \ref KUSB_HANDLE
+	/*!
+	*
+	* \param[out] DriverAPI
+	* A driver API structure to populate.
+	*
+	* \param[in] UsbHandle
+	* Handle containing the desired driver API.
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
+	*/
+	KUSB_EXP BOOL KUSB_API LibK_CopyDriverAPI(
+	    _out PKUSB_DRIVER_API DriverAPI,
+	    _in KUSB_HANDLE UsbHandle);
+
+//! Initialize a driver API function.
+	/*!
+	* \param[out] ProcAddress
 	* Reference to a function pointer that will receive the API function pointer.
 	*
-	* \param DriverID
+	* \param[in] DriverID
 	* The driver id of the API to use. See \ref KUSB_DRVID
 	*
-	* \param FunctionID
+	* \param[in] FunctionID
 	* The function id. See \ref KUSB_FNID
 	*
-	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get
-	* extended error information.
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*
 	*/
 	KUSB_EXP BOOL KUSB_API LibK_GetProcAddress(
-	    __out KPROC* ProcAddress,
-	    __in ULONG DriverID,
-	    __in ULONG FunctionID);
+	    _out KPROC* ProcAddress,
+	    _in ULONG DriverID,
+	    _in ULONG FunctionID);
 
 	/**@}*/
 #endif
@@ -1671,667 +1902,614 @@ extern "C" {
 	*  @{
 	*/
 
-	//! Creates/opens a libusbK interface handle from the device list. This is a preferred method.
+//! Creates/opens a libusbK interface handle from the device list. This is a preferred method.
 	/*!
 	*
-	* \param DevInfo
-	* The device list element to open.<BR>
-	* To obtain a \c DevInfo:
-	* - Get a list of device elements using \ref LstK_Init.
-	* - Use the linked list macros in \ref lusbk_linked_list.h to iterate/search the list for the device element of interest.
-	* - Once \c UsbK_Open returns, the device list can be freed at the users discretion.
+	* \param[out] InterfaceHandle
+	* Receives a handle configured to the first (default) interface on the device. This handle is required by
+	* other libusbK routines that perform operations on the default interface. The handle is opaque. To release
+	* this handle, call the \ref UsbK_Free function.
 	*
-	* \param InterfaceHandle
-	* Receives a handle configured to the first (default) interface on the device.
-	* This handle is required by other libusbK routines that perform operations
-	* on the default interface. The handle is opaque. To release this handle,
-	* call the \ref UsbK_Close function.
+	* \param[in] DevInfo
+	* The device list element to open.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*
-	* \ref UsbK_Open performs the same tasks as \ref UsbK_Initialize with the following exceptions:
+	* \c UsbK_Init performs the same tasks as \ref UsbK_Initialize with the following exceptions:
 	* - Uses a \ref KLST_DEVINFO instead of a file handle created with the Windows CreateFile() API function.
-	* - File handles are managed internally and are closed when the last \ref KUSB_HANDLE is
-	*   closed with \ref UsbK_Close.
-	* - If \c DevInfo is a composite device, multiple device file handles are managed as one.
+	* - File handles are managed internally and are closed when the last \ref KUSB_HANDLE is closed with
+	*   \ref UsbK_Free. To obtain the internal file device handle, See \ref UsbK_GetProperty.
+	*
+	* \note
+	* A \c KUSB_HANDLE is required by other library routines that perform operations on a device. Once
+	* initialized, it can access all interfaces/endpoints of a device. An initialized handle can be cloned with
+	* \ref UsbK_Clone or \ref UsbK_GetAssociatedInterface. A Cloned handle will behave just as the orignal
+	* except in will maintain it's own \b selected interface setting.
 	*
 	*/
-	KUSB_EXP BOOL KUSB_API UsbK_Open (
-	    __in KLST_DEVINFO* DevInfo,
-	    __out KUSB_HANDLE* InterfaceHandle);
+	KUSB_EXP BOOL KUSB_API UsbK_Init (
+	    _out KUSB_HANDLE* InterfaceHandle,
+	    _in KLST_DEVINFO_HANDLE DevInfo);
 
-	//! Closes a libusbK interface handle opened by \ref UsbK_Open or \ref UsbK_Initialize. This is a preferred method.
+//! Frees a libusbK interface handle.
 	/*!
 	*
-	* \param InterfaceHandle
-	* Handle to an interface on the device. This handle must be created by a previous call to:
-	* - \ref UsbK_Open
-	* - \ref UsbK_Initialize
-	* - \ref UsbK_GetAssociatedInterface
+	* \param[in] InterfaceHandle
+	* Handle to an interface on the device. This handle must be created by a previous call to \ref UsbK_Init,
+	* \ref UsbK_Initialize, \ref UsbK_GetAssociatedInterface, or \ref UsbK_Clone.
 	*
-	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	* \returns TRUE.
 	*
-	* The \ref UsbK_Close function releases all of the resources that
-	* \ref UsbK_Initialize, \ref UsbK_Open, or \ref UsbK_GetAssociatedInterface allocated. This is a synchronous
-	* operation.
+	* The \ref UsbK_Free function releases resources alocated to the InterfaceHandle.
 	*
-	* \note \ref UsbK_Close and \ref UsbK_Free perform the same tasks.  The difference is in the return code only.
-	* - \ref UsbK_Free always returns TRUE.
-	* - \ref UsbK_Close will return FALSE in the hande is already closed/free.
 	*/
-	KUSB_EXP BOOL KUSB_API UsbK_Close (
-	    __in KUSB_HANDLE InterfaceHandle);
+	KUSB_EXP BOOL KUSB_API UsbK_Free (
+	    _in KUSB_HANDLE InterfaceHandle);
 
-	//! Claims the specified interface by number or index.
+//! Claims the specified interface by number or index.
 	/*!
 	*
-	* \param InterfaceHandle
-	* A libusbK interface handle which is returned by:
-	* - \ref UsbK_Open
-	* - \ref UsbK_Initialize
-	* - \ref UsbK_GetAssociatedInterface
+	* \param[in] InterfaceHandle
+	* An initialized usb handle, see \ref UsbK_Init.
 	*
-	* \param NumberOrIndex
+	* \param[in] NumberOrIndex
 	* Interfaces can be claimed or released by a interface index or \c bInterfaceNumber.
 	* - Interface indexes always start from 0 and continue sequentially for all interfaces of the device.
 	* - An interface number always represents the actual \ref USB_INTERFACE_DESCRIPTOR::bInterfaceNumber.
 	*   Interface numbers are not guaranteed to be zero based or sequential.
 	*
-	* \param IsIndex
-	* If TRUE, \c NumberOrIndex represents an interface index.\n
-	* if FALSE \c NumberOrIndex represents a \c bInterfaceNumber.
+	* \param[in] IsIndex
+	* If TRUE, \c NumberOrIndex represents an interface index.\n if FALSE \c NumberOrIndex represents a
+	* \c bInterfaceNumber.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*
-	* Claiming an interface allows applications a way to prevent other applications
-	* or multiple instances of the same application from using an interface at the same time.
+	* Claiming an interface allows applications a way to prevent other applications or multiple instances of the
+	* same application from using an interface at the same time.
 	*
 	* When an interface is claimed with \ref UsbK_ClaimInterface it performs the following actions:
-	* - Checks if the interface exists. If it does not, returns FALSE and sets last error to ERROR_NO_MORE_ITEMS.
+	* - Checks if the interface exists. If it does not, returns FALSE and sets last error to
+	*   ERROR_NO_MORE_ITEMS.
 	* - The default (or current) interface for the device is changed to \c NumberOrIndex.
 	* - libusb0.sys and libusbK.sys:
-	*   - A request to claim the interface is sent to the driver.
-	*     If the interface is not claimed or already claimed by the application the request succeeds.
-	*     If the interface is claimed by another application, \ref UsbK_ClaimInterface returns FALSE
-	*     and sets last error to \c ERROR_BUSY.  In this case the
-	*     The default (or current) interface for the device is \b still changed to \c NumberOrIndex.
-	* - WinUSB.sys:
-	*   All WinUSB device interfaces are claimed when the device is opened.
+	*   - A request to claim the interface is sent to the driver. If the interface is not claimed or already
+	*     claimed by the application the request succeeds. If the interface is claimed by another application,
+	*     \ref UsbK_ClaimInterface returns FALSE and sets last error to \c ERROR_BUSY. In this case the The
+	*     default (or current) interface for the device is \b still changed to \c NumberOrIndex.
+	* - WinUSB.sys: All WinUSB device interfaces are claimed when the device is opened. This function performs
+	*   identically to \ref UsbK_SelectInterface
+	*
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_ClaimInterface (
-	    __in KUSB_HANDLE InterfaceHandle,
-	    __in UCHAR NumberOrIndex,
-	    __in BOOL IsIndex);
+	    _in KUSB_HANDLE InterfaceHandle,
+	    _in UCHAR NumberOrIndex,
+	    _in BOOL IsIndex);
 
-	//! Releases the specified interface by number or index.
+//! Releases the specified interface by number or index.
 	/*!
 	*
-	* \param InterfaceHandle
-	* A libusbK interface handle which is returned by:
-	* - \ref UsbK_Open
-	* - \ref UsbK_Initialize
-	* - \ref UsbK_GetAssociatedInterface
+	* \param[in] InterfaceHandle
+	* An initialized usb handle, see \ref UsbK_Init.
 	*
-	* \param NumberOrIndex
+	* \param[in] NumberOrIndex
 	* Interfaces can be claimed or released by a interface index or \c bInterfaceNumber.
 	* - Interface indexes always start from 0 and continue sequentially for all interfaces of the device.
 	* - An interface number always represents the actual \ref USB_INTERFACE_DESCRIPTOR::bInterfaceNumber.
 	*   Interface numbers are not guaranteed to be zero based or sequential.
 	*
-	* \param IsIndex
-	* If TRUE, \c NumberOrIndex represents an interface index.\n
-	* if FALSE \c NumberOrIndex represents a \c bInterfaceNumber.
+	* \param[in] IsIndex
+	* If TRUE, \c NumberOrIndex represents an interface index.\n if FALSE \c NumberOrIndex represents a
+	* \c bInterfaceNumber.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*
 	* When an interface is release with \ref UsbK_ReleaseInterface it performs the following actions:
-	* - Checks if the interface exists. If it does not, returns FALSE and sets last error to ERROR_NO_MORE_ITEMS.
+	* - Checks if the interface exists. If it does not, returns FALSE and sets last error to
+	*   ERROR_NO_MORE_ITEMS.
 	* - The default (or current) interface for the device is changed to the previously claimed interface.
 	* - libusb0.sys and libusbK.sys:
-	*   - A request to release the interface is sent to the driver.
-	*     If the interface is not claimed by a different application the request succeeds.
-	*     If the interface is claimed by another application, \ref UsbK_ReleaseInterface returns FALSE
-	*     and sets last error to \c ERROR_BUSY.  In this case, the default/current interface for the device
-	*     is \b still changed to the previously claimed interface.
-	* - WinUSB.sys:
-	*   No other action needed, returns TRUE.
+	*   - A request to release the interface is sent to the driver. If the interface is not claimed by a
+	*     different application the request succeeds. If the interface is claimed by another application,
+	*     \ref UsbK_ReleaseInterface returns FALSE and sets last error to \c ERROR_BUSY. In this case, the
+	*     default/current interface for the device is \b still changed to the previously claimed interface.
+	* - WinUSB.sys: No other action needed, returns TRUE.
 	*
 	* \note
-	* When an interface is released, it is moved to the bottom if an interface stack making a previously
-	* claimed interface the current.  This will continue to occur regardless of whether the interface is claimed.
-	* For this reason, \ref UsbK_ReleaseInterface can be used as a means to change the current/default interface
-	* of an \c InterfaceHandle without claiming the interface.
+	* When an interface is released, it is moved to the bottom if an interface stack making a previously claimed
+	* interface the current. This will continue to occur regardless of whether the interface is claimed. For
+	* this reason, \ref UsbK_ReleaseInterface can be used as a means to change the current/default interface of
+	* an \c InterfaceHandle without claiming the interface.
+	*
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_ReleaseInterface (
-	    __in KUSB_HANDLE InterfaceHandle,
-	    __in UCHAR NumberOrIndex,
-	    __in BOOL IsIndex);
+	    _in KUSB_HANDLE InterfaceHandle,
+	    _in UCHAR NumberOrIndex,
+	    _in BOOL IsIndex);
 
-	//! Sets the alternate setting of the specified interface.
+//! Sets the alternate setting of the specified interface.
 	/*!
 	*
-	* \param InterfaceHandle
-	* A libusbK interface handle which is returned by:
-	* - \ref UsbK_Open
-	* - \ref UsbK_Initialize
-	* - \ref UsbK_GetAssociatedInterface
+	* \param[in] InterfaceHandle
+	* An initialized usb handle, see \ref UsbK_Init.
 	*
-	* \param NumberOrIndex
+	* \param[in] NumberOrIndex
 	* Interfaces can be specified by a interface index or \c bInterfaceNumber.
 	* - Interface indexes always start from 0 and continue sequentially for all interfaces of the device.
 	* - An interface number always represents the actual \ref USB_INTERFACE_DESCRIPTOR::bInterfaceNumber.
 	*   Interface numbers are not guaranteed to be zero based or sequential.
 	*
-	* \param IsIndex
-	* If TRUE, \c NumberOrIndex represents an interface index.\n
-	* if FALSE \c NumberOrIndex represents a \c bInterfaceNumber.
+	* \param[in] IsIndex
+	* If TRUE, \c NumberOrIndex represents an interface index.\n if FALSE \c NumberOrIndex represents a
+	* \c bInterfaceNumber.
 	*
-	* \param AltSettingNumber
+	* \param[in] AltSettingNumber
 	* The bAlternateSetting to activate.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*
-	* \ref UsbK_SetAltInterface performs the same task as \ref UsbK_SetCurrentAlternateSetting except it provides
-	* the option of specifying which interfaces alternate setting to activate.
+	* \ref UsbK_SetAltInterface performs the same task as \ref UsbK_SetCurrentAlternateSetting except it
+	* provides the option of specifying which interfaces alternate setting to activate.
+	*
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_SetAltInterface (
-	    __in KUSB_HANDLE InterfaceHandle,
-	    __in UCHAR NumberOrIndex,
-	    __in BOOL IsIndex,
-	    __in UCHAR AltSettingNumber);
+	    _in KUSB_HANDLE InterfaceHandle,
+	    _in UCHAR NumberOrIndex,
+	    _in BOOL IsIndex,
+	    _in UCHAR AltSettingNumber);
 
-	//! Gets the alternate setting for the specified interface.
+//! Gets the alternate setting for the specified interface.
 	/*!
 	*
-	* \param InterfaceHandle
-	* A libusbK interface handle which is returned by:
-	* - \ref UsbK_Open
-	* - \ref UsbK_Initialize
-	* - \ref UsbK_GetAssociatedInterface
+	* \param[in] InterfaceHandle
+	* An initialized usb handle, see \ref UsbK_Init.
 	*
-	* \param NumberOrIndex
+	* \param[in] NumberOrIndex
 	* Interfaces can be specified by a interface index or \c bInterfaceNumber.
 	* - Interface indexes always start from 0 and continue sequentially for all interfaces of the device.
 	* - An interface number always represents the actual \ref USB_INTERFACE_DESCRIPTOR::bInterfaceNumber.
 	*   Interface numbers are not guaranteed to be zero based or sequential.
 	*
-	* \param IsIndex
-	* If TRUE, \c NumberOrIndex represents an interface index.\n
-	* if FALSE \c NumberOrIndex represents a \c bInterfaceNumber.
+	* \param[in] IsIndex
+	* If TRUE, \c NumberOrIndex represents an interface index.\n if FALSE \c NumberOrIndex represents a
+	* \c bInterfaceNumber.
 	*
-	* \param AltSettingNumber
+	* \param[out] AltSettingNumber
 	* On success, returns the active bAlternateSetting.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*
-	* \ref UsbK_GetAltInterface performs the same task as \ref UsbK_GetCurrentAlternateSetting except it provides
-	* the option of specifying which interfaces alternate setting is to be retrieved.
+	* \ref UsbK_GetAltInterface performs the same task as \ref UsbK_GetCurrentAlternateSetting except it
+	* provides the option of specifying which interfaces alternate setting is to be retrieved.
+	*
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_GetAltInterface (
-	    __in KUSB_HANDLE InterfaceHandle,
-	    __in UCHAR NumberOrIndex,
-	    __in BOOL IsIndex,
-	    __out PUCHAR AltSettingNumber);
+	    _in KUSB_HANDLE InterfaceHandle,
+	    _in UCHAR NumberOrIndex,
+	    _in BOOL IsIndex,
+	    _out PUCHAR AltSettingNumber);
 
-	//! Gets the requested descriptor. This is a synchronous operation.
+//! Gets the requested descriptor. This is a synchronous operation.
 	/*!
 	*
-	* \param InterfaceHandle
-	* A libusbK interface handle which is returned by:
-	* - \ref UsbK_Open
-	* - \ref UsbK_Initialize
-	* - \ref UsbK_GetAssociatedInterface
+	* \param[in] InterfaceHandle
+	* An initialized usb handle, see \ref UsbK_Init.
 	*
-	* \param DescriptorType
-	* A value that specifies the type of descriptor to return. This
-	* parameter corresponds to the bDescriptorType field of a standard device
-	* descriptor, whose values are described in the Universal Serial Bus
+	* \param[in] DescriptorType
+	* A value that specifies the type of descriptor to return. This parameter corresponds to the bDescriptorType
+	* field of a standard device descriptor, whose values are described in the Universal Serial Bus
 	* specification.
 	*
-	* \param Index
-	* The descriptor index. For an explanation of the descriptor index, see
-	* the Universal Serial Bus specification (www.usb.org).
+	* \param[in] Index
+	* The descriptor index. For an explanation of the descriptor index, see the Universal Serial Bus
+	* specification (www.usb.org).
 	*
-	* \param LanguageID
-	* A value that specifies the language identifier, if the requested
-	* descriptor is a string descriptor.
+	* \param[in] LanguageID
+	* A value that specifies the language identifier, if the requested descriptor is a string descriptor.
 	*
-	* \param Buffer
+	* \param[out] Buffer
 	* A caller-allocated buffer that receives the requested descriptor.
 	*
-	* \param BufferLength
+	* \param[in] BufferLength
 	* The length, in bytes, of Buffer.
 	*
-	* \param LengthTransferred
-	*
+	* \param[out] LengthTransferred
 	* The number of bytes that were copied into Buffer.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*
-	* If the device descriptor or active config descriptor is requested,
-	* \ref UsbK_GetDescriptor retrieves cached data and this becomes a non-blocking, non I/O request.
+	* If the device descriptor or active config descriptor is requested, \ref UsbK_GetDescriptor retrieves
+	* cached data and this becomes a non-blocking, non I/O request.
+	*
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_GetDescriptor (
-	    __in KUSB_HANDLE InterfaceHandle,
-	    __in UCHAR DescriptorType,
-	    __in UCHAR Index,
-	    __in USHORT LanguageID,
-	    __out_opt PUCHAR Buffer,
-	    __in ULONG BufferLength,
-	    __out PULONG LengthTransferred);
+	    _in KUSB_HANDLE InterfaceHandle,
+	    _in UCHAR DescriptorType,
+	    _in UCHAR Index,
+	    _in USHORT LanguageID,
+	    _out PUCHAR Buffer,
+	    _in ULONG BufferLength,
+	    _outopt PULONG LengthTransferred);
 
-	//! Transmits control data over a default control endpoint.
+//! Transmits control data over a default control endpoint.
 	/*!
 	*
-	* \param InterfaceHandle
+	* \param[in] InterfaceHandle
 	* A valid libusbK interface handle returned by:
-	* - \ref UsbK_Open
+	* - \ref UsbK_Init
 	* - \ref UsbK_Initialize
 	* - \ref UsbK_GetAssociatedInterface
+	* - \ref UsbK_Clone
 	*
-	* \param SetupPacket
+	* \param[in] SetupPacket
 	*  The 8-byte setup packet of type WINUSB_SETUP_PACKET.
 	*
-	* \param Buffer
+	* \param[in,out] Buffer
 	* A caller-allocated buffer that contains the data to transfer.
 	*
-	* \param BufferLength
-	* The number of bytes to transfer, not including the setup packet. This
-	* number must be less than or equal to the size, in bytes, of Buffer.
+	* \param[in] BufferLength
+	* The number of bytes to transfer, not including the setup packet. This number must be less than or equal to
+	* the size, in bytes, of Buffer.
 	*
-	* \param LengthTransferred
-	* A pointer to a ULONG variable that receives the actual number of
-	* transferred bytes. If the application does not expect any data to be
-	* transferred during the data phase (BufferLength is zero),
-	* LengthTransferred can be NULL.
+	* \param[out] LengthTransferred
+	* A pointer to a ULONG variable that receives the actual number of transferred bytes. If the application
+	* does not expect any data to be transferred during the data phase (BufferLength is zero), LengthTransferred
+	* can be NULL.
 	*
-	* \param Overlapped
-	* An optional pointer to an OVERLAPPED structure, which is used for
-	* asynchronous operations. If this parameter is specified, \ref
-	* UsbK_ControlTransfer immediately returns, and the event is signaled when
-	* the operation is complete. If Overlapped is not supplied, the \ref
-	* UsbK_ControlTransfer function transfers data synchronously.
+	* \param[in] Overlapped
+	* An optional pointer to an OVERLAPPED structure, which is used for asynchronous operations. If this
+	* parameter is specified, \ref UsbK_ControlTransfer immediately returns, and the event is signaled when the
+	* operation is complete. If Overlapped is not supplied, the \ref UsbK_ControlTransfer function transfers
+	* data synchronously.
 	*
-	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
-	* If an \c Overlapped member is supplied and the operation succeeds this function returns FALSE
-	* and sets last error to ERROR_IO_PENDING.
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information. If an
+	* \c Overlapped member is supplied and the operation succeeds this function returns FALSE and sets last
+	* error to ERROR_IO_PENDING.
 	*
-	* A \ref UsbK_ControlTransfer is never cached.  These requests always go directly to the usb device.
+	* A \ref UsbK_ControlTransfer is never cached. These requests always go directly to the usb device.
 	*
 	* \attention
-	* This function should not be used for operations supported by the library.\n
-	* e.g. \ref UsbK_SetConfiguration, \ref UsbK_SetAltInterface, etc..
+	* This function should not be used for operations supported by the library.\n e.g.
+	* \ref UsbK_SetConfiguration, \ref UsbK_SetAltInterface, etc..
+	*
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_ControlTransfer (
-	    __in KUSB_HANDLE InterfaceHandle,
-	    __in WINUSB_SETUP_PACKET SetupPacket,
-	    __out_opt PUCHAR Buffer,
-	    __in ULONG BufferLength,
-	    __out_opt PULONG LengthTransferred,
-	    __in_opt LPOVERLAPPED Overlapped);
+	    _in KUSB_HANDLE InterfaceHandle,
+	    _in WINUSB_SETUP_PACKET SetupPacket,
+	    _refopt PUCHAR Buffer,
+	    _in ULONG BufferLength,
+	    _outopt PULONG LengthTransferred,
+	    _inopt LPOVERLAPPED Overlapped);
 
-	//! Sets the power policy for a device.
+//! Sets the power policy for a device.
 	/*!
 	*
-	* \param InterfaceHandle
-	* A libusbK interface handle which is returned by:
-	* - \ref UsbK_Open
-	* - \ref UsbK_Initialize
-	* - \ref UsbK_GetAssociatedInterface
+	* \param[in] InterfaceHandle
+	* An initialized usb handle, see \ref UsbK_Init.
 	*
-	* \param PolicyType
-	* A value that specifies the power policy to set. The following table
-	* describes symbolic constants that are defined in \ref lusbk_shared.h.
+	* \param[in] PolicyType
+	* A value that specifies the power policy to set. The following table describes symbolic constants that are
+	* defined in \ref lusbk_shared.h.
 	*
 	* - AUTO_SUSPEND (0x81)
-	*   - Specifies the auto-suspend policy type; the power policy parameter must
-	*     be specified by the caller in the Value parameter.
+	*   - Specifies the auto-suspend policy type; the power policy parameter must be specified by the caller in
+	*     the Value parameter.
 	*   - For auto-suspend, the Value parameter must point to a UCHAR variable.
-	*   - If Value is TRUE (nonzero), the USB stack suspends the device if the
-	*     device is idle. A device is idle if there are no transfers pending, or
-	*     if the only pending transfers are IN transfers to interrupt or bulk
-	*     endpoints.
-	*   - The default value is determined by the value set in the DefaultIdleState
-	*     registry setting. By default, this value is TRUE.
+	*   - If Value is TRUE (nonzero), the USB stack suspends the device if the device is idle. A device is idle
+	*     if there are no transfers pending, or if the only pending transfers are IN transfers to interrupt or
+	*     bulk endpoints.
+	*   - The default value is determined by the value set in the DefaultIdleState registry setting. By default,
+	*     this value is TRUE.
 	*
 	* - SUSPEND_DELAY (0x83)
-	*   - Specifies the suspend-delay policy type; the power policy parameter must
-	*     be specified by the caller in the Value parameter.
+	*   - Specifies the suspend-delay policy type; the power policy parameter must be specified by the caller in
+	*     the Value parameter.
 	*   - For suspend-delay, Value must point to a ULONG variable.
-	*   - Value specifies the minimum amount of time, in milliseconds, that the
-	*     driver must wait post transfer before it can suspend the device.
-	*   - The default value is determined by the value set in the
-	*     DefaultIdleTimeout registry setting. By default, this value is five
-	*     seconds.
+	*   - Value specifies the minimum amount of time, in milliseconds, that the driver must wait post transfer
+	*     before it can suspend the device.
+	*   - The default value is determined by the value set in the DefaultIdleTimeout registry setting. By
+	*     default, this value is five seconds.
 	*
-	* \param ValueLength
+	* \param[in] ValueLength
 	* The size, in bytes, of the buffer at Value.
 	*
-	* \param Value
-	* The new value for the power policy parameter. Data type and value for
-	* Value depends on the type of power policy passed in PolicyType. For more
-	* information, see PolicyType.
+	* \param[in] Value
+	* The new value for the power policy parameter. Data type and value for Value depends on the type of power
+	* policy passed in PolicyType. For more information, see PolicyType.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*
-	* The following list summarizes the effects of changes to power management
-	* states:
-	* - All pipe handles, interface handles, locks, and alternate settings are
-	*   preserved across power management events.
-	* - Any transfers that are in progress are suspended when a device transfers
-	*   to a low power state, and they are resumed when the device is restored
-	*   to a working state.
-	* - The device and system must be in a working state before the client can
-	*   restore a device-specific configuration. Clients can determine whether
-	*   the device and system are in a working state from the WM_POWERBROADCAST
-	*   message.
-	* - The client can indicate that an interface is idle by calling \ref
-	*   UsbK_SetPowerPolicy.
+	* The following list summarizes the effects of changes to power management states:
+	* - All pipe handles, interface handles, locks, and alternate settings are preserved across power management
+	*   events.
+	* - Any transfers that are in progress are suspended when a device transfers to a low power state, and they
+	*   are resumed when the device is restored to a working state.
+	* - The device and system must be in a working state before the client can restore a device-specific
+	*   configuration. Clients can determine whether the device and system are in a working state from the
+	*   WM_POWERBROADCAST message.
+	* - The client can indicate that an interface is idle by calling \ref UsbK_SetPowerPolicy.
+	*
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_SetPowerPolicy (
-	    __in KUSB_HANDLE InterfaceHandle,
-	    __in ULONG PolicyType,
-	    __in ULONG ValueLength,
-	    __in PVOID Value);
+	    _in KUSB_HANDLE InterfaceHandle,
+	    _in ULONG PolicyType,
+	    _in ULONG ValueLength,
+	    _in PVOID Value);
 
-	//! Gets the power policy for a device.
+//! Gets the power policy for a device.
 	/*!
 	*
-	* \param InterfaceHandle
-	* A libusbK interface handle which is returned by:
-	* - \ref UsbK_Open
-	* - \ref UsbK_Initialize
-	* - \ref UsbK_GetAssociatedInterface
+	* \param[in] InterfaceHandle
+	* An initialized usb handle, see \ref UsbK_Init.
 	*
-	* \param PolicyType
-	* A value that specifies the power policy parameter to retrieve in Value.
-	* The following table describes symbolic constants that are defined in
-	* \ref lusbk_shared.h.
+	* \param[in] PolicyType
+	* A value that specifies the power policy parameter to retrieve in Value. The following table describes
+	* symbolic constants that are defined in \ref lusbk_shared.h.
 	*
 	* - AUTO_SUSPEND (0x81)
-	*   - If the caller specifies a power policy of AUTO_SUSPEND, \ref
-	*     UsbK_GetPowerPolicy returns the value of the auto suspend policy
-	*     parameter in the Value parameter.
-	*   - If Value is TRUE (that is, nonzero), the USB stack suspends the device
-	*     when no transfers are pending or the only transfers pending are IN
-	*     transfers on an interrupt or bulk endpoint.
-	*   - The value of the DefaultIdleState registry value determines the default
-	*     value of the auto suspend policy parameter.
+	*   - If the caller specifies a power policy of AUTO_SUSPEND, \ref UsbK_GetPowerPolicy returns the value of
+	*     the auto suspend policy parameter in the Value parameter.
+	*   - If Value is TRUE (that is, nonzero), the USB stack suspends the device when no transfers are pending
+	*     or the only transfers pending are IN transfers on an interrupt or bulk endpoint.
+	*   - The value of the DefaultIdleState registry value determines the default value of the auto suspend
+	*     policy parameter.
 	*   - The Value parameter must point to a UCHAR variable.
 	*
 	* - SUSPEND_DELAY (0x83)
-	*   - If the caller specifies a power policy of SUSPEND_DELAY, \ref
-	*     UsbK_GetPowerPolicy returns the value of the suspend delay policy
-	*     parameter in Value.
-	*   - The suspend delay policy parameter specifies the minimum amount of time,
-	*     in milliseconds, that the driver must wait after any transfer before it
-	*     can suspend the device.
+	*   - If the caller specifies a power policy of SUSPEND_DELAY, \ref UsbK_GetPowerPolicy returns the value of
+	*     the suspend delay policy parameter in Value.
+	*   - The suspend delay policy parameter specifies the minimum amount of time, in milliseconds, that the
+	*     driver must wait after any transfer before it can suspend the device.
 	*   - Value must point to a ULONG variable.
 	*
-	* \param ValueLength
-	* A pointer to the size of the buffer that Value. On output, ValueLength
-	* receives the size of the data that was copied into the Value buffer.
+	* \param[in,out] ValueLength
+	* A pointer to the size of the buffer that Value. On output, ValueLength receives the size of the data that
+	* was copied into the Value buffer.
 	*
-	* \param Value
-	* A buffer that receives the specified power policy parameter. For more
-	* information, see PolicyType.
+	* \param[out] Value
+	* A buffer that receives the specified power policy parameter. For more information, see PolicyType.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_GetPowerPolicy (
-	    __in KUSB_HANDLE InterfaceHandle,
-	    __in ULONG PolicyType,
-	    __inout PULONG ValueLength,
-	    __out PVOID Value);
+	    _in KUSB_HANDLE InterfaceHandle,
+	    _in ULONG PolicyType,
+	    _ref PULONG ValueLength,
+	    _out PVOID Value);
 
-	//! Sets the device configuration number.
+//! Sets the device configuration number.
 	/*!
 	*
-	* \param InterfaceHandle
-	* A libusbK interface handle which is returned by:
-	* - \ref UsbK_Open
-	* - \ref UsbK_Initialize
-	* - \ref UsbK_GetAssociatedInterface
+	* \param[in] InterfaceHandle
+	* An initialized usb handle, see \ref UsbK_Init.
 	*
-	* \param ConfigurationNumber
+	* \param[in] ConfigurationNumber
 	* The configuration number to activate.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*
-	* \ref UsbK_SetConfiguration is only supported with libusb0.sys.
-	* If the driver in not libusb0.sys, this function performs the following emulation actions:
+	* \ref UsbK_SetConfiguration is only supported with libusb0.sys. If the driver in not libusb0.sys, this
+	* function performs the following emulation actions:
 	* - If the requested configuration number is the current configuration number, returns TRUE.
-	* - If the requested configuration number is one other than the current configuration number,
-	*   returns FALSE and set last error to \c ERROR_NO_MORE_ITEMS.
+	* - If the requested configuration number is one other than the current configuration number, returns FALSE
+	*   and set last error to \c ERROR_NO_MORE_ITEMS.
 	*
-	* This function will fail if there are pending I/O operations or there are other libusbK interface
-	* handles referencing the device.
-	* \sa UsbK_Free
+	* This function will fail if there are pending I/O operations or there are other libusbK interface handles
+	* referencing the device. \sa UsbK_Free
+	*
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_SetConfiguration (
-	    __in KUSB_HANDLE InterfaceHandle,
-	    __in UCHAR ConfigurationNumber);
+	    _in KUSB_HANDLE InterfaceHandle,
+	    _in UCHAR ConfigurationNumber);
 
-	//! Gets the device current configuration number.
+//! Gets the device current configuration number.
 	/*!
 	*
-	* \param InterfaceHandle
-	* A libusbK interface handle which is returned by:
-	* - \ref UsbK_Open
-	* - \ref UsbK_Initialize
-	* - \ref UsbK_GetAssociatedInterface
+	* \param[in] InterfaceHandle
+	* An initialized usb handle, see \ref UsbK_Init.
 	*
-	* \param ConfigurationNumber
+	* \param[out] ConfigurationNumber
 	* On success, receives the active configuration number.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_GetConfiguration (
-	    __in KUSB_HANDLE InterfaceHandle,
-	    __out PUCHAR ConfigurationNumber);
+	    _in KUSB_HANDLE InterfaceHandle,
+	    _out PUCHAR ConfigurationNumber);
 
-	//! Resets the usb device of the specified interface handle. (port cycle).
+//! Resets the usb device of the specified interface handle. (port cycle).
 	/*!
 	*
-	* \param InterfaceHandle
-	* A libusbK interface handle which is returned by:
-	* - \ref UsbK_Open
-	* - \ref UsbK_Initialize
-	* - \ref UsbK_GetAssociatedInterface
+	* \param[in] InterfaceHandle
+	* An initialized usb handle, see \ref UsbK_Init.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_ResetDevice (
-	    __in KUSB_HANDLE InterfaceHandle);
+	    _in KUSB_HANDLE InterfaceHandle);
 
-	//! Creates a libusbK handle for the device specified by a file handle.
+//! Creates a libusbK handle for the device specified by a file handle.
 	/*!
 	*
-	* \param DeviceHandle
-	* The handle to the device that CreateFile returned.
-	* libusbK uses overlapped I/O, so FILE_FLAG_OVERLAPPED must be specified in the
-	* dwFlagsAndAttributes parameter of CreateFile call for DeviceHandle to have the
+	* \attention
+	* This function is supported for WinUSB API compatibility only and is not intended for new development.
+	* libusbK library users should use \ref UsbK_Init instead. (regardless of the driver they've selected)
+	*
+	* \param[in] DeviceHandle
+	* The handle to the device that CreateFile returned. libusbK uses overlapped I/O, so FILE_FLAG_OVERLAPPED
+	* must be specified in the dwFlagsAndAttributes parameter of CreateFile call for DeviceHandle to have the
 	* characteristics necessary for this to function properly.
 	*
-	* \param InterfaceHandle
-	* Receives a handle configured to the first (default) interface on the device.
-	* This handle is required by other libusbK routines that perform operations
-	* on the default interface. The handle is opaque. To release this handle,
-	* call the \ref UsbK_Free function.
+	* \param[out] InterfaceHandle
+	* Receives a handle configured to the first (default) interface on the device. This handle is required by
+	* other libusbK routines that perform operations on the default interface. The handle is opaque. To release
+	* this handle, call the \ref UsbK_Free function.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*
-	* When \ref UsbK_Initialize is called, the policy settings of the interface
-	* are reset to the default values.
+	* When \ref UsbK_Initialize is called, the policy settings of the interface are reset to the default values.
 	*
-	* The \ref UsbK_Initialize call queries the underlying USB stack for various
-	* descriptors and allocates enough memory to store the retrieved
-	* descriptor data.
+	* The \ref UsbK_Initialize call queries the underlying USB stack for various descriptors and allocates
+	* enough memory to store the retrieved descriptor data.
 	*
-	* \ref UsbK_Initialize first retrieves the device descriptor and then gets
-	* the associated configuration descriptor. From the configuration
-	* descriptor, the call derives the associated interface descriptors and
-	* stores them in an array. The interfaces in the array are identified by
-	* zero-based indexes. An index value of 0 indicates the first interface
-	* (the default interface), a value of 1 indicates the second associated
-	* interface, and so on. \ref UsbK_Initialize parses the default interface
-	* descriptor for the endpoint descriptors and caches information such as
-	* the associated pipes or state specific data. The handle received in the
-	* InterfaceHandle parameter will have its default interface configured to
-	* the first interface in the array.
+	* \ref UsbK_Initialize first retrieves the device descriptor and then gets the associated configuration
+	* descriptor. From the configuration descriptor, the call derives the associated interface descriptors and
+	* stores them in an array. The interfaces in the array are identified by zero-based indexes. An index value
+	* of 0 indicates the first interface (the default interface), a value of 1 indicates the second associated
+	* interface, and so on. \ref UsbK_Initialize parses the default interface descriptor for the endpoint
+	* descriptors and caches information such as the associated pipes or state specific data. The handle
+	* received in the InterfaceHandle parameter will have its default interface configured to the first
+	* interface in the array.
 	*
-	* If an application wants to use another interface on the device, it can
-	* call \ref UsbK_GetAssociatedInterface, or \ref UsbK_ClaimInterface.
+	* If an application wants to use another interface on the device, it can call
+	* \ref UsbK_GetAssociatedInterface, or \ref UsbK_ClaimInterface.
+	*
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_Initialize (
-	    __in HANDLE DeviceHandle,
-	    __out KUSB_HANDLE* InterfaceHandle);
+	    _in HANDLE DeviceHandle,
+	    _out KUSB_HANDLE* InterfaceHandle);
 
-	//! Frees a libusbK interface handle.
+//! Selects the specified interface by number or index as the current interface.
 	/*!
 	*
-	* \param InterfaceHandle
-	* Handle to an interface on the device. This handle must be created by a previous call to:
-	* - \ref UsbK_Open
-	* - \ref UsbK_Initialize
-	* - \ref UsbK_GetAssociatedInterface
+	* \param[in] InterfaceHandle
+	* An initialized usb handle, see \ref UsbK_Init.
 	*
-	* \returns TRUE.
+	* \param[in] NumberOrIndex
+	* Interfaces can be claimed or released by a interface index or \c bInterfaceNumber.
+	* - Interface indexes always start from 0 and continue sequentially for all interfaces of the device.
+	* - An interface number always represents the actual \ref USB_INTERFACE_DESCRIPTOR::bInterfaceNumber.
+	*   Interface numbers are not guaranteed to be zero based or sequential.
 	*
-	* The \ref UsbK_Free function releases all of the resources that
-	* \ref UsbK_Initialize or \ref UsbK_Open allocated. This is a synchronous
-	* operation.
-	*
-	* \note \ref UsbK_Close and \ref UsbK_Free perform the same tasks.  The difference is in the return code only.
-	* - \ref UsbK_Free always returns TRUE.
-	* - \ref UsbK_Close will return FALSE in the hande is already closed/free.
-	*/
-	KUSB_EXP BOOL KUSB_API UsbK_Free (
-	    __in KUSB_HANDLE InterfaceHandle);
-
-	KUSB_EXP BOOL KUSB_API UsbK_SelectInterface (
-	    __in KUSB_HANDLE InterfaceHandle,
-	    __in UCHAR NumberOrIndex,
-	    __in BOOL IsIndex);
-
-	//! Retrieves a handle for an associated interface.
-	/*!
-	*
-	* \param InterfaceHandle
-	* A libusbK interface handle which is returned by:
-	* - \ref UsbK_Open
-	* - \ref UsbK_Initialize
-	*
-	* \param AssociatedInterfaceIndex
-	* An index that specifies the associated interface to retrieve. A value of
-	* 0 indicates the first associated interface, a value of 1 indicates the
-	* second associated interface, and so on.
-	*
-	* \param AssociatedInterfaceHandle
-	* A handle for the associated interface. Callers must pass this interface
-	* handle to libusbK Functions exposed by libusbK.dll. To close this handle,
-	* call \ref UsbK_Free.
+	* \param[in] IsIndex
+	* If TRUE, \c NumberOrIndex represents an interface index.\n if FALSE \c NumberOrIndex represents a
+	* \c bInterfaceNumber.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*
-	* The \ref UsbK_GetAssociatedInterface function retrieves an opaque handle for an
-	* associated interface. This is a synchronous operation.
+	* \sa UsbK_ClaimInterface
 	*
-	* The first associated interface is the interface that immediately follows
-	* the current (or default) interface of the specified /c InterfaceHandle.
+	*/
+	KUSB_EXP BOOL KUSB_API UsbK_SelectInterface (
+	    _in KUSB_HANDLE InterfaceHandle,
+	    _in UCHAR NumberOrIndex,
+	    _in BOOL IsIndex);
+
+//! Retrieves a handle for an associated interface.
+	/*!
 	*
-	* The handle that \ref UsbK_GetAssociatedInterface returns must be released
-	* by calling \ref UsbK_Free.
+	* \param[in] InterfaceHandle
+	* An initialized usb handle, see \ref UsbK_Init.
+	*
+	* \param[in] AssociatedInterfaceIndex
+	* An index that specifies the associated interface to retrieve. A value of 0 indicates the first associated
+	* interface, a value of 1 indicates the second associated interface, and so on.
+	*
+	* \param[out] AssociatedInterfaceHandle
+	* A handle for the associated interface. Callers must pass this interface handle to libusbK Functions
+	* exposed by libusbK.dll. To close this handle, call \ref UsbK_Free.
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
+	* The \ref UsbK_GetAssociatedInterface function retrieves an opaque handle for an associated interface. This
+	* is a synchronous operation.
+	*
+	* The first associated interface is the interface that immediately follows the current (or default)
+	* interface of the specified /c InterfaceHandle.
+	*
+	* The handle that \ref UsbK_GetAssociatedInterface returns must be released by calling \ref UsbK_Free.
 	*
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_GetAssociatedInterface (
-	    __in KUSB_HANDLE InterfaceHandle,
-	    __in UCHAR AssociatedInterfaceIndex,
-	    __out KUSB_HANDLE* AssociatedInterfaceHandle);
+	    _in KUSB_HANDLE InterfaceHandle,
+	    _in UCHAR AssociatedInterfaceIndex,
+	    _out KUSB_HANDLE* AssociatedInterfaceHandle);
 
-	KUSB_EXP BOOL KUSB_API UsbK_Clone (
-	    __in KUSB_HANDLE InterfaceHandle,
-	    __out KUSB_HANDLE* DstInterfaceHandle);
-
-	//! Retrieves the interface descriptor for the specified alternate interface settings for a particular interface handle.
+//! Clones the specified interface handle.
 	/*!
 	*
-	* \param InterfaceHandle
-	* A libusbK interface handle which is returned by:
-	* - \ref UsbK_Open
-	* - \ref UsbK_Initialize
-	* - \ref UsbK_GetAssociatedInterface
+	* Each cloned interface handle maintains it's own selected interface.
 	*
-	* \param AltSettingNumber
-	* A value that indicates which alternate settings to return. A value of 0
-	* indicates the first alternate setting, a value of 1 indicates the second
-	* alternate setting, and so on.
+	* \param[in] InterfaceHandle
+	* An initialized usb handle, see \ref UsbK_Init.
 	*
-	* \param UsbAltInterfaceDescriptor
-	* A pointer to a caller-allocated \ref USB_INTERFACE_DESCRIPTOR structure that
-	* contains information about the interface that AltSettingNumber
-	* specified.
-	*
-	* The \ref UsbK_QueryInterfaceSettings call searches the current/default interface array
-	* for the alternate interface specified by the caller in the AltSettingNumber.
-	* If the specified alternate interface is found, the function populates the caller-allocated
-	* USB_INTERFACE_DESCRIPTOR structure. If the specified alternate interface is not
-	* found, then the call fails with the ERROR_NO_MORE_ITEMS code.
-	*
-	* To change the current/default interface, see \ref UsbK_ClaimInterface and \ref UsbK_ReleaseInterface
+	* \param[out] DstInterfaceHandle
+	* On success, the cloned return handle.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
+	*/
+	KUSB_EXP BOOL KUSB_API UsbK_Clone (
+	    _in KUSB_HANDLE InterfaceHandle,
+	    _out KUSB_HANDLE* DstInterfaceHandle);
+
+//! Retrieves the interface descriptor for the specified alternate interface settings for a particular interface handle.
+	/*!
+	*
+	* \param[in] InterfaceHandle
+	* An initialized usb handle, see \ref UsbK_Init.
+	*
+	* \param[in] AltSettingNumber
+	* A value that indicates which alternate settings to return. A value of 0 indicates the first alternate
+	* setting, a value of 1 indicates the second alternate setting, and so on.
+	*
+	* \param[out] UsbAltInterfaceDescriptor
+	* A pointer to a caller-allocated \ref USB_INTERFACE_DESCRIPTOR structure that contains information about
+	* the interface that AltSettingNumber specified.
+	*
+	* The \ref UsbK_QueryInterfaceSettings call searches the current/default interface array for the alternate
+	* interface specified by the caller in the AltSettingNumber. If the specified alternate interface is found,
+	* the function populates the caller-allocated USB_INTERFACE_DESCRIPTOR structure. If the specified alternate
+	* interface is not found, then the call fails with the ERROR_NO_MORE_ITEMS code.
+	*
+	* To change the current/default interface, see \ref UsbK_SelectInterface and \ref UsbK_ClaimInterface
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_QueryInterfaceSettings (
-	    __in KUSB_HANDLE InterfaceHandle,
-	    __in UCHAR AltSettingNumber,
-	    __out PUSB_INTERFACE_DESCRIPTOR UsbAltInterfaceDescriptor);
+	    _in KUSB_HANDLE InterfaceHandle,
+	    _in UCHAR AltSettingNumber,
+	    _out PUSB_INTERFACE_DESCRIPTOR UsbAltInterfaceDescriptor);
 
-	//! Retrieves information about the physical device that is associated with a libusbK handle.
+//! Retrieves information about the physical device that is associated with a libusbK handle.
 	/*!
-	* \param InterfaceHandle
-	* A libusbK interface handle which is returned by:
-	* - \ref UsbK_Open
-	* - \ref UsbK_Initialize
-	* - \ref UsbK_GetAssociatedInterface
+	* \param[in] InterfaceHandle
+	* An initialized usb handle, see \ref UsbK_Init.
 	*
-	* \param InformationType
-	* A value that specifies which interface information value to retrieve.
-	* On input, InformationType must have the following value: \c DEVICE_SPEED
-	* (0x01).
+	* \param[in] InformationType
+	* A value that specifies which interface information value to retrieve. On input, InformationType must have
+	* the following value: \c DEVICE_SPEED (0x01).
 	*
-	* \param BufferLength
-	* The maximum number of bytes to read. This number must be less than or
-	* equal to the size, in bytes, of Buffer. On output, BufferLength is set
-	* to the actual number of bytes that were copied into Buffer.
+	* \param[in,out] BufferLength
+	* The maximum number of bytes to read. This number must be less than or equal to the size, in bytes, of
+	* Buffer. On output, BufferLength is set to the actual number of bytes that were copied into Buffer.
 	*
-	* \param Buffer
-	* A caller-allocated buffer that receives the requested value.
-	* On output, Buffer indicates the device speed:
+	* \param[in,out] Buffer
+	* A caller-allocated buffer that receives the requested value. On output, Buffer indicates the device speed:
 	* - (0x01) low/full speed device.
 	* - (0x03) high speed device.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_QueryDeviceInformation (
-	    __in KUSB_HANDLE InterfaceHandle,
-	    __in ULONG InformationType,
-	    __inout PULONG BufferLength,
-	    __out PVOID Buffer);
+	    _in KUSB_HANDLE InterfaceHandle,
+	    _in ULONG InformationType,
+	    _ref PULONG BufferLength,
+	    _ref PVOID Buffer);
 
-	//! Sets the alternate setting of an interface.
+//! Sets the alternate setting of an interface.
 	/*!
 	*
-	* \param InterfaceHandle
-	* A libusbK interface handle which is returned by:
-	* - \ref UsbK_Initialize
-	* - \ref UsbK_Open
-	* - \ref UsbK_GetAssociatedInterface
+	* \param[in] InterfaceHandle
+	* An initialized usb handle, see \ref UsbK_Init.
 	*
-	* \param AltSettingNumber
-	* The value that is contained in the bAlternateSetting member of the
-	* \ref USB_INTERFACE_DESCRIPTOR structure. This structure can be populated by the
-	* \ref UsbK_QueryInterfaceSettings routine.
+	* \param[in] AltSettingNumber
+	* The value that is contained in the bAlternateSetting member of the \ref USB_INTERFACE_DESCRIPTOR
+	* structure. This structure can be populated by the \ref UsbK_QueryInterfaceSettings routine.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*
@@ -2339,21 +2517,19 @@ extern "C" {
 	*
 	* To change the default/current interface see \ref UsbK_ClaimInterface and \ref UsbK_ReleaseInterface
 	* \sa UsbK_SetAltInterface
+	*
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_SetCurrentAlternateSetting (
-	    __in KUSB_HANDLE InterfaceHandle,
-	    __in UCHAR AltSettingNumber);
+	    _in KUSB_HANDLE InterfaceHandle,
+	    _in UCHAR AltSettingNumber);
 
-	//! Gets the current alternate interface setting for an interface.
+//! Gets the current alternate interface setting for an interface.
 	/*!
 	*
-	* \param InterfaceHandle
-	* A libusbK interface handle which is returned by:
-	* - \ref UsbK_Open
-	* - \ref UsbK_Initialize
-	* - \ref UsbK_GetAssociatedInterface
+	* \param[in] InterfaceHandle
+	* An initialized usb handle, see \ref UsbK_Init.
 	*
-	* \param AltSettingNumber
+	* \param[out] AltSettingNumber
 	* A pointer to an unsigned character that receives an integer that indicates the current alternate setting.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
@@ -2365,84 +2541,68 @@ extern "C" {
 	*
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_GetCurrentAlternateSetting (
-	    __in KUSB_HANDLE InterfaceHandle,
-	    __out PUCHAR AltSettingNumber);
+	    _in KUSB_HANDLE InterfaceHandle,
+	    _out PUCHAR AltSettingNumber);
 
-	//! Retrieves information about a pipe that is associated with an interface.
+//! Retrieves information about a pipe that is associated with an interface.
 	/*!
 	*
-	* \param InterfaceHandle
-	* A libusbK interface handle which is returned by:
-	* - \ref UsbK_Open
-	* - \ref UsbK_Initialize
-	* - \ref UsbK_GetAssociatedInterface
+	* \param[in] InterfaceHandle
+	* An initialized usb handle, see \ref UsbK_Init.
 	*
-	* \param AltSettingNumber
-	* A value that specifies the alternate interface to return the
-	* information for.
+	* \param[in] AltSettingNumber
+	* A value that specifies the alternate interface to return the information for.
 	*
-	* \param PipeIndex
-	* A value that specifies the pipe to return information about. This value
-	* is not the same as the bEndpointAddress field in the endpoint
-	* descriptor. A PipeIndex value of 0 signifies the first endpoint that is
-	* associated with the interface, a value of 1 signifies the second
-	* endpoint, and so on. PipeIndex must be less than the value in the
-	* bNumEndpoints field of the interface descriptor.
+	* \param[in] PipeIndex
+	* A value that specifies the pipe to return information about. This value is not the same as the
+	* bEndpointAddress field in the endpoint descriptor. A PipeIndex value of 0 signifies the first endpoint
+	* that is associated with the interface, a value of 1 signifies the second endpoint, and so on. PipeIndex
+	* must be less than the value in the bNumEndpoints field of the interface descriptor.
 	*
-	* \param PipeInformation
-	* A pointer, on output, to a caller-allocated \ref WINUSB_PIPE_INFORMATION
-	* structure that contains pipe information.
+	* \param[out] PipeInformation
+	* A pointer, on output, to a caller-allocated \ref WINUSB_PIPE_INFORMATION structure that contains pipe
+	* information.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*
-	* The \ref UsbK_QueryPipe function does not retrieve information about the
-	* control pipe.
+	* The \ref UsbK_QueryPipe function does not retrieve information about the control pipe.
 	*
-	* Each interface on the USB device can have multiple endpoints. To
-	* communicate with each of these endpoints, the bus driver creates pipes
-	* for each endpoint on the interface. The pipe indices are zero-based.
-	* Therefore for n number of endpoints, the pipes' indices are set from
-	* n-1. \ref UsbK_QueryPipe parses the configuration descriptor to get the
-	* interface specified by the caller. It searches the interface descriptor
-	* for the endpoint descriptor associated with the caller-specified pipe.
-	* If the endpoint is found, the function populates the caller-allocated
-	* \ref WINUSB_PIPE_INFORMATION structure with information from the endpoint
-	* descriptor.
+	* Each interface on the USB device can have multiple endpoints. To communicate with each of these endpoints,
+	* the bus driver creates pipes for each endpoint on the interface. The pipe indices are zero-based.
+	* Therefore for n number of endpoints, the pipes' indices are set from n-1. \ref UsbK_QueryPipe parses the
+	* configuration descriptor to get the interface specified by the caller. It searches the interface
+	* descriptor for the endpoint descriptor associated with the caller-specified pipe. If the endpoint is
+	* found, the function populates the caller-allocated \ref WINUSB_PIPE_INFORMATION structure with information
+	* from the endpoint descriptor.
+	*
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_QueryPipe (
-	    __in KUSB_HANDLE InterfaceHandle,
-	    __in UCHAR AltSettingNumber,
-	    __in UCHAR PipeIndex,
-	    __out PWINUSB_PIPE_INFORMATION PipeInformation);
+	    _in KUSB_HANDLE InterfaceHandle,
+	    _in UCHAR AltSettingNumber,
+	    _in UCHAR PipeIndex,
+	    _out PWINUSB_PIPE_INFORMATION PipeInformation);
 
-	//! Sets the policy for a specific pipe associated with an endpoint on the device. This is a synchronous operation.
+//! Sets the policy for a specific pipe associated with an endpoint on the device. This is a synchronous operation.
 	/*!
 	*
-	* \param InterfaceHandle
-	* A libusbK interface handle which is returned by:
-	* - \ref UsbK_Open
-	* - \ref UsbK_Initialize
-	* - \ref UsbK_GetAssociatedInterface
+	* \param[in] InterfaceHandle
+	* An initialized usb handle, see \ref UsbK_Init.
 	*
-	* \param PipeID
-	* An 8-bit value that consists of a 7-bit address and a direction bit.
-	* This parameter corresponds to the bEndpointAddress field in the endpoint
-	* descriptor.
+	* \param[in] PipeID
+	* An 8-bit value that consists of a 7-bit address and a direction bit. This parameter corresponds to the
+	* bEndpointAddress field in the endpoint descriptor.
 	*
-	* \param PolicyType
-	*  A ULONG variable that specifies the policy parameter to change. The
-	* Value parameter contains the new value for the policy parameter.
-	* See the remarks section for information about each of the pipe policies
-	* and the resulting behavior.
+	* \param[in] PolicyType
+	* A ULONG variable that specifies the policy parameter to change. The Value parameter contains the new value
+	* for the policy parameter. See the remarks section for information about each of the pipe policies and the
+	* resulting behavior.
 	*
-	*
-	* \param ValueLength
+	* \param[in] ValueLength
 	* The size, in bytes, of the buffer at Value.
 	*
-	* \param Value
-	* The new value for the policy parameter that PolicyType specifies. The
-	* size of this input parameter depends on the policy to change. For
-	* information about the size of this parameter, see the description of the
+	* \param[in] Value
+	* The new value for the policy parameter that PolicyType specifies. The size of this input parameter depends
+	* on the policy to change. For information about the size of this parameter, see the description of the
 	* PolicyType parameter.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
@@ -2451,458 +2611,412 @@ extern "C" {
 	*
 	* - \c SHORT_PACKET_TERMINATE (0x01)
 	*   - The default value is \c FALSE.
-	*   - To enable \c SHORT_PACKET_TERMINATE, in Value pass the address of a
-	*     caller-allocated \c UCHAR variable set to \c TRUE (nonzero).
-	*   - Enabling \c SHORT_PACKET_TERMINATE causes the driver to send a zero-length
-	*     packet at the end of every write request to the host controller.
+	*   - To enable \c SHORT_PACKET_TERMINATE, in Value pass the address of a caller-allocated \c UCHAR variable
+	*     set to \c TRUE (nonzero).
+	*   - Enabling \c SHORT_PACKET_TERMINATE causes the driver to send a zero-length packet at the end of every
+	*     write request to the host controller.
 	*
 	* - \c AUTO_CLEAR_STALL (0x02)
-	*   - The default value is \c FALSE. To enable \c AUTO_CLEAR_STALL, in Value pass
-	*     the address of a caller-allocated \c UCHAR variable set to \c TRUE (nonzero).
-	*   - Enabling \c AUTO_CLEAR_STALL causes libusbK to reset the pipe in order to
-	*     automatically clear the stall condition. Data continues to flow on the
-	*     bulk and interrupt \c IN endpoints again as soon as a new or a queued
-	*     transfer arrives on the endpoint. This policy parameter does not affect
-	*     control pipes.
-	*   - Disabling \c AUTO_CLEAR_STALL causes all transfers (that arrive to the
-	*     endpoint after the stalled transfer) to fail until the caller manually
-	*     resets the endpoint's pipe by calling \ref UsbK_ResetPipe.
+	*   - The default value is \c FALSE. To enable \c AUTO_CLEAR_STALL, in Value pass the address of a
+	*     caller-allocated \c UCHAR variable set to \c TRUE (nonzero).
+	*   - Enabling \c AUTO_CLEAR_STALL causes libusbK to reset the pipe in order to automatically clear the
+	*     stall condition. Data continues to flow on the bulk and interrupt \c IN endpoints again as soon as a
+	*     new or a queued transfer arrives on the endpoint. This policy parameter does not affect control pipes.
+	*   - Disabling \c AUTO_CLEAR_STALL causes all transfers (that arrive to the endpoint after the stalled
+	*     transfer) to fail until the caller manually resets the endpoint's pipe by calling \ref UsbK_ResetPipe.
 	*
 	* - \c PIPE_TRANSFER_TIMEOUT (0x03)
-	*   - The default value is zero. To set a time-out value, in Value pass the
-	*     address of a caller-allocated \c ULONG variable that contains the time-out
-	*     interval.
-	*   - The \c PIPE_TRANSFER_TIMEOUT value specifies the time-out interval, in
-	*     milliseconds. The host controller cancels transfers that do not complete
-	*     within the specified time-out interval.
-	*   - A value of zero (default) indicates that transfers do not time out
-	*     because the host controller never cancels the transfer.
+	*   - The default value is zero. To set a time-out value, in Value pass the address of a caller-allocated
+	*     \c ULONG variable that contains the time-out interval.
+	*   - The \c PIPE_TRANSFER_TIMEOUT value specifies the time-out interval, in milliseconds. The host
+	*     controller cancels transfers that do not complete within the specified time-out interval.
+	*   - A value of zero (default) indicates that transfers do not time out because the host controller never
+	*     cancels the transfer.
 	*
 	* - \c IGNORE_SHORT_PACKETS (0x04)
-	*   - The default value is \c FALSE. To enable \c IGNORE_SHORT_PACKETS, in Value
-	*     pass the address of a caller-allocated \c UCHAR variable set to \c TRUE
-	*     (nonzero).
-	*   - Enabling \c IGNORE_SHORT_PACKETS causes the host controller to not complete
-	*     a read operation after it receives a short packet. Instead, the host
-	*     controller completes the operation only after the host has read the
-	*     specified number of bytes.
-	*   - Disabling \c IGNORE_SHORT_PACKETS causes the host controller to complete a
-	*     read operation when either the host has read the specified number of
-	*     bytes or the host has received a short packet.
+	*   - The default value is \c FALSE. To enable \c IGNORE_SHORT_PACKETS, in Value pass the address of a
+	*     caller-allocated \c UCHAR variable set to \c TRUE (nonzero).
+	*   - Enabling \c IGNORE_SHORT_PACKETS causes the host controller to not complete a read operation after it
+	*     receives a short packet. Instead, the host controller completes the operation only after the host has
+	*     read the specified number of bytes.
+	*   - Disabling \c IGNORE_SHORT_PACKETS causes the host controller to complete a read operation when either
+	*     the host has read the specified number of bytes or the host has received a short packet.
 	*
 	* - \c ALLOW_PARTIAL_READS (0x05)
-	*   - The default value is \c TRUE (nonzero). To disable \c ALLOW_PARTIAL_READS, in
-	*     Value pass the address of a caller-allocated \c UCHAR variable set to \c FALSE
-	*     (zero).
-	*   - Disabling \c ALLOW_PARTIAL_READS causes the read requests to fail whenever
-	*     the device returns more data (on bulk and interrupt \c IN endpoints) than
-	*     the caller requested.
-	*   - Enabling \c ALLOW_PARTIAL_READS causes libusbK to save or discard the extra
-	*     data when the device returns more data (on bulk and interrupt \c IN
-	*     endpoints) than the caller requested. This behavior is defined by
-	*     setting the \c AUTO_FLUSH value.
+	*   - The default value is \c TRUE (nonzero). To disable \c ALLOW_PARTIAL_READS, in Value pass the address
+	*     of a caller-allocated \c UCHAR variable set to \c FALSE (zero).
+	*   - Disabling \c ALLOW_PARTIAL_READS causes the read requests to fail whenever the device returns more
+	*     data (on bulk and interrupt \c IN endpoints) than the caller requested.
+	*   - Enabling \c ALLOW_PARTIAL_READS causes libusbK to save or discard the extra data when the device
+	*     returns more data (on bulk and interrupt \c IN endpoints) than the caller requested. This behavior is
+	*     defined by setting the \c AUTO_FLUSH value.
 	*
 	* - \c AUTO_FLUSH (0x06)
-	*   - The default value is \c FALSE (zero). To enable \c AUTO_FLUSH, in Value pass
-	*     the address of a caller-allocated \c UCHAR variable set to \c TRUE (nonzero).
-	*   - \c AUTO_FLUSH must be used with \c ALLOW_PARTIAL_READS enabled. If
-	*     \c ALLOW_PARTIAL_READS is \c TRUE, the value of \c AUTO_FLUSH determines the
-	*     action taken by libusbK when the device returns more data than the caller
-	*     requested.
-	*   - Disabling \c ALLOW_PARTIAL_READS causes libusbK to ignore the \c AUTO_FLUSH
-	*     value.
-	*   - Disabling \c AUTO_FLUSH with \c ALLOW_PARTIAL_READS enabled causes libusbK to
-	*     save the extra data, add the data to the beginning of the caller's next
-	*     read request, and send it to the caller in the next read operation.
-	*   - Enabling \c AUTO_FLUSH with \c ALLOW_PARTIAL_READS enabled causes libusbK to
-	*     discard the extra data remaining from the read request.
+	*   - The default value is \c FALSE (zero). To enable \c AUTO_FLUSH, in Value pass the address of a
+	*     caller-allocated \c UCHAR variable set to \c TRUE (nonzero).
+	*   - \c AUTO_FLUSH must be used with \c ALLOW_PARTIAL_READS enabled. If \c ALLOW_PARTIAL_READS is \c TRUE,
+	*     the value of \c AUTO_FLUSH determines the action taken by libusbK when the device returns more data
+	*     than the caller requested.
+	*   - Disabling \c ALLOW_PARTIAL_READS causes libusbK to ignore the \c AUTO_FLUSH value.
+	*   - Disabling \c AUTO_FLUSH with \c ALLOW_PARTIAL_READS enabled causes libusbK to save the extra data, add
+	*     the data to the beginning of the caller's next read request, and send it to the caller in the next
+	*     read operation.
+	*   - Enabling \c AUTO_FLUSH with \c ALLOW_PARTIAL_READS enabled causes libusbK to discard the extra data
+	*     remaining from the read request.
 	*
 	* - \c RAW_IO (0x07)
-	*   - The default value is \c FALSE (zero). To enable \c RAW_IO, in Value pass the
-	*     address of a caller-allocated \c UCHAR variable set to \c TRUE (nonzero).
-	*   - Enabling \c RAW_IO causes libusbK to send data directly to the \c USB driver
-	*     stack, bypassing libusbK's queuing and error handling mechanism.
-	*   - The buffers that are passed to \ref UsbK_ReadPipe must be configured by the
-	*     caller as follows:
+	*   - The default value is \c FALSE (zero). To enable \c RAW_IO, in Value pass the address of a
+	*     caller-allocated \c UCHAR variable set to \c TRUE (nonzero).
+	*   - Enabling \c RAW_IO causes libusbK to send data directly to the \c USB driver stack, bypassing
+	*     libusbK's queuing and error handling mechanism.
+	*   - The buffers that are passed to \ref UsbK_ReadPipe must be configured by the caller as follows:
 	*     - The buffer length must be a multiple of the maximum endpoint packet size.
-	*     - The length must be less than or equal to the value of
-	*       \c MAXIMUM_TRANSFER_SIZE retrieved by \ref UsbK_GetPipePolicy.
-	*   - Disabling \c RAW_IO (\c FALSE) does not impose any restriction on the buffers
-	*     that are passed to \ref UsbK_ReadPipe.
+	*     - The length must be less than or equal to the value of \c MAXIMUM_TRANSFER_SIZE retrieved by
+	*       \ref UsbK_GetPipePolicy.
+	*   - Disabling \c RAW_IO (\c FALSE) does not impose any restriction on the buffers that are passed to
+	*     \ref UsbK_ReadPipe.
 	*
 	* - \c RESET_PIPE_ON_RESUME (0x09)
-	*   - The default value is \c FALSE (zero). To enable \c RESET_PIPE_ON_RESUME, in
-	*     Value pass the address of a caller-allocated \c UCHAR variable set to \c TRUE
-	*     (nonzero).
-	*   - \c TRUE (or a nonzero value) indicates that on resume from suspend, libusbK
-	*     resets the endpoint before it allows the caller to send new requests to
-	*     the endpoint.
+	*   - The default value is \c FALSE (zero). To enable \c RESET_PIPE_ON_RESUME, in Value pass the address of
+	*     a caller-allocated \c UCHAR variable set to \c TRUE (nonzero).
+	*   - \c TRUE (or a nonzero value) indicates that on resume from suspend, libusbK resets the endpoint before
+	*     it allows the caller to send new requests to the endpoint.
+	*
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_SetPipePolicy (
-	    __in KUSB_HANDLE InterfaceHandle,
-	    __in UCHAR PipeID,
-	    __in ULONG PolicyType,
-	    __in ULONG ValueLength,
-	    __in PVOID Value);
+	    _in KUSB_HANDLE InterfaceHandle,
+	    _in UCHAR PipeID,
+	    _in ULONG PolicyType,
+	    _in ULONG ValueLength,
+	    _in PVOID Value);
 
-	//! Gets the policy for a specific pipe (endpoint).
+//! Gets the policy for a specific pipe (endpoint).
 	/*!
 	*
-	* \param InterfaceHandle
-	* A libusbK interface handle which is returned by:
-	* - \ref UsbK_Open
-	* - \ref UsbK_Initialize
-	* - \ref UsbK_GetAssociatedInterface
+	* \param[in] InterfaceHandle
+	* An initialized usb handle, see \ref UsbK_Init.
 	*
-	* \param PipeID
-	* An 8-bit value that consists of a 7-bit address and a direction bit.
-	* This parameter corresponds to the bEndpointAddress field in the endpoint
-	* descriptor.
+	* \param[in] PipeID
+	* An 8-bit value that consists of a 7-bit address and a direction bit. This parameter corresponds to the
+	* bEndpointAddress field in the endpoint descriptor.
 	*
-	* \param PolicyType
-	* A ULONG variable that specifies the policy parameter to retrieve. The
-	* current value for the policy parameter is retrieved the Value parameter.
+	* \param[in] PolicyType
+	* A ULONG variable that specifies the policy parameter to retrieve. The current value for the policy
+	* parameter is retrieved the Value parameter.
 	*
-	* \param ValueLength
-	* A pointer to the size, in bytes, of the buffer that Value points to. On
-	* output, ValueLength receives the size, in bytes, of the data that was
-	* copied into the Value buffer.
+	* \param[in,out] ValueLength
+	* A pointer to the size, in bytes, of the buffer that Value points to. On output, ValueLength receives the
+	* size, in bytes, of the data that was copied into the Value buffer.
 	*
-	* \param Value
+	* \param[out] Value
 	* A pointer to a buffer that receives the specified pipe policy value.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_GetPipePolicy (
-	    __in KUSB_HANDLE InterfaceHandle,
-	    __in UCHAR PipeID,
-	    __in ULONG PolicyType,
-	    __inout PULONG ValueLength,
-	    __out PVOID Value);
+	    _in KUSB_HANDLE InterfaceHandle,
+	    _in UCHAR PipeID,
+	    _in ULONG PolicyType,
+	    _ref PULONG ValueLength,
+	    _out PVOID Value);
 
-	//! Reads data from the specified pipe.
+//! Reads data from the specified pipe.
 	/*!
 	*
-	* \param InterfaceHandle
-	* A libusbK interface handle which is returned by:
-	* - \ref UsbK_Open
-	* - \ref UsbK_Initialize
-	* - \ref UsbK_GetAssociatedInterface
+	* \param[in] InterfaceHandle
+	* An initialized usb handle, see \ref UsbK_Init.
 	*
-	* \param PipeID
-	* An 8-bit value that consists of a 7-bit address and a direction bit.
-	* This parameter corresponds to the bEndpointAddress field in the endpoint
-	* descriptor.
+	* \param[in] PipeID
+	* An 8-bit value that consists of a 7-bit address and a direction bit. This parameter corresponds to the
+	* bEndpointAddress field in the endpoint descriptor.
 	*
-	* \param Buffer
+	* \param[out] Buffer
 	* A caller-allocated buffer that receives the data that is read.
 	*
-	* \param BufferLength
-	* The maximum number of bytes to read. This number must be less than or
-	* equal to the size, in bytes, of Buffer.
+	* \param[in] BufferLength
+	* The maximum number of bytes to read. This number must be less than or equal to the size, in bytes, of
+	* Buffer.
 	*
-	* \param LengthTransferred
-	* A pointer to a ULONG variable that receives the actual number of bytes
-	* that were copied into Buffer. For more information, see Remarks.
+	* \param[out] LengthTransferred
+	* A pointer to a ULONG variable that receives the actual number of bytes that were copied into Buffer. For
+	* more information, see Remarks.
 	*
-	* \param Overlapped
-	* An optional pointer to an overlapped structure for asynchronous
-	* operations. This can be a \ref KOVL_HANDLE or a pointer to a standard
-	* windows OVERLAPPED structure. If this parameter is specified, \c
-	* UsbK_ReadPipe returns immediately rather than waiting synchronously for
-	* the operation to complete before returning. An event is signaled when
-	* the operation is complete.
+	* \param[in] Overlapped
+	* An optional pointer to an overlapped structure for asynchronous operations. This can be a \ref KOVL_HANDLE
+	* or a pointer to a standard windows OVERLAPPED structure. If this parameter is specified, \c UsbK_ReadPipe
+	* returns immediately rather than waiting synchronously for the operation to complete before returning. An
+	* event is signaled when the operation is complete.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_ReadPipe (
-	    __in KUSB_HANDLE InterfaceHandle,
-	    __in UCHAR PipeID,
-	    __out_opt PUCHAR Buffer,
-	    __in ULONG BufferLength,
-	    __out_opt PULONG LengthTransferred,
-	    __in_opt LPOVERLAPPED Overlapped);
+	    _in KUSB_HANDLE InterfaceHandle,
+	    _in UCHAR PipeID,
+	    _out PUCHAR Buffer,
+	    _in ULONG BufferLength,
+	    _outopt PULONG LengthTransferred,
+	    _inopt LPOVERLAPPED Overlapped);
 
-	//! Writes data to a pipe.
+//! Writes data to a pipe.
 	/*!
 	*
-	* \param InterfaceHandle
-	* A libusbK interface handle which is returned by:
-	* - \ref UsbK_Open
-	* - \ref UsbK_Initialize
-	* - \ref UsbK_GetAssociatedInterface
+	* \param[in] InterfaceHandle
+	* An initialized usb handle, see \ref UsbK_Init.
 	*
-	* \param PipeID
-	* An 8-bit value that consists of a 7-bit address and a direction bit.
-	* This parameter corresponds to the bEndpointAddress field in the endpoint
-	* descriptor.
+	* \param[in] PipeID
+	* An 8-bit value that consists of a 7-bit address and a direction bit. This parameter corresponds to the
+	* bEndpointAddress field in the endpoint descriptor.
 	*
-	* \param Buffer
-	* A caller-allocated buffer that receives the data that is read.
+	* \param[in] Buffer
+	* A caller-allocated buffer the data is written from.
 	*
-	* \param BufferLength
-	* The maximum number of bytes to write. This number must be less than or
-	* equal to the size, in bytes, of Buffer.
+	* \param[in] BufferLength
+	* The maximum number of bytes to write. This number must be less than or equal to the size, in bytes, of
+	* Buffer.
 	*
-	* \param LengthTransferred
-	* A pointer to a ULONG variable that receives the actual number of bytes
-	* that were transferred from Buffer. For more information, see Remarks.
+	* \param[out] LengthTransferred
+	* A pointer to a ULONG variable that receives the actual number of bytes that were transferred from Buffer.
+	* For more information, see Remarks.
 	*
-	* \param Overlapped
-	* An optional pointer to an overlapped structure for asynchronous
-	* operations. This can be a \ref KOVL_HANDLE or a pointer to a standard
-	* windows OVERLAPPED structure. If this parameter is specified, \c
-	* UsbK_WritePipe returns immediately rather than waiting synchronously for
-	* the operation to complete before returning. An event is signaled when
-	* the operation is complete.
+	* \param[in] Overlapped
+	* An optional pointer to an overlapped structure for asynchronous operations. This can be a \ref KOVL_HANDLE
+	* or a pointer to a standard windows OVERLAPPED structure. If this parameter is specified, \c UsbK_WritePipe
+	* returns immediately rather than waiting synchronously for the operation to complete before returning. An
+	* event is signaled when the operation is complete.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_WritePipe (
-	    __in KUSB_HANDLE InterfaceHandle,
-	    __in UCHAR PipeID,
-	    __in PUCHAR Buffer,
-	    __in ULONG BufferLength,
-	    __out_opt PULONG LengthTransferred,
-	    __in_opt LPOVERLAPPED Overlapped);
+	    _in KUSB_HANDLE InterfaceHandle,
+	    _in UCHAR PipeID,
+	    _in PUCHAR Buffer,
+	    _in ULONG BufferLength,
+	    _outopt PULONG LengthTransferred,
+	    _inopt LPOVERLAPPED Overlapped);
 
-	//! Resets the data toggle and clears the stall condition on a pipe.
+//! Resets the data toggle and clears the stall condition on a pipe.
 	/*!
 	*
-	* \param InterfaceHandle
-	* A libusbK interface handle which is returned by:
-	* - \ref UsbK_Open
-	* - \ref UsbK_Initialize
-	* - \ref UsbK_GetAssociatedInterface
+	* \param[in] InterfaceHandle
+	* An initialized usb handle, see \ref UsbK_Init.
 	*
-	* \param PipeID
-	* An 8-bit value that consists of a 7-bit address and a direction bit.
-	* This parameter corresponds to the bEndpointAddress field in the endpoint
-	* descriptor.
+	* \param[in] PipeID
+	* An 8-bit value that consists of a 7-bit address and a direction bit. This parameter corresponds to the
+	* bEndpointAddress field in the endpoint descriptor.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_ResetPipe (
-	    __in KUSB_HANDLE InterfaceHandle,
-	    __in UCHAR PipeID);
+	    _in KUSB_HANDLE InterfaceHandle,
+	    _in UCHAR PipeID);
 
-	//! Aborts all of the pending transfers for a pipe.
+//! Aborts all of the pending transfers for a pipe.
 	/*!
 	*
-	* \param InterfaceHandle
-	* A libusbK interface handle which is returned by:
-	* - \ref UsbK_Open
-	* - \ref UsbK_Initialize
-	* - \ref UsbK_GetAssociatedInterface
+	* \param[in] InterfaceHandle
+	* An initialized usb handle, see \ref UsbK_Init.
 	*
-	* \param PipeID
-	* An 8-bit value that consists of a 7-bit address and a direction bit.
-	* This parameter corresponds to the bEndpointAddress field in the endpoint
-	* descriptor.
+	* \param[in] PipeID
+	* An 8-bit value that consists of a 7-bit address and a direction bit. This parameter corresponds to the
+	* bEndpointAddress field in the endpoint descriptor.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_AbortPipe (
-	    __in KUSB_HANDLE InterfaceHandle,
-	    __in UCHAR PipeID);
+	    _in KUSB_HANDLE InterfaceHandle,
+	    _in UCHAR PipeID);
 
-	//! Discards any data that is cached in a pipe.
+//! Discards any data that is cached in a pipe.
 	/*!
 	*
-	* \param InterfaceHandle
-	* A libusbK interface handle which is returned by:
-	* - \ref UsbK_Open
-	* - \ref UsbK_Initialize
-	* - \ref UsbK_GetAssociatedInterface
+	* \param[in] InterfaceHandle
+	* An initialized usb handle, see \ref UsbK_Init.
 	*
-	*
-	* \param PipeID
-	* An 8-bit value that consists of a 7-bit address and a direction bit.
-	* This parameter corresponds to the bEndpointAddress field in the endpoint
-	* descriptor.
+	* \param[in] PipeID
+	* An 8-bit value that consists of a 7-bit address and a direction bit. This parameter corresponds to the
+	* bEndpointAddress field in the endpoint descriptor.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_FlushPipe (
-	    __in KUSB_HANDLE InterfaceHandle,
-	    __in UCHAR PipeID);
+	    _in KUSB_HANDLE InterfaceHandle,
+	    _in UCHAR PipeID);
 
-	//! Reads from an isochronous pipe.
+//! Reads from an isochronous pipe.
 	/*!
 	*
-	* \param InterfaceHandle
-	* A libusbK interface handle which is returned by:
-	* - \ref UsbK_Open
-	* - \ref UsbK_Initialize
-	* - \ref UsbK_GetAssociatedInterface
+	* \param[in] InterfaceHandle
+	* An initialized usb handle, see \ref UsbK_Init.
 	*
-	* \param IsoContext
+	* \param[in,out] IsoContext
 	* Pointer to an isochronous transfer context created with \ref IsoK_Init
 	*
-	* \param Buffer
+	* \param[out] Buffer
 	* A caller-allocated buffer that receives the data that is read.
 	*
-	* \param BufferLength
-	* The maximum number of bytes to read. This number must be less than or
-	* equal to the size, in bytes, of Buffer.
+	* \param[in] BufferLength
+	* The maximum number of bytes to read. This number must be less than or equal to the size, in bytes, of
+	* Buffer.
 	*
-	* \param Overlapped
-	* A \b required pointer to an overlapped structure for asynchronous
-	* operations. This can be a \ref KOVL_HANDLE or a pointer to a standard
-	* windows OVERLAPPED structure. If this parameter is specified, \c
-	* UsbK_IsoReadPipe returns immediately rather than waiting synchronously for
-	* the operation to complete before returning. An event is signaled when
-	* the operation is complete.
+	* \param[in] Overlapped
+	* A \b required pointer to an overlapped structure for asynchronous operations. This can be a
+	* \ref KOVL_HANDLE or a pointer to a standard windows OVERLAPPED structure. If this parameter is specified,
+	* \c UsbK_IsoReadPipe returns immediately rather than waiting synchronously for the operation to complete
+	* before returning. An event is signaled when the operation is complete.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*
-	*
 	* \par Overlapped I/O considerations
-	* If an \c Overlapped parameter is specified and the transfer is submitted
-	* successfully, the function returns \b FALSE and sets last error to \c
-	* ERROR_IO_PENDING. When using overlapped I/O, users may ignore the return
-	* results of this function and instead use the return results from one of
-	* the \ref ovlk wait functions or from \ref UsbK_GetOverlappedResult.
+	* If an \c Overlapped parameter is specified and the transfer is submitted successfully, the function
+	* returns \b FALSE and sets last error to \c ERROR_IO_PENDING. When using overlapped I/O, users may ignore
+	* the return results of this function and instead use the return results from one of the \ref ovlk wait
+	* functions or from \ref UsbK_GetOverlappedResult.
 	*
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_IsoReadPipe (
-	    __in KUSB_HANDLE InterfaceHandle,
-	    __inout PKISO_CONTEXT IsoContext,
-	    __out_opt PUCHAR Buffer,
-	    __in ULONG BufferLength,
-	    __in LPOVERLAPPED Overlapped);
+	    _in KUSB_HANDLE InterfaceHandle,
+	    _ref PKISO_CONTEXT IsoContext,
+	    _out PUCHAR Buffer,
+	    _in ULONG BufferLength,
+	    _in LPOVERLAPPED Overlapped);
 
-	//! Writes to an isochronous pipe.
+//! Writes to an isochronous pipe.
 	/*!
 	*
-	* \param InterfaceHandle
-	* A libusbK interface handle which is returned by:
-	* - \ref UsbK_Open
-	* - \ref UsbK_Initialize
-	* - \ref UsbK_GetAssociatedInterface
+	* \param[in] InterfaceHandle
+	* An initialized usb handle, see \ref UsbK_Init.
 	*
-	* \param IsoContext
+	* \param[in,out] IsoContext
 	* Pointer to an isochronous transfer context created with \ref IsoK_Init. See remarks below.
 	*
-	* \param Buffer
+	* \param[in] Buffer
 	* A caller-allocated buffer that receives the data that is read.
 	*
-	* \param BufferLength
-	* The maximum number of bytes to write. This number must be less than or
-	* equal to the size, in bytes, of Buffer.
+	* \param[in] BufferLength
+	* The maximum number of bytes to write. This number must be less than or equal to the size, in bytes, of
+	* Buffer.
 	*
-	* \param Overlapped
-	* An optional pointer to an overlapped structure for asynchronous
-	* operations. This can be a \ref KOVL_HANDLE or a pointer to a standard
-	* windows OVERLAPPED structure. If this parameter is specified, \c
-	* UsbK_IsoWritePipe returns immediately rather than waiting synchronously for
-	* the operation to complete before returning. An event is signaled when
-	* the operation is complete.
+	* \param[in] Overlapped
+	* An optional pointer to an overlapped structure for asynchronous operations. This can be a \ref KOVL_HANDLE
+	* or a pointer to a standard windows OVERLAPPED structure. If this parameter is specified,
+	* \c UsbK_IsoWritePipe returns immediately rather than waiting synchronously for the operation to complete
+	* before returning. An event is signaled when the operation is complete.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
-	*
-	* \remarks
 	*
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_IsoWritePipe (
-	    __in KUSB_HANDLE InterfaceHandle,
-	    __inout PKISO_CONTEXT IsoContext,
-	    __in PUCHAR Buffer,
-	    __in ULONG BufferLength,
-	    __in LPOVERLAPPED Overlapped);
+	    _in KUSB_HANDLE InterfaceHandle,
+	    _ref PKISO_CONTEXT IsoContext,
+	    _in PUCHAR Buffer,
+	    _in ULONG BufferLength,
+	    _in LPOVERLAPPED Overlapped);
 
-	//! Retrieves the current USB frame number.
+//! Retrieves the current USB frame number.
 	/*!
-	* \param InterfaceHandle
-	* A libusbK interface handle which is returned by:
-	* - \ref UsbK_Open
-	* - \ref UsbK_Initialize
-	* - \ref UsbK_GetAssociatedInterface
 	*
-	* \param FrameNumber
-	* A pointer to a location that receives the current 32-bit frame number on
-	* the USB bus (from the host controller driver).
+	* \param[in] InterfaceHandle
+	* An initialized usb handle, see \ref UsbK_Init.
+	*
+	* \param[out] FrameNumber
+	* A pointer to a location that receives the current 32-bit frame number on the USB bus (from the host
+	* controller driver).
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_GetCurrentFrameNumber (
-	    __in KUSB_HANDLE InterfaceHandle,
-	    __out PULONG FrameNumber);
+	    _in KUSB_HANDLE InterfaceHandle,
+	    _out PULONG FrameNumber);
 
-	//! Retrieves the results of an overlapped operation on the specified libusbK handle.
+//! Retrieves the results of an overlapped operation on the specified libusbK handle.
 	/*!
 	*
-	* \param InterfaceHandle
-	* A libusbK interface handle which is returned by:
-	* - \ref UsbK_Open
-	* - \ref UsbK_Initialize
-	* - \ref UsbK_GetAssociatedInterface
+	* \param[in] InterfaceHandle
+	* An initialized usb handle, see \ref UsbK_Init.
 	*
-	* \param lpOverlapped
-	* A pointer to a standard windows OVERLAPPED structure that was specified
-	* when the overlapped operation was started.
+	* \param[in] lpOverlapped
+	* A pointer to a standard windows OVERLAPPED structure that was specified when the overlapped operation was
+	* started.
 	*
-	* \param lpNumberOfBytesTransferred
-	* A pointer to a variable that receives the number of bytes that were
-	* actually transferred by a read or write operation.
+	* \param[out] lpNumberOfBytesTransferred
+	* A pointer to a variable that receives the number of bytes that were actually transferred by a read or
+	* write operation.
 	*
-	* \param bWait
-	* If this parameter is TRUE, the function does not return until the
-	* operation has been completed. If this parameter is FALSE and the
-	* operation is still pending, the function returns FALSE and the
-	* GetLastError function returns ERROR_IO_INCOMPLETE.
+	* \param[in] bWait
+	* If this parameter is TRUE, the function does not return until the operation has been completed. If this
+	* parameter is FALSE and the operation is still pending, the function returns FALSE and the GetLastError
+	* function returns ERROR_IO_INCOMPLETE.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*
-	* This function is like the Win32 API routine, GetOverlappedResult, with
-	* one difference; instead of passing a file handle that is returned from
-	* CreateFile, the caller passes an interface handle that is returned from
-	* \ref UsbK_Initialize, \ref UsbK_Open, or \ref UsbK_GetAssociatedInterface.
-	* The caller can use either API routine, if the
-	* appropriate handle is passed. The \ref UsbK_GetOverlappedResult function
-	* extracts the file handle from the interface handle and then calls
-	* GetOverlappedResult. \n
+	* This function is like the Win32 API routine, GetOverlappedResult, with one difference; instead of passing
+	* a file handle that is returned from CreateFile, the caller passes an interface handle that is returned
+	* from \ref UsbK_Initialize, \ref UsbK_Init, or \ref UsbK_GetAssociatedInterface. The caller can use either
+	* API routine, if the appropriate handle is passed. The \ref UsbK_GetOverlappedResult function extracts the
+	* file handle from the interface handle and then calls GetOverlappedResult. \n
 	*
-	* The results that are reported by the \ref UsbK_GetOverlappedResult
-	* function are those from the specified handle's last overlapped operation
-	* to which the specified standard windows OVERLAPPED structure was
-	* provided, and for which the operation's results were pending. A pending
-	* operation is indicated when the function that started the operation
-	* returns FALSE, and the GetLastError routine returns ERROR_IO_PENDING.
-	* When an I/O operation is pending, the function that started the
-	* operation resets the hEvent member of the standard windows OVERLAPPED
-	* structure to the nonsignaled state. Then when the pending operation has
-	* been completed, the system sets the event object to the signaled state. \n
+	* The results that are reported by the \ref UsbK_GetOverlappedResult function are those from the specified
+	* handle's last overlapped operation to which the specified standard windows OVERLAPPED structure was
+	* provided, and for which the operation's results were pending. A pending operation is indicated when the
+	* function that started the operation returns FALSE, and the GetLastError routine returns ERROR_IO_PENDING.
+	* When an I/O operation is pending, the function that started the operation resets the hEvent member of the
+	* standard windows OVERLAPPED structure to the nonsignaled state. Then when the pending operation has been
+	* completed, the system sets the event object to the signaled state. \n
 	*
-	* The caller can specify that an event object is manually reset in the
-	* standard windows OVERLAPPED structure. If an automatic reset event
-	* object is used, the event handle must not be specified in any other wait
-	* operation in the interval between starting the overlapped operation and
-	* the call to \ref UsbK_GetOverlappedResult. For example, the event object
-	* is sometimes specified in one of the wait routines to wait for the
-	* operation to be completed. When the wait routine returns, the system
-	* sets an auto-reset event's state to nonsignaled, and a successive call
-	* to \ref UsbK_GetOverlappedResult with the bWait parameter set to TRUE
-	* causes the function to be blocked indefinitely.
+	* The caller can specify that an event object is manually reset in the standard windows OVERLAPPED
+	* structure. If an automatic reset event object is used, the event handle must not be specified in any other
+	* wait operation in the interval between starting the overlapped operation and the call to
+	* \ref UsbK_GetOverlappedResult. For example, the event object is sometimes specified in one of the wait
+	* routines to wait for the operation to be completed. When the wait routine returns, the system sets an
+	* auto-reset event's state to nonsignaled, and a successive call to \ref UsbK_GetOverlappedResult with the
+	* bWait parameter set to TRUE causes the function to be blocked indefinitely.
 	*
-	* If the bWait parameter is TRUE, \ref UsbK_GetOverlappedResult determines
-	* whether the pending operation has been completed by waiting for the
-	* event object to be in the signaled state.
+	* If the bWait parameter is TRUE, \ref UsbK_GetOverlappedResult determines whether the pending operation has
+	* been completed by waiting for the event object to be in the signaled state.
 	*
-	* If the hEvent member of the standard windows OVERLAPPED structure is
-	* NULL, the system uses the state of the file handle to signal when the
-	* operation has been completed. Do not use file handles for this purpose.
-	* It is better to use an event object because of the confusion that can
-	* occur when multiple concurrent overlapped operations are performed on
-	* the same file. In this situation, you cannot know which operation caused
-	* the state of the object to be signaled.
+	* If the hEvent member of the standard windows OVERLAPPED structure is NULL, the system uses the state of
+	* the file handle to signal when the operation has been completed. Do not use file handles for this purpose.
+	* It is better to use an event object because of the confusion that can occur when multiple concurrent
+	* overlapped operations are performed on the same file. In this situation, you cannot know which operation
+	* caused the state of the object to be signaled.
 	*
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_GetOverlappedResult (
-	    __in KUSB_HANDLE InterfaceHandle,
-	    __in LPOVERLAPPED lpOverlapped,
-	    __out LPDWORD lpNumberOfBytesTransferred,
-	    __in BOOL bWait);
+	    _in KUSB_HANDLE InterfaceHandle,
+	    _in LPOVERLAPPED lpOverlapped,
+	    _out LPDWORD lpNumberOfBytesTransferred,
+	    _in BOOL bWait);
+
+//! Gets a USB device (driver specific) property from usb handle.
+	/*!
+	*
+	* \param[in] InterfaceHandle
+	* USB handle of the property to retrieve.
+	*
+	* \param[in] PropertyType
+	* The propety type to retrieve.
+	*
+	* \param[in,out] PropertySize
+	* Size in bytes of \c Property.
+	*
+	* \param[out] Property
+	* On success, receives the proprty data.
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
+	*/
+	KUSB_EXP BOOL KUSB_API UsbK_GetProperty (
+	    _in KUSB_HANDLE InterfaceHandle,
+	    _in KUSB_PROPERTY PropertyType,
+	    _ref PULONG PropertySize,
+	    _out PVOID Property);
 
 	/*! @} */
 
@@ -2911,143 +3025,145 @@ extern "C" {
 
 #ifndef _LIBUSBK_LSTK_FUNCTIONS
 	/*! \addtogroup lstk
-	* @{
+	*@{
 	*/
 
-	//! Initializes a new usb device list.
+//! Initializes a new usb device list.
 	/*!
+	*
+	* \param[out] DeviceList
+	* Pointer reference that will receive a populated device list.
+	*
+	* \param[in] Flags
+	* Search, filter, and listing options. see \c KLST_FLAG
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*
 	* \c LstK_Init populates \c DeviceList with connected usb devices that can be used by libusbK.
 	*
-	* \note if \ref LstK_Init returns TRUE, the device list must be freed with \ref LstK_Free when it is no longer needed.
+	* \note if \ref LstK_Init returns TRUE, the device list must be freed with \ref LstK_Free when it is no
+	* longer needed.
 	*
-	* \param DeviceList
-	* Pointer reference that will receive a populated device list.
-	*
-	* \param InitParameters
-	* Search, filter, and listing options. see \c KLST_INIT_PARAMS
-	*
-	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*/
 	KUSB_EXP BOOL KUSB_API LstK_Init(
-	    __deref_inout KLST_HANDLE* DeviceList,
-	    __in PKLST_INIT_PARAMS InitParameters);
+	    _out KLST_HANDLE* DeviceList,
+	    _in KLST_FLAG Flags);
 
-	//! Frees a usb device list.
+//! Frees a usb device list.
 	/*!
-	* Frees all resources that were allocated to \c DeviceList by \ref LstK_Init.
 	*
-	* \note if \ref LstK_Init returns TRUE, the device list must be freed with \ref LstK_Free when it is no longer needed.
+	* \note if \ref LstK_Init returns TRUE, the device list must be freed with \ref LstK_Free when it is no
+	* longer needed.
 	*
-	* \param DeviceList
+	* \param[in] DeviceList
 	* The \c DeviceList to free.
 	*
 	* \returns NONE
+	*
+	* Frees all resources that were allocated to \c DeviceList by \ref LstK_Init.
+	*
 	*/
 	KUSB_EXP BOOL KUSB_API LstK_Free(
-	    __in KLST_HANDLE DeviceList);
+	    _in KLST_HANDLE DeviceList);
 
-	//! Enumerates \ref KLST_DEVINFO elements of a \ref KLST_DEV_LIST.
+//! Enumerates \ref KLST_DEVINFO elements of a \ref KLST_HANDLE.
 	/*!
 	*
-	* \param DeviceList
+	* \param[in] DeviceList
 	* The \c DeviceList to enumerate.
 	*
-	* \param EnumDevListCB
+	* \param[in] EnumDevListCB
 	* Function to call for each iteration.
 	*
-	* \param Context
+	* \param[in] Context
 	* Optional user context pointer.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*
 	* Calls \c EnumDevListCB for each element in the device list or until \c EnumDevListCB returns FALSE.
+	*
 	*/
 	KUSB_EXP BOOL KUSB_API LstK_Enumerate(
-	    __in KLST_HANDLE DeviceList,
-	    __in PKLST_ENUM_DEVINFO_CB EnumDevListCB,
-	    __in_opt PVOID Context);
+	    _in KLST_HANDLE DeviceList,
+	    _in PKLST_ENUM_DEVINFO_CB EnumDevListCB,
+	    _inopt PVOID Context);
 
-	//! Gets the \ref KLST_DEVINFO element for the current position.
+//! Gets the \ref KLST_DEVINFO element for the current position.
 	/*!
 	*
-	* \param DeviceList
+	* \param[in] DeviceList
 	* The \c DeviceList to retrieve a current \ref KLST_DEVINFO for.
 	*
-	* \param DeviceInfo
+	* \param[out] DeviceInfo
 	* The device information.
-	*
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*
-	* After a \c DeviceList is created or after the \ref LstK_MoveReset method is
-	* called, the \c LstK_MoveNext method must be called to advance the device
-	* list enumerator to the first element of the \c DeviceList before calling
-	* \c LstK_Current otherwise, \c DeviceInfo is undefined.
+	* After a \c DeviceList is created or after the \ref LstK_MoveReset method is called, the \c LstK_MoveNext
+	* method must be called to advance the device list enumerator to the first element of the \c DeviceList
+	* before calling \c LstK_Current otherwise, \c DeviceInfo is undefined.
 	*
-	* \c LstK_Current returns \c FALSE and sets last error to \c
-	* ERROR_NO_MORE_ITEMS if the last call to \c LstK_MoveNext returned \c
-	* FALSE, which indicates the end of the \c DeviceList.
+	* \c LstK_Current returns \c FALSE and sets last error to \c ERROR_NO_MORE_ITEMS if the last call to
+	* \c LstK_MoveNext returned \c FALSE, which indicates the end of the \c DeviceList.
 	*
-	* \c LstK_Current does not move the position of the device list
-	* enumerator, and consecutive calls to \c LstK_Current return the same
-	* object until either \c LstK_MoveNext or \ref LstK_MoveReset is called.
+	* \c LstK_Current does not move the position of the device list enumerator, and consecutive calls to
+	* \c LstK_Current return the same object until either \c LstK_MoveNext or \ref LstK_MoveReset is called.
+	*
 	*/
 	KUSB_EXP BOOL KUSB_API LstK_Current(
-	    __in KLST_HANDLE DeviceList,
-	    __deref_out KLST_DEVINFO_HANDLE* DeviceInfo);
+	    _in KLST_HANDLE DeviceList,
+	    _out KLST_DEVINFO_HANDLE* DeviceInfo);
 
-	//! Advances the device list current \ref KLST_DEVINFO position.
+//! Advances the device list current \ref KLST_DEVINFO position.
 	/*!
-	* \param DeviceList
+	* \param[in] DeviceList
 	* A usb device list returned by \ref LstK_Init
 	*
-	* \param DeviceInfo [OPTIONAL]
+	* \param[out] DeviceInfo
 	* On success, contains a pointer to the device information for the current enumerators position.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*
-	* After a \c DeviceList is created or after \ref LstK_MoveReset is called, an
-	* enumerator is positioned before the first element of the \c DeviceList
-	* and the \b first call to \c LstK_MoveNext moves the enumerator over the
-	* first element of the \c DeviceList.
+	* After a \c DeviceList is created or after \ref LstK_MoveReset is called, an enumerator is positioned
+	* before the first element of the \c DeviceList and the \b first call to \c LstK_MoveNext moves the
+	* enumerator over the first element of the \c DeviceList.
 	*
-	* If \c LstK_MoveNext passes the end of the \c DeviceList, the enumerator
-	* is positioned after the last element in the \c DeviceList and \c
-	* LstK_MoveNext returns \c FALSE. When the enumerator is at this position,
-	* a subsequent call to \c LstK_MoveNext will reset the enumerator and it
-	* continues from the beginning.
+	* If \c LstK_MoveNext passes the end of the \c DeviceList, the enumerator is positioned after the last
+	* element in the \c DeviceList and \c LstK_MoveNext returns \c FALSE. When the enumerator is at this
+	* position, a subsequent call to \c LstK_MoveNext will reset the enumerator and it continues from the
+	* beginning.
 	*
 	*/
 	KUSB_EXP BOOL KUSB_API LstK_MoveNext(
-	    __inout KLST_HANDLE DeviceList,
-	    __deref_out_opt KLST_DEVINFO_HANDLE* DeviceInfo);
+	    _in KLST_HANDLE DeviceList,
+	    _outopt KLST_DEVINFO_HANDLE* DeviceInfo);
 
-	//! Sets the device list to its initial position, which is before the first element in the list.
+//! Sets the device list to its initial position, which is before the first element in the list.
 	/*!
 	*
-	* \param DeviceList
+	* \param[in] DeviceList
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
 	*/
 	KUSB_EXP VOID KUSB_API LstK_MoveReset(
-	    __inout KLST_HANDLE DeviceList);
+	    _in KLST_HANDLE DeviceList);
 
-	//! Find a device by vendor and product id
+//! Find a device by vendor and product id
 	/*!
 	*
-	* \param DeviceList
+	* \param[in] DeviceList
 	* The \c DeviceList to retrieve a current \ref KLST_DEVINFO for.
 	*
-	* \param Vid
-	* ID is used in conjunction with the \c Pid to uniquely identify USB
-	* devices, providing traceability to the OEM.
+	* \param[in] Vid
+	* ID is used in conjunction with the \c Pid to uniquely identify USB devices, providing traceability to the
+	* OEM.
 	*
-	* \param Pid
-	* ID is used in conjunction with the \c Pid to uniquely identify USB
-	* devices, providing traceability to the OEM.
+	* \param[in] Pid
+	* ID is used in conjunction with the \c Pid to uniquely identify USB devices, providing traceability to the
+	* OEM.
 	*
-	* \param DeviceInfo
+	* \param[out] DeviceInfo
 	* On success, the device information pointer, otherwise NULL.
 	*
 	* \returns
@@ -3056,53 +3172,127 @@ extern "C" {
 	*   - Sets last error to \c ERROR_NO_MORE_ITEMS if the device was \b not found.
 	*
 	* Searches all elements in \c DeviceList for usb device matching the specified.
+	*
 	*/
 	KUSB_EXP BOOL KUSB_API LstK_FindByVidPid(
-	    __in KLST_HANDLE DeviceList,
-	    __in UINT Vid,
-	    __in UINT Pid,
-	    __deref_out KLST_DEVINFO_HANDLE* DeviceInfo);
+	    _in KLST_HANDLE DeviceList,
+	    _in UINT Vid,
+	    _in UINT Pid,
+	    _out KLST_DEVINFO_HANDLE* DeviceInfo);
 
-	KUSB_EXP BOOL KUSB_API LstK_Count(
-	    __in KLST_HANDLE DeviceList,
-	    __inout PULONG Count);
-
-	KUSB_EXP BOOL KUSB_API LstK_Sync(
-	    __inout KLST_HANDLE MasterList,
-	    __in KLST_HANDLE SlaveList,
-	    __in_opt PKLST_SYNC_PARAMS SyncParams);
-
-	//! Creates a copy of an existing device list.
+//! Counts the number of device info elements in a device list.
 	/*!
 	*
-	* \param SrcList
+	* \param[in] DeviceList
+	* The deice list to count.
+	*
+	* \param[in,out] Count
+	* On success, receives the number of \ref KLST_DEVINFO elements in the list.
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
+	*/
+	KUSB_EXP BOOL KUSB_API LstK_Count(
+	    _in KLST_HANDLE DeviceList,
+	    _ref PULONG Count);
+
+//! Synchronize the device info elements of two device lists.
+	/*!
+	*
+	* \param[in] MasterList
+	* The device list handle to use as the master list.
+	*
+	* \param[in] SlaveList
+	* The device list handle to use as the master list.
+	*
+	* \param[in] SyncFlags
+	* One or more \ref KLST_SYNC_FLAG.
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
+	*/
+	KUSB_EXP BOOL KUSB_API LstK_Sync(
+	    _in KLST_HANDLE MasterList,
+	    _in KLST_HANDLE SlaveList,
+	    _inopt KLST_SYNC_FLAG SyncFlags);
+
+//! Creates a copy of an existing device list.
+	/*!
+	*
+	* \param[in] SrcList
 	* The device list to copy.
 	*
-	* \param DstList
+	* \param[out] DstList
 	* Reference to a pointer that receives the cloned device list.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
 	*/
 	KUSB_EXP BOOL KUSB_API LstK_Clone(
-	    __in KLST_HANDLE SrcList,
-	    __out KLST_HANDLE* DstList);
+	    _in KLST_HANDLE SrcList,
+	    _out KLST_HANDLE* DstList);
 
+//! Creates a copy of an existing device info handle.
+	/*!
+	*
+	* \param[in] SrcInfo
+	* The device info to copy.
+	*
+	* \param[out] DstInfo
+	* Reference to a pointer that receives the cloned device info.
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
+	*/
 	KUSB_EXP BOOL KUSB_API LstK_CloneInfo(
-	    __in KLST_DEVINFO_HANDLE SrcInfo,
-	    __deref_inout KLST_DEVINFO_HANDLE* DstInfo);
+	    _in KLST_DEVINFO_HANDLE SrcInfo,
+	    _out KLST_DEVINFO_HANDLE* DstInfo);
 
+//! Removes a device info handle for a device list.
+	/*!
+	*
+	* \param[in] DeviceList
+	* The device list of the info element.
+	*
+	* \param[in] DeviceInfo
+	* The device info element to remove from the list.
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
+	*/
 	KUSB_EXP BOOL KUSB_API LstK_DetachInfo(
-	    __inout KLST_HANDLE DeviceList,
-	    __in KLST_DEVINFO_HANDLE DeviceInfo);
+	    _in KLST_HANDLE DeviceList,
+	    _in KLST_DEVINFO_HANDLE DeviceInfo);
 
+//! Appends a device info handle for a device list.
+	/*!
+	*
+	* \param[in] DeviceList
+	* The device list to add the info element.
+	*
+	* \param[in] DeviceInfo
+	* The device info element to add to the list.
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
+	*/
 	KUSB_EXP BOOL KUSB_API LstK_AttachInfo(
-	    __inout KLST_HANDLE DeviceList,
-	    __in KLST_DEVINFO_HANDLE DeviceInfo);
+	    _in KLST_HANDLE DeviceList,
+	    _in KLST_DEVINFO_HANDLE DeviceInfo);
 
+//! Frees a device info handle that was detached with \ref LstK_DetachInfo.
+	/*!
+	*
+	* \param[in] DeviceInfo
+	* The device info element to free.
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
+	*/
 	KUSB_EXP BOOL KUSB_API LstK_FreeInfo(
-	    __deref_inout KLST_DEVINFO_HANDLE DeviceInfo);
+	    _in KLST_DEVINFO_HANDLE DeviceInfo);
 
-	/*! @} */
+	/**@}*/
 
 #endif
 
@@ -3111,37 +3301,33 @@ extern "C" {
 	* @{
 	*/
 
-	//! Creates a new hot-plug handle for USB device arrival/removal event monitoring.
+//! Creates a new hot-plug handle for USB device arrival/removal event monitoring.
 	/*!
 	*
-	* \param Handle
+	* \param[out] Handle
 	* Reference to a handle pointer that will receive the initialized hot-plug handle.
 	*
-	* \param InitParams
+	* \param[in,out] InitParams
 	* Hot plug handle initialization structure.
 	*
-	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get
-	* extended error information.
-	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*
 	*/
 	KUSB_EXP BOOL KUSB_API HotK_Init(
-	    __deref_out KHOT_HANDLE* Handle,
-	    __in KHOT_PARAMS* InitParams);
+	    _out KHOT_HANDLE* Handle,
+	    _ref PKHOT_PARAMS InitParams);
 
-	//! Frees the specified hot-plug handle.
+//! Frees the specified hot-plug handle.
 	/*!
 	*
-	* \param Handle
+	* \param[in] Handle
 	* hot-plug handle pointer to free.
 	*
-	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get
-	* extended error information.
-	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*
 	*/
 	KUSB_EXP BOOL KUSB_API HotK_Free(
-	    __in KHOT_HANDLE Handle);
+	    _in KHOT_HANDLE Handle);
 
 	//! Frees all hot-plug handles initialized with \ref HotK_Init.
 	/*!
@@ -3158,252 +3344,576 @@ extern "C" {
 	*  @{
 	*/
 
-	//! Gets a preallocated \c OverlappedK structure from the specified/default pool.
+//! Gets a preallocated \c OverlappedK structure from the specified/default pool.
 	/*!
 	*
-	* \param Pool
-	* The overlapped pool used to retrieve the next available \c OverlappedK,
-	* or NULL for the default pool.
+	* \param[in] Pool
+	* The overlapped pool used to retrieve the next available \c OverlappedK.
 	*
-	* \c Pool parameter.
+	* \param[out] OverlappedK
+	* On Success, receives the overlapped handle.
 	*
-	* \returns On success, the next unused overlappedK available in the pool.
-	* Otherwise NULL. Use \c GetLastError() to get extended error information.
+	* \returns On success, the next unused overlappedK available in the pool. Otherwise NULL. Use
+	* \c GetLastError() to get extended error information.
 	*
-	* After calling \ref OvlK_Acquire or \ref OvlK_ReUse the \c OverlappedK is
-	* ready to be used in an I/O operation. See one of the \c UsbK core
-	* transfer functions such as \ref UsbK_ReadPipe or \ref UsbK_WritePipe for
-	* more information.
+	* After calling \ref OvlK_Acquire or \ref OvlK_ReUse the \c OverlappedK is ready to be used in an I/O
+	* operation. See one of the \c UsbK core transfer functions such as \ref UsbK_ReadPipe or
+	* \ref UsbK_WritePipe for more information.
 	*
-	* If the pools internal refurbished list (a re-usable list of \c
-	* OverlappedK structures) is not empty, the \ref OvlK_Acquire function
-	* will choose an overlapped from the refurbished list.
+	* If the pools internal refurbished list (a re-usable list of \c OverlappedK structures) is not empty, the
+	* \ref OvlK_Acquire function will choose an overlapped from the refurbished list.
 	*
 	*/
 	KUSB_EXP BOOL KUSB_API OvlK_Acquire(
-	    __out KOVL_HANDLE* OverlappedK,
-	    __in KOVL_POOL_HANDLE Pool);
+	    _out KOVL_HANDLE* OverlappedK,
+	    _in KOVL_POOL_HANDLE Pool);
 
-	//! Returns an \c OverlappedK structure to it's pool.
+//! Returns an \c OverlappedK structure to it's pool.
 	/*!
 	*
-	* \param OverlappedK
+	* \param[in] OverlappedK
 	* The overlappedK to release.
 	*
-	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get
-	* extended error information.
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*
-	* When an overlapped is returned to pool, it resources are \b not freed.
-	* Instead, it is added to an internal refurbished list (a re-usable list of \c
-	* OverlappedK structures).
+	* When an overlapped is returned to pool, it resources are \b not freed. Instead, it is added to an internal
+	* refurbished list (a re-usable list of \c OverlappedK structures).
 	*
-	* \warning
-	* This function must not be called when the OverlappedK is in-use. If
-	* unsure, consider using \ref OvlK_WaitAndRelease instead.
+	* \warning This function must not be called when the OverlappedK is in-use. If unsure, consider using
+	* \ref OvlK_WaitAndRelease instead.
+	*
 	*/
 	KUSB_EXP BOOL KUSB_API OvlK_Release(
-	    __in KOVL_HANDLE OverlappedK);
+	    _in KOVL_HANDLE OverlappedK);
 
 
-	//! Creates a new overlapped pool.
+//! Creates a new overlapped pool.
 	/*!
 	*
-	* \param MaxOverlappedCount
+	* \param[out] PoolHandle
+	* On success, receives the new pool handle.
+	*
+	* \param[in] UsbHandle
+	* USB handle to associate with the pool.
+	*
+	* \param[in] MaxOverlappedCount
 	* Maximum number of overkappedK handles allowed in the pool.
 	*
-	* \returns On success, the newly created overlapped pool.  Otherwise NULL.
-	* Use \c GetLastError() to get extended error information.
+	* \param[in] Flags
+	* Pool flags.
 	*
-	* \c OverlappedK pools use a spin-lock to achieve thread safety.
-	* Some of the \c OvlK function hold this spin-lock for a brief period to protect internal data.
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*
 	*/
-	KUSB_EXP BOOL KUSB_API OvlK_InitPool(
-	    __out KOVL_POOL_HANDLE* PoolHandle,
-	    __in USHORT MaxOverlappedCount);
+	KUSB_EXP BOOL KUSB_API OvlK_InitPool (
+	    _out KOVL_POOL_HANDLE* PoolHandle,
+	    _in KUSB_HANDLE UsbHandle,
+	    _in USHORT MaxOverlappedCount,
+	    _inopt KOVL_POOL_FLAG Flags);
 
-	//! Destroys the specified pool and all resources it created.
+//! Destroys the specified pool and all resources it created.
 	/*!
 	*
+	* \param[in] Pool
+	* The overlapped pool to destroy. Once destroyed, the pool and all resources which belong to it can no
+	* longer be used.
 	*
-	* \param Pool
-	* The overlapped pool to destroy. Once destroyed, the pool and all
-	* resources which belong to it can no longer be used.
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*
-	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get
-	* extended error information.
-	*
-	* \warning
-	* A pool should not be destroyed until all OverlappedKs acquired from it
-	* are no longer in-use. For more information see \ref OvlK_WaitAndRelease or \ref OvlK_Release.
+	* \warning A pool should not be destroyed until all OverlappedKs acquired from it are no longer in-use. For
+	* more information see \ref OvlK_WaitAndRelease or \ref OvlK_Release.
 	*
 	*/
 	KUSB_EXP BOOL KUSB_API OvlK_FreePool(
-	    __in KOVL_POOL_HANDLE Pool);
+	    _in KOVL_POOL_HANDLE Pool);
 
 
-	//! Returns the internal event handle used to signal IO operations.
+//! Returns the internal event handle used to signal IO operations.
 	/*!
 	*
-	* \param OverlappedK
+	* \param[in] OverlappedK
 	* The overlappedK used to return the internal event handle.
 	*
-	* \returns On success, The manual reset event handle being used by this
-	* overlappedK. Otherwise NULL. Use \c GetLastError() to get extended error
-	* information.
+	* \returns On success, The manual reset event handle being used by this overlappedK. Otherwise NULL. Use
+	* \c GetLastError() to get extended error information.
 	*
-	* \ref OvlK_GetEventHandle is useful for applications that must to their
-	* own event handling. It exposes the windows \c OVERLAPPED \c hEvent used
-	* for i/o completion signaling. This event handle can be used by the
+	* \ref OvlK_GetEventHandle is useful for applications that must to their own event handling. It exposes the
+	* windows \c OVERLAPPED \c hEvent used for i/o completion signaling. This event handle can be used by the
 	* standard event wait functions; /c WaitForMultipleObjectsEx for example.
 	*
-	* \warning Use \ref OvlK_GetEventHandle with caution. Event handles
-	* returned by this function should never be used unless the OverlappedK
-	* has been \b acquired by the application.
+	* \warning Use \ref OvlK_GetEventHandle with caution. Event handles returned by this function should never
+	* be used unless the OverlappedK has been \b acquired by the application.
 	*
 	*/
 	KUSB_EXP HANDLE KUSB_API OvlK_GetEventHandle(
-	    __in KOVL_HANDLE OverlappedK);
+	    _in KOVL_HANDLE OverlappedK);
 
-	//! Waits for an OverlappedK i/o operation to complete.
+//! Waits for overlapped I/O completion, and performs actions specified in \c WaitFlags.
 	/*!
 	*
-	* \param OverlappedK
+	* \param[in] OverlappedK
 	* The overlappedK to wait on.
 	*
-	* \param TimeoutMS
+	* \param[in] TimeoutMS
 	* Number of milliseconds to wait for overlapped completion.
 	*
-	* \param WaitFlags
-	* See /ref KOVL_WAIT_FLAGS
+	* \param[in] WaitFlags
+	* See /ref KOVL_WAIT_FLAG
 	*
-	* \param TransferredLength
+	* \param[out] TransferredLength
 	* On success, returns the number of bytes transferred by this overlappedK.
 	*
-	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get
-	* extended error information.
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information. See
+	* the remarks section below for details on relevant error codes.
 	*
-	* \c OvlK_Wait waits the the time interval specified by \c TimeoutMS for
-	* an overlapped result. If the transfer does not complete in time, on
-	* operation specified by \c WaitFlags can be performed on the \c
-	* OverlappedK.
+	* \c OvlK_Wait waits the time interval specified in \c TimeoutMS for the overlapped I/O operation to
+	* complete. Different actions can then taken depending on the flags specified in \c WaitFlags.
+	*
+	* \WINERRORTABLE
+	*
+	* \WINERROR{ERROR_CANCELLED,1223}
+	* - The I/O was cancelled by the user. The transfer complete event was not signalled within the alotted
+	*   transfer timeout time and the OvlK_Wait function issued a CancelIoEx/CancelIo request because the
+	*   \ref KOVL_WAIT_FLAG_CANCEL_ON_TIMEOUT flag bit was set.
+	* \ENDWINERROR
+	*
+	* \WINERROR{ERROR_OPERATION_ABORTED,995}
+	* - The transfer complete event is signalled but the overlapped result was allready cancelled. The
+	*   overlapped I/O may have bee cancelled for one of the following reasons:
+	*   - Driver cancelled because of pipe timeout policy expiration.
+	*   - The device was disconnected.
+	*   - A \ref UsbK_AbortPipe request was issued.
+	* \ENDWINERROR
+	*
+	* \ENDWINERRORTABLE
+	*
 	*/
 	KUSB_EXP BOOL KUSB_API OvlK_Wait(
-	    __in KOVL_HANDLE OverlappedK,
-	    __in_opt DWORD TimeoutMS,
-	    __in_opt KOVL_WAIT_FLAGS WaitFlags,
-	    __out PULONG TransferredLength);
+	    _in KOVL_HANDLE OverlappedK,
+	    _inopt ULONG TimeoutMS,
+	    _inopt KOVL_WAIT_FLAG WaitFlags,
+	    _out PULONG TransferredLength);
 
-	//! Waits for an OverlappedK i/o operation to complete; cancels if it fails to complete within the specified time.
+//! Waits for overlapped I/O completion, cancels on a timeout error.
 	/*!
 	*
-	* \note
-	* When \c OvlK_WaitOrCancel returns, the \c OverlappedK is ready for
-	* re-use or release.
-	*
-	* \param OverlappedK
+	* \param[in] OverlappedK
 	* The overlappedK to wait on.
 	*
-	* \param TimeoutMS
+	* \param[in] TimeoutMS
 	* Number of milliseconds to wait for overlapped completion.
 	*
-	* \param TransferredLength
+	* \param[out] TransferredLength
 	* On success, returns the number of bytes transferred by this overlappedK.
 	*
-	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get
-	* extended error information.
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information. See
+	* \ref OvlK_Wait for details on relevant win32 error codes.
 	*
-	* \c OvlK_WaitOrCancel waits the the time interval specified by \c
-	* TimeoutMS for an overlapped result. If the transfer does not complete in
-	* time, the overlapped operation is canceled.
+	* \note This convenience function calls \ref OvlK_Wait with \ref KOVL_WAIT_FLAG_CANCEL_ON_TIMEOUT.
 	*
-	* This convenience function calls \ref OvlK_Wait with \ref
-	* WAIT_FLAGS_CANCEL_ON_TIMEOUT
+	* \c OvlK_WaitOrCancel waits the the time interval specified by \c TimeoutMS for an overlapped result. If
+	* the \c TimeoutMS interval expires the I/O operation is cancelled. The \c OverlappedK is not released back
+	* to its pool.
 	*
 	*/
 	KUSB_EXP BOOL KUSB_API OvlK_WaitOrCancel(
-	    __in KOVL_HANDLE OverlappedK,
-	    __in_opt DWORD TimeoutMS,
-	    __out PULONG TransferredLength);
+	    _in KOVL_HANDLE OverlappedK,
+	    _inopt ULONG TimeoutMS,
+	    _out PULONG TransferredLength);
 
-	//! Waits for completion, cancels the transfer if it fails to complete within the specified time. Always releases the \c OverlappedK back to it pool.
+//! Waits for overlapped I/O completion, cancels on a timeout error and always releases the OvlK handle back to its pool.
 	/*!
 	*
-	*
-	* \param OverlappedK
+	* \param[in] OverlappedK
 	* The overlappedK to wait on.
 	*
-	* \param TimeoutMS
+	* \param[in] TimeoutMS
 	* Number of milliseconds to wait for overlapped completion.
 	*
-	* \param TransferredLength
+	* \param[out] TransferredLength
 	* On success, returns the number of bytes transferred by this overlappedK.
 	*
-	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get
-	* extended error information.
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information. See
+	* \ref OvlK_Wait for details on relevant win32 error codes.
 	*
-	* \c OvlK_WaitAndRelease waits the the time interval specified by \c
-	* TimeoutMS for an overlapped result. If the transfer does not complete in
-	* time, the overlapped operation is canceled. \c OverlappedK is always
-	* released back to its pool.
+	* \note This convenience function calls \ref OvlK_Wait with \ref KOVL_WAIT_FLAG_RELEASE_ALWAYS.
 	*
-	* This convenience function calls \ref OvlK_Wait with \ref
-	* WAIT_FLAGS_RELEASE_ALWAYS
-	*
-	* \note
-	* When \c OvlK_WaitOrCancel returns, the i/o operation has either been
-	* completed or canceled and \c OverlappedK has been released back to the
-	* pool.
+	* \c OvlK_WaitAndRelease waits the the time interval specified by \c TimeoutMS for an overlapped result.
+	* When \c OvlK_WaitOrCancel returns, the I/O operation has either been completed or cancelled. The
+	* \c OverlappedK is always released back to its pool where it can be re-acquired with \ref OvlK_Acquire.
 	*
 	*/
 	KUSB_EXP BOOL KUSB_API OvlK_WaitAndRelease(
-	    __in KOVL_HANDLE OverlappedK,
-	    __in_opt DWORD TimeoutMS,
-	    __out PULONG TransferredLength);
+	    _in KOVL_HANDLE OverlappedK,
+	    _inopt ULONG TimeoutMS,
+	    _out PULONG TransferredLength);
 
-	//! Checks for i/o completion; returns immediately. (polling)
+//! Checks for i/o completion; returns immediately. (polling)
 	/*!
 	*
-	* \param OverlappedK
+	* \param[in] OverlappedK
 	* The overlappedK to check for completion.
 	*
-	* \warning
-	* \ref OvlK_IsComplete does \b no validation on the OverlappedK.
-	* It's purpose is to check the event signal state as fast as possible.
+	* \warning \ref OvlK_IsComplete does \b no validation on the OverlappedK. It's purpose is to check the event
+	* signal state as fast as possible.
 	*
 	* \returns TRUE if the \c OverlappedK has completed, otherwise FALSE.
 	*
 	* \c OvlK_IsComplete quickly checks if the \c OverlappedK i/o operation has completed.
 	*/
 	KUSB_EXP BOOL KUSB_API OvlK_IsComplete(
-	    __in KOVL_HANDLE OverlappedK);
+	    _in KOVL_HANDLE OverlappedK);
 
-	//! Initializes an overlappedK for re-use. The overlappedK is not return to its pool.
+//! Initializes an overlappedK for re-use. The overlappedK is not return to its pool.
 	/*!
 	*
-	* \param OverlappedK
+	* \param[in] OverlappedK
 	* The overlappedK to re-use.
 	*
-	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get
-	* extended error information.
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*
 	*  This function performs the following actions:
 	*  - Resets the overlapped event to non-signaled via ResetEvent().
 	*  - Clears the internal overlapped information.
-	*  - Clears the 'Internal' and 'InternalHigh' members of the windows
-	*    overlapped structure.
+	*  - Clears the 'Internal' and 'InternalHigh' members of the windows overlapped structure.
 	*
 	* \note
-	* Re-using OverlappedKs is the most efficient means of OverlappedK
-	* management. When an OverlappedK is "re-used" it is not returned to the
-	* pool. Instead, the application retains ownership for use in another i/o
-	* operation.
+	* Re-using OverlappedKs is the most efficient means of OverlappedK management. When an OverlappedK is
+	* "re-used" it is not returned to the pool. Instead, the application retains ownership for use in another
+	* i/o operation.
 	*
 	*/
-	KUSB_EXP BOOL KUSB_API KUSB_API OvlK_ReUse(
-	    __in KOVL_HANDLE OverlappedK);
+	KUSB_EXP BOOL KUSB_API OvlK_ReUse(
+	    _in KOVL_HANDLE OverlappedK);
 
 	/**@}*/
+
+#endif
+
+#ifndef _LIBUSBK_STMK_FUNCTIONS
+
+	/*! \addtogroup stmk
+	*  @{
+	*/
+
+//! Initializes a new uni-directional pipe stream.
+	/*!
+	*
+	* \param[out] StreamHandle
+	* On success, receives the new stream handle.
+	*
+	* \param[in] UsbHandle
+	* Usb handle to associate with this stream.
+	*
+	* \param[in] PipeID
+	* Endpoint address of USB pipe to associate with this stream.
+	*
+	* \param[in] MaxTransferSize
+	* Maximum number of bytes transferred at once. Larger transfers committed with the stream read/write
+	* functions are automatically split into multiple smaller chunks.
+	*
+	* \param[in] MaxPendingTransfers
+	* Maximum number of transfers allowed to be outstanding and the total number of transfer contexts that are
+	* allocated to the stream.
+	*
+	* \param[in] MaxPendingIO
+	* Maximum number of I/O requests the internal stream thread is allowed to have submit at any given time.
+	* (Pending I/O)
+	*
+	* \param[in] Callbacks
+	* Optional user callback functions. If specified, these callback functions will be executed in real time
+	* (from within the context of the internal stream thread) as transfers go through the various states.
+	*
+	* \param[in] Flags
+	* Additional stream flags.
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
+	* \par
+	* When a stream is initialized, it validates input parameters and allocates the required memory for the
+	* transfer context array and transfer lists from a private memory heap. The stream is not started and no I/O
+	* requests are sent to the device until \ref StmK_Start is executed.
+	*
+	*/
+	KUSB_EXP BOOL KUSB_API StmK_Init(
+	    _out KSTM_HANDLE* StreamHandle,
+	    _in KUSB_HANDLE UsbHandle,
+	    _in UCHAR PipeID,
+	    _in ULONG MaxTransferSize,
+	    _in ULONG MaxPendingTransfers,
+	    _in ULONG MaxPendingIO,
+	    _inopt PKSTM_CALLBACK Callbacks,
+	    _inopt KSTM_FLAG Flags);
+
+//! Frees resources allocated by a stream handle.
+	/*!
+	*
+	* \param[in] StreamHandle
+	* The stream handle to free.
+	*
+	* \returns TRUE.
+	*
+	* If the stream is currently started it is automatically stopped before its resources are freed.
+	*
+	*/
+	KUSB_EXP BOOL KUSB_API StmK_Free(
+	    _in KSTM_HANDLE StreamHandle);
+
+//! Starts the internal stream thread.
+	/*!
+	*
+	* \param[in] StreamHandle
+	* The stream to start.
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
+	* \par
+	* When a stream is started, the internal stream thread used for all I/O operations is created and started.
+	* Once started, read/write streams take the following courses of action:
+	* - Read Stream
+	*   -# The internal stream thread begings submitting read requests to the pipe. The stream API will always
+	*      try to keep \c MaxPendingIO requests submitted at all times.
+	*   -# When the pending I/O count reaches \c MaxPendingIO, it begins waiting on the oldest pending transfer
+	*      to complete.
+	*   -# When a transfer completes, the internal pending I/O count is decremented and the transfers is moved
+	*      into an internal finished list and remains here until it is retrieved by the user via \ref StmK_Read.
+	* - Write Stream
+	*   -# Initially, the internal stream thread is idled because the user has not supplied it with any write
+	*      request via \ref StmK_Write.
+	*   -# When write request are submitted transfers are move from the an internal idle list into a queued
+	*      where they await processing by the internal stream thread.
+	*   -# When a transfer completes, the internal pending I/O count is decremented and the transfers is moved
+	*      back into the idle list where it can be reused again by subsequent \ref StmK_Write requests.
+	*
+	*/
+	KUSB_EXP BOOL KUSB_API StmK_Start(
+	    _in KSTM_HANDLE StreamHandle);
+
+//! Stops the internal stream thread.
+	/*!
+	*
+	* \param[in] StreamHandle
+	* The stream to stop.
+	*
+	* \param[in] TimeoutCancelMS
+	* Number of milliseconds the internal stream thread should wait for pending I/O to complete before
+	* cancelling all pending requests.
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
+	*/
+	KUSB_EXP BOOL KUSB_API StmK_Stop(
+	    _in KSTM_HANDLE StreamHandle,
+	    _in ULONG TimeoutCancelMS);
+
+//! Reads data from the stream buffer.
+	/*!
+	*
+	* \param[in] StreamHandle
+	* The stream to read.
+	*
+	* \param[out] Buffer
+	* A caller-allocated buffer that receives the data that is read.
+	*
+	* \param[in] Offset
+	* Read start offset of \c Buffer.
+	*
+	* \param[in] Length
+	* Size of \c Buffer.
+	*
+	* \param[out] TransferredLength
+	* On success, receives the actual number of bytes that were copied into \c Buffer.
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
+	*/
+	KUSB_EXP BOOL KUSB_API StmK_Read(
+	    _in KSTM_HANDLE StreamHandle,
+	    _out PUCHAR Buffer,
+	    _in LONG Offset,
+	    _in ULONG Length,
+	    _out PULONG TransferredLength);
+
+//! Writes data to the stream buffer.
+	/*!
+	*
+	* \param[in] StreamHandle
+	* The stream to write.
+	*
+	* \param[in] Buffer
+	* A caller-allocated buffer the data is written from.
+	*
+	* \param[in] Offset
+	* Write start offset of \c Buffer.
+	*
+	* \param[in] Length
+	* Number of bytes to copy into the stream buffer.
+	*
+	* \param[out] TransferredLength
+	* On success, receives the actual number of bytes that were copied into the stream buffer.
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
+	*/
+	KUSB_EXP BOOL KUSB_API StmK_Write(
+	    _in KSTM_HANDLE StreamHandle,
+	    _in PUCHAR Buffer,
+	    _in LONG Offset,
+	    _in ULONG Length,
+	    _out PULONG TransferredLength);
+	/**@}*/
+
+#endif
+
+#ifndef _LIBUSBK_ISOK_FUNCTIONS
+	/*! \addtogroup isok
+	*  @{
+	*/
+
+//! Creates a new isochronous transfer context.
+	/*!
+	*
+	* \param[out] IsoContext
+	* Receives a new isochronous transfer context.
+	*
+	* \param[in] NumberOfPackets
+	* The number of \ref KISO_PACKET structures allocated to \c IsoContext. Assigned to
+	* \ref KISO_CONTEXT::NumberOfPackets. The \ref KISO_CONTEXT::NumberOfPackets field is assignable by
+	* \c IsoK_Init only and must not be changed by the user.
+	*
+	* \param[in] PipeID
+	* The USB endpoint address assigned to \ref KISO_CONTEXT::PipeID. The driver uses this field to determine
+	* which pipe will receive the transfer request. The \ref KISO_CONTEXT::PipeID may be chamged by the user in
+	* subsequent request.
+	*
+	* \param[in] StartFrame
+	* The USB frame number this request must start on (or \b 0 for ASAP) and assigned to
+	* \ref KISO_CONTEXT::StartFrame. The \ref KISO_CONTEXT::StartFrame may be chamged by the user in subsequent
+	* request. For more information, see \ref KISO_CONTEXT::StartFrame.
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
+	* \c IsoK_Init is performs the following tasks in order:
+	* -# Allocates the \c IsoContext and the required \ref KISO_PACKET structures.
+	* -# Zero-initializes all ISO context memory.
+	* -# Assigns \b NumberOfPackets, \b PipeID, and \b StartFrame to \c IsoContext.
+	*
+	*/
+	KUSB_EXP BOOL KUSB_API IsoK_Init(
+	    _out PKISO_CONTEXT* IsoContext,
+	    _in ULONG NumberOfPackets,
+	    _inopt UCHAR PipeID,
+	    _inopt ULONG StartFrame);
+
+//! Destroys an isochronous transfer context.
+	/*!
+	* \param[in] IsoContext
+	* A pointer to an isochronous transfer context created with \ref IsoK_Init.
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*/
+	KUSB_EXP BOOL KUSB_API IsoK_Free(
+	    _in PKISO_CONTEXT IsoContext);
+
+//! Convenience function for setting the offset of all ISO packets of an isochronous transfer context.
+	/*!
+	* \param[in] IsoContext
+	* A pointer to an isochronous transfer context.
+	*
+	* \param[in] PacketSize
+	* The packet size used to calculate and assign the absolute data offset for each \ref KISO_PACKET in
+	* \c IsoContext.
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
+	* \c IsoK_SetPackets updates all \ref KISO_PACKET::Offset fields in a \ref KISO_CONTEXT so all offset are
+	* \c PacketSize apart. For example:
+	* - The offset of the first (0-index) packet is 0.
+	* - The offset of the second (1-index) packet is PacketSize.
+	* - The offset of the third (2-index) packet is PacketSize*2.
+	*
+	*/
+	KUSB_EXP BOOL KUSB_API IsoK_SetPackets(
+	    _in PKISO_CONTEXT IsoContext,
+	    _in ULONG PacketSize);
+
+//! Convenience function for setting all fields of a \ref KISO_PACKET.
+	/*!
+	* \param[in] IsoContext
+	* A pointer to an isochronous transfer context.
+	*
+	* \param[in] PacketIndex
+	* The packet index to set.
+	*
+	* \param[in] IsoPacket
+	* Pointer to a user allocated \c KISO_PACKET which is copied into the PKISO_CONTEXT::IsoPackets array at the
+	* specified index.
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*/
+	KUSB_EXP BOOL KUSB_API IsoK_SetPacket(
+	    _in PKISO_CONTEXT IsoContext,
+	    _in ULONG PacketIndex,
+	    _in PKISO_PACKET IsoPacket);
+
+//! Convenience function for getting all fields of a \ref KISO_PACKET.
+	/*!
+	* \param[in] IsoContext
+	* A pointer to an isochronous transfer context.
+	*
+	* \param[in] PacketIndex
+	* The packet index to get.
+	*
+	* \param[out] IsoPacket
+	* Pointer to a user allocated \c KISO_PACKET which receives a copy of the ISO packet in the
+	* PKISO_CONTEXT::IsoPackets array at the specified index.
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*/
+	KUSB_EXP BOOL KUSB_API IsoK_GetPacket(
+	    _in PKISO_CONTEXT IsoContext,
+	    _in ULONG PacketIndex,
+	    _out PKISO_PACKET IsoPacket);
+
+//! Convenience function for enumerating ISO packets of an isochronous transfer context.
+	/*!
+	* \param[in] IsoContext
+	* A pointer to an isochronous transfer context.
+	*
+	* \param[in] EnumPackets
+	* Pointer to a user supplied callback function which is executed for all ISO packets in \c IsoContext or
+	* until the user supplied callback function returns \c FALSE.
+	*
+	* \param[in] StartPacketIndex
+	* The zero-based ISO packet index to begin enumeration at.
+	*
+	* \param[in] UserState
+	* A user defined value which is passed as a parameter to the user supplied callback function.
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*/
+	KUSB_EXP BOOL KUSB_API IsoK_EnumPackets(
+	    _in PKISO_CONTEXT IsoContext,
+	    _in PKISO_ENUM_PACKETS_CB EnumPackets,
+	    _inopt ULONG StartPacketIndex,
+	    _inopt PVOID UserState);
+
+//! Convenience function for re-using an isochronous transfer context in a subsequent request.
+	/*!
+	* \param[in,out] IsoContext
+	* A pointer to an isochronous transfer context.
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
+	* \c IsoK_ReUse does the following:
+	* -# Zero-initializes the \b Length and \b Status fields of all \ref KISO_PACKET structures.
+	* -# Zero-initializes the \b StartFrame and \b ErrorCount of the \ref KISO_CONTEXT.
+	*
+	*/
+	KUSB_EXP BOOL KUSB_API IsoK_ReUse(
+	    _ref PKISO_CONTEXT IsoContext);
+
+	/*! @} */
 
 #endif
 

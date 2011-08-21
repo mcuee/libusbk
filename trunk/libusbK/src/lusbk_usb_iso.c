@@ -19,11 +19,11 @@ binary distributions.
 #include "lusbk_private.h"
 #include "lusbk_handles.h"
 
-KUSB_EXP BOOL KUSB_API IsoK_Init (
-    __deref_out PKISO_CONTEXT* IsoContext,
-    __in ULONG NumberOfPackets,
-    __in_opt UCHAR PipeID,
-    __in_opt ULONG StartFrame)
+KUSB_EXP BOOL KUSB_API IsoK_Init(
+    _out PKISO_CONTEXT* IsoContext,
+    _in ULONG NumberOfPackets,
+    _inopt UCHAR PipeID,
+    _inopt ULONG StartFrame)
 {
 	PKISO_CONTEXT isoCtx = NULL;
 
@@ -51,7 +51,7 @@ Error:
 }
 
 KUSB_EXP BOOL KUSB_API IsoK_Free(
-    __in PKISO_CONTEXT IsoContext)
+    _in PKISO_CONTEXT IsoContext)
 {
 	ErrorHandle(!IsHandleValid(IsoContext), Error, "IsoContext");
 	Mem_Free(&IsoContext);
@@ -63,8 +63,8 @@ Error:
 }
 
 KUSB_EXP BOOL KUSB_API IsoK_SetPackets(
-    __inout PKISO_CONTEXT IsoContext,
-    __in ULONG PacketSize)
+    _in PKISO_CONTEXT IsoContext,
+    _in ULONG PacketSize)
 {
 	ULONG packetIndex;
 	ULONG nextOffSet = 0;
@@ -84,9 +84,9 @@ Error:
 
 
 KUSB_EXP BOOL KUSB_API IsoK_SetPacket(
-    __in PKISO_CONTEXT IsoContext,
-    __in ULONG PacketIndex,
-    __in PKISO_PACKET IsoPacket)
+    _in PKISO_CONTEXT IsoContext,
+    _in ULONG PacketIndex,
+    _in PKISO_PACKET IsoPacket)
 {
 	ErrorHandle(!IsHandleValid(IsoContext), Error, "IsoContext");
 	ErrorParam(PacketIndex >= IsoContext->NumberOfPackets, Error, "PacketIndex");
@@ -101,9 +101,9 @@ Error:
 
 
 KUSB_EXP BOOL KUSB_API IsoK_GetPacket(
-    __in PKISO_CONTEXT IsoContext,
-    __in ULONG PacketIndex,
-    __out PKISO_PACKET IsoPacket)
+    _in PKISO_CONTEXT IsoContext,
+    _in ULONG PacketIndex,
+    _out PKISO_PACKET IsoPacket)
 {
 	ErrorHandle(!IsHandleValid(IsoContext), Error, "IsoContext");
 	ErrorParam(PacketIndex >= IsoContext->NumberOfPackets, Error, "PacketIndex");
@@ -117,10 +117,10 @@ Error:
 
 
 KUSB_EXP BOOL KUSB_API IsoK_EnumPackets(
-    __in PKISO_CONTEXT IsoContext,
-    __in PKISO_ENUM_PACKETS_CB EnumPackets,
-    __in_opt ULONG StartPacketIndex,
-    __in_opt PVOID UserContext)
+    _in PKISO_CONTEXT IsoContext,
+    _in PKISO_ENUM_PACKETS_CB EnumPackets,
+    _inopt ULONG StartPacketIndex,
+    _inopt PVOID UserState)
 {
 	ErrorHandle(!IsHandleValid(IsoContext), Error, "IsoContext");
 	ErrorParam(!IsHandleValid(EnumPackets), Error, "EnumPackets");
@@ -128,7 +128,7 @@ KUSB_EXP BOOL KUSB_API IsoK_EnumPackets(
 
 	for (StartPacketIndex; StartPacketIndex < IsoContext->NumberOfPackets; StartPacketIndex++)
 	{
-		if (!EnumPackets(StartPacketIndex, &IsoContext->IsoPackets[StartPacketIndex], UserContext))
+		if (!EnumPackets(StartPacketIndex, &IsoContext->IsoPackets[StartPacketIndex], UserState))
 			break;
 	}
 	return TRUE;
@@ -139,7 +139,7 @@ Error:
 
 
 KUSB_EXP BOOL KUSB_API IsoK_ReUse(
-    __inout PKISO_CONTEXT IsoContext)
+    _ref PKISO_CONTEXT IsoContext)
 {
 	ULONG packetIndex;
 

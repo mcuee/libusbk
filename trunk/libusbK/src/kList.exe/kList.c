@@ -288,16 +288,14 @@ int __cdecl main(int argc, char** argv)
 	LONG devicePos = 0;
 	LONG_PTR selection;
 	ULONG count = 0;
-	KLST_INIT_PARAMS initParams;
+	KLST_FLAG lstFlags = KLST_FLAG_INCLUDE_DISCONNECT;
 
 	UNREFERENCED_PARAMETER(argc);
 	UNREFERENCED_PARAMETER(argv);
 
 	UsbIdsText = LoadResourceUsbIds();
 
-	memset(&initParams, 0, sizeof(initParams));
-	initParams.ShowDisconnectedDevices = TRUE;
-	if (!LstK_Init(&deviceList, &initParams))
+	if (!LstK_Init(&deviceList, lstFlags))
 	{
 		printf("failed getting device list.\n");
 		ec = WinError(0);
@@ -367,7 +365,7 @@ int __cdecl main(int argc, char** argv)
 	}
 
 	printf("Loading driver api..\n");
-	if (!LibK_LoadDriverApi(&K, deviceElement->DrvId, sizeof(K)))
+	if (!LibK_LoadDriverAPI(&K, deviceElement->DrvId))
 	{
 		ec = WinError(0);
 		goto Done;

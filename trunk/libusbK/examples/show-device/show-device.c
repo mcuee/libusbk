@@ -51,7 +51,7 @@ DWORD __cdecl main(int argc, char* argv[])
 
 	// Initialize a new device list.  This populates the list with the
 	// usb devices libusbK can access.
-	if (!LstK_Init(&deviceList, NULL))
+	if (!LstK_Init(&deviceList, 0))
 	{
 		errorCode = GetLastError();
 		printf("An error occured getting the device list. errorCode=%08Xh\n", errorCode);

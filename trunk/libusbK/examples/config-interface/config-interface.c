@@ -45,11 +45,11 @@ DWORD __cdecl main(int argc, char* argv[])
 	if (!Examples_GetTestDevice(&deviceList, &deviceInfo, argc, argv))
 		return GetLastError();
 
-	// Open the device
-	if (!UsbK_Open(deviceInfo, &handle))
+	// Initialize the device
+	if (!UsbK_Init(&handle, deviceInfo))
 	{
 		errorCode = GetLastError();
-		printf("Open device failed. Win32Error=%u (0x%08X)\n", errorCode, errorCode);
+		printf("Init device failed. ErrorCode: %08Xh\n",  errorCode);
 		goto Done;
 	}
 	printf("Device opened successfully!\n");
@@ -65,7 +65,7 @@ DWORD __cdecl main(int argc, char* argv[])
 		if (errorCode == ERROR_NO_MORE_ITEMS)
 			printf("Failed claiming interface. Interface number %02Xh does not exists.\n", INTF_NUMBER);
 		else
-			printf("Failed claiming interface. Win32Error=%u (0x%08X)\n", errorCode, errorCode);
+			printf("Failed claiming interface. ErrorCode: %08Xh\n",  errorCode);
 
 		goto Done;
 	}
@@ -79,7 +79,7 @@ DWORD __cdecl main(int argc, char* argv[])
 		if (errorCode == ERROR_NO_MORE_ITEMS)
 			printf("Failed querying alt interface. Alt Setting number %02Xh does not exists.\n", ALT_SETTING_NUMBER);
 		else
-			printf("Failed querying alt interface. Win32Error=%u (0x%08X)\n", errorCode, errorCode);
+			printf("Failed querying alt interface. ErrorCode: %08Xh\n",  errorCode);
 
 		goto Done;
 	}
@@ -123,7 +123,7 @@ DWORD __cdecl main(int argc, char* argv[])
 	if (!UsbK_SetCurrentAlternateSetting(handle, interfaceInfo.bAlternateSetting))
 	{
 		errorCode = GetLastError();
-		printf("Failed setting alt interface. Win32Error=%u (0x%08X)\n", errorCode, errorCode);
+		printf("Failed setting alt interface. ErrorCode: %08Xh\n",  errorCode);
 		goto Done;
 	}
 	else
@@ -138,7 +138,7 @@ DWORD __cdecl main(int argc, char* argv[])
 Done:
 	// Close the device handle
 	// if handle is invalid (NULL), has no effect
-	UsbK_Close(handle);
+	UsbK_Free(handle);
 
 	// Free the device list
 	// if deviceList is invalid (NULL), has no effect

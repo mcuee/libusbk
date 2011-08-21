@@ -100,7 +100,7 @@ DWORD exhaust_handles_usbk(int argc, char* argv[])
 	if (!UnitK_GetTestDevice(&devList, &devInfo, argc, argv))
 		return GetLastError();
 
-	LibK_LoadDriverApi(&Usb, devInfo->DrvId, sizeof(KUSB_DRIVER_API));
+	LibK_LoadDriverAPI(&Usb, devInfo->DrvId);
 	if (!Usb.Open(devInfo, &masterDevice))
 	{
 		return show_error("Failed opening device");

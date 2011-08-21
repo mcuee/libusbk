@@ -38,4 +38,5 @@ SOURCES= \
 		..\lusbk_usb_iso.c \
 		..\lusbk_handles.c \
 		..\lusbk_hot_plug.c \
+		..\lusbk_queued_stream.c \
 		..\lusbk_wrapper_winusb.c
