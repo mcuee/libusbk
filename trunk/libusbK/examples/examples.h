@@ -59,19 +59,19 @@ typedef enum _BM_TEST_TYPE
 */
 BOOL Examples_GetTestDevice(KLST_HANDLE* DeviceList,
                             KLST_DEVINFO_HANDLE* DeviceInfo,
-                           int argc,
-                           char* argv[]);
+                            int argc,
+                            char* argv[]);
 BOOL Examples_GetTestDeviceEx(KLST_HANDLE* DeviceList,
                               KLST_DEVINFO_HANDLE* DeviceInfo,
-                             int argc,
-                             char* argv[],
-                             KLST_FLAG Flags);
+                              int argc,
+                              char* argv[],
+                              KLST_FLAG Flags);
 
 BOOL Bench_Configure(KUSB_HANDLE UsbHandle,
-                   BM_COMMAND Command,
-                   UCHAR InterfaceNumber,
-                   PKUSB_DRIVER_API DriverAPI,
-                   PBM_TEST_TYPE TestType);
+                     BM_COMMAND Command,
+                     UCHAR InterfaceNumber,
+                     PKUSB_DRIVER_API DriverAPI,
+                     PBM_TEST_TYPE TestType);
 
 
 typedef struct _DATA_COUNTER_STATS
