@@ -59,9 +59,29 @@ These examples show basic library functionality like finding and opening a devic
      contained in a single solution-like build script which can be used to build all or any of the examples.
      - Get and install <A href="http://tdm-gcc.tdragon.net/download">TDM64-GCC</A>
      - Open a Mingw64 build command prompt.
-     - Navigate to the \b examples folder.
+     - Navigate to the \b examples folder and execute make:
+	   - Mingw64 project make syntax: <PRE>make [arch=amd64/x86] [Example name]</PRE>
+	   - Mingw64 solution make syntax: <PRE>make [all/multi-all]</PRE>
+	   - <B>make</B> builds all 32bit examples.
+	   - <B>make arch=amd64</B> builds all 64bit examples.
+	   - <B>make show-device</B> builds the 32bit show-device example.
+	   - <B>make multi-all</B> builds all 32bit and 64bit examples.  
+
+<HR>
+
+<B>Running the examples:</B><BR>
+
+\note
+The output EXEs will be placed in different locations depending on the compiler/IDE used.  Generally they
+are placed in compiler/IDE default locations.
+
+\attention
+Most examples are meant to be modifed prior to use.  It is not advisabe to run these examples as-is before
+reviewing the example code. The one exception is if your device is an official Benchmark USB Device.
+
 
 \htmlonly
 <P>&nbsp;</P><P>&nbsp;</P><P>&nbsp;</P><P>&nbsp;</P><P>&nbsp;</P><P>&nbsp;</P><P>&nbsp;</P><P>&nbsp;</P>
 \endhtmlonly
+
 */

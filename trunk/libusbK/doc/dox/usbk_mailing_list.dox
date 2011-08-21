@@ -1,5 +1,5 @@
 /*! \page usbk_mailing_list Support Forum
-\brief All libusbK rleated questions and issues may be posted to the libusb-win32-devel mailing list.
+\brief All libusbK related questions and issues may be posted to the libusb-win32-devel mailing list.
 
 <H2>libusb-win32-devel</H2><BR>
 libusb-win32-devel is a highly active list. There is generally a short lag time between posting a question
@@ -8,10 +8,12 @@ have a suggestion, feel free to send your comments to the list.
 <HR>
 
 \par Subscribing to the list:
-Before posting, you must subscribe to receive e-mails from the mailing list. Subscribe here: \mailinglist
+Before posting, you must subscribe to receive e-mails from the mailing list.
+<BR>Subscribe: \mailinglist
 
 \par Posting to the list:
-Once subscribed, send your message to the mailing list e-mail address, \b libusb-win32-devel@@lists.sourceforge.net.
+Once subscribed, send your message to the mailing list e-mail address.
+<BR>Email: <B>libusb-win32-devel@@lists.sourceforge.net</B>
 
 \note
 When you send an e-mail to the list, it must come from the e-mail address you subsribed with.
