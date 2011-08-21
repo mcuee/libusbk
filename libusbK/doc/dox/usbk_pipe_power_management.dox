@@ -1,4 +1,4 @@
-/*! \page usbk_power_management libusbK Power Management
+/*! \page usbk_power_management Power Management
 * libusbK uses the KMDF state machines for power management. Power
 * policies are managed through calls to \ref UsbK_SetPowerPolicy.
 *
@@ -100,7 +100,7 @@ suspend, this registry value only pertains to system suspend.
 *
 */
 
-/*! \page usbk_pipe_management libusbK Pipe Policy Management
+/*! \page usbk_pipe_management Pipe Policy Management
 *
 * To enable applications to get and set an endpoint pipe's default policy
 * parameters, libusbK.dll exposes the \ref UsbK_GetPipePolicy function to

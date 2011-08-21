@@ -9,6 +9,20 @@
 <IMG src="ftv2vertline.png" style="display: none" />
 <IMG src="ftv2node.png" style="display: none" />
 <IMG src="ftv2blank.png" style="display: none" />
+
+\par What is it?
+libusbK is a complete driver/library solution for vendor class usb device interfaces.
+The target audience is usb developers and usb device manufacturer seeking a driver
+solution for a new USB widget.
+\attention
+libusbK is not an end-user component.
+IE. If your googling for a usb driver because windows can't seem to find one, this is not the solution.
+
+\par Licensing
+LibusbK is dual license under GPL and modified BSD.
+For redistribution purposes, libusbK can be licensed under either agreement.
+See the \b license folder which accompanies each libusbK package for license details.
+
 <H1>libusbK USB Library and Driver Documentation</H1>
 - \subpage usbk_about
   <BR>Explanation of the libusbK project, the user mode library, and its \ref usbk_drivers.
@@ -23,7 +37,7 @@
   <BR>Methods for building the libusbK user mode library and driver from source code.
   <HR>
 - \subpage usbk_mailing_list
-  <BR>All libusbK rleated questions and issues.
+  <BR>All libusbK related questions and issues.
   <HR>
 */
 

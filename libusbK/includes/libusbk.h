@@ -15,6 +15,7 @@
 ///////////////////////////////////////////////////////////////////////
 
 #ifndef _LIBUSBK_LIBK_TYPES
+#include <pshpack1.h>
 
 /*! \addtogroup libk
 * @{
@@ -44,7 +45,6 @@ typedef INT_PTR (FAR WINAPI* KPROC)();
 #endif
 
 #pragma warning(disable:4201)
-#include <pshpack1.h>
 
 #if _MSC_VER >= 1200
 #pragma warning(push)
@@ -131,7 +131,6 @@ C_ASSERT(sizeof(KUSB_SETUP_PACKET) == 8);
 #pragma warning(pop)
 #endif
 
-#include <poppack.h>
 
 //! Base handle type for all library handles.
 typedef void* KLIB_HANDLE;
@@ -210,16 +209,21 @@ typedef struct _KLIB_VERSION
 typedef KLIB_VERSION* PKLIB_VERSION;
 
 /*! @} */
-
+#include <poppack.h>
 #endif
 
 #ifndef _LIBUSBK_ISOK_TYPES
+/*! \addtogroup isok
+* @{
+*/
+
 
 //! Callback function typedef for \ref IsoK_EnumPackets
 typedef BOOL KUSB_API KISO_ENUM_PACKETS_CB (_in ULONG PacketIndex, _in PKISO_PACKET IsoPacket, _in PVOID UserState);
 //! Pointer to a \ref KISO_ENUM_PACKETS_CB.
 typedef KISO_ENUM_PACKETS_CB* PKISO_ENUM_PACKETS_CB;
 
+/*! @} */
 #endif
 
 #ifndef _LIBUSBK_LSTK_TYPES
@@ -358,7 +362,6 @@ typedef enum _KLST_FLAG
 
 } KLST_FLAG;
 
-#include <poppack.h>
 
 
 //! Device list enumeration function callback typedef.
@@ -385,10 +388,14 @@ typedef BOOL KUSB_API KLST_ENUM_DEVINFO_CB (
 typedef KLST_ENUM_DEVINFO_CB* PKLST_ENUM_DEVINFO_CB;
 
 /*! @} */
+#include <poppack.h>
 
 #endif
 
 #ifndef   __USB_H__
+/*! \addtogroup libk
+* @{
+*/
 
 //! Maximum value that can be added to the current start frame.
 #define USBD_ISO_START_FRAME_RANGE 1024
@@ -866,47 +873,13 @@ typedef USB_INTERFACE_ASSOCIATION_DESCRIPTOR* PUSB_INTERFACE_ASSOCIATION_DESCRIP
 #pragma warning(pop)
 #endif
 
+/*! @} */
+
 #include <poppack.h>
-
-#if _MSC_VER >= 1200
-#pragma warning(push)
-#pragma warning(disable:4201)
-#endif
-
-// Microsoft OS Descriptor APIs
-// supported in windows XP and later
-
-#define OS_STRING_DESCRIPTOR_INDEX                  0xEE
-
-#define MS_GENRE_DESCRIPTOR_INDEX                   0x0001
-#define MS_POWER_DESCRIPTOR_INDEX                   0x0002
-
-#define MS_OS_STRING_SIGNATURE                      L"MSFT100"
-
-#define MS_OS_FLAGS_CONTAINERID                     0x02
-
-typedef struct _OS_STRING
-{
-	UCHAR bLength;
-	UCHAR bDescriptorType;
-	WCHAR MicrosoftString[7];
-	UCHAR bVendorCode;
-	union
-	{
-		UCHAR bPad;
-		UCHAR bFlags;
-	};
-} OS_STRING;
-//! pointer to a \c OS_STRING
-typedef OS_STRING* POS_STRING;
-
-#if _MSC_VER >= 1200
-#pragma warning(pop)
-#endif
-
 #endif // __USB_H__
 
 #ifndef _LIBUSBK_LIBK_TYPES
+#include <pshpack1.h>
 
 /*! \addtogroup libk
 * @{
@@ -1487,6 +1460,7 @@ typedef KUSB_DRIVER_API* PKUSB_DRIVER_API;
 C_ASSERT(sizeof(KUSB_DRIVER_API) == 512);
 
 /**@}*/
+#include <poppack.h>
 
 #endif
 
@@ -1589,6 +1563,7 @@ typedef VOID KUSB_API KHOT_PLUG_CB(KHOT_HANDLE HotHandle, PKHOT_PARAMS HotParams
 #endif
 
 #ifndef _LIBUSBK_OVLK_TYPES
+#include <pshpack1.h>
 
 /*! \addtogroup ovlk
 *  @{
@@ -1633,6 +1608,7 @@ typedef enum _KOVL_POOL_FLAG
 } KOVL_POOL_FLAG;
 
 /**@}*/
+#include <poppack.h>
 
 #endif
 
