@@ -32,10 +32,10 @@ extern int gLoop;
 #endif
 
 VOID KUSB_API OnHotPlug(
-    __in KHOT_HANDLE Handle,
-    __in KHOT_PARAMS* Params,
-    __in KLST_DEVINFO_HANDLE DeviceInfo,
-    __in KLST_SYNC_FLAG NotificationType)
+    KHOT_HANDLE Handle,
+    KHOT_PARAMS* Params,
+    KLST_DEVINFO_HANDLE DeviceInfo,
+    KLST_SYNC_FLAG NotificationType)
 {
 	UNREFERENCED_PARAMETER(Handle);
 
