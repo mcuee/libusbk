@@ -57,21 +57,21 @@ typedef enum _BM_TEST_TYPE
 * \returns
 * TRUE if a devices was found, otherwise FALSE.
 */
-BOOL Examples_GetTestDevice( __deref_out KLST_HANDLE* DeviceList,
-                             __deref_out KLST_DEVINFO_HANDLE* DeviceInfo,
-                             __in int argc,
-                             __in char* argv[]);
-BOOL Examples_GetTestDeviceEx( __deref_out KLST_HANDLE* DeviceList,
-                               __deref_out KLST_DEVINFO_HANDLE* DeviceInfo,
-                               __in int argc,
-                               __in char* argv[],
-                               __in_opt KLST_FLAG Flags);
+BOOL Examples_GetTestDevice(KLST_HANDLE* DeviceList,
+                            KLST_DEVINFO_HANDLE* DeviceInfo,
+                           int argc,
+                           char* argv[]);
+BOOL Examples_GetTestDeviceEx(KLST_HANDLE* DeviceList,
+                              KLST_DEVINFO_HANDLE* DeviceInfo,
+                             int argc,
+                             char* argv[],
+                             KLST_FLAG Flags);
 
-BOOL Bench_Configure(__in KUSB_HANDLE UsbHandle,
-                     __in BM_COMMAND Command,
-                     __in UCHAR InterfaceNumber,
-                     __in_opt PKUSB_DRIVER_API DriverAPI,
-                     __deref_inout PBM_TEST_TYPE TestType);
+BOOL Bench_Configure(KUSB_HANDLE UsbHandle,
+                   BM_COMMAND Command,
+                   UCHAR InterfaceNumber,
+                   PKUSB_DRIVER_API DriverAPI,
+                   PBM_TEST_TYPE TestType);
 
 
 typedef struct _DATA_COUNTER_STATS

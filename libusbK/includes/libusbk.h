@@ -915,8 +915,6 @@ typedef OS_STRING* POS_STRING;
 //! Usb handle specific properties that can be retrieved with \ref UsbK_GetProperty.
 typedef enum _KUSB_PROPERTY
 {
-    KUSB_PROPERTY_INVALID = (ULONG) - 1,
-
     //! Get the internal device file handle used for operations such as GetOverlappedResult or DeviceIoControl.
     KUSB_PROPERTY_DEVICE_FILE_HANDLE,
 
