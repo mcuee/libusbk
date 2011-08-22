@@ -215,7 +215,7 @@ Transferred 12288 bytes in 3 transfers. errorCode=00000000h
 \endverbatim
 */
 
-//! Asynchronously streams data to or from and endpoint.
+//! Asynchronously streams data to or from an endpoint.
 /*!
 * \example xfer-stream.c
 *
