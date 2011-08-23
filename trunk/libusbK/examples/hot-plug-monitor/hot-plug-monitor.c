@@ -85,7 +85,7 @@ DWORD __cdecl main(int argc, char* argv[])
 		{
 			if (_kbhit())
 			{
-				chKey = _getch();
+				chKey = (CHAR)_getch();
 				if (chKey == 'q' || chKey == 'Q')
 					break;
 

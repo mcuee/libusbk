@@ -1,4 +1,4 @@
 DIRS= \
      examples \
-     src \
-     unit_tests
+     package \
+     src
