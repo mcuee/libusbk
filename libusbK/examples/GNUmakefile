@@ -49,6 +49,7 @@ all: xfer-sync
 all: xfer-async
 all: xfer-stream
 all: xfer-iso
+all: xfer-async-loop
 
 # make the hot-plug-monitor example for the specified "arch" (default is x86)
 #
@@ -100,6 +101,11 @@ xfer-stream:
 .PHONY: xfer-iso
 xfer-iso:
 	$(MAKE) --no-print-directory --directory=./xfer-iso $(subst w -- ,,$(MAKEFLAGS)) all
+# make the xfer-async-loop example for the specified "arch" (default is x86)
+#
+.PHONY: xfer-async-loop
+xfer-async-loop:
+	$(MAKE) --no-print-directory --directory=./xfer-async-loop $(subst w -- ,,$(MAKEFLAGS)) all
 
 # make all examples for x86 and amd64 archs. ("arch" argument not used)
 #
@@ -122,4 +128,5 @@ clean:
 	$(MAKE) --directory=./xfer-async $(MAKEFLAGS) clean
 	$(MAKE) --directory=./xfer-stream $(MAKEFLAGS) clean
 	$(MAKE) --directory=./xfer-iso $(MAKEFLAGS) clean
+	$(MAKE) --directory=./xfer-async-loop $(MAKEFLAGS) clean
 	$(RM) ./_ReSharper*

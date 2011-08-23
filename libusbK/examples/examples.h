@@ -81,16 +81,16 @@ typedef struct _DATA_COUNTER_STATS
 	LARGE_INTEGER Stop;
 
 	LONGLONG TotalBytes;
-	DOUBLE Bps;
-	DOUBLE dFreq;
-	DOUBLE Duration;
+	double Bps;
+	double dFreq;
+	double Duration;
 
 } DATA_COUNTER_STATS, *PDATA_COUNTER_STATS;
 
 #define mDcs_Init(mDataCounterStats) do {																		\
 	memset((mDataCounterStats),0,sizeof(DATA_COUNTER_STATS));													\
 	QueryPerformanceFrequency(&((mDataCounterStats)->Freq)); 													\
-	(mDataCounterStats)->dFreq = 1.0/(DOUBLE)(mDataCounterStats)->Freq.QuadPart; 								\
+	(mDataCounterStats)->dFreq = 1.0/(double)(mDataCounterStats)->Freq.QuadPart; 								\
 	QueryPerformanceCounter(&((mDataCounterStats)->Start));  													\
 }while(0)
 
@@ -99,9 +99,9 @@ typedef struct _DATA_COUNTER_STATS
 	(mDataCounterStats)->TotalBytes+=(LONG)(mAddTransferLength); 												\
 	(mDataCounterStats)->Duration =  																			\
 		((mDataCounterStats)->dFreq) *   																		\
-		((DOUBLE) ((mDataCounterStats)->Stop.QuadPart - (mDataCounterStats)->Start.QuadPart));   				\
+		((double) ((mDataCounterStats)->Stop.QuadPart - (mDataCounterStats)->Start.QuadPart));   				\
 	if ((mDataCounterStats)->Duration != 0.0)																	\
-		(mDataCounterStats)->Bps = ((DOUBLE)(mDataCounterStats)->TotalBytes) / (mDataCounterStats)->Duration;	\
+		(mDataCounterStats)->Bps = ((double)(mDataCounterStats)->TotalBytes) / (mDataCounterStats)->Duration;	\
 }while(0)
 
 

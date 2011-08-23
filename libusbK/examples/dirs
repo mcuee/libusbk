@@ -9,6 +9,4 @@ DIRS= \
      xfer-async-loop \
      xfer-iso \
      xfer-stream \
-     xfer-stream-read \
-     xfer-stream-write \
      xfer-sync

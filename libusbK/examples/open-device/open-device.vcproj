@@ -341,14 +341,14 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath="..\examples.c"
-				>
-			</File>
-			<File
 				RelativePath=".\open-device.c"
 				>
 			</File>
-		</Filter>
+			<File
+				RelativePath="..\examples.c"
+				>
+			</File>
+			</Filter>
 		<Filter
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
@@ -364,6 +364,10 @@
 			</File>
 			<File
 				RelativePath="..\..\includes\lusbk_shared.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\includes\lusbk_linked_list.h"
 				>
 			</File>
 		</Filter>

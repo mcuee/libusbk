@@ -348,7 +348,7 @@
 				RelativePath="..\examples.c"
 				>
 			</File>
-		</Filter>
+			</Filter>
 		<Filter
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
@@ -364,6 +364,10 @@
 			</File>
 			<File
 				RelativePath="..\..\includes\lusbk_shared.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\includes\lusbk_linked_list.h"
 				>
 			</File>
 		</Filter>
