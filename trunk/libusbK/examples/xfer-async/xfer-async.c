@@ -49,20 +49,20 @@ DWORD __cdecl main(int argc, char* argv[])
 
 	memset(ovlArray, 0, sizeof(ovlArray));
 
-	/*!
+	/*
 	Find the test device. Uses "vid=hhhh pid=hhhh" arguments supplied on the
 	command line. (default is: vid=04D8 pid=FA2E)
 	*/
 	if (!Examples_GetTestDevice(&deviceList, &deviceInfo, argc, argv))
 		return GetLastError();
 
-	/*!
+	/*
 	This example will use the dynamic driver api so that it can be used
 	with all supported drivers.
 	*/
 	LibK_LoadDriverAPI(&Usb, deviceInfo->DrvId);
 
-	/*!
+	/*
 	Initialize the device. This creates the physical usb handle.
 	*/
 	if (!Usb.Init(&usbHandle, deviceInfo))
@@ -73,18 +73,18 @@ DWORD __cdecl main(int argc, char* argv[])
 	}
 	printf("Device opened successfully!\n");
 
-	/*!
+	/*
 	Configure the benchmark test device to accept/send data.
 	*/
 	success = Bench_Configure(usbHandle, BM_COMMAND_SET_TEST, 0, &Usb, &testType);
 	if (!success) printf("Bench_Configure failed.\n");
 
-	/*!
+	/*
 	Initialize a new OvlK pool handle.
 	*/
 	OvlK_InitPool(&ovlPool, usbHandle, ASYNC_PENDING_IO_COUNT, 0);
 
-	/*!
+	/*
 	Submit ASYNC_PENDING_IO_COUNT number of I/O request.
 	*/
 	ovlIndex = (DWORD) - 1;
@@ -113,7 +113,7 @@ DWORD __cdecl main(int argc, char* argv[])
 		printf("Transfer #%u submitted for %u bytes.\n", ovlIndex, sizeof(myBuffer));
 	}
 
-	/*!
+	/*
 	Complete all I/O request submitted above.
 	*/
 	ovlIndex = (DWORD) - 1;
@@ -140,11 +140,11 @@ DWORD __cdecl main(int argc, char* argv[])
 
 Done:
 
-	/*!
+	/*
 	Close the usb handle.
 	*/
 	if (usbHandle) Usb.Free(usbHandle);
-	/*!
+	/*
 	Free the device list.
 	*/
 	LstK_Free(deviceList);
@@ -152,7 +152,7 @@ Done:
 	OvlK_FreePool(ovlPool);
 	return errorCode;
 }
-/*
+/*!
 Looking for device vid/pid 04D8/FA2E..
 Using 04D8:FA2E (LUSBW1): Benchmark Device - Microchip Technology, Inc.
 Device opened successfully!

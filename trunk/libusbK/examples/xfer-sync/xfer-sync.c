@@ -45,20 +45,20 @@ DWORD __cdecl main(int argc, char* argv[])
 	ULONG transferredLength;
 	ULONG transferIndex;
 
-	/*!
+	/*
 	Find the test device. Uses "vid=hhhh pid=hhhh" arguments supplied on the
 	command line. (default is: vid=04D8 pid=FA2E)
 	*/
 	if (!Examples_GetTestDevice(&deviceList, &deviceInfo, argc, argv))
 		return GetLastError();
 
-	/*!
+	/*
 	This example will use the dynamic driver api so that it can be used
 	with all supported drivers.
 	*/
 	LibK_LoadDriverAPI(&Usb, deviceInfo->DrvId);
 
-	/*!
+	/*
 	Initialize the device. This creates the physical usb handle.
 	*/
 	if (!Usb.Init(&usbHandle, deviceInfo))
@@ -72,7 +72,7 @@ DWORD __cdecl main(int argc, char* argv[])
 	success = Bench_Configure(usbHandle, BM_COMMAND_SET_TEST, 0, &Usb, &testType);
 	if (!success) printf("Bench_Configure failed.\n");
 
-	/*!
+	/*
 	Submit and complete SYNC_TRANSFER_COUNT number of transfers.
 	*/
 	transferIndex = (DWORD) - 1;
@@ -99,18 +99,18 @@ DWORD __cdecl main(int argc, char* argv[])
 
 Done:
 
-	/*!
+	/*
 	Close the usb handle.
 	*/
 	if (usbHandle) Usb.Free(usbHandle);
-	/*!
+	/*
 	Free the device list.
 	*/
 	LstK_Free(deviceList);
 
 	return errorCode;
 }
-/*
+/*!
 Looking for device vid/pid 04D8/FA2E..
 Using 04D8:FA2E (LUSBW1): Benchmark Device - Microchip Technology, Inc.
 Device opened successfully!

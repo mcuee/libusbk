@@ -132,7 +132,8 @@ Name: installer; Description: "Create and install a libusb-win32 device driver a
 Name: upgrader;  Description: "Upgrade libusb-win32 components"; Flags: unchecked;
 Name: upgrader\sys;  Description: "Driver (@K_LIBUSBK_NAME@.sys)";
 Name: upgrader\libusb0sys;  Description: "Driver (@K_LIBUSB0_NAME@.sys)";
-Name: upgrader\dll;  Description: "User libraries (@K_LIBUSBK_NAME@, @K_LIBUSB10_NAME@, @K_LIBUSB0_NAME@)";
+;Name: upgrader\dll;  Description: "User libraries (@K_LIBUSBK_NAME@, @K_LIBUSB10_NAME@, @K_LIBUSB0_NAME@)";
+Name: upgrader\dll;  Description: "User libraries (@K_LIBUSBK_NAME@, @K_LIBUSB0_NAME@)";
 Name: filter; Description: "Install a @K_LIBUSB0_NAME@ device filter. (advanced users)"; Flags: unchecked;
 
 [Icons]
@@ -153,7 +154,7 @@ Source: "@K_LIBUSB0_DEP_DIR@\bin\x86\@K_LIBUSB0_NAME@.sys"; DestDir: {sys}\drive
 ; 32 bit program support
 Source: "@K_PKG_BIN@\dll\x86\@K_LIBUSBK_NAME@.dll"; DestDir: {sys}; Flags: replacesameversion restartreplace promptifolder; Check: IsX86; Tasks: upgrader\dll;
 Source: "@K_PKG_BIN@\dll\x86\@K_LIBUSB0_NAME@.dll"; DestDir: {sys}; Flags: replacesameversion restartreplace promptifolder; Check: IsX86; Tasks: upgrader\dll;
-Source: "@K_PKG_BIN@\dll\x86\@K_LIBUSB10_NAME@.dll"; DestDir: {sys}; Flags: replacesameversion restartreplace promptifolder; Check: IsX86; Tasks: upgrader\dll;
+;Source: "@K_PKG_BIN@\dll\x86\@K_LIBUSB10_NAME@.dll"; DestDir: {sys}; Flags: replacesameversion restartreplace promptifolder; Check: IsX86; Tasks: upgrader\dll;
 
 ; ============================================================================
 ; ** @K_LIBUSBK_NAME@ AMD 64bit
@@ -163,12 +164,12 @@ Source: "@K_LIBUSB0_DEP_DIR@\bin\amd64\@K_LIBUSB0_NAME@.sys"; DestDir: {sys}\dri
 ; 32 bit program support
 Source: "@K_PKG_BIN@\dll\x86\@K_LIBUSBK_NAME@.dll"; DestDir: {syswow64}; Flags: replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\dll;
 Source: "@K_PKG_BIN@\dll\x86\@K_LIBUSB0_NAME@.dll"; DestDir: {syswow64}; Flags: replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\dll;
-Source: "@K_PKG_BIN@\dll\x86\@K_LIBUSB10_NAME@.dll"; DestDir: {syswow64}; Flags: replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\dll;
+;Source: "@K_PKG_BIN@\dll\x86\@K_LIBUSB10_NAME@.dll"; DestDir: {syswow64}; Flags: replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\dll;
 
 ; 64bit bit program support
 Source: "@K_PKG_BIN@\dll\amd64\@K_LIBUSBK_NAME@.dll"; DestDir: {sys}; Flags: replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\dll;
 Source: "@K_PKG_BIN@\dll\amd64\@K_LIBUSB0_NAME@.dll"; DestDir: {sys}; Flags: replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\dll;
-Source: "@K_PKG_BIN@\dll\amd64\@K_LIBUSB10_NAME@.dll"; DestDir: {sys}; Flags: replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\dll;
+;Source: "@K_PKG_BIN@\dll\amd64\@K_LIBUSB10_NAME@.dll"; DestDir: {sys}; Flags: replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\dll;
 
 ; ============================================================================
 ; ** @K_LIBUSBK_NAME@/@K_LIBUSB0_NAME@ inf-wizard

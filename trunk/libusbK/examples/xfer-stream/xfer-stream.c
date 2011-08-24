@@ -25,7 +25,7 @@
 #include "examples.h"
 
 // Example configuration:
-#define EP_ADDRESS				0x01
+#define EP_ADDRESS				0x81
 #define MAX_TRANSFER_SIZE		4096
 #define MAX_PENDING_TRANSFERS	128
 #define MAX_PENDING_IO			3
@@ -46,7 +46,7 @@ DWORD __cdecl main(int argc, char* argv[])
 	UCHAR myBuffer[MAX_TRANSFER_SIZE * MAX_PENDING_IO];
 	BM_TEST_TYPE testType = USB_ENDPOINT_DIRECTION_IN(EP_ADDRESS) ? BM_TEST_TYPE_READ : BM_TEST_TYPE_WRITE;
 
-	/*!
+	/*
 	Find the test device. Uses "vid=hhhh pid=hhhh" arguments supplied on the
 	command line. (default is: vid=04D8 pid=FA2E)
 	*/
@@ -55,7 +55,7 @@ DWORD __cdecl main(int argc, char* argv[])
 
 	LibK_LoadDriverAPI(&Usb, deviceInfo->DrvId);
 
-	/*!
+	/*
 	Initialize the device. This creates the physical usb handle.
 	*/
 	if (!Usb.Init(&usbHandle, deviceInfo))
@@ -161,7 +161,7 @@ DWORD __cdecl main(int argc, char* argv[])
 	}
 	while(!_kbhit());
 
-	/*!
+	/*
 	Stop the stream.
 	*/
 	success = StmK_Stop(streamHandle, 0);
@@ -170,20 +170,53 @@ DWORD __cdecl main(int argc, char* argv[])
 	if (!success) goto Done;
 
 Done:
-	/*!
-	Free the stream handle.
-	*/
+	// Free the stream handle.
 	StmK_Free(streamHandle);
 
-	/*!
-	Free the usb handle.
-	*/
+	// Free the usb handle.
 	UsbK_Free(usbHandle);
 
-	/*!
-	Free the device list.
-	*/
+	// Free the device list.
 	LstK_Free(deviceList);
 
 	return errorCode;
 }
+/*!
+Looking for device vid/pid 04D8/FA2E..
+Using 04D8:FA2E (LUSBW1): Benchmark Device - Microchip Technology, Inc.
+Device opened successfully!
+[Init  Stream] result = 00000000h
+[Start Stream] result = 00000000h
+Transferred bytes:524288 BPS:185559705.08
+Transferred bytes:159744 BPS:3444001.36
+Transferred bytes:159744 BPS:2128927.06
+Transferred bytes:167936 BPS:1694587.83
+Transferred bytes:163840 BPS:1473756.41
+Transferred bytes:163840 BPS:1343928.97
+Transferred bytes:167936 BPS:1259668.21
+Transferred bytes:167936 BPS:1199183.22
+[StreamResult] Bytes-total:1675264 Seconds-total:1.397 BPS-average:1199183.22
+Transferred bytes:172032 BPS:876132.77
+Transferred bytes:167936 BPS:858126.93
+Transferred bytes:163840 BPS:843762.19
+Transferred bytes:163840 BPS:838453.05
+Transferred bytes:163840 BPS:834713.10
+Transferred bytes:163840 BPS:832090.60
+Transferred bytes:163840 BPS:830226.44
+Transferred bytes:163840 BPS:828502.37
+Transferred bytes:167936 BPS:829741.23
+Transferred bytes:163840 BPS:828706.57
+[StreamResult] Bytes-total:1654784 Seconds-total:1.997 BPS-average:828706.57
+Transferred bytes:167936 BPS:860579.17
+Transferred bytes:159744 BPS:828717.06
+Transferred bytes:159744 BPS:819513.85
+Transferred bytes:163840 BPS:819588.39
+Transferred bytes:159744 BPS:815706.23
+Transferred bytes:163840 BPS:816251.25
+Transferred bytes:159744 BPS:813581.03
+Transferred bytes:163840 BPS:814108.63
+Transferred bytes:163840 BPS:815067.72
+Transferred bytes:163840 BPS:815427.14
+[StreamResult] Bytes-total:1626112 Seconds-total:1.994 BPS-average:815427.14
+[Stop  Stream] result = 00000000h
+*/

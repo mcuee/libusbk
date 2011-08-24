@@ -3,10 +3,10 @@
 * \example hot-plug-monitor.c
 *
 * \par hot-plug-monitor example:
-* -# Initializes a new HotK handle.
+* -# Initializes a new HotK (hot-plug) handle.
 * -# Writes arrival/removal event notifications to console output as they occur. 
 * -# Repeats step #2 until the \b Q key is pressed.
-* -# Frees the HotK handle created in step #1
+* -# Frees the HotK (hot-plug) handle created in step #1
 *
 \par Console Output
 \verbatim
@@ -36,11 +36,12 @@ HotK monitor closed. ErrorCode: 00000000h
 * \example show-device.c
 *
 * \par show-device example:
-* -# Creates a usb device list.
-* -# Prints a single line description for each device list element.
-* -# Searches for the example device hardware id
-* -# Prints example device connection status.
-* -# Destroys the usb device list created in step #1
+* -# Initializes a new LstK (device list) handle.
+* -# Gets the number of devices contained in the device list.
+* -# Demonstrates using \ref LstK_FindByVidPid to locate the example VID/PID.
+* -# Demonstrates using \ref LstK_MoveReset and \ref LstK_MoveNext to locate the example VID/PID.
+* -# Demonstrates using \ref LstK_Enumerate for printing a single line description of each device list element.
+* -# Frees the LstK (device list) handle created in step #1.
 *
 * \par Console Output
 * \verbatim
@@ -55,10 +56,10 @@ Example device connected!
 *
 * \par open-device example:
 * -# Finds a device by vid/pid (use vid=hhhh, pid=hhhhh and the command line).
-* -# Opens the device.
+* -# Initializes a new UsbK (usb device) handle.
 * -# Prints pipe information.
-* -# Frees the usb device.
-* -# Destroys the usb device list created in step #1
+* -# Frees the UsbK (usb device) handle.
+* -# Frees the LstK (device list) handle created in step #1.
 *
 * \par Console Output
 * \verbatim
@@ -78,9 +79,9 @@ Pipe Information:
 * \par load-driver-api example:
 * -# Finds a device by vid/pid (use vid=hhhh, pid=hhhhh and the command line).
 * -# Loads a dynamic driver API set specific to the devices driver.
-* -# Opens the device.
-* -# Frees the usb device.
-* -# Destroys the usb device list created in step #1
+* -# Initializes a new UsbK (usb device) handle.
+* -# Frees the UsbK (usb device) handle.
+* -# Frees the LstK (device list) handle created in step #1.
 *
 * \par Console Output
 * \verbatim
@@ -97,13 +98,13 @@ Device opened successfully!
 *
 * \par config-interface example:
 * -# Finds a device by vid/pid (use vid=hhhh, pid=hhhhh and the command line).
-* -# Opens the device.
+* -# Initializes a new UsbK (usb device) handle.
 * -# Claims the specified interface. (re-define at top of example)
 * -# Finds the specified interface/alt setting. (re-define at top of example)
 * -# Finds the specified read and write pipes. (re-define at top of example)
 * -# Sets the specified alternate setting as the "active" interface.
-* -# Frees the usb device.
-* -# Destroys the usb device list created in step #1
+* -# Frees the UsbK (usb device) handle.
+* -# Frees the LstK (device list) handle created in step #1.
 *
 * \par Console Output
 * \verbatim
@@ -123,11 +124,11 @@ Alternate setting 00h selected!
 *
 * \par xfer-async-loop example:
 * -# Finds a device by vid/pid (use vid=hhhh, pid=hhhhh and the command line).
-* -# Opens the device.
+* -# Initializes a new UsbK (usb device) handle.
 * -# Transfers an application defined number of packets from a read pipe to a write pipe.
      (see example comments)
-* -# Frees the usb device.
-* -# Destroys the usb device list created in step #1
+* -# Frees the UsbK (usb device) handle.
+* -# Frees the LstK (device list) handle created in step #1.
 *
 * \par Console Output
 * \verbatim
@@ -167,11 +168,11 @@ Device opened successfully!
 *
 * \par xfer-sync example:
 * -# Finds a device by vid/pid (use vid=hhhh, pid=hhhhh and the command line).
-* -# Opens the device.
+* -# Initializes a new UsbK (usb device) handle.
 * -# Configures the benchmark test device to accept/send data.
 * -# Submits/Completes \c SYNC_TRANSFER_COUNT number of I/O request one at a time.
-* -# Frees the usb device.
-* -# Frees the usb device list created in step #1
+* -# Frees the UsbK (usb device) handle.
+* -# Frees the LstK (device list) handle created in step #1.
 *
 * \par Console Output
 * \verbatim
@@ -191,14 +192,14 @@ Transferred 12288 bytes in 3 transfers. errorCode=00000000h
 *
 * \par xfer-async example:
 * -# Finds a device by vid/pid (use vid=hhhh, pid=hhhhh and the command line).
-* -# Opens the device.
+* -# Initializes a new UsbK (usb device) handle.
 * -# Configures the benchmark test device to accept/send data.
-* -# Initializes a new OvlK pool handle.
+* -# Initializes a new OvlPoolK (overlapped pool) handle.
 * -# Submits \c ASYNC_PENDING_IO_COUNT number of I/O request.
 * -# Completes all I/O request submitted above.
-* -# Frees the usb device.
-* -# Frees the overlapped pool.
-* -# Frees the usb device list created in step #1
+* -# Frees the UsbK (usb device) handle.
+* -# Frees the OvlPoolK (overlapped pool) handle.
+* -# Frees the LstK (device list) handle created in step #1.
 *
 * \par Console Output
 * \verbatim
@@ -221,7 +222,7 @@ Transferred 12288 bytes in 3 transfers. errorCode=00000000h
 *
 * \par xfer-stream example:
 * -# Finds a device by vid/pid (use vid=hhhh, pid=hhhhh and the command line).
-* -# Opens the device.
+* -# Initializes a new UsbK (usb device) handle.
 * -# Configures the benchmark test device to accept/send data.
 * -# Initializes a new stream handle.
 * -# Starts the stream.
@@ -229,7 +230,8 @@ Transferred 12288 bytes in 3 transfers. errorCode=00000000h
 * -# Stops and starts the stream.
 * -# Repeats the above two steps until a key is pressed.
 * -# Stops and frees the stream.
-* -# Frees the usb device list created in step #1
+* -# Frees the UsbK (usb device) handle.
+* -# Frees the LstK (device list) handle created in step #1.
 *
 * \par Console Output
 * \verbatim
@@ -279,13 +281,14 @@ Transferred bytes:163840 BPS:815427.14
 *
 * \par pipe-policy-timeout example:
 * -# Finds a device by vid/pid (use vid=hhhh, pid=hhhhh and the command line).
-* -# Opens the device.
+* -# Initializes a new UsbK (usb device) handle.
 * -# Gets the pipe transfer timeout policy value, sets it, and gets it a second time.
 * -# Configures the benchmark test device to not accept/send data.
-* -# Initializes a new OvlK pool handle.
+* -# Initializes a new OvlPoolK (overlapped pool) handle.
 * -# Submits transfers and estimates the compeletion timeout duration. 
-* -# Frees the overlapped pool.
-* -# Frees the usb device list created in step #1
+* -# Frees the UsbK (usb device) handle.
+* -# Frees the OvlPoolK (overlapped pool) handle.
+* -# Frees the LstK (device list) handle created in step #1.
 *
 * \par Console Output
 * \verbatim

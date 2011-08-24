@@ -49,8 +49,10 @@ DWORD __cdecl main(int argc, char* argv[])
 	DWORD errorCode = ERROR_SUCCESS;
 	ULONG count = 0;
 
-	// Initialize a new device list.  This populates the list with the
-	// usb devices libusbK can access.
+	/*
+	Initialize a new LstK (device list) handle.
+	The list is polulated with all usb devices libusbK can access.
+	*/
 	if (!LstK_Init(&deviceList, 0))
 	{
 		errorCode = GetLastError();
@@ -58,6 +60,7 @@ DWORD __cdecl main(int argc, char* argv[])
 		return errorCode;
 	}
 
+	// Get the number of devices contained in the device list.
 	LstK_Count(deviceList, &count);
 	if (!count)
 	{

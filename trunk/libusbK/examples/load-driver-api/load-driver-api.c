@@ -89,7 +89,7 @@ Done:
 	return errorCode;
 }
 
-/*
+/*!
 Console Output:
 
 Looking for device vid/pid 04D8/FA2E..

@@ -13,7 +13,7 @@ IF /I "!G_DIST!" NEQ "finalize" (
 	goto Done
 )
 
-IF EXIST "!K_LIBUSB10_DEP_DIR!" IF EXIST "!K_LIBUSB0_DEP_DIR!" (
+IF EXIST "!K_LIBUSB10_DEP_DIR!" (
 	PUSHD !CD!
 	CD /D "!K_LIBUSB10_DEP_DIR!\msvc"
 	CALL ddk_build
@@ -32,15 +32,12 @@ IF EXIST "!K_LIBUSB10_DEP_DIR!" IF EXIST "!K_LIBUSB0_DEP_DIR!" (
 	
 	COPY /Y "!K_LIBUSB10_OUTPUT_DIR!\!K_LIBUSB10_NAME!.dll" "!G_TARGET_OUTPUT_ABS_DIR!\!G_TARGET_OUTPUT_ARCH!\"
 	COPY /Y "!K_LIBUSB10_OUTPUT_DIR!\!K_LIBUSB10_NAME!.lib" "!G_TARGET_OUTPUT_ABS_DIR!\!G_TARGET_OUTPUT_ARCH!\"
+)
 
+IF EXIST "!K_LIBUSB0_DEP_DIR!" (
 	IF /I "!_BUILDARCH!" EQU "x86" (
 		COPY /Y "!K_LIBUSB0_DEP_DIR!\bin\!_BUILDARCH!\libusb0_x86.dll" "!G_TARGET_OUTPUT_ABS_DIR!\!G_TARGET_OUTPUT_ARCH!\libusb0.dll"
 		COPY /Y "!K_LIBUSB0_DEP_DIR!\lib\msvc\libusb.lib" "!G_TARGET_OUTPUT_ABS_DIR!\!G_TARGET_OUTPUT_ARCH!\libusb0.lib"
-		
-		REM - make.cfg is configured so the x86 dll is the very last to build.
-		REM - This batch file is ran while inside of the x86 ddk environment,
-		REM - thus it is used to build libwdi and inf-wizard was well.
-		CALL :FinalizeDistribution
 	) ELSE (
 		COPY /Y "!K_LIBUSB0_DEP_DIR!\bin\!_BUILDARCH!\libusb0.dll" "!G_TARGET_OUTPUT_ABS_DIR!\!G_TARGET_OUTPUT_ARCH!\"
 		IF /I "!_BUILDARCH!" EQU "ia64" (
@@ -49,8 +46,15 @@ IF EXIST "!K_LIBUSB10_DEP_DIR!" IF EXIST "!K_LIBUSB0_DEP_DIR!" (
 			COPY /Y "!K_LIBUSB0_DEP_DIR!\lib\msvc_x64\libusb.lib" "!G_TARGET_OUTPUT_ABS_DIR!\!G_TARGET_OUTPUT_ARCH!\libusb0.lib"
 		)
 	)
-	GOTO Done
 )
+
+IF /I "!_BUILDARCH!" EQU "x86" (
+	REM - make.cfg is configured so the x86 dll is the very last to build.
+	REM - This batch file is ran while inside of the x86 ddk environment,
+	REM - thus it is used to build libwdi and inf-wizard was well.
+	CALL :FinalizeDistribution
+)
+GOTO Done
 
 :Error
 	ECHO Cannot create final dist. Missing !K_LIBUSB10_NAME!/libusb-win32.
@@ -88,10 +92,10 @@ GOTO :EOF
 	XCOPY "!G_BUILD_OUTPUT_BASE_ABS_DIR!\*" "!K_PKG_BIN!" /S /I /Y
 	
 	REM - Copy in the libusb-win32 includes
-	CALL .\make_tasks\deploy_dep.cmd "!K_LIBUSB0_DEP_DIR!" "!K_PKG!" "!K_LIBUSB0_NAME!" ".\make_tasks\!K_LIBUSB0_NAME!.dep.lst"
+	IF EXIST "!K_LIBUSB0_DEP_DIR!" CALL .\make_tasks\deploy_dep.cmd "!K_LIBUSB0_DEP_DIR!" "!K_PKG!" "!K_LIBUSB0_NAME!" ".\make_tasks\!K_LIBUSB0_NAME!.dep.lst"
 
 	REM - Copy in the libusb-1.x includes
-	CALL .\make_tasks\deploy_dep.cmd "!K_LIBUSB10_DEP_DIR!" "!K_PKG!" "!K_LIBUSB10_NAME!" ".\make_tasks\!K_LIBUSB10_NAME!.dep.lst"
+	IF EXIST "!K_LIBUSB10_DEP_DIR!" CALL .\make_tasks\deploy_dep.cmd "!K_LIBUSB10_DEP_DIR!" "!K_PKG!" "!K_LIBUSB10_NAME!" ".\make_tasks\!K_LIBUSB10_NAME!.dep.lst"
 	
 	REM - Copy in the libusbK includes
 	CALL .\make_tasks\deploy_dep.cmd "!K_LIBUSBK_DEP_DIR!" "!K_PKG!" "!K_LIBUSBK_NAME!" ".\make_tasks\!K_LIBUSBK_NAME!.dep.lst"
@@ -103,9 +107,7 @@ GOTO :EOF
 	REM CALL :MakeGccLibs "\lib\gcc\*.def" "\lib\gcc"
 	
 	REM - Move the customized libusbK inf-wizard files into the libwdi directory.
-	CALL :SwapFile "!K_LIBWDI_DIR!\msvc\config.h" libwdi ".\src\libwdi\config.h"
-	CALL :SwapFile "!K_LIBWDI_DIR!\examples\inf_wizard.c" libwdi ".\src\libwdi\inf_wizard.c"
-	CALL :SwapFile "!K_LIBWDI_DIR!\examples\inf_wizard_rc.rc" libwdi ".\src\libwdi\inf_wizard_rc.rc"
+	CALL ".\src\libwdi\copy-to-libwdi.cmd" "!K_LIBWDI_DIR!"
 	
 	REM - Build libwdiK and inf-wizardK.
 	PUSHD !CD!
@@ -116,11 +118,6 @@ GOTO :EOF
 	SET C_DEFINES=
 	SET RC_DEFINES=
 	POPD
-	
-	REM - Restore the files that were replaced.
-	CALL :RestoreFile "!K_LIBWDI_DIR!\examples\inf_wizard_rc.rc" libwdi
-	CALL :RestoreFile "!K_LIBWDI_DIR!\examples\inf_wizard.c" libwdi
-	CALL :RestoreFile "!K_LIBWDI_DIR!\msvc\config.h" libwdi
 
 	IF NOT EXIST "!K_LIBWDI_DIR!\examples\inf-wizard.exe" (
 		ECHO ERROR - "!K_LIBWDI_DIR!\examples\inf-wizard.exe" not found.
