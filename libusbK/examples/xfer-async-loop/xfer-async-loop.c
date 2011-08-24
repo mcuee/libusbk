@@ -340,3 +340,32 @@ Done:
 
 	return g_ErrorCode;
 }
+/*!
+Looking for device vid/pid 04D8/FA2E..
+Using 04D8:FA2E (LUSBW1): Benchmark Device - Microchip Technology, Inc.
+Device opened successfully!
+[Tx-001] PipeID=01h Length=512
+[Tx-002] PipeID=01h Length=512
+[Tx-003] PipeID=01h Length=512
+[Rx-001] PipeID=81h Length=512
+[Tx-004] PipeID=01h Length=512
+[Rx-002] PipeID=81h Length=512
+[Tx-005] PipeID=01h Length=512
+[Rx-003] PipeID=81h Length=512
+[Tx-006] PipeID=01h Length=512
+[Rx-004] PipeID=81h Length=512
+[Tx-007] PipeID=01h Length=512
+[Rx-005] PipeID=81h Length=512
+[Tx-008] PipeID=01h Length=512
+[Rx-006] PipeID=81h Length=512
+[Tx-009] PipeID=01h Length=512
+[Rx-007] PipeID=81h Length=512
+[Tx-010] PipeID=01h Length=512
+[Rx-008] PipeID=81h Length=512
+[Tx-011] PipeID=01h Length=512
+[Rx-009] PipeID=81h Length=512
+[Tx-012] PipeID=01h Length=512
+[Rx-010] PipeID=81h Length=512
+[Rx-011] PipeID=81h Length=512
+[Rx-012] PipeID=81h Length=512
+*/

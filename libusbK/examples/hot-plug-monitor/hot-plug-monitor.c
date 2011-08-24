@@ -24,13 +24,6 @@
 */
 #include "examples.h"
 
-#ifndef UNIT_TEST_LOOP_COUNT
-#define UNIT_TEST_LOOP_COUNT 1
-static int gLoop = 0;
-#else
-extern int gLoop;
-#endif
-
 VOID KUSB_API OnHotPlug(
     KHOT_HANDLE Handle,
     KHOT_PARAMS* Params,
@@ -39,6 +32,7 @@ VOID KUSB_API OnHotPlug(
 {
 	UNREFERENCED_PARAMETER(Handle);
 
+	// Write arrival/removal event notifications to console output as they occur.
 	printf(
 	    "\n"
 	    "[%s] %s (%s) [%s]\n"
@@ -62,56 +56,55 @@ DWORD __cdecl main(int argc, char* argv[])
 	KHOT_PARAMS hotParams;
 	CHAR chKey;
 
-	for (gLoop = 0; gLoop < UNIT_TEST_LOOP_COUNT; gLoop++)
+	memset(&hotParams, 0, sizeof(hotParams));
+	hotParams.OnHotPlug = OnHotPlug;
+	hotParams.Flags |= KHOT_FLAG_PLUG_ALL_ON_INIT;
+	strcpy(hotParams.PatternMatch.InstanceID, "*");
+
+	printf("Initialize a HotK device notification event monitor..\n");
+	printf("Looking for devices with instances IDs matching the pattern '%s'..\n", hotParams.PatternMatch.InstanceID);
+	printf("Press 'q' to exit..\n\n");
+
+	// Initializes a new HotK handle.
+	if (!HotK_Init(&hotHandle, &hotParams))
 	{
-		memset(&hotParams, 0, sizeof(hotParams));
-		hotParams.OnHotPlug = OnHotPlug;
-		hotParams.Flags |= KHOT_FLAG_PLUG_ALL_ON_INIT;
-		strcpy(hotParams.PatternMatch.InstanceID, "*");
-
-		printf("Initialize a HotK device notification event monitor..\n");
-		printf("Looking for devices with instances IDs matching the pattern '%s'..\n", hotParams.PatternMatch.InstanceID);
-		printf("Press 'q' to exit..\n\n");
-		if (!HotK_Init(&hotHandle, &hotParams))
-		{
-			errorCode = GetLastError();
-			printf("HotK_Init failed. ErrorCode: %08Xh\n",  errorCode);
-			goto Done;
-		}
-
-		printf("HotK monitor initialized. ErrorCode: %08Xh\n",  errorCode);
-
-		for(;;)
-		{
-			if (_kbhit())
-			{
-				chKey = (CHAR)_getch();
-				if (chKey == 'q' || chKey == 'Q')
-					break;
-
-				chKey = '\0';
-				continue;
-			}
-
-			Sleep(100);
-		}
-
-		if (!HotK_Free(hotHandle))
-		{
-			errorCode = GetLastError();
-			printf("HotK_Free failed. ErrorCode: %08Xh\n",  errorCode);
-			goto Done;
-		}
-
-		printf("HotK monitor closed. ErrorCode: %08Xh\n",  errorCode);
-
+		errorCode = GetLastError();
+		printf("HotK_Init failed. ErrorCode: %08Xh\n",  errorCode);
+		goto Done;
 	}
+
+	printf("HotK monitor initialized. ErrorCode: %08Xh\n",  errorCode);
+
+	for(;;)
+	{
+		if (_kbhit())
+		{
+			chKey = (CHAR)_getch();
+			if (chKey == 'q' || chKey == 'Q')
+				break;
+
+			chKey = '\0';
+			continue;
+		}
+
+		Sleep(100);
+	}
+
+	// Free the HotK handle.
+	if (!HotK_Free(hotHandle))
+	{
+		errorCode = GetLastError();
+		printf("HotK_Free failed. ErrorCode: %08Xh\n",  errorCode);
+		goto Done;
+	}
+
+	printf("HotK monitor closed. ErrorCode: %08Xh\n",  errorCode);
 
 Done:
 	return errorCode;
 }
 
-/*
+/*!
 Initialize a HotK device notification event monitor..
 Looking for devices with instances IDs matching the pattern '*'..
 Press 'q' to exit..

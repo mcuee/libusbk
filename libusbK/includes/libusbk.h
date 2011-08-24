@@ -132,7 +132,7 @@ C_ASSERT(sizeof(KUSB_SETUP_PACKET) == 8);
 #endif
 
 
-//! Base handle type for all library handles.
+//! Base handle type for all library handles, See \ref KLIB_HANDLE_TYPE.
 typedef void* KLIB_HANDLE;
 
 //! Opaque UsbK handle, see \ref UsbK_Init.
