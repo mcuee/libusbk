@@ -1,86 +1,89 @@
-/********************************************************************
- FileName:     	usb_config.h
- Dependencies: 	Always: GenericTypeDefs.h, usb_device.h
-               	Situational: usb_function_hid.h, usb_function_cdc.h, usb_function_msd.h, etc.
- Processor:		PIC18 or PIC24 USB Microcontrollers
- Hardware:		The code is natively intended to be used on the following
- 				hardware platforms: PICDEM™ FS USB Demo Board, 
- 				PIC18F87J50 FS USB Plug-In Module, or
- 				Explorer 16 + PIC24 USB PIM.  The firmware may be
- 				modified for use on other USB platforms by editing the
- 				HardwareProfile.h file.
- Complier:  	Microchip C18 (for PIC18) or C30 (for PIC24)
- Company:		Microchip Technology, Inc.
+/*! \file usb_config.h
+* \brief Benchmark USB device configuration file.
+*
+* The benchmark firmware has many options that can be configured at compile-time.
+* Some options are not supported by all MCP USB chips, others cannot be achieved
+* because of memory requirements.  If the firmware fails to build, it is most 
+* likely because of one of these two reasons.
+*
+*/
 
- Software License Agreement:
-
- The software supplied herewith by Microchip Technology Incorporated
- (the “Company”) for its PIC® Microcontroller is intended and
- supplied to you, the Company’s customer, for use solely and
- exclusively on Microchip PIC Microcontroller products. The
- software is owned by the Company and/or its supplier, and is
- protected under applicable copyright laws. All rights are reserved.
- Any use in violation of the foregoing restrictions may subject the
- user to criminal sanctions under applicable laws, as well as to
- civil liability for the breach of the terms and conditions of this
- license.
-
- THIS SOFTWARE IS PROVIDED IN AN “AS IS” CONDITION. NO WARRANTIES,
- WHETHER EXPRESS, IMPLIED OR STATUTORY, INCLUDING, BUT NOT LIMITED
- TO, IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
- PARTICULAR PURPOSE APPLY TO THIS SOFTWARE. THE COMPANY SHALL NOT,
- IN ANY CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL OR
- CONSEQUENTIAL DAMAGES, FOR ANY REASON WHATSOEVER.
-
-********************************************************************
- File Description:
-
- Change History:
-  Rev   Date         Description
-  1.0   11/19/2004   Initial release
-  2.1   02/26/2007   Updated for simplicity and to use common
-                     coding style
- *******************************************************************/
-
-/*********************************************************************
- * Descriptor specific type definitions are defined in: usbd.h
- ********************************************************************/
+/*! \mainpage 
+* - \ref config_device
+* - \ref config_interface
+*/
 
 #ifndef USBCFG_H
 #define USBCFG_H
 
-// DESCRIPTOR CONFIGURATION /////////////////////////////////////////
+#define EP_ISO        0x01
+#define EP_BULK       0x02
+#define EP_INT        0x03
 
-// DUAL_INTERFACE Selection:
-// if defined, creates a dual interfaces device each interface will be 
-// exposed as a seperate device (windows). 
-// 
-// #define DUAL_INTERFACE
+#include "usb_config_external.h"
 
-// DUAL_INTERFACE_WITH_ASSOCIATION Selection:
-// If defined, creates a single device with two interfaces.
-//
-// #define DUAL_INTERFACE_WITH_ASSOCIATION
+/*! \addtogroup config_device Device Setup
+@{
+*/
 
-// SINGLE_INTERFACE_WITH_ALTSETTINGS Selection:
-// If defined, creates a single interface device with an additional alt 
-// setting. By default, the first alt setting will have either 0 or 
-// USBGEN_EP_SIZE_INTF0/2 for its endpoints wMaxPacketSize's (0 for ISO 
-// endpoints). The second alt setting exposes the interface with the actual 
-// wMaxPacketSize setting. 
-//
+/*! \def DUAL_INTERFACE
+* \brief Configure for two non-associated interfaces.
+*
+* If defined, creates a dual interfaces device where each interface is exposed as a seperate device under windows.
+*
+*/
+#ifndef USBCFG_H
+#define DUAL_INTERFACE
+#endif
+
+/*! \def DUAL_INTERFACE_WITH_ASSOCIATION
+* \brief Configure for two associated interfaces.
+*
+* If defined, creates a dual interfaces device where both interfaces are exposed as one device under windows.
+*
+*/
+#ifndef USBCFG_H
+#define DUAL_INTERFACE_WITH_ASSOCIATION
+#endif
+
+/*! \def SINGLE_INTERFACE_WITH_ALTSETTINGS
+* \brief Configure for one interface with two alt settings.
+*
+* If defined, creates a single interface device with two alternate settings.
+*
+* If \ref INTF0 is configured for bulk or interrupt endpoints:
+* - Alt setting 0 will have endpoints with \b wMaxPacketSize = USBGEN_EP_SIZE_INTF0 / 2.
+* - Alt setting 1 will have endpoints with \b wMaxPacketSize = USBGEN_EP_SIZE_INTF0.
+*
+* If \ref INTF0 is configured for ISO endpoints:
+* - Alt setting 0 will have endpoints with \b wMaxPacketSize = 0.
+* - Alt setting 1 will have endpoints with \b wMaxPacketSize = USBGEN_EP_SIZE_INTF0.
+*
+*/
+#ifndef USBCFG_H
 #define SINGLE_INTERFACE_WITH_ALTSETTINGS
+#endif
 
-// VENDOR_BUFFER_ENABLED Selection:
-// Enables additional control requests and an 8 byte buffer for storing and 
-// retrieving data. 
-//
-#define VENDOR_BUFFER_ENABLED 1
+/*! \def VENDOR_BUFFER_ENABLED
+* \brief Enables EP0 get/set vendor buffer.
+*
+* If defined, enables additional control requests and an 8 byte buffer for storing and 
+* retrieving data.
+*
+*/
+#ifndef USBCFG_H
+#define VENDOR_BUFFER_ENABLED
+#endif
 
-// DESCRIPTOR_COUNTING_ENABLED Selection:
-// uses the vendor buffer to store descriptor request count information 
-//
-#define DESCRIPTOR_COUNTING_ENABLED 1
+/*! \def DESCRIPTOR_COUNTING_ENABLED
+* \brief Enables descriptor request counting to vendor buffer.
+*
+* If defined, uses the vendor buffer to store descriptor request count information.
+*
+*/
+#ifndef USBCFG_H
+#define DESCRIPTOR_COUNTING_ENABLED
+#endif
 
 #if defined(DESCRIPTOR_COUNTING_ENABLED) && !defined(VENDOR_BUFFER_ENABLED)
 #define VENDOR_BUFFER_ENABLED
@@ -123,38 +126,57 @@
 	#define INTF1_STRING 'B','e','n','c','h','m','a','r','k',' ','T','w','o'
 #endif
 
-/////////////////////////////////////////////////////////////////////
-#define EP_ISO        0x01            // Isochronous Transfer
-#define EP_BULK       0x02            // Bulk Transfer
-#define EP_INT        0x03			  // Interrupt Transfer
+/*!@}*/
 
-
-// INTERFACE & ENDPOINT CONFIGURATION ///////////////////////////////
+/*! \addtogroup config_interface Interface and Endpoint Setup
+@{
+*/
 
 // Interface number to use in interface descriptor(s)
 #define INTF0_NUMBER 0
 #define INTF1_NUMBER 1
 
-/////////////////////////////////////////////////////////////////////
-// ENDPOINT #1 (IN,OUT) Size & Type
-#define USBGEN_EP_SIZE_INTF0	64
-// #define INTF0				EP_ISO
-#define INTF0				EP_BULK
-// #define INTF0				EP_INT
-/////////////////////////////////////////////////////////////////////
+/*! \def USBGEN_EP_SIZE_INTF0
+* \brief wMaxPacketSize for IN and OUT endpoints on interface 0.
+*
+*/
+#ifndef USBGEN_EP_SIZE_INTF0
+	#define USBGEN_EP_SIZE_INTF0	32
+#endif
 
-/////////////////////////////////////////////////////////////////////
-// ENDPOINT #2 (IN,OUT) Size & Type
-#define USBGEN_EP_SIZE_INTF1	32
-// #define INTF1				EP_ISO
-#define INTF1				EP_BULK
-// #define INTF1				EP_INT
-/////////////////////////////////////////////////////////////////////
+/*! \def INTF0
+* \brief Endpoint type for IN and OUT endpoints on interface 0.
+*
+* Valid values are \c EP_ISO, \c EP_BULK, and \c EP_INT.
+*/
+#ifndef INTF0
+	#define INTF0 EP_BULK
+#endif
+
+/*! \def USBGEN_EP_SIZE_INTF1
+* \brief wMaxPacketSize for IN and OUT endpoints on interface 1.
+*
+*/
+#ifndef USBGEN_EP_SIZE_INTF1
+	#define USBGEN_EP_SIZE_INTF1	32
+#endif
+
+/*! \def INTF1
+* \brief Endpoint type for IN and OUT endpoints on interface 1.
+* 
+* Valid values are \c EP_ISO, \c EP_BULK, and \c EP_INT.
+*/
+#ifndef INTF1
+	#define INTF1 EP_BULK
+#endif
+
+/*!@}*/
 
 /////////////////////////////////////////////////////////////////////
 // USB SERVICE MODE
-//#define USB_POLLING
+#if !defined(USB_POLLING) && !defined(USB_INTERRUPT)
 #define USB_INTERRUPT
+#endif
 /////////////////////////////////////////////////////////////////////
 
 // INTERFACE & ENDPOINT INTERNAL SETUP //////////////////////////////
@@ -198,7 +220,7 @@
 /////////////////////////////////////////////////////////////////////
 
 
-/** DEFINITIONS ****************************************************/
+/* DEFINITIONS ****************************************************/
 #define USBGEN_EP_NUM_INTF0		1
 #define USBGEN_EP_NUM_INTF1		2
 
@@ -237,9 +259,9 @@
   #define USB_PING_PONG_MODE USB_PING_PONG__FULL_PING_PONG
 #else
 // #define USB_PING_PONG_MODE USB_PING_PONG__NO_PING_PONG
-// #define USB_PING_PONG_MODE USB_PING_PONG__FULL_PING_PONG
+#define USB_PING_PONG_MODE USB_PING_PONG__FULL_PING_PONG
 // #define USB_PING_PONG_MODE USB_PING_PONG__EP0_OUT_ONLY
-#define USB_PING_PONG_MODE USB_PING_PONG__ALL_BUT_EP0		//NOTE: This mode is not supported in PIC18F4550 family rev A3 devices
+// #define USB_PING_PONG_MODE USB_PING_PONG__ALL_BUT_EP0		//NOTE: This mode is not supported in PIC18F4550 family rev A3 devices
 #endif
 
 
@@ -262,7 +284,7 @@
 #define USB_ENABLE_ALL_HANDLERS
 
 
-/** DEVICE CLASS USAGE *********************************************/
+/* DEVICE CLASS USAGE *********************************************/
 #define USB_USE_GEN
 #define	EVN	0
 #define	ODD	1

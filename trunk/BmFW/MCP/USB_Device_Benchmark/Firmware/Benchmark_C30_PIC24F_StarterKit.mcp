@@ -1,12 +1,12 @@
 [HEADER]
 magic_cookie={66E99B07-E706-4689-9E80-9B2582898A13}
 file_version=1.0
-device=PIC24FJ64GB002
+device=PIC24FJ256GB106
 [PATH_INFO]
 BuildDirPolicy=BuildDirIsProjectDir
 dir_src=
 dir_bin=
-dir_tmp=./Objects\USB Device - Benchmark - C30
+dir_tmp=./Objects\USB Device - Benchmark - C30_PIC24F_StarterKit
 dir_sin=
 dir_inc=.;..;..\..\Microchip\Include
 dir_lib=C:\Program Files\Microchip\MPLAB C30\lib
