@@ -41,17 +41,17 @@ CALL :MakeOutput "BmFW - 1Intf[Interrupt_32],VendorBuffer"
 CALL :StartConfig
 CALL :AddConfig SINGLE_INTERFACE_WITH_ALTSETTINGS
 CALL :AddConfig INTF0 EP_ISO
-CALL :AddConfig USBGEN_EP_SIZE_INTF0 64
+CALL :AddConfig USBGEN_EP_SIZE_INTF0 256
 CALL :AddConfig VENDOR_BUFFER_ENABLED
 CALL :EndConfig
-CALL :MakeOutput "BmFW - 1Intf[ISO_64],VendorBuffer,2AltSettings"
+CALL :MakeOutput "BmFW - 1Intf[ISO_256],VendorBuffer,2AltSettings"
 
 CALL :StartConfig
 CALL :AddConfig INTF0 EP_ISO
-CALL :AddConfig USBGEN_EP_SIZE_INTF0 512
+CALL :AddConfig USBGEN_EP_SIZE_INTF0 64
 CALL :AddConfig VENDOR_BUFFER_ENABLED
 CALL :EndConfig
-CALL :MakeOutput "BmFW - 1Intf[ISO_512],VendorBuffer"
+CALL :MakeOutput "BmFW - 1Intf[ISO_64],VendorBuffer"
 
 :Test
 CALL :StartConfig
