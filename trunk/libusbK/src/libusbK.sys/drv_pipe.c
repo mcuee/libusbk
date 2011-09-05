@@ -82,7 +82,7 @@ NTSTATUS Pipe_Reset(__in PDEVICE_CONTEXT deviceContext,
 		{
 			USBERR("WdfUsbTargetPipeResetSynchronously failed pipeID=%02Xh status=%Xh\n", pipeID, status);
 		}
-		InterlockedExchange(&pipeContext->TransferCounter, 0);
+		pipeContext->TransferCounter = 0;
 	}
 	else
 	{

@@ -123,21 +123,21 @@ typedef struct _KISO_PACKET
 	*
 	* \note This field is assigned by the user application only and used by the driver upon transfer submission and completion.
 	*/
-	ULONG Offset;
+	INT Offset;
 
 	//! Set by the host controller to indicate the actual number of bytes received by the device for isochronous IN transfers. Length not used for isochronous OUT transfers.
 	/*!
 	* \note This field is is not user assignable and is updated by the driver upon transfer completion.
 	*/
-	ULONG Length;
+	USHORT Length;
 
-	//! Contains the USBD status, on return from the host controller driver, of this transfer packet.
+	//! Contains the 16 least significant USBD status bits, on return from the host controller driver, of this transfer packet.
 	/*!
 	* See MSDN for USBD status codes: <A href="http://msdn.microsoft.com/en-us/library/ff539136%28VS.85%29.aspx">USBD status code reference</A>
 	*
 	* \note This field is is not user assignable and is updated by the driver upon transfer completion.
 	*/
-	ULONG Status;
+	USHORT Status;
 
 } KISO_PACKET;
 //! pointer to a \c KISO_PACKET structure
@@ -206,7 +206,7 @@ typedef struct _KISO_CONTEXT
 	*
 	* \note This field is assigned by the user application only and used by the driver upon transfer submission.
 	*/
-	UCHAR PipeID;
+	LONG PipeID;
 
 	//! Specifies the frame number that the transfer should begin on (0 for ASAP).
 	/*!
@@ -230,13 +230,20 @@ typedef struct _KISO_CONTEXT
 	* \note This field may be assigned by the user application and is updated by the driver upon transfer
 	* completion.
 	*/
-	ULONG StartFrame;
+	LONG StartFrame;
 
 	//! Contains the number of packets that completed with an error condition on return from the host controller driver.
 	/*!
 	* \note This field is is not user assignable and is updated by the driver upon transfer completion.
 	*/
-	ULONG ErrorCount;
+	LONG ErrorCount;
+
+	//! Specifies the number of packets that are described by the variable-length array member \c IsoPacket.
+	/*
+	* \note This field is assigned by the user application only and used by the driver upon transfer submission
+	* and completion.
+	*/
+	LONG NumberOfPackets;
 
 	//! Contains aunique per-pipe transfer counter.
 	/*
@@ -247,14 +254,7 @@ typedef struct _KISO_CONTEXT
 	*
 	* \note This field is is not user assignable and is updated by the driver upon transfer submission.
 	*/
-	ULONG TransferCounter;
-
-	//! Specifies the number of packets that are described by the variable-length array member \c IsoPacket.
-	/*
-	* \note This field is assigned by the user application only and used by the driver upon transfer submission
-	* and completion.
-	*/
-	ULONG NumberOfPackets;
+	INT64 TransferCounter;
 
 	//! Contains a variable-length array of \c KISO_PACKET structures that describe the isochronous transfer packets to be transferred on the USB bus.
 	/*

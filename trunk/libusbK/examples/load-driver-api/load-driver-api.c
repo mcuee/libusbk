@@ -39,7 +39,7 @@ DWORD __cdecl main(int argc, char* argv[])
 
 	// load a dynamic driver api for this device.  The dynamic driver api
 	// is more versatile because it adds support for winusb.sys devices.
-	if (!LibK_LoadDriverAPI(&K, deviceInfo->DrvId))
+	if (!LibK_LoadDriverAPI(&K, deviceInfo->DriverID))
 	{
 		errorCode = GetLastError();
 		printf("Loading driver api failed. ErrorCode: %08Xh\n",  errorCode);
@@ -47,7 +47,7 @@ DWORD __cdecl main(int argc, char* argv[])
 	}
 
 	// Display some information on the driver api type.
-	switch(deviceInfo->DrvId)
+	switch(deviceInfo->DriverID)
 	{
 	case KUSB_DRVID_LIBUSBK:
 		printf("libusbK driver api loaded!\n");

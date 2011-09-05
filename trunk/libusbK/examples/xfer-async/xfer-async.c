@@ -60,7 +60,7 @@ DWORD __cdecl main(int argc, char* argv[])
 	This example will use the dynamic driver api so that it can be used
 	with all supported drivers.
 	*/
-	LibK_LoadDriverAPI(&Usb, deviceInfo->DrvId);
+	LibK_LoadDriverAPI(&Usb, deviceInfo->DriverID);
 
 	/*
 	Initialize the device. This creates the physical usb handle.
@@ -82,7 +82,7 @@ DWORD __cdecl main(int argc, char* argv[])
 	/*
 	Initialize a new OvlK pool handle.
 	*/
-	OvlK_InitPool(&ovlPool, usbHandle, ASYNC_PENDING_IO_COUNT, 0);
+	OvlK_Init(&ovlPool, usbHandle, ASYNC_PENDING_IO_COUNT, 0);
 
 	/*
 	Submit ASYNC_PENDING_IO_COUNT number of I/O request.
@@ -149,7 +149,7 @@ Done:
 	*/
 	LstK_Free(deviceList);
 
-	OvlK_FreePool(ovlPool);
+	OvlK_Free(ovlPool);
 	return errorCode;
 }
 /*!

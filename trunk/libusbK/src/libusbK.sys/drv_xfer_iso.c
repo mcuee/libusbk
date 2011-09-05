@@ -1610,10 +1610,10 @@ VOID XferIsoEx(__in WDFQUEUE Queue,
 	PURB urb;
 	ULONG urbSize;
 	USBD_PIPE_HANDLE usbdPipeHandle;
-	ULONG posPacket;
-	ULONG nextOffset;
+	LONG posPacket;
+	LONG nextOffset;
 	ULONG nextLength;
-	ULONG transferCounter;
+	INT64 transferCounter;
 	WDF_REQUEST_SEND_OPTIONS sendOptions;
 
 	UNREFERENCED_PARAMETER(InputBufferLength);
@@ -1627,7 +1627,7 @@ VOID XferIsoEx(__in WDFQUEUE Queue,
 
 	USBDBG("ContextMemory=%p\n", requestContext->Iso.ContextMemory);
 
-	transferCounter = (ULONG)InterlockedIncrement(&requestContext->PipeContext->TransferCounter);
+	transferCounter = ++requestContext->PipeContext->TransferCounter;
 
 	if (!requestContext->Iso.ContextMemory)
 	{
@@ -1711,10 +1711,10 @@ VOID XferIsoEx(__in WDFQUEUE Queue,
 		// DeviceToHost packet setup
 		for (posPacket = 0; posPacket < isoContext->NumberOfPackets; posPacket++)
 		{
-			ULONG offset = isoContext->IsoPackets[posPacket].Offset;
+			INT offset = isoContext->IsoPackets[posPacket].Offset;
 			isoContext->IsoPackets[posPacket].Status = 0;
 
-			if (offset < nextOffset || offset >= requestContext->Length)
+			if (offset < nextOffset || offset >= (LONG)requestContext->Length)
 			{
 				status = STATUS_INVALID_DEVICE_REQUEST;
 				USBERR("Invalid packet offset. IsoPackets[%u].Offset=%u.\n",
@@ -1733,10 +1733,10 @@ VOID XferIsoEx(__in WDFQUEUE Queue,
 		// HostToDevice packet setup
 		for (posPacket = 0; posPacket < isoContext->NumberOfPackets; posPacket++)
 		{
-			ULONG offset = isoContext->IsoPackets[posPacket].Offset;
+			INT offset = isoContext->IsoPackets[posPacket].Offset;
 			isoContext->IsoPackets[posPacket].Status = 0;
 
-			if (offset < nextOffset || offset >= requestContext->Length)
+			if (offset < nextOffset || offset >= (LONG)requestContext->Length)
 			{
 				status = STATUS_INVALID_DEVICE_REQUEST;
 				USBERR("Invalid packet offset. IsoPackets[%u].Offset=%u.\n",
@@ -1791,7 +1791,7 @@ static VOID XferIsoExComplete(__in WDFREQUEST Request,
 	PURB urb;
 	NTSTATUS status;
 	PREQUEST_CONTEXT requestContext;
-	ULONG posPacket;
+	LONG posPacket;
 
 	UNREFERENCED_PARAMETER(Target);
 
@@ -1807,8 +1807,8 @@ static VOID XferIsoExComplete(__in WDFREQUEST Request,
 	// update the iso packet status & lengths
 	for (posPacket = 0; posPacket < IsoContext->NumberOfPackets; posPacket++)
 	{
-		IsoContext->IsoPackets[posPacket].Length = urb->UrbIsochronousTransfer.IsoPacket[posPacket].Length;
-		IsoContext->IsoPackets[posPacket].Status = urb->UrbIsochronousTransfer.IsoPacket[posPacket].Status;
+		IsoContext->IsoPackets[posPacket].Length = (USHORT)urb->UrbIsochronousTransfer.IsoPacket[posPacket].Length;
+		IsoContext->IsoPackets[posPacket].Status = (USHORT)(urb->UrbIsochronousTransfer.IsoPacket[posPacket].Status & 0xFFFF);
 		requestContext->TotalTransferred += urb->UrbIsochronousTransfer.IsoPacket[posPacket].Length;
 	}
 

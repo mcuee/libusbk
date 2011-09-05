@@ -1055,7 +1055,7 @@ KUSB_EXP BOOL KUSB_API UsbK_IsoReadPipe(
 	Mem_Zero(&request, sizeof(request));
 	request.IsoEx.IsoContext = IsoContext;
 	request.IsoEx.IsoContextSize = IsoContextSize;
-	request.IsoEx.PipeID = IsoContext->PipeID;
+	request.IsoEx.PipeID = (UCHAR)IsoContext->PipeID;
 
 	success = Ioctl_Async(Dev_Handle(), LIBUSBK_IOCTL_ISOEX_READ,
 	                      &request, sizeof(request),
@@ -1092,7 +1092,7 @@ KUSB_EXP BOOL KUSB_API UsbK_IsoWritePipe(
 	Mem_Zero(&request, sizeof(request));
 	request.IsoEx.IsoContext = IsoContext;
 	request.IsoEx.IsoContextSize = IsoContextSize;
-	request.IsoEx.PipeID = IsoContext->PipeID;
+	request.IsoEx.PipeID = (UCHAR)IsoContext->PipeID;
 
 	success = Ioctl_Async(Dev_Handle(), LIBUSBK_IOCTL_ISOEX_WRITE,
 	                      &request, sizeof(request),

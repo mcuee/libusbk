@@ -90,7 +90,7 @@ binary distributions.
 	PUB_TO_PRIV(StmK,KSTM_HANDLE_INTERNAL,KStm_Pool_Handle,KStm_Pool_Handle_Internal,ErrorAction)
 
 #define PROTO_POOLHANDLE(AllKSection,HandleType)											\
-	PKLIB_USER_CONTEXT PoolHandle_GetContext_##AllKSection(P##HandleType PoolHandle);		\
+	KLIB_USER_CONTEXT PoolHandle_GetContext_##AllKSection(P##HandleType PoolHandle);		\
 	P## HandleType PoolHandle_Acquire_##AllKSection(PKOBJ_CB EvtCleanup);					\
 	BOOL PoolHandle_Inc_##AllKSection(P##HandleType PoolHandle);							\
 	BOOL PoolHandle_IncEx_##AllKSection(P##HandleType PoolHandle, long* lockCount);			\
@@ -135,6 +135,104 @@ binary distributions.
 
 #define PIPEID_TO_IDX(Pipe_Number) ((((Pipe_Number) & 0xF)|(((Pipe_Number)>>3) & 0x10)) & 0x1F)
 #define Get_PipeInterfaceHandle(KUsb_Handle_Internal,Pipe_Number) ((KUsb_Handle_Internal)->Device->UsbStack->PipeCache[PIPEID_TO_IDX(Pipe_Number)].InterfaceHandle)
+
+//! Synchronize the device info elements of two device lists.
+/*!
+*
+* \param[in] MasterList
+* The device list handle to use as the master list.
+*
+* \param[in] SlaveList
+* The device list handle to use as the master list.
+*
+* \param[in] SyncFlags
+* One or more \ref KLST_SYNC_FLAG.
+*
+* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+*
+*/
+KUSB_EXP BOOL KUSB_API LstK_Sync(
+    _in KLST_HANDLE MasterList,
+    _in KLST_HANDLE SlaveList,
+    _inopt KLST_SYNC_FLAG SyncFlags);
+
+//! Creates a copy of an existing device list.
+/*!
+*
+* \param[in] SrcList
+* The device list to copy.
+*
+* \param[out] DstList
+* Reference to a pointer that receives the cloned device list.
+*
+* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+*
+*/
+KUSB_EXP BOOL KUSB_API LstK_Clone(
+    _in KLST_HANDLE SrcList,
+    _out KLST_HANDLE* DstList);
+
+//! Creates a copy of an existing device info handle.
+/*!
+*
+* \param[in] SrcInfo
+* The device info to copy.
+*
+* \param[out] DstInfo
+* Reference to a pointer that receives the cloned device info.
+*
+* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+*
+*/
+KUSB_EXP BOOL KUSB_API LstK_CloneInfo(
+    _in KLST_DEVINFO_HANDLE SrcInfo,
+    _out KLST_DEVINFO_HANDLE* DstInfo);
+
+//! Removes a device info handle for a device list.
+/*!
+*
+* \param[in] DeviceList
+* The device list of the info element.
+*
+* \param[in] DeviceInfo
+* The device info element to remove from the list.
+*
+* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+*
+*/
+KUSB_EXP BOOL KUSB_API LstK_DetachInfo(
+    _in KLST_HANDLE DeviceList,
+    _in KLST_DEVINFO_HANDLE DeviceInfo);
+
+//! Appends a device info handle for a device list.
+/*!
+*
+* \param[in] DeviceList
+* The device list to add the info element.
+*
+* \param[in] DeviceInfo
+* The device info element to add to the list.
+*
+* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+*
+*/
+KUSB_EXP BOOL KUSB_API LstK_AttachInfo(
+    _in KLST_HANDLE DeviceList,
+    _in KLST_DEVINFO_HANDLE DeviceInfo);
+
+//! Frees a device info handle that was detached with \ref LstK_DetachInfo.
+/*!
+*
+* \param[in] DeviceInfo
+* The device info element to free.
+*
+* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+*
+*/
+KUSB_EXP BOOL KUSB_API LstK_FreeInfo(
+    _in KLST_DEVINFO_HANDLE DeviceInfo);
+
+
 
 typedef VOID KUSB_API KOBJ_CB(PVOID Handle);
 typedef KOBJ_CB* PKOBJ_CB;
@@ -304,7 +402,7 @@ typedef struct _KOBJ_BASE
 	struct
 	{
 		BOOL Valid;
-		PKLIB_HANDLE_CB CleanupCB;
+		KLIB_HANDLE_CLEANUP_CB* CleanupCB;
 		KLIB_USER_CONTEXT Context;
 	} User;
 } KOBJ_BASE, *PKOBJ_BASE;
@@ -604,7 +702,7 @@ PROTO_POOLHANDLE(StmK, KSTM_HANDLE_INTERNAL);
 			(KLib_Handle_Internal)->Base.User.CleanupCB(   					\
 				(KLib_Handle_Internal),    										\
 				(KLib_Handle_Type),    											\
-				&((KLib_Handle_Internal)->Base.User.Context)); 					\
+				((KLib_Handle_Internal)->Base.User.Context)); 					\
    																				\
 			(KLib_Handle_Internal)->Base.User.CleanupCB = NULL;				\
 		}  																		\

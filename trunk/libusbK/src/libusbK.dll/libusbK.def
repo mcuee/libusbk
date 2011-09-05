@@ -64,8 +64,8 @@ EXPORTS
     
     OvlK_Acquire
     OvlK_Release
-    OvlK_InitPool
-    OvlK_FreePool
+    OvlK_Init
+    OvlK_Free
     OvlK_GetEventHandle
     OvlK_Wait
     OvlK_WaitOrCancel

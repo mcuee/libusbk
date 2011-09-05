@@ -200,7 +200,7 @@ BOOL UsbStack_Init(
     __in_opt	KUSB_DRVID DriverID,
     __in		BOOL UsePipeCache,
     __in_opt	HANDLE DeviceHandle,
-    __in_opt	KLST_DEVINFO* DevInfo,
+    __in_opt	KLST_DEVINFO_HANDLE DevInfo,
     __in_opt	PKDEV_HANDLE_INTERNAL SharedDevice,
     __in		PKUSB_STACK_CB Init_ConfigCB,
     __in_opt	PKUSB_STACK_CB Init_BackendCB,
@@ -222,7 +222,7 @@ BOOL UsbStack_Init(
 		{
 			DeviceHandle = CreateDeviceFile(DevInfo->DevicePath);
 			ErrorNoSet(!IsHandleValid(DeviceHandle), Error, "CreateDeviceFile failed.");
-			DriverID = (KUSB_DRVID)DevInfo->DrvId;
+			DriverID = (KUSB_DRVID)DevInfo->DriverID;
 			handle->Device->DevicePath = Str_Dupe(DevInfo->DevicePath);
 		}
 

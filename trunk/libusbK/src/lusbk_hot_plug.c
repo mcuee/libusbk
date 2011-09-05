@@ -106,15 +106,15 @@ static BOOL h_Register_Atom(PKHOT_NOTIFIER_LIST NotifierList);
 static BOOL h_Create_Thread(PKHOT_NOTIFIER_LIST NotifierList);
 static BOOL h_Create_Hwnd(PKHOT_NOTIFIER_LIST NotifierList, HWND* hwnd);
 
-static BOOL KUSB_API h_DevEnum_PlugWaiters(KLST_HANDLE DeviceList, KLST_DEVINFO* DeviceInfo, PKLST_NOTIFY_CONTEXT Context);
-static BOOL KUSB_API h_DevEnum_ClearSyncResults(KLST_HANDLE DeviceList, KLST_DEVINFO* DeviceInfo, PKLST_NOTIFY_CONTEXT Context);
-static BOOL KUSB_API h_DevEnum_RegisterForBroadcast(KLST_HANDLE DeviceList, KLST_DEVINFO* DeviceInfo, PKHOT_HANDLE_INTERNAL Context);
-static BOOL KUSB_API h_DevEnum_UpdateForRemoval(KLST_HANDLE DeviceList, KLST_DEVINFO* DeviceInfo, PDEV_BROADCAST_DEVICEINTERFACE_A Context);
+static BOOL KUSB_API h_DevEnum_PlugWaiters(KLST_HANDLE DeviceList, KLST_DEVINFO_HANDLE DeviceInfo, PKLST_NOTIFY_CONTEXT Context);
+static BOOL KUSB_API h_DevEnum_ClearSyncResults(KLST_HANDLE DeviceList, KLST_DEVINFO_HANDLE DeviceInfo, PKLST_NOTIFY_CONTEXT Context);
+static BOOL KUSB_API h_DevEnum_RegisterForBroadcast(KLST_HANDLE DeviceList, KLST_DEVINFO_HANDLE DeviceInfo, PKHOT_HANDLE_INTERNAL Context);
+static BOOL KUSB_API h_DevEnum_UpdateForRemoval(KLST_HANDLE DeviceList, KLST_DEVINFO_HANDLE DeviceInfo, PDEV_BROADCAST_DEVICEINTERFACE_A Context);
 
 static BOOL h_NotifyWaiters(__in_opt PKHOT_HANDLE_INTERNAL HotHandle, BOOL ClearSyncResultsWhenComplete);
 static BOOL h_RegisterForBroadcast(PKHOT_HANDLE_INTERNAL HotHandle);
 
-static BOOL h_IsHotMatch(PKHOT_HANDLE_INTERNAL HotHandle, KLST_DEVINFO* DeviceInfo);
+static BOOL h_IsHotMatch(PKHOT_HANDLE_INTERNAL HotHandle, KLST_DEVINFO_HANDLE DeviceInfo);
 
 static BOOL h_NotifyWaiters(__in_opt PKHOT_HANDLE_INTERNAL HotHandle, BOOL ClearSyncResultsWhenComplete)
 {
@@ -148,7 +148,7 @@ static void KUSB_API Cleanup_HotK(PKHOT_HANDLE_INTERNAL handle)
 	}
 }
 
-static BOOL KUSB_API h_DevEnum_UpdateForRemoval(KLST_HANDLE DeviceList, KLST_DEVINFO* DeviceInfo, PDEV_BROADCAST_DEVICEINTERFACE_A Context)
+static BOOL KUSB_API h_DevEnum_UpdateForRemoval(KLST_HANDLE DeviceList, KLST_DEVINFO_HANDLE DeviceInfo, PDEV_BROADCAST_DEVICEINTERFACE_A Context)
 {
 	UNREFERENCED_PARAMETER(DeviceList);
 
@@ -164,7 +164,7 @@ static BOOL KUSB_API h_DevEnum_UpdateForRemoval(KLST_HANDLE DeviceList, KLST_DEV
 	return TRUE;
 }
 
-static BOOL KUSB_API h_DevEnum_ClearSyncResults(KLST_HANDLE DeviceList, KLST_DEVINFO* DeviceInfo, KLST_NOTIFY_CONTEXT* Context)
+static BOOL KUSB_API h_DevEnum_ClearSyncResults(KLST_HANDLE DeviceList, KLST_DEVINFO_HANDLE DeviceInfo, KLST_NOTIFY_CONTEXT* Context)
 {
 	UNREFERENCED_PARAMETER(DeviceList);
 	UNREFERENCED_PARAMETER(Context);
@@ -240,7 +240,7 @@ static BOOL h_Wait_Hwnd(BOOL WaitForExit)
 	return TRUE;
 }
 
-static BOOL h_IsHotMatch(PKHOT_HANDLE_INTERNAL HotHandle, KLST_DEVINFO* DeviceInfo)
+static BOOL h_IsHotMatch(PKHOT_HANDLE_INTERNAL HotHandle, KLST_DEVINFO_HANDLE DeviceInfo)
 {
 	BOOL isMatch = TRUE;
 
@@ -256,7 +256,7 @@ static BOOL h_IsHotMatch(PKHOT_HANDLE_INTERNAL HotHandle, KLST_DEVINFO* DeviceIn
 	return isMatch;
 }
 
-static BOOL KUSB_API h_DevEnum_RegisterForBroadcast(KLST_HANDLE DeviceList, KLST_DEVINFO* DeviceInfo, PKHOT_HANDLE_INTERNAL Context)
+static BOOL KUSB_API h_DevEnum_RegisterForBroadcast(KLST_HANDLE DeviceList, KLST_DEVINFO_HANDLE DeviceInfo, PKHOT_HANDLE_INTERNAL Context)
 {
 	UNREFERENCED_PARAMETER(DeviceList);
 
@@ -321,7 +321,7 @@ static BOOL h_RegisterForBroadcast(PKHOT_HANDLE_INTERNAL HotHandle)
 	return TRUE;
 }
 
-static BOOL KUSB_API h_DevEnum_PlugWaiters(KLST_HANDLE DeviceList, KLST_DEVINFO* DeviceInfo, KLST_NOTIFY_CONTEXT* Context)
+static BOOL KUSB_API h_DevEnum_PlugWaiters(KLST_HANDLE DeviceList, KLST_DEVINFO_HANDLE DeviceInfo, KLST_NOTIFY_CONTEXT* Context)
 {
 	PKHOT_HANDLE_INTERNAL handle;
 	PKUSB_STR_EL devInstEL = NULL;
@@ -363,27 +363,27 @@ static BOOL KUSB_API h_DevEnum_PlugWaiters(KLST_HANDLE DeviceList, KLST_DEVINFO*
 			if (DeviceInfo->SyncFlags & KLST_SYNC_FLAG_ADDED)
 			{
 				if (handle->Public.OnHotPlug)
-					handle->Public.OnHotPlug((KHOT_HANDLE)handle, &handle->Public, DeviceInfo, KLST_SYNC_FLAG_ADDED);
+					handle->Public.OnHotPlug((KHOT_HANDLE)handle, DeviceInfo, KLST_SYNC_FLAG_ADDED);
 
 				if (handle->Public.UserHwnd && handle->Public.UserMessage >= WM_USER)
 				{
 					if (handle->Public.Flags & KHOT_FLAG_POST_USER_MESSAGE)
-						PostMessageA(handle->Public.UserHwnd, (UINT)handle->Public.UserMessage, (WPARAM)&handle->Public, (LPARAM)KLST_SYNC_FLAG_ADDED);
+						PostMessageA(handle->Public.UserHwnd, (UINT)handle->Public.UserMessage + 1, (WPARAM)handle, (LPARAM)DeviceInfo);
 					else
-						SendMessageA(handle->Public.UserHwnd, (UINT)handle->Public.UserMessage, (WPARAM)&handle->Public, (LPARAM)KLST_SYNC_FLAG_ADDED);
+						SendMessageA(handle->Public.UserHwnd, (UINT)handle->Public.UserMessage + 1, (WPARAM)handle, (LPARAM)DeviceInfo);
 				}
 			}
 			else if (DeviceInfo->SyncFlags & KLST_SYNC_FLAG_REMOVED)
 			{
 				if (handle->Public.OnHotPlug)
-					handle->Public.OnHotPlug((KHOT_HANDLE)handle, &handle->Public, DeviceInfo, KLST_SYNC_FLAG_REMOVED);
+					handle->Public.OnHotPlug((KHOT_HANDLE)handle, DeviceInfo, KLST_SYNC_FLAG_REMOVED);
 
 				if (handle->Public.UserHwnd && handle->Public.UserMessage >= WM_USER)
 				{
 					if (handle->Public.Flags & KHOT_FLAG_POST_USER_MESSAGE)
-						PostMessageA(handle->Public.UserHwnd, (UINT)handle->Public.UserMessage, (WPARAM)&handle->Public, (LPARAM)KLST_SYNC_FLAG_REMOVED);
+						PostMessageA(handle->Public.UserHwnd, (UINT)handle->Public.UserMessage, (WPARAM)handle, (LPARAM)DeviceInfo);
 					else
-						SendMessageA(handle->Public.UserHwnd, (UINT)handle->Public.UserMessage, (WPARAM)&handle->Public, (LPARAM)KLST_SYNC_FLAG_REMOVED);
+						SendMessageA(handle->Public.UserHwnd, (UINT)handle->Public.UserMessage, (WPARAM)handle, (LPARAM)DeviceInfo);
 				}
 			}
 		}

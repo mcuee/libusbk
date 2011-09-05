@@ -26,7 +26,6 @@
 
 VOID KUSB_API OnHotPlug(
     KHOT_HANDLE Handle,
-    KHOT_PARAMS* Params,
     KLST_DEVINFO_HANDLE DeviceInfo,
     KLST_SYNC_FLAG NotificationType)
 {

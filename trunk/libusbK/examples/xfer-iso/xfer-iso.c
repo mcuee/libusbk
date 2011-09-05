@@ -89,7 +89,7 @@ DWORD __cdecl main(int argc, char* argv[])
 	/*!
 	Initialize a new OvlK pool handle.
 	*/
-	OvlK_InitPool(&ovlPool, handle, 4, 0);
+	OvlK_Init(&ovlPool, handle, 4, 0);
 	OvlK_Acquire(&ovlkHandle, ovlPool);
 
 	UsbK_ResetPipe(handle, isoCtx->PipeID);
@@ -160,7 +160,7 @@ Done:
 	/*!
 	Free the overlapped pool.
 	*/
-	OvlK_FreePool(ovlPool);
+	OvlK_Free(ovlPool);
 
 	return errorCode;
 }

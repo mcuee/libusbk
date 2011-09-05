@@ -24,8 +24,6 @@ binary distributions.
 // warning C4127: conditional expression is constant.
 #pragma warning(disable: 4127)
 
-#define GetDrvIdString(DrvId)	(DrvIdNames[((((LONG)(DrvId))<0) || ((LONG)(DrvId)) >= KUSB_DRVID_COUNT)?KUSB_DRVID_COUNT:(DrvId)])
-
 #define GetRegDevNodeString(DeviceInterfaceElement,ValuenNameString,Key,ValueDataString)	\
 	(_stricmp(ValuenNameString,DEFINE_TO_STR(Key))==0 ? l_Str_CopyLast(';',DeviceInterfaceElement->Key,ValueDataString):NULL)
 
@@ -72,7 +70,7 @@ typedef struct _KLST_SYNC_CONTEXT
 
 typedef struct _SERVICE_DRVID_MAP
 {
-	INT DrvId;
+	INT DriverID;
 	LPCSTR* MapNames;
 }* PSERVICE_DRVID_MAP, SERVICE_DRVID_MAP;
 
@@ -114,7 +112,7 @@ static const SERVICE_DRVID_MAP ServiceDrvIdMap[] =
 	{KUSB_DRVID_LIBUSB0,	lusb0_Services},
 	{KUSB_DRVID_WINUSB,		wusb_Services},
 
-	{KUSB_DRVID_INVALID,	NULL}
+	{ -1,	NULL}
 };
 
 static const SERVICE_DRVID_MAP DevGuidDrvIdMap[] =
@@ -123,7 +121,7 @@ static const SERVICE_DRVID_MAP DevGuidDrvIdMap[] =
 	{KUSB_DRVID_LIBUSB0,		lusb0_DevGuidNames},
 	{KUSB_DRVID_LIBUSB0_FILTER,	lusb0_FilterDevGuidNames},
 
-	{KUSB_DRVID_INVALID,	NULL}
+	{ -1,	NULL}
 };
 
 static LONG l_GetReg_String(__in HKEY hKeyParent,
@@ -254,7 +252,7 @@ Done:
 
 static BOOL KUSB_API l_DevEnum_Free_All(
     __in KLST_HANDLE DeviceList,
-    __in KLST_DEVINFO* DeviceInfo,
+    __in KLST_DEVINFO_HANDLE DeviceInfo,
     __in KLST_SYNC_CONTEXT* Context)
 {
 	UNREFERENCED_PARAMETER(Context);
@@ -267,10 +265,10 @@ static BOOL KUSB_API l_DevEnum_Free_All(
 
 static BOOL KUSB_API l_DevEnum_Clone_All(
     __in KLST_HANDLE SrcDeviceList,
-    __in KLST_DEVINFO* DeviceInfo,
+    __in KLST_DEVINFO_HANDLE DeviceInfo,
     __in KLST_HANDLE DstDeviceList)
 {
-	KLST_DEVINFO* ClonedDevInfo = NULL;
+	KLST_DEVINFO_HANDLE ClonedDevInfo = NULL;
 
 	UNREFERENCED_PARAMETER(SrcDeviceList);
 
@@ -285,7 +283,7 @@ static BOOL KUSB_API l_DevEnum_Clone_All(
 
 static BOOL KUSB_API l_DevEnum_Apply_Filter(
     __in KLST_HANDLE DeviceList,
-    __in KLST_DEVINFO* DeviceInfo,
+    __in KLST_DEVINFO_HANDLE DeviceInfo,
     __in KLST_FLAG* Flags)
 {
 	if (!(*Flags & KLST_FLAG_INCLUDE_RAWGUID))
@@ -317,7 +315,7 @@ static void KUSB_API Cleanup_DevInfo(__in PKLST_DEVINFO_HANDLE_INTERNAL handle)
 
 static BOOL KUSB_API l_DevEnum_SyncPrep(
     __in KLST_HANDLE DeviceList,
-    __in KLST_DEVINFO* DeviceInfo,
+    __in KLST_DEVINFO_HANDLE DeviceInfo,
     __in KLST_SYNC_CONTEXT* Context)
 {
 	UNREFERENCED_PARAMETER(DeviceList);
@@ -330,7 +328,7 @@ static BOOL KUSB_API l_DevEnum_SyncPrep(
 
 static BOOL KUSB_API l_DevEnum_Sync_Master(
     __in KLST_HANDLE DeviceList,
-    __in KLST_DEVINFO* DeviceInfo,
+    __in KLST_DEVINFO_HANDLE DeviceInfo,
     __in KLST_SYNC_CONTEXT* Context)
 {
 	PKLST_DEVINFO_EL masterDevInfo = (PKLST_DEVINFO_EL)DeviceInfo;
@@ -385,7 +383,7 @@ static BOOL KUSB_API l_DevEnum_Sync_Master(
 
 static BOOL KUSB_API l_DevEnum_Sync_Slave(
     __in KLST_HANDLE DeviceList,
-    __in KLST_DEVINFO* DeviceInfo,
+    __in KLST_DEVINFO_HANDLE DeviceInfo,
     __in KLST_SYNC_CONTEXT* Context)
 {
 	PKLST_DEVINFO_EL slaveDevInfo = (PKLST_DEVINFO_EL)DeviceInfo;
@@ -423,9 +421,9 @@ static BOOL KUSB_API l_DevEnum_Sync_Slave(
 		if ((KLST_SYNC_FLAG_ADDED & Context->SyncFlags))
 		{
 			// Added.
-			if (LstK_CloneInfo((KLST_DEVINFO*)slaveDevInfo, (KLST_DEVINFO**)&masterDevInfo))
+			if (LstK_CloneInfo((KLST_DEVINFO_HANDLE)slaveDevInfo, (KLST_DEVINFO_HANDLE*)&masterDevInfo))
 			{
-				LstK_AttachInfo((KLST_HANDLE)Context->Master, (KLST_DEVINFO*)masterDevInfo);
+				LstK_AttachInfo((KLST_HANDLE)Context->Master, (KLST_DEVINFO_HANDLE)masterDevInfo);
 				if (slaveDevInfo->Public.Connected)
 					masterDevInfo->Public.SyncFlags = KLST_SYNC_FLAG_ADDED;
 				else
@@ -501,16 +499,16 @@ static BOOL l_Build_AssignDriver(KLST_DEVINFO_HANDLE devItem)
 	PSERVICE_DRVID_MAP map;
 
 	// find driver type by device interface guid
-	devItem->DrvId = KUSB_DRVID_INVALID;
+	devItem->DriverID = -1;
 	map = (PSERVICE_DRVID_MAP)DevGuidDrvIdMap;
-	while(devItem->DrvId == KUSB_DRVID_INVALID && map->DrvId != KUSB_DRVID_INVALID)
+	while(devItem->DriverID == -1 && map->DriverID != -1)
 	{
 		LPCSTR* devGuid = map->MapNames;
 		while(*devGuid)
 		{
 			if (_stricmp(devItem->DeviceInterfaceGUID, *devGuid) == 0)
 			{
-				devItem->DrvId = map->DrvId;
+				devItem->DriverID = map->DriverID;
 				break;
 			}
 			devGuid++;
@@ -520,14 +518,14 @@ static BOOL l_Build_AssignDriver(KLST_DEVINFO_HANDLE devItem)
 
 	// find driver type by service name (if not found)
 	map = (PSERVICE_DRVID_MAP)ServiceDrvIdMap;
-	while(devItem->DrvId == KUSB_DRVID_INVALID && map->DrvId != KUSB_DRVID_INVALID)
+	while(devItem->DriverID == -1 && map->DriverID != -1)
 	{
 		LPCSTR* serviceName = map->MapNames;
 		while(*serviceName)
 		{
 			if (_stricmp(devItem->Service, *serviceName) == 0)
 			{
-				devItem->DrvId = map->DrvId;
+				devItem->DriverID = map->DriverID;
 				break;
 			}
 			serviceName++;
@@ -535,10 +533,10 @@ static BOOL l_Build_AssignDriver(KLST_DEVINFO_HANDLE devItem)
 		map++;
 	}
 
-	if (devItem->DrvId != KUSB_DRVID_INVALID)
+	if (devItem->DriverID != -1)
 	{
-		if (devItem->DrvId == KUSB_DRVID_LIBUSB0_FILTER ||
-		        devItem->DrvId == KUSB_DRVID_LIBUSB0 )
+		if (devItem->DriverID == KUSB_DRVID_LIBUSB0_FILTER ||
+		        devItem->DriverID == KUSB_DRVID_LIBUSB0 )
 		{
 			if (devItem->LUsb0FilterIndex <= 255)
 			{
@@ -699,7 +697,7 @@ static BOOL l_EnumKey_Instances(LPCSTR Name, KUSB_ENUM_REGKEY_PARAMS* RegEnumPar
 	// query LUsb0
 	RegEnumParams->TempItem->LUsb0FilterIndex = (ULONG) - 1;
 	// e.g. HKLM\SYSTEM\CurrentControlSet\Control\DeviceClasses\{20343a29-6da1-4db8-8a3c-16e774057bf5}\##?#USB#VID_1234&PID_0001#BMD001#{20343a29-6da1-4db8-8a3c-16e774057bf5}\#\Device Parameters\LUsb0
-	status = l_GetReg_DWord(RegEnumParams->hOpenedKey, Name, "\\#\\Device Parameters", "LUsb0", &RegEnumParams->TempItem->LUsb0FilterIndex);
+	status = l_GetReg_DWord(RegEnumParams->hOpenedKey, Name, "\\#\\Device Parameters", "LUsb0", (LPDWORD)&RegEnumParams->TempItem->LUsb0FilterIndex);
 
 	if (!l_Build_FillProperties(RegEnumParams->TempItem))
 		return TRUE;
@@ -843,7 +841,7 @@ KUSB_EXP BOOL KUSB_API LstK_MoveNext(
 			return FALSE;
 		}
 		handle->current = handle->head;
-		*DeviceInfo = (KLST_DEVINFO*)handle->current;
+		*DeviceInfo = (KLST_DEVINFO_HANDLE)handle->current;
 		PoolHandle_Dec_LstK(handle);
 		return TRUE;
 	}
@@ -856,7 +854,7 @@ KUSB_EXP BOOL KUSB_API LstK_MoveNext(
 	}
 
 	if (DeviceInfo)
-		*DeviceInfo = (KLST_DEVINFO*)handle->current;
+		*DeviceInfo = (KLST_DEVINFO_HANDLE)handle->current;
 
 	PoolHandle_Dec_LstK(handle);
 	return TRUE;
@@ -878,7 +876,7 @@ KUSB_EXP BOOL KUSB_API LstK_Current(
 		PoolHandle_Dec_LstK(handle);
 		return FALSE;
 	}
-	*DeviceInfo = (KLST_DEVINFO*)handle->current;
+	*DeviceInfo = (KLST_DEVINFO_HANDLE)handle->current;
 
 	PoolHandle_Dec_LstK(handle);
 	return TRUE;
@@ -901,7 +899,7 @@ KUSB_EXP VOID KUSB_API LstK_MoveReset(
 
 KUSB_EXP BOOL KUSB_API LstK_Enumerate(
     _in KLST_HANDLE DeviceList,
-    _in PKLST_ENUM_DEVINFO_CB EnumDevListCB,
+    _in KLST_ENUM_DEVINFO_CB* EnumDevListCB,
     _inopt PVOID Context)
 {
 	PKLST_DEVINFO_EL check, tmp;
@@ -914,7 +912,7 @@ KUSB_EXP BOOL KUSB_API LstK_Enumerate(
 
 	DL_FOREACH_SAFE(handle->head, check, tmp)
 	{
-		if (EnumDevListCB(DeviceList, (KLST_DEVINFO*)check, Context) == FALSE)
+		if (EnumDevListCB(DeviceList, (KLST_DEVINFO_HANDLE)check, Context) == FALSE)
 			break;
 	}
 
@@ -927,8 +925,8 @@ Error:
 
 KUSB_EXP BOOL KUSB_API LstK_FindByVidPid(
     _in KLST_HANDLE DeviceList,
-    _in UINT Vid,
-    _in UINT Pid,
+    _in LONG Vid,
+    _in LONG Pid,
     _out KLST_DEVINFO_HANDLE* DeviceInfo)
 {
 	PKLST_DEVINFO_EL check = NULL;
@@ -946,7 +944,7 @@ KUSB_EXP BOOL KUSB_API LstK_FindByVidPid(
 			break;
 	}
 
-	*DeviceInfo = (KLST_DEVINFO*)check;
+	*DeviceInfo = (KLST_DEVINFO_HANDLE)check;
 	if (!check)
 	{
 		PoolHandle_Dec_LstK(handle);
@@ -1047,7 +1045,7 @@ KUSB_EXP BOOL KUSB_API LstK_CloneInfo(
 	memcpy(&clonedHandle->DevInfoEL->Public, &handle->DevInfoEL->Public, sizeof(clonedHandle->DevInfoEL->Public));
 
 	clonedHandle->DevInfoEL->DevListHandle = NULL;
-	*DstInfo = (KLST_DEVINFO*)clonedHandle->DevInfoEL;
+	*DstInfo = (KLST_DEVINFO_HANDLE)clonedHandle->DevInfoEL;
 	PoolHandle_Dec_LstInfoK(handle);
 	PoolHandle_Live_LstInfoK(clonedHandle);
 	return TRUE;

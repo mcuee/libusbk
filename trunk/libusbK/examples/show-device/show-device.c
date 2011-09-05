@@ -87,6 +87,18 @@ DWORD __cdecl main(int argc, char* argv[])
 	else
 		printf("Example device not found.\n");
 
+
+	if (deviceInfo)
+	{
+		BOOL success = LibK_SetContext(deviceInfo, KLIB_HANDLE_TYPE_LSTINFOK, 1);
+		if (success)
+		{
+			UINT_PTR myValue = LibK_GetContext(deviceInfo, KLIB_HANDLE_TYPE_LSTINFOK);
+			printf("MyContextValue = %u\n", myValue);
+		}
+
+	}
+
 	// #2
 	// Enumerates the device list using it's internal "current" position.
 	//
