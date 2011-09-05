@@ -134,10 +134,10 @@ Done:
 	return success;
 }
 
-KUSB_EXP BOOL KUSB_API OvlK_InitPool(
+KUSB_EXP BOOL KUSB_API OvlK_Init(
     _out KOVL_POOL_HANDLE* PoolHandle,
     _in KUSB_HANDLE UsbHandle,
-    _in USHORT MaxOverlappedCount,
+    _in LONG MaxOverlappedCount,
     _inopt KOVL_POOL_FLAG Flags)
 {
 	PKOVL_POOL_HANDLE_INTERNAL handle = NULL;
@@ -174,12 +174,12 @@ Error:
 	return FALSE;
 }
 
-KUSB_EXP BOOL KUSB_API OvlK_FreePool(
-    _in KOVL_POOL_HANDLE Pool)
+KUSB_EXP BOOL KUSB_API OvlK_Free(
+    _in KOVL_POOL_HANDLE PoolHandle)
 {
 	PKOVL_POOL_HANDLE_INTERNAL handle;
 
-	Pub_To_Priv_OvlPoolK(Pool, handle, return FALSE);
+	Pub_To_Priv_OvlPoolK(PoolHandle, handle, return FALSE);
 	ErrorSetAction(!PoolHandle_Inc_OvlPoolK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_OvlPoolK");
 
 	PoolHandle_Dec_OvlPoolK(handle);
@@ -201,7 +201,7 @@ Error:
 
 KUSB_EXP BOOL KUSB_API OvlK_Wait(
     _in KOVL_HANDLE OverlappedK,
-    _inopt ULONG TimeoutMS,
+    _inopt LONG TimeoutMS,
     _inopt KOVL_WAIT_FLAG WaitFlags,
     _out PULONG TransferredLength)
 {
@@ -291,7 +291,7 @@ CancelIoRetry:
 
 KUSB_EXP BOOL KUSB_API OvlK_WaitOrCancel(
     _in KOVL_HANDLE OverlappedK,
-    _inopt ULONG TimeoutMS,
+    _inopt LONG TimeoutMS,
     _out PULONG TransferredLength)
 {
 	return OvlK_Wait(OverlappedK, TimeoutMS, KOVL_WAIT_FLAG_CANCEL_ON_TIMEOUT, TransferredLength);
@@ -299,7 +299,7 @@ KUSB_EXP BOOL KUSB_API OvlK_WaitOrCancel(
 
 KUSB_EXP BOOL KUSB_API OvlK_WaitAndRelease(
     _in KOVL_HANDLE OverlappedK,
-    _inopt ULONG TimeoutMS,
+    _inopt LONG TimeoutMS,
     _out PULONG TransferredLength)
 {
 	return OvlK_Wait(OverlappedK, TimeoutMS, KOVL_WAIT_FLAG_RELEASE_ALWAYS, TransferredLength);

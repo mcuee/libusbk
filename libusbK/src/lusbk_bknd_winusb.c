@@ -756,7 +756,7 @@ KUSB_EXP BOOL KUSB_API WUsb_WritePipe(
 
 #endif
 
-BOOL GetProcAddress_WUsb(__out KPROC* ProcAddress, __in ULONG FunctionID)
+BOOL GetProcAddress_WUsb(__out KPROC* ProcAddress, __in LONG FunctionID)
 {
 	WUsb_Init_Library();
 
@@ -765,6 +765,9 @@ BOOL GetProcAddress_WUsb(__out KPROC* ProcAddress, __in ULONG FunctionID)
 
 	switch(FunctionID)
 	{
+	case KUSB_FNID_Init:
+		*ProcAddress = (KPROC)WUsb_Init;
+		break;
 	case KUSB_FNID_Initialize:
 		*ProcAddress = (KPROC)WUsb_Initialize;
 		break;
@@ -839,7 +842,7 @@ BOOL GetProcAddress_WUsb(__out KPROC* ProcAddress, __in ULONG FunctionID)
 }
 
 #else
-BOOL GetProcAddress_WUsb(__out KPROC* ProcAddress, __in ULONG FunctionID)
+BOOL GetProcAddress_WUsb(__out KPROC* ProcAddress, __in LONG FunctionID)
 {
 	GetProcAddress_Unsupported(ProcAddress, FunctionID);
 	return LusbwError(ERROR_NOT_SUPPORTED);

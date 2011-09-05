@@ -121,7 +121,7 @@ BOOL DumpDescriptorHidReport(__in PHID_DESCRIPTOR desc,
                              __in UCHAR descriptorPos);
 
 static LPCSTR DrvIdNames[8] = {"libusbK", "libusb0", "WinUSB", "libusb0 filter", "Unknown", "Unknown", "Unknown"};
-#define GetDrvIdString(DrvId)	(DrvIdNames[((((LONG)(DrvId))<0) || ((LONG)(DrvId)) >= KUSB_DRVID_COUNT)?KUSB_DRVID_COUNT:(DrvId)])
+#define GetDrvIdString(DriverID)	(DrvIdNames[((((LONG)(DriverID))<0) || ((LONG)(DriverID)) >= KUSB_DRVID_COUNT)?KUSB_DRVID_COUNT:(DriverID)])
 
 #define MAX_TAB 9
 static LPCSTR gTabIndents[MAX_TAB] =
@@ -365,7 +365,7 @@ int __cdecl main(int argc, char** argv)
 	}
 
 	printf("Loading driver api..\n");
-	if (!LibK_LoadDriverAPI(&K, deviceElement->DrvId))
+	if (!LibK_LoadDriverAPI(&K, deviceElement->DriverID))
 	{
 		ec = WinError(0);
 		goto Done;

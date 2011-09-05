@@ -24,6 +24,8 @@
 */
 #include "examples.h"
 
+KUSB_DRIVER_API Usb;
+
 DWORD __cdecl main(int argc, char* argv[])
 {
 	KLST_HANDLE deviceList = NULL;
@@ -38,8 +40,10 @@ DWORD __cdecl main(int argc, char* argv[])
 	if (!Examples_GetTestDevice(&deviceList, &deviceInfo, argc, argv))
 		return GetLastError();
 
+	LibK_LoadDriverAPI(&Usb, deviceInfo->DriverID);
+
 	// Initialize the device
-	if (!UsbK_Init(&handle, deviceInfo))
+	if (!Usb.Init(&handle, deviceInfo))
 	{
 		ec = GetLastError();
 		printf("Init device failed. Win32Error=%u (0x%08X)\n", ec, ec);
@@ -50,7 +54,7 @@ DWORD __cdecl main(int argc, char* argv[])
 	// while the device is opened, query information on the endpoints
 	// of the first alternate setting of the current interface.
 	printf("Pipe Information:\n");
-	while (UsbK_QueryPipe(handle, 0, pipeIndex++, &pipeInfo))
+	while (Usb.QueryPipe(handle, 0, pipeIndex++, &pipeInfo))
 	{
 		printf("  PipeId=0x%02X PipeType=0x%02X Interval=%u MaximumPacketSize=%u\n",
 		       pipeInfo.PipeId, pipeInfo.PipeType, pipeInfo.Interval, pipeInfo.MaximumPacketSize);
@@ -59,7 +63,7 @@ DWORD __cdecl main(int argc, char* argv[])
 Done:
 	// Close the device handle
 	// if handle is invalid (NULL), has no effect
-	UsbK_Free(handle);
+	Usb.Free(handle);
 
 	// Free the device list
 	// if deviceList is invalid (NULL), has no effect

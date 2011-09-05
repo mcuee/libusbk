@@ -50,7 +50,7 @@ binary distributions.
 #define CONDBG0(message) CONDBG("%s", message)
 
 static LPCSTR DrvIdNames[8] = {"libusbK", "libusb0", "WinUSB", "libusb0 filter", "Unknown", "Unknown", "Unknown"};
-#define GetDrvIdString(DrvId)	(DrvIdNames[((((LONG)(DrvId))<0) || ((LONG)(DrvId)) >= KUSB_DRVID_COUNT)?KUSB_DRVID_COUNT:(DrvId)])
+#define GetDrvIdString(DriverID)	(DrvIdNames[((((LONG)(DriverID))<0) || ((LONG)(DriverID)) >= KUSB_DRVID_COUNT)?KUSB_DRVID_COUNT:(DriverID)])
 
 static LPCSTR DevSpeedStrings[4] = {"Unknown", "Low/Full", "Unknown", "High"};
 #define GetDevSpeedString(DevSpeed)	(DevSpeedStrings[(DevSpeed) & 0x3])
@@ -293,10 +293,14 @@ BOOL Bench_Open(__in PBENCHMARK_TEST_PARAM test)
 
 	while (LstK_MoveNext(test->DeviceList, &deviceInfo))
 	{
-		if (!LibK_LoadDriverAPI(&K, deviceInfo->DrvId))
+		// enabled
+		UINT userContext = (UINT)LibK_GetContext(deviceInfo, KLIB_HANDLE_TYPE_LSTINFOK);
+		if (userContext != TRUE) continue;
+
+		if (!LibK_LoadDriverAPI(&K, deviceInfo->DriverID))
 		{
 			WinError(0);
-			CONWRN("could not load driver api %s.\n", GetDrvIdString(deviceInfo->DrvId));
+			CONWRN("could not load driver api %s.\n", GetDrvIdString(deviceInfo->DriverID));
 			continue;
 		}
 		if (!test->Use_UsbK_Init)
@@ -1314,7 +1318,7 @@ void ShowTestInfo(PBENCHMARK_TEST_PARAM test)
 	if (!test) return;
 
 	CONMSG("%s Test Information\n", TestDisplayString[test->TestType & 3]);
-	CONMSG("\tDriver          : %s\n", GetDrvIdString(test->SelectedDeviceProfile->DrvId));
+	CONMSG("\tDriver          : %s\n", GetDrvIdString(test->SelectedDeviceProfile->DriverID));
 	CONMSG("\tVid / Pid       : %04Xh / %04Xh\n", test->DeviceDescriptor.idVendor,  test->DeviceDescriptor.idProduct);
 	CONMSG("\tDevicePath      : %s\n", test->SelectedDeviceProfile->DevicePath);
 	CONMSG("\tDevice Speed    : %s\n", GetDevSpeedString(test->DeviceSpeed));
@@ -1385,6 +1389,9 @@ int GetTestDeviceFromArgs(PBENCHMARK_TEST_PARAM test)
 		int mi = -1;
 		PCHAR chID;
 
+		// disabled
+		LibK_SetContext(deviceInfo, KLIB_HANDLE_TYPE_LSTINFOK, (KLIB_USER_CONTEXT)FALSE);
+
 		memset(id, 0, sizeof(id));
 		strcpy_s(id, MAX_PATH - 1, deviceInfo->InstanceID);
 		_strlwr_s(id, MAX_PATH);
@@ -1396,10 +1403,10 @@ int GetTestDeviceFromArgs(PBENCHMARK_TEST_PARAM test)
 		if ( (chID = strstr(id, "mi_")) != NULL)
 			sscanf_s(chID, "mi_%02x", &mi);
 
-		if (test->Vid != vid || test->Pid != pid)
+		if (test->Vid == vid && test->Pid == pid)
 		{
-			LstK_DetachInfo(test->DeviceList, deviceInfo);
-			LstK_FreeInfo(deviceInfo);
+			// enabled
+			LibK_SetContext(deviceInfo, KLIB_HANDLE_TYPE_LSTINFOK, (KLIB_USER_CONTEXT)TRUE);
 		}
 	}
 
@@ -1419,7 +1426,7 @@ int GetTestDeviceFromList(PBENCHMARK_TEST_PARAM test)
 		while (LstK_MoveNext(test->DeviceList, &deviceInfo))
 		{
 			count++;
-			CONMSG("%02u. %s (%s) [%s]\n", count, deviceInfo->DeviceDesc, deviceInfo->InstanceID, GetDrvIdString(deviceInfo->DrvId));
+			CONMSG("%02u. %s (%s) [%s]\n", count, deviceInfo->DeviceDesc, deviceInfo->InstanceID, GetDrvIdString(deviceInfo->DriverID));
 		}
 
 		return ERROR_SUCCESS;
@@ -1428,8 +1435,12 @@ int GetTestDeviceFromList(PBENCHMARK_TEST_PARAM test)
 	{
 		while (LstK_MoveNext(test->DeviceList, &deviceInfo) && count < 9)
 		{
-			CONMSG("%u. %s (%s) [%s]\n", count + 1, deviceInfo->DeviceDesc, deviceInfo->InstanceID, GetDrvIdString(deviceInfo->DrvId));
+			CONMSG("%u. %s (%s) [%s]\n", count + 1, deviceInfo->DeviceDesc, deviceInfo->InstanceID, GetDrvIdString(deviceInfo->DriverID));
 			count++;
+
+			// enabled
+			LibK_SetContext(deviceInfo, KLIB_HANDLE_TYPE_LSTINFOK, (KLIB_USER_CONTEXT)TRUE);
+
 		}
 		if (!count)
 		{
@@ -1449,8 +1460,9 @@ int GetTestDeviceFromList(PBENCHMARK_TEST_PARAM test)
 			count = 0;
 			while (LstK_MoveNext(test->DeviceList, &deviceInfo) && ++count != selection)
 			{
-				LstK_DetachInfo(test->DeviceList, deviceInfo);
-				LstK_FreeInfo(deviceInfo);
+				// disabled
+				LibK_SetContext(deviceInfo, KLIB_HANDLE_TYPE_LSTINFOK, (KLIB_USER_CONTEXT)FALSE);
+
 			}
 
 			if (!deviceInfo)

@@ -42,6 +42,13 @@ These examples show basic library functionality like finding and opening a devic
      function. These are very generalized errors, the Windows API/MSDN provides ways to lookup error strings
      for the extended error number but is advisable not to use them! Instead refer to this documentation
      under the function that caused the error.
+-# Structure Packing
+   - The following structures are packed at \b 1 byte:
+     - All \b USB prefixed types
+     - \ref KISO_CONTEXT
+     - \ref KISO_PACKET
+     - \ref WINUSB_SETUP_PACKET
+   - All other structures assume natural packing.
 
 <HR>
 

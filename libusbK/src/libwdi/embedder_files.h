@@ -27,7 +27,8 @@
  * use the --with-userdir option when running configure.
  */
 
-struct emb {
+struct emb
+{
 	int reuse_last;
 	char* file_name;
 	char* extraction_subdir;
@@ -36,23 +37,24 @@ struct emb {
 /*
  * files to embed
  */
-struct emb embeddable_fixed[] = {
+struct emb embeddable_fixed[] =
+{
 
 // WinUSB
 #if defined(DDK_DIR)
 #	if defined(OPT_M32)
-		{ 0, DDK_DIR "\\redist\\wdf\\x86\\WdfCoInstaller" WDF_VER ".dll", "x86" },
-		{ 0, DDK_DIR "\\redist\\winusb\\x86\\winusbcoinstaller2.dll", "x86" },
+	{ 0, DDK_DIR "\\redist\\wdf\\x86\\WdfCoInstaller" WDF_VER ".dll", "x86" },
+	{ 0, DDK_DIR "\\redist\\winusb\\x86\\winusbcoinstaller2.dll", "x86" },
 #	endif	// OPT_M32
 #	if defined(OPT_M64)
-		{ 0, DDK_DIR "\\redist\\wdf\\amd64\\WdfCoInstaller" WDF_VER ".dll", "amd64" },
-		{ 0, DDK_DIR "\\redist\\winusb\\amd64\\winusbcoinstaller2.dll", "amd64" },
+	{ 0, DDK_DIR "\\redist\\wdf\\amd64\\WdfCoInstaller" WDF_VER ".dll", "amd64" },
+	{ 0, DDK_DIR "\\redist\\winusb\\amd64\\winusbcoinstaller2.dll", "amd64" },
 #	endif	// OPT_M64
 #	if defined(OPT_IA64)
-		{ 0, DDK_DIR "\\redist\\wdf\\ia64\\WdfCoInstaller" WDF_VER ".dll", "ia64" },
-		{ 0, DDK_DIR "\\redist\\winusb\\ia64\\winusbcoinstaller2.dll", "ia64" },
+	{ 0, DDK_DIR "\\redist\\wdf\\ia64\\WdfCoInstaller" WDF_VER ".dll", "ia64" },
+	{ 0, DDK_DIR "\\redist\\winusb\\ia64\\winusbcoinstaller2.dll", "ia64" },
 #	endif	// OPT_IA64
-		{ 0, DDK_DIR "\\license.rtf", "license\\WinUSB" },	// WinUSB License file
+	{ 0, DDK_DIR "\\license.rtf", "license\\WinUSB" },	// WinUSB License file
 #endif	// DDK_DIR
 
 // libusb0
@@ -60,22 +62,22 @@ struct emb embeddable_fixed[] = {
 	{ 0, LIBUSB0_DIR "\\bin\\x86\\libusb0_x86.dll", "x86" },
 #	if defined(LIBUSBK_DIR)
 #		if defined(OPT_M32)
-			{ 1, "libusb0.dll", "x86" },	// reuse
+	{ 1, "libusb0.dll", "x86" },	// reuse
 #		endif	// OPT_M32
 #		if defined(OPT_M64)
-			{ 1, "libusb0_x86.dll", "amd64" },	// reuse
+	{ 1, "libusb0_x86.dll", "amd64" },	// reuse
 #		endif	// OPT_M64
 #	endif	// LIBUSBK_DIR
 #	if defined(OPT_M32)
-		{ 0, LIBUSB0_DIR "\\bin\\x86\\libusb0.sys", "x86" },
+	{ 0, LIBUSB0_DIR "\\bin\\x86\\libusb0.sys", "x86" },
 #	endif	// OPT_M32
 #	if defined(OPT_M64)
-		{ 0, LIBUSB0_DIR "\\bin\\amd64\\libusb0.dll", "amd64" },
-		{ 0, LIBUSB0_DIR "\\bin\\amd64\\libusb0.sys", "amd64" },
+	{ 0, LIBUSB0_DIR "\\bin\\amd64\\libusb0.dll", "amd64" },
+	{ 0, LIBUSB0_DIR "\\bin\\amd64\\libusb0.sys", "amd64" },
 #	endif	// OPT_M64
 #	if defined(OPT_IA64)
-		{ 0, LIBUSB0_DIR "\\bin\\ia64\\libusb0.dll", "ia64" },
-		{ 0, LIBUSB0_DIR "\\bin\\ia64\\libusb0.sys", "ia64" },
+	{ 0, LIBUSB0_DIR "\\bin\\ia64\\libusb0.dll", "ia64" },
+	{ 0, LIBUSB0_DIR "\\bin\\ia64\\libusb0.sys", "ia64" },
 #	endif	// OPT_IA64
 	{ 0, LIBUSB0_DIR "\\installer_license.txt", "license\\libusb0" },
 #endif	// LIBUSB0_DIR
@@ -85,17 +87,17 @@ struct emb embeddable_fixed[] = {
 
 #	if	defined(OPT_M32)
 #		if !defined(DDK_DIR)
-			{ 0, LIBUSBK_DIR "\\sys\\x86\\WdfCoInstaller" WDF_VER ".dll", "x86" },
+	{ 0, LIBUSBK_DIR "\\sys\\x86\\WdfCoInstaller" WDF_VER ".dll", "x86" },
 #		endif	// DDK_DIR
-		{ 0, LIBUSBK_DIR "\\sys\\x86\\libusbK.sys", "x86" },
-		{ 0, LIBUSBK_DIR "\\dll\\x86\\libusbK.dll", "x86" },
+	{ 0, LIBUSBK_DIR "\\sys\\x86\\libusbK.sys", "x86" },
+	{ 0, LIBUSBK_DIR "\\dll\\x86\\libusbK.dll", "x86" },
 #		if defined(OPT_M64)
-			{ 1, "libusbK_x86.dll", "amd64" },	// reuse
+	{ 1, "libusbK_x86.dll", "amd64" },	// reuse
 #		endif	// OPT_M64
 #		if !defined(LIBUSB0_DIR)
-			{ 0, LIBUSBK_DIR "\\dll\\x86\\libusb0.dll", "x86" },
+	{ 0, LIBUSBK_DIR "\\dll\\x86\\libusb0.dll", "x86" },
 #			if defined(OPT_M64)
-				{ 1, "libusb0_x86.dll", "amd64" },	// reuse
+	{ 1, "libusb0_x86.dll", "amd64" },	// reuse
 #			endif	// OPT_M64
 #		endif	// LIBUSB0_DIR
 //		{ 0, LIBUSBK_DIR "\\dll\\x86\\libusb-1.0.dll", "x86" },
@@ -106,34 +108,34 @@ struct emb embeddable_fixed[] = {
 
 #	if defined(OPT_M64)
 #		if !defined(DDK_DIR)
-			{ 0, LIBUSBK_DIR "\\sys\\amd64\\WdfCoInstaller" WDF_VER ".dll", "amd64" },
+	{ 0, LIBUSBK_DIR "\\sys\\amd64\\WdfCoInstaller" WDF_VER ".dll", "amd64" },
 #		endif	// DDK_DIR
-		{ 0, LIBUSBK_DIR "\\sys\\amd64\\libusbK.sys", "amd64" },
-		{ 0, LIBUSBK_DIR "\\dll\\amd64\\libusbK.dll", "amd64" },
+	{ 0, LIBUSBK_DIR "\\sys\\amd64\\libusbK.sys", "amd64" },
+	{ 0, LIBUSBK_DIR "\\dll\\amd64\\libusbK.dll", "amd64" },
 //		{ 0, LIBUSBK_DIR "\\dll\\amd64\\libusb-1.0.dll", "amd64" },
 #		if !defined(LIBUSB0_DIR)
-			{ 0, LIBUSBK_DIR "\\dll\\amd64\\libusb0.dll", "amd64" },
+	{ 0, LIBUSBK_DIR "\\dll\\amd64\\libusb0.dll", "amd64" },
 #		endif	// LIBUSB0_DIR
 #		if !defined(OPT_M32)
-			// The x86/ DLLs will not be used, but they are required for rename to _x86
-			{ 0, LIBUSBK_DIR "\\dll\\x86\\libusbK.dll", "x86" },
-			{ 1, "libusbK_x86.dll", "amd64" },
+	// The x86/ DLLs will not be used, but they are required for rename to _x86
+	{ 0, LIBUSBK_DIR "\\dll\\x86\\libusbK.dll", "x86" },
+	{ 1, "libusbK_x86.dll", "amd64" },
 //			{ 0, LIBUSBK_DIR "\\dll\\x86\\libusb-1.0.dll", "x86" },
 //			{ 1, "libusb-1.0_x86.dll", "amd64" },
 #			if !defined(LIBUSB0_DIR)
-				{ 0, LIBUSBK_DIR "\\dll\\x86\\libusb0.dll", "x86" }
-				{ 1, "libusb0_x86.dll", "amd64" },
+	{ 0, LIBUSBK_DIR "\\dll\\x86\\libusb0.dll", "x86" }
+	{ 1, "libusb0_x86.dll", "amd64" },
 #			endif	// LIBUSB0_DIR
 #		endif	// OPT_M32
 #	endif	// OPT_M64
 
 #	if defined(OPT_IA64)
 #		if !defined(DDK_DIR)
-			{ 0, LIBUSBK_DIR "\\sys\\ia64\\WdfCoInstaller" WDF_VER ".dll", "ia64" },
+	{ 0, LIBUSBK_DIR "\\sys\\ia64\\WdfCoInstaller" WDF_VER ".dll", "ia64" },
 #		endif	// DDK_DIR
-		{ 0, LIBUSBK_DIR "\\sys\\ia64\\libusbK.sys", "ia64" },
-		{ 0, LIBUSBK_DIR "\\dll\\ia64\\libusbK.dll", "ia64" },
-		{ 0, LIBUSBK_DIR "\\dll\\ia64\\libusb0.dll", "ia64" },
+	{ 0, LIBUSBK_DIR "\\sys\\ia64\\libusbK.sys", "ia64" },
+	{ 0, LIBUSBK_DIR "\\dll\\ia64\\libusbK.dll", "ia64" },
+	{ 0, LIBUSBK_DIR "\\dll\\ia64\\libusb0.dll", "ia64" },
 #	endif	// OPT_IA64
 
 #endif	// LIBUSBK_DIR

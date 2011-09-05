@@ -37,11 +37,11 @@ ULONG DebugLevel = 4;
 	break
 
 VOID WUsb_Init_Library();
-BOOL GetProcAddress_Base(__out KPROC* ProcAddress, __in ULONG FunctionID);
-BOOL GetProcAddress_UsbK(__out KPROC* ProcAddress, __in ULONG FunctionID);
-BOOL GetProcAddress_WUsb(__out KPROC* ProcAddress, __in ULONG FunctionID);
+BOOL GetProcAddress_Base(__out KPROC* ProcAddress, __in LONG FunctionID);
+BOOL GetProcAddress_UsbK(__out KPROC* ProcAddress, __in LONG FunctionID);
+BOOL GetProcAddress_WUsb(__out KPROC* ProcAddress, __in LONG FunctionID);
 
-BOOL GetProcAddress_Base(__out KPROC* ProcAddress, __in ULONG FunctionID)
+BOOL GetProcAddress_Base(__out KPROC* ProcAddress, __in LONG FunctionID)
 {
 	// some function are the same for all apis; they are set here.
 	switch(FunctionID)
@@ -73,7 +73,7 @@ BOOL GetProcAddress_Base(__out KPROC* ProcAddress, __in ULONG FunctionID)
 	return TRUE;
 }
 
-BOOL GetProcAddress_UsbK(__out KPROC* ProcAddress, __in ULONG FunctionID)
+BOOL GetProcAddress_UsbK(__out KPROC* ProcAddress, __in LONG FunctionID)
 {
 	switch(FunctionID)
 	{
@@ -165,7 +165,7 @@ BOOL GetProcAddress_UsbK(__out KPROC* ProcAddress, __in ULONG FunctionID)
 	return TRUE;
 }
 
-BOOL GetProcAddress_LUsb0(__out KPROC* ProcAddress, __in ULONG FunctionID)
+BOOL GetProcAddress_LUsb0(__out KPROC* ProcAddress, __in LONG FunctionID)
 {
 	switch(FunctionID)
 	{
@@ -182,8 +182,8 @@ BOOL GetProcAddress_LUsb0(__out KPROC* ProcAddress, __in ULONG FunctionID)
 
 KUSB_EXP BOOL KUSB_API LibK_GetProcAddress(
     _out KPROC* ProcAddress,
-    _in ULONG DriverID,
-    _in ULONG FunctionID)
+    _in LONG DriverID,
+    _in LONG FunctionID)
 {
 	CheckLibInit();
 
@@ -229,7 +229,7 @@ KUSB_EXP BOOL KUSB_API LibK_CopyDriverAPI(
 
 KUSB_EXP BOOL KUSB_API LibK_LoadDriverAPI(
     _out PKUSB_DRIVER_API DriverAPI,
-    _in ULONG DriverID)
+    _in LONG DriverID)
 {
 	int fnIdIndex;
 	int fnIdCount = 0;
@@ -248,6 +248,7 @@ KUSB_EXP BOOL KUSB_API LibK_LoadDriverAPI(
 		switch(fnIdIndex)
 		{
 			CASE_FNID_LOAD(Init);
+			CASE_FNID_LOAD(Free);
 			CASE_FNID_LOAD(ClaimInterface);
 			CASE_FNID_LOAD(ReleaseInterface);
 			CASE_FNID_LOAD(SetAltInterface);
@@ -260,7 +261,6 @@ KUSB_EXP BOOL KUSB_API LibK_LoadDriverAPI(
 			CASE_FNID_LOAD(GetConfiguration);
 			CASE_FNID_LOAD(ResetDevice);
 			CASE_FNID_LOAD(Initialize);
-			CASE_FNID_LOAD(Free);
 			CASE_FNID_LOAD(SelectInterface);
 			CASE_FNID_LOAD(GetAssociatedInterface);
 			CASE_FNID_LOAD(Clone);
@@ -366,7 +366,7 @@ KUSB_EXP BOOL KUSB_API LibK_SetContext(
 KUSB_EXP BOOL KUSB_API LibK_SetCleanupCallback(
     _in KLIB_HANDLE Handle,
     _in KLIB_HANDLE_TYPE HandleType,
-    _in PKLIB_HANDLE_CB CleanupCB)
+    _in KLIB_HANDLE_CLEANUP_CB* CleanupCB)
 {
 	PKOBJ_BASE base = Lib_GetBase(Handle, HandleType);
 

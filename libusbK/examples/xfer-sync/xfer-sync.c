@@ -56,7 +56,7 @@ DWORD __cdecl main(int argc, char* argv[])
 	This example will use the dynamic driver api so that it can be used
 	with all supported drivers.
 	*/
-	LibK_LoadDriverAPI(&Usb, deviceInfo->DrvId);
+	LibK_LoadDriverAPI(&Usb, deviceInfo->DriverID);
 
 	/*
 	Initialize the device. This creates the physical usb handle.

@@ -174,7 +174,7 @@ typedef struct _PIPE_CONTEXT
 	WDFUSBPIPE Pipe;			// Pipe handle.
 	WDFQUEUE Queue;				// Pipe queue.
 	ULONG Policy[MAX_POLICY];	// Pipe policies.
-	volatile LONG TransferCounter;
+	INT64 TransferCounter;
 } PIPE_CONTEXT, *PPIPE_CONTEXT;
 
 WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(PIPE_CONTEXT,

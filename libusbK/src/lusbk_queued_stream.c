@@ -30,10 +30,6 @@ extern ULONG DebugLevel;
 
 #define Stm_Alloc(mStream,mSize) HeapAlloc((mStream)->Heap,HEAP_ZERO_MEMORY,mSize)
 
-#define EXECUTE_USER_CB(KStm_Handle_Internal,KStm_CallbackFn,KStm_Result,KStm_CallbackParams)	\
-	if (KStm_Handle_Internal->UserCB->KStm_CallbackFn)   										\
-		KStm_Result = KStm_Handle_Internal->UserCB->KStm_CallbackFn##KStm_CallbackParams
-
 static void CALLBACK Stm_ReadAPC(__in ULONG_PTR dwParam)
 {
 	PKSTM_XFER_LINK_EL xferEL = (PKSTM_XFER_LINK_EL)dwParam;
@@ -60,22 +56,22 @@ static void CALLBACK Stm_StopAPC(__in ULONG_PTR dwParam)
 //	handle->Info->DriverAPI.FlushPipe(handle->Info->UsbHandle,handle->Info->PipeID);
 }
 
-static DWORD KUSB_API Stm_SubmitRead(
+static LONG KUSB_API Stm_SubmitRead(
     __in PKSTM_INFO StreamInfo,
     __in PKSTM_XFER_CONTEXT XferContext,
     __in LPOVERLAPPED Overlapped)
 {
 	StreamInfo->DriverAPI.ReadPipe(StreamInfo->UsbHandle, StreamInfo->PipeID, XferContext->Buffer, XferContext->BufferSize, NULL, Overlapped);
-	return GetLastError();
+	return (LONG)GetLastError();
 }
 
-static DWORD KUSB_API Stm_SubmitWrite(
+static LONG KUSB_API Stm_SubmitWrite(
     __in PKSTM_INFO StreamInfo,
     __in PKSTM_XFER_CONTEXT XferContext,
     __in LPOVERLAPPED Overlapped)
 {
 	StreamInfo->DriverAPI.WritePipe(StreamInfo->UsbHandle, StreamInfo->PipeID, XferContext->Buffer, XferContext->TransferLength, NULL, Overlapped);
-	return GetLastError();
+	return (LONG)GetLastError();
 }
 typedef struct _KSTM_THREAD_INTERNAL
 {
@@ -95,7 +91,7 @@ typedef struct _KSTM_THREAD_INTERNAL
 
 static BOOL Stm_Thread_Alloc_Ovl(PKSTM_THREAD_INTERNAL stm)
 {
-	ULONG pos;
+	LONG pos;
 
 	stm->ovlEvents = Stm_Alloc(stm->handle, sizeof(HANDLE) * stm->handle->Info->MaxPendingIO);
 	if (!stm->ovlEvents)
@@ -123,7 +119,7 @@ static BOOL Stm_Thread_Alloc_Ovl(PKSTM_THREAD_INTERNAL stm)
 
 static BOOL Stm_Thread_Free_Ovl(PKSTM_THREAD_INTERNAL stm)
 {
-	ULONG pos;
+	LONG pos;
 	PKSTM_OVERLAPPED_EL ovlTemp;
 
 	if (!stm->ovlEvents) return TRUE;
@@ -260,7 +256,16 @@ static BOOL Stm_Thread_ProcessPending(PKSTM_THREAD_INTERNAL stm, DWORD timeoutOv
 	else
 		DecLock(stm->handle->PendingTransfers);
 
-	EXECUTE_USER_CB(stm->handle, Complete, stm->errorCode, (stm->handle->Info, &stm->xferNext->Xfer->Public));
+	if (stm->handle->UserCB->Complete)
+	{
+		LONG ec;
+		ec = stm->handle->UserCB->Complete(stm->handle->Info, &stm->xferNext->Xfer->Public, stm->errorCode);
+		if (ec != ERROR_SUCCESS && ec != (LONG)stm->errorCode && stm->success)
+		{
+			stm->errorCode = ec;
+			stm->success = FALSE;
+		}
+	}
 	return stm->success;
 }
 
@@ -299,6 +304,8 @@ static unsigned _stdcall Stm_ThreadProc(PKSTM_HANDLE_INTERNAL handle)
 		exitCode = stm->errorCode;
 		goto Done;
 	}
+	if (handle->UserCB->Initialize)
+		handle->UserCB->Initialize(handle->Info);
 
 	while(handle->Thread.State == KSTM_THREADSTATE_STARTED && exitCode == ERROR_SUCCESS)
 	{
@@ -410,9 +417,9 @@ KUSB_EXP BOOL KUSB_API StmK_Init(
     _out KSTM_HANDLE* StreamHandle,
     _in KUSB_HANDLE UsbHandle,
     _in UCHAR PipeID,
-    _in ULONG MaxTransferSize,
-    _in ULONG MaxPendingTransfers,
-    _in ULONG MaxPendingIO,
+    _in LONG MaxTransferSize,
+    _in LONG MaxPendingTransfers,
+    _in LONG MaxPendingIO,
     _inopt PKSTM_CALLBACK Callbacks,
     _inopt KSTM_FLAG Flags)
 {
@@ -420,7 +427,7 @@ KUSB_EXP BOOL KUSB_API StmK_Init(
 	DWORD errorCode = ERROR_SUCCESS;
 	PKSTM_HANDLE_INTERNAL handle;
 	PKUSB_HANDLE_INTERNAL usbHandle;
-	DWORD TransferIndex;
+	LONG TransferIndex;
 	USB_ENDPOINT_DESCRIPTOR epDescriptor;
 	BOOL success;
 
@@ -499,8 +506,6 @@ KUSB_EXP BOOL KUSB_API StmK_Init(
 		xfer->Public.Buffer		= xfer->Buffer;
 		xfer->Public.BufferSize = xfer->BufferSize;
 
-		EXECUTE_USER_CB(handle, Initialize, errorCode, (handle->Info, &xfer->Public));
-
 		if (USB_ENDPOINT_DIRECTION_IN(handle->Info->PipeID))
 		{
 			DL_APPEND(handle->List.Queued, &xfer->Link);
@@ -563,7 +568,7 @@ Error:
 
 KUSB_EXP BOOL KUSB_API StmK_Stop(
     _in KSTM_HANDLE StreamHandle,
-    _in ULONG TimeoutCancelMS)
+    _in LONG TimeoutCancelMS)
 {
 	PKSTM_HANDLE_INTERNAL handle;
 	BOOL success;
@@ -586,14 +591,14 @@ Error:
 KUSB_EXP BOOL KUSB_API StmK_Read(
     _in KSTM_HANDLE StreamHandle,
     _out PUCHAR Buffer,
-    _in LONG Offset,
-    _in ULONG Length,
+    _in INT Offset,
+    _in LONG Length,
     _out PULONG TransferredLength)
 {
 	PKSTM_HANDLE_INTERNAL handle = NULL;
 	PKSTM_XFER_LINK_EL xferEL = NULL;
-	UINT transferLength = 0;
-	UINT stageSize;
+	LONG transferLength = 0;
+	LONG stageSize;
 
 	Pub_To_Priv_StmK(StreamHandle, handle, return FALSE);
 	ErrorParamAction(!Buffer, "Buffer", return FALSE);
@@ -624,7 +629,7 @@ KUSB_EXP BOOL KUSB_API StmK_Read(
 
 		DecLock(handle->PendingTransfers);
 
-		stageSize = Length >  xferEL->Xfer->Public.TransferLength ? xferEL->Xfer->Public.TransferLength : Length;
+		stageSize = Length >  (LONG)xferEL->Xfer->Public.TransferLength ? (LONG)xferEL->Xfer->Public.TransferLength : Length;
 		Length			-= stageSize;
 		transferLength	+= stageSize;
 
@@ -648,8 +653,8 @@ Error:
 KUSB_EXP BOOL KUSB_API StmK_Write(
     _in KSTM_HANDLE StreamHandle,
     _in PUCHAR Buffer,
-    _in LONG Offset,
-    _in ULONG Length,
+    _in INT Offset,
+    _in LONG Length,
     _out PULONG TransferredLength)
 {
 	PKSTM_HANDLE_INTERNAL handle = NULL;
@@ -686,7 +691,7 @@ KUSB_EXP BOOL KUSB_API StmK_Write(
 		}
 
 		IncLock(handle->PendingTransfers);
-		stageSize = Length >  xferEL->Xfer->BufferSize ? xferEL->Xfer->BufferSize : Length;
+		stageSize = Length >  (LONG)xferEL->Xfer->BufferSize ? (LONG)xferEL->Xfer->BufferSize : Length;
 		Length			-= stageSize;
 		transferLength	+= stageSize;
 

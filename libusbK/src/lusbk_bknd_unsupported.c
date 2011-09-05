@@ -461,7 +461,7 @@ KUSB_EXP BOOL KUSB_API Unsupported_QueryInterfaceSettings(
 }
 
 
-BOOL GetProcAddress_Unsupported(__out KPROC* ProcAddress, __in ULONG FunctionID)
+BOOL GetProcAddress_Unsupported(__out KPROC* ProcAddress, __in LONG FunctionID)
 {
 	switch(FunctionID)
 	{

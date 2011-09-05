@@ -15,7 +15,6 @@
 ///////////////////////////////////////////////////////////////////////
 
 #ifndef _LIBUSBK_LIBK_TYPES
-#include <pshpack1.h>
 
 /*! \addtogroup libk
 * @{
@@ -53,10 +52,7 @@ typedef INT_PTR (FAR WINAPI* KPROC)();
 #pragma warning(disable:4214) // named type definition in parentheses
 
 //! User defined handle context space, see \ref LibK_GetContext.
-typedef UINT_PTR KLIB_USER_CONTEXT;
-
-//! Pointer to a KLIB_USER_CONTEXT structure.
-typedef KLIB_USER_CONTEXT* PKLIB_USER_CONTEXT;
+typedef INT_PTR KLIB_USER_CONTEXT;
 
 //! KUSB control setup packet.
 /*!
@@ -148,7 +144,7 @@ typedef KLIB_HANDLE KHOT_HANDLE;
 typedef KLIB_HANDLE KOVL_HANDLE;
 
 
-//! Opaque OvlPoolK handle, see \ref OvlK_InitPool.
+//! Opaque OvlPoolK handle, see \ref OvlK_Init.
 typedef KLIB_HANDLE KOVL_POOL_HANDLE;
 
 //! Opaque StmK handle, see \ref StmK_Init.
@@ -186,30 +182,27 @@ typedef enum _KLIB_HANDLE_TYPE
 } KLIB_HANDLE_TYPE;
 
 //! Function typedef for \ref LibK_SetCleanupCallback.
-typedef LONG KUSB_API KLIB_HANDLE_CB (_in KLIB_HANDLE Handle, _in KLIB_HANDLE_TYPE HandleType, _in PKLIB_USER_CONTEXT UserState);
-//! Function pointer to a \ref KLIB_HANDLE_CB.
-typedef KLIB_HANDLE_CB* PKLIB_HANDLE_CB;
+typedef LONG KUSB_API KLIB_HANDLE_CLEANUP_CB (_in KLIB_HANDLE Handle, _in KLIB_HANDLE_TYPE HandleType, _in KLIB_USER_CONTEXT UserContext);
 
 //! libusbK verson information structure.
 typedef struct _KLIB_VERSION
 {
 	//! Major version number.
-	UINT Major;
+	LONG Major;
 
 	//! Minor version number.
-	UINT Minor;
+	LONG Minor;
 
 	//! Micro version number.
-	UINT Micro;
+	LONG Micro;
 
 	//! Nano version number.
-	UINT Nano;
+	LONG Nano;
 } KLIB_VERSION;
 //! Pointer to a \copybrief KLIB_VERSION
 typedef KLIB_VERSION* PKLIB_VERSION;
 
 /*! @} */
-#include <poppack.h>
 #endif
 
 #ifndef _LIBUSBK_ISOK_TYPES
@@ -220,15 +213,11 @@ typedef KLIB_VERSION* PKLIB_VERSION;
 
 //! Callback function typedef for \ref IsoK_EnumPackets
 typedef BOOL KUSB_API KISO_ENUM_PACKETS_CB (_in ULONG PacketIndex, _in PKISO_PACKET IsoPacket, _in PVOID UserState);
-//! Pointer to a \ref KISO_ENUM_PACKETS_CB.
-typedef KISO_ENUM_PACKETS_CB* PKISO_ENUM_PACKETS_CB;
 
 /*! @} */
 #endif
 
 #ifndef _LIBUSBK_LSTK_TYPES
-
-#include <pshpack1.h>
 
 /*! \addtogroup lstk
 * @{
@@ -247,35 +236,35 @@ typedef KISO_ENUM_PACKETS_CB* PKISO_ENUM_PACKETS_CB;
 typedef enum _KLST_SYNC_FLAG
 {
     //! Cleared/invalid state.
-    KLST_SYNC_FLAG_NONE				= 0,
+    KLST_SYNC_FLAG_NONE				= 0L,
 
     //! Unchanged state,
-    KLST_SYNC_FLAG_UNCHANGED		= 1 << 0,
+    KLST_SYNC_FLAG_UNCHANGED		= 0x0001,
 
     //! Added (Arrival) state,
-    KLST_SYNC_FLAG_ADDED			= 1 << 1,
+    KLST_SYNC_FLAG_ADDED			= 0x0002,
 
     //! Removed (Unplugged) state,
-    KLST_SYNC_FLAG_REMOVED			= 1 << 2,
+    KLST_SYNC_FLAG_REMOVED			= 0x0004,
 
     //! Connect changed state.
-    KLST_SYNC_FLAG_CONNECT_CHANGE	= 1 << 3,
+    KLST_SYNC_FLAG_CONNECT_CHANGE	= 0x0008,
 
     //! All states.
-    KLST_SYNC_FLAG_MASK				= (KLST_SYNC_FLAG_CONNECT_CHANGE - 1) | KLST_SYNC_FLAG_CONNECT_CHANGE,
+    KLST_SYNC_FLAG_MASK				= 0x000F,
 } KLST_SYNC_FLAG;
 
 //! Common usb device information structure
 typedef struct _KLST_DEV_COMMON_INFO
 {
 	//! VendorID parsed from \ref KLST_DEVINFO::InstanceID
-	UINT Vid;
+	LONG Vid;
 
 	//! ProductID parsed from \ref KLST_DEVINFO::InstanceID
-	UINT Pid;
+	LONG Pid;
 
 	//! Interface number (valid for composite devices only) parsed from \ref KLST_DEVINFO::InstanceID
-	UINT MI;
+	LONG MI;
 
 	// An ID that uniquely identifies a USB device.
 	CHAR InstanceID[KLST_STRING_MAX_LEN];
@@ -296,7 +285,7 @@ typedef struct _KLST_DEVINFO
 	KLST_DEV_COMMON_INFO Common;
 
 	//! Driver id this device element is using
-	LONG DrvId;
+	LONG DriverID;
 
 	//! Device interface GUID
 	CHAR DeviceInterfaceGUID[KLST_STRING_MAX_LEN];
@@ -336,12 +325,12 @@ typedef struct _KLST_DEVINFO
 	CHAR DevicePath[KLST_STRING_MAX_LEN];
 
 	//! libusb-win32 filter index id.
-	ULONG LUsb0FilterIndex;
+	LONG LUsb0FilterIndex;
 
 	//! Indicates the devices connection state.
 	BOOL Connected;
 
-	//! Synchronization flags populates by \ref LstK_Sync.
+	//! Synchronization flags. (internal use only)
 	KLST_SYNC_FLAG SyncFlags;
 
 } KLST_DEVINFO;
@@ -352,13 +341,13 @@ typedef KLST_DEVINFO* KLST_DEVINFO_HANDLE;
 typedef enum _KLST_FLAG
 {
     //! No flags (or 0)
-    KLST_FLAG_NONE,
+    KLST_FLAG_NONE = 0L,
 
     //! Enable listings for the raw device interface GUID.{A5DCBF10-6530-11D2-901F-00C04FB951ED}
-    KLST_FLAG_INCLUDE_RAWGUID = (1 << 0),
+    KLST_FLAG_INCLUDE_RAWGUID = 0x0001,
 
     //! List libusbK devices that not currently connected.
-    KLST_FLAG_INCLUDE_DISCONNECT = (1 << 1),
+    KLST_FLAG_INCLUDE_DISCONNECT = 0x0002,
 
 } KLST_FLAG;
 
@@ -384,15 +373,14 @@ typedef BOOL KUSB_API KLST_ENUM_DEVINFO_CB (
     _in KLST_DEVINFO_HANDLE DeviceInfo,
     _in PVOID Context);
 
-//! Pointer to a \c KLST_ENUM_DEVINFO_CB
-typedef KLST_ENUM_DEVINFO_CB* PKLST_ENUM_DEVINFO_CB;
-
 /*! @} */
-#include <poppack.h>
 
 #endif
 
 #ifndef   __USB_H__
+
+#include <pshpack1.h>
+
 /*! \addtogroup libk
 * @{
 */
@@ -400,7 +388,6 @@ typedef KLST_ENUM_DEVINFO_CB* PKLST_ENUM_DEVINFO_CB;
 //! Maximum value that can be added to the current start frame.
 #define USBD_ISO_START_FRAME_RANGE 1024
 
-#include <pshpack1.h>
 
 //! bmRequest.Dir
 enum BMREQUEST_DIR_ENUM
@@ -879,7 +866,6 @@ typedef USB_INTERFACE_ASSOCIATION_DESCRIPTOR* PUSB_INTERFACE_ASSOCIATION_DESCRIP
 #endif // __USB_H__
 
 #ifndef _LIBUSBK_LIBK_TYPES
-#include <pshpack1.h>
 
 /*! \addtogroup libk
 * @{
@@ -898,9 +884,6 @@ typedef enum _KUSB_PROPERTY
 //! Supported driver id enumeration.
 typedef enum _KUSB_DRVID
 {
-    //! Invalid driver ID
-    KUSB_DRVID_INVALID = -1L,
-
     //! libusbK.sys driver ID
     KUSB_DRVID_LIBUSBK,
 
@@ -921,11 +904,11 @@ typedef enum _KUSB_DRVID
 //! Supported function id enumeration.
 typedef enum _KUSB_FNID
 {
-    //! Invalid function ID
-    KUSB_FNID_INVALID = -1L,
-
     //! \ref UsbK_Init dynamic driver function id.
     KUSB_FNID_Init,
+
+    //! \ref UsbK_Free dynamic driver function id.
+    KUSB_FNID_Free,
 
     //! \ref UsbK_ClaimInterface dynamic driver function id.
     KUSB_FNID_ClaimInterface,
@@ -962,9 +945,6 @@ typedef enum _KUSB_FNID
 
     //! \ref UsbK_Initialize dynamic driver function id.
     KUSB_FNID_Initialize,
-
-    //! \ref UsbK_Free dynamic driver function id.
-    KUSB_FNID_Free,
 
     //! \ref UsbK_SelectInterface dynamic driver function id.
     KUSB_FNID_SelectInterface,
@@ -1036,6 +1016,9 @@ typedef BOOL KUSB_API KUSB_Init (
     _out KUSB_HANDLE* InterfaceHandle,
     _in KLST_DEVINFO_HANDLE DevInfo);
 
+typedef BOOL KUSB_API KUSB_Free (
+    _in KUSB_HANDLE InterfaceHandle);
+
 typedef BOOL KUSB_API KUSB_ClaimInterface (
     _in KUSB_HANDLE InterfaceHandle,
     _in UCHAR NumberOrIndex,
@@ -1101,9 +1084,6 @@ typedef BOOL KUSB_API KUSB_ResetDevice (
 typedef BOOL KUSB_API KUSB_Initialize (
     _in HANDLE DeviceHandle,
     _out KUSB_HANDLE* InterfaceHandle);
-
-typedef BOOL KUSB_API KUSB_Free (
-    _in KUSB_HANDLE InterfaceHandle);
 
 typedef BOOL KUSB_API KUSB_SelectInterface (
     _in KUSB_HANDLE InterfaceHandle,
@@ -1216,241 +1196,239 @@ typedef BOOL KUSB_API KUSB_GetProperty (
     _ref PULONG PropertySize,
     _out PVOID Property);
 
-//! USB core driver API structure.
+
+
+//! USB core driver API information structure.
 /*!
 * This structure is part of \ref KUSB_DRIVER_API and contains
 * driver and user specific information.
 *
-* \note
-* This structure has a fixed 64 byte structure size.
 */
 typedef struct _KUSB_DRIVER_API_INFO
 {
 	//! \readonly Driver id of the driver api.
-	KUSB_DRVID DriverID;
+	LONG DriverID;
 
 	//! \readonly Number of valid functions contained in the driver API.
-	UINT FunctionCount;
-
-	//! User-defined state.
-	UINT_PTR UserState;
+	LONG FunctionCount;
 
 } KUSB_DRIVER_API_INFO;
 
 //! Driver API function set structure.
-/*!
-* \fixedstruct{512}
-*
+/*
 * Contains the driver specific USB core function pointer set.
 *
+* \note
+* This structure has a fixed 512 byte structure size.
 */
 typedef struct _KUSB_DRIVER_API
 {
+	//! Driver API information.
 	KUSB_DRIVER_API_INFO Info;
 
 	/*! \fn BOOL KUSB_API Init (_out KUSB_HANDLE* InterfaceHandle, _in KLST_DEVINFO_HANDLE DevInfo)
 		* \memberof KUSB_DRIVER_API
 		* \copydoc UsbK_Init
 		*/
-	BOOL (KUSB_API* Init) (_out KUSB_HANDLE* InterfaceHandle, _in KLST_DEVINFO_HANDLE DevInfo);
-
-	/*! \fn BOOL KUSB_API ClaimInterface (_in KUSB_HANDLE InterfaceHandle, _in UCHAR NumberOrIndex, _in BOOL IsIndex)
-	* \memberof KUSB_DRIVER_API
-	* \copydoc UsbK_ClaimInterface
-	*/
-	BOOL (KUSB_API* ClaimInterface) (_in KUSB_HANDLE InterfaceHandle, _in UCHAR NumberOrIndex, _in BOOL IsIndex);
-
-	/*! \fn BOOL KUSB_API ReleaseInterface (_in KUSB_HANDLE InterfaceHandle, _in UCHAR NumberOrIndex, _in BOOL IsIndex)
-	* \memberof KUSB_DRIVER_API
-	* \copydoc UsbK_ReleaseInterface
-	*/
-	BOOL (KUSB_API* ReleaseInterface) (_in KUSB_HANDLE InterfaceHandle, _in UCHAR NumberOrIndex, _in BOOL IsIndex);
-
-	/*! \fn BOOL KUSB_API SetAltInterface (_in KUSB_HANDLE InterfaceHandle, _in UCHAR NumberOrIndex, _in BOOL IsIndex, _in UCHAR AltSettingNumber)
-	* \memberof KUSB_DRIVER_API
-	* \copydoc UsbK_SetAltInterface
-	*/
-	BOOL (KUSB_API* SetAltInterface) (_in KUSB_HANDLE InterfaceHandle, _in UCHAR NumberOrIndex, _in BOOL IsIndex, _in UCHAR AltSettingNumber);
-
-	/*! \fn BOOL KUSB_API GetAltInterface (_in KUSB_HANDLE InterfaceHandle, _in UCHAR NumberOrIndex, _in BOOL IsIndex, _out PUCHAR AltSettingNumber)
-	* \memberof KUSB_DRIVER_API
-	* \copydoc UsbK_GetAltInterface
-	*/
-	BOOL (KUSB_API* GetAltInterface) (_in KUSB_HANDLE InterfaceHandle, _in UCHAR NumberOrIndex, _in BOOL IsIndex, _out PUCHAR AltSettingNumber);
-
-	/*! \fn BOOL KUSB_API GetDescriptor (_in KUSB_HANDLE InterfaceHandle, _in UCHAR DescriptorType, _in UCHAR Index, _in USHORT LanguageID, _out PUCHAR Buffer, _in ULONG BufferLength, _outopt PULONG LengthTransferred)
-	* \memberof KUSB_DRIVER_API
-	* \copydoc UsbK_GetDescriptor
-	*/
-	BOOL (KUSB_API* GetDescriptor) (_in KUSB_HANDLE InterfaceHandle, _in UCHAR DescriptorType, _in UCHAR Index, _in USHORT LanguageID, _out PUCHAR Buffer, _in ULONG BufferLength, _outopt PULONG LengthTransferred);
-
-	/*! \fn BOOL KUSB_API ControlTransfer (_in KUSB_HANDLE InterfaceHandle, _in WINUSB_SETUP_PACKET SetupPacket, _refopt PUCHAR Buffer, _in ULONG BufferLength, _outopt PULONG LengthTransferred, _inopt LPOVERLAPPED Overlapped)
-	* \memberof KUSB_DRIVER_API
-	* \copydoc UsbK_ControlTransfer
-	*/
-	BOOL (KUSB_API* ControlTransfer) (_in KUSB_HANDLE InterfaceHandle, _in WINUSB_SETUP_PACKET SetupPacket, _refopt PUCHAR Buffer, _in ULONG BufferLength, _outopt PULONG LengthTransferred, _inopt LPOVERLAPPED Overlapped);
-
-	/*! \fn BOOL KUSB_API SetPowerPolicy (_in KUSB_HANDLE InterfaceHandle, _in ULONG PolicyType, _in ULONG ValueLength, _in PVOID Value)
-	* \memberof KUSB_DRIVER_API
-	* \copydoc UsbK_SetPowerPolicy
-	*/
-	BOOL (KUSB_API* SetPowerPolicy) (_in KUSB_HANDLE InterfaceHandle, _in ULONG PolicyType, _in ULONG ValueLength, _in PVOID Value);
-
-	/*! \fn BOOL KUSB_API GetPowerPolicy (_in KUSB_HANDLE InterfaceHandle, _in ULONG PolicyType, _ref PULONG ValueLength, _out PVOID Value)
-	* \memberof KUSB_DRIVER_API
-	* \copydoc UsbK_GetPowerPolicy
-	*/
-	BOOL (KUSB_API* GetPowerPolicy) (_in KUSB_HANDLE InterfaceHandle, _in ULONG PolicyType, _ref PULONG ValueLength, _out PVOID Value);
-
-	/*! \fn BOOL KUSB_API SetConfiguration (_in KUSB_HANDLE InterfaceHandle, _in UCHAR ConfigurationNumber)
-	* \memberof KUSB_DRIVER_API
-	* \copydoc UsbK_SetConfiguration
-	*/
-	BOOL (KUSB_API* SetConfiguration) (_in KUSB_HANDLE InterfaceHandle, _in UCHAR ConfigurationNumber);
-
-	/*! \fn BOOL KUSB_API GetConfiguration (_in KUSB_HANDLE InterfaceHandle, _out PUCHAR ConfigurationNumber)
-	* \memberof KUSB_DRIVER_API
-	* \copydoc UsbK_GetConfiguration
-	*/
-	BOOL (KUSB_API* GetConfiguration) (_in KUSB_HANDLE InterfaceHandle, _out PUCHAR ConfigurationNumber);
-
-	/*! \fn BOOL KUSB_API ResetDevice (_in KUSB_HANDLE InterfaceHandle)
-	* \memberof KUSB_DRIVER_API
-	* \copydoc UsbK_ResetDevice
-	*/
-	BOOL (KUSB_API* ResetDevice) (_in KUSB_HANDLE InterfaceHandle);
-
-	/*! \fn BOOL KUSB_API Initialize (_in HANDLE DeviceHandle, _out KUSB_HANDLE* InterfaceHandle)
-	* \memberof KUSB_DRIVER_API
-	* \copydoc UsbK_Initialize
-	*/
-	BOOL (KUSB_API* Initialize) (_in HANDLE DeviceHandle, _out KUSB_HANDLE* InterfaceHandle);
+	KUSB_Init* Init;
 
 	/*! \fn BOOL KUSB_API Free (_in KUSB_HANDLE InterfaceHandle)
 	* \memberof KUSB_DRIVER_API
 	* \copydoc UsbK_Free
 	*/
-	BOOL (KUSB_API* Free) (_in KUSB_HANDLE InterfaceHandle);
+	KUSB_Free* Free;
+
+	/*! \fn BOOL KUSB_API ClaimInterface (_in KUSB_HANDLE InterfaceHandle, _in UCHAR NumberOrIndex, _in BOOL IsIndex)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_ClaimInterface
+	*/
+	KUSB_ClaimInterface* ClaimInterface;
+
+	/*! \fn BOOL KUSB_API ReleaseInterface (_in KUSB_HANDLE InterfaceHandle, _in UCHAR NumberOrIndex, _in BOOL IsIndex)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_ReleaseInterface
+	*/
+	KUSB_ReleaseInterface* ReleaseInterface;
+
+	/*! \fn BOOL KUSB_API SetAltInterface (_in KUSB_HANDLE InterfaceHandle, _in UCHAR NumberOrIndex, _in BOOL IsIndex, _in UCHAR AltSettingNumber)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_SetAltInterface
+	*/
+	KUSB_SetAltInterface* SetAltInterface;
+
+	/*! \fn BOOL KUSB_API GetAltInterface (_in KUSB_HANDLE InterfaceHandle, _in UCHAR NumberOrIndex, _in BOOL IsIndex, _out PUCHAR AltSettingNumber)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_GetAltInterface
+	*/
+	KUSB_GetAltInterface* GetAltInterface;
+
+	/*! \fn BOOL KUSB_API GetDescriptor (_in KUSB_HANDLE InterfaceHandle, _in UCHAR DescriptorType, _in UCHAR Index, _in USHORT LanguageID, _out PUCHAR Buffer, _in ULONG BufferLength, _outopt PULONG LengthTransferred)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_GetDescriptor
+	*/
+	KUSB_GetDescriptor* GetDescriptor;
+
+	/*! \fn BOOL KUSB_API ControlTransfer (_in KUSB_HANDLE InterfaceHandle, _in WINUSB_SETUP_PACKET SetupPacket, _refopt PUCHAR Buffer, _in ULONG BufferLength, _outopt PULONG LengthTransferred, _inopt LPOVERLAPPED Overlapped)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_ControlTransfer
+	*/
+	KUSB_ControlTransfer* ControlTransfer;
+
+	/*! \fn BOOL KUSB_API SetPowerPolicy (_in KUSB_HANDLE InterfaceHandle, _in ULONG PolicyType, _in ULONG ValueLength, _in PVOID Value)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_SetPowerPolicy
+	*/
+	KUSB_SetPowerPolicy* SetPowerPolicy;
+
+	/*! \fn BOOL KUSB_API GetPowerPolicy (_in KUSB_HANDLE InterfaceHandle, _in ULONG PolicyType, _ref PULONG ValueLength, _out PVOID Value)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_GetPowerPolicy
+	*/
+	KUSB_GetPowerPolicy* GetPowerPolicy;
+
+	/*! \fn BOOL KUSB_API SetConfiguration (_in KUSB_HANDLE InterfaceHandle, _in UCHAR ConfigurationNumber)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_SetConfiguration
+	*/
+	KUSB_SetConfiguration* SetConfiguration;
+
+	/*! \fn BOOL KUSB_API GetConfiguration (_in KUSB_HANDLE InterfaceHandle, _out PUCHAR ConfigurationNumber)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_GetConfiguration
+	*/
+	KUSB_GetConfiguration* GetConfiguration;
+
+	/*! \fn BOOL KUSB_API ResetDevice (_in KUSB_HANDLE InterfaceHandle)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_ResetDevice
+	*/
+	KUSB_ResetDevice* ResetDevice;
+
+	/*! \fn BOOL KUSB_API Initialize (_in HANDLE DeviceHandle, _out KUSB_HANDLE* InterfaceHandle)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_Initialize
+	*/
+	KUSB_Initialize* Initialize;
 
 	/*! \fn BOOL KUSB_API SelectInterface (_in KUSB_HANDLE InterfaceHandle, _in UCHAR NumberOrIndex, _in BOOL IsIndex)
 	* \memberof KUSB_DRIVER_API
 	* \copydoc UsbK_SelectInterface
 	*/
-	BOOL (KUSB_API* SelectInterface) (_in KUSB_HANDLE InterfaceHandle, _in UCHAR NumberOrIndex, _in BOOL IsIndex);
+	KUSB_SelectInterface* SelectInterface;
 
 	/*! \fn BOOL KUSB_API GetAssociatedInterface (_in KUSB_HANDLE InterfaceHandle, _in UCHAR AssociatedInterfaceIndex, _out KUSB_HANDLE* AssociatedInterfaceHandle)
 	* \memberof KUSB_DRIVER_API
 	* \copydoc UsbK_GetAssociatedInterface
 	*/
-	BOOL (KUSB_API* GetAssociatedInterface) (_in KUSB_HANDLE InterfaceHandle, _in UCHAR AssociatedInterfaceIndex, _out KUSB_HANDLE* AssociatedInterfaceHandle);
+	KUSB_GetAssociatedInterface* GetAssociatedInterface;
 
 	/*! \fn BOOL KUSB_API Clone (_in KUSB_HANDLE InterfaceHandle, _out KUSB_HANDLE* DstInterfaceHandle)
 	* \memberof KUSB_DRIVER_API
 	* \copydoc UsbK_Clone
 	*/
-	BOOL (KUSB_API* Clone) (_in KUSB_HANDLE InterfaceHandle, _out KUSB_HANDLE* DstInterfaceHandle);
+	KUSB_Clone* Clone;
 
 	/*! \fn BOOL KUSB_API QueryInterfaceSettings (_in KUSB_HANDLE InterfaceHandle, _in UCHAR AltSettingNumber, _out PUSB_INTERFACE_DESCRIPTOR UsbAltInterfaceDescriptor)
 	* \memberof KUSB_DRIVER_API
 	* \copydoc UsbK_QueryInterfaceSettings
 	*/
-	BOOL (KUSB_API* QueryInterfaceSettings) (_in KUSB_HANDLE InterfaceHandle, _in UCHAR AltSettingNumber, _out PUSB_INTERFACE_DESCRIPTOR UsbAltInterfaceDescriptor);
+	KUSB_QueryInterfaceSettings* QueryInterfaceSettings;
 
 	/*! \fn BOOL KUSB_API QueryDeviceInformation (_in KUSB_HANDLE InterfaceHandle, _in ULONG InformationType, _ref PULONG BufferLength, _ref PVOID Buffer)
 	* \memberof KUSB_DRIVER_API
 	* \copydoc UsbK_QueryDeviceInformation
 	*/
-	BOOL (KUSB_API* QueryDeviceInformation) (_in KUSB_HANDLE InterfaceHandle, _in ULONG InformationType, _ref PULONG BufferLength, _ref PVOID Buffer);
+	KUSB_QueryDeviceInformation* QueryDeviceInformation;
 
 	/*! \fn BOOL KUSB_API SetCurrentAlternateSetting (_in KUSB_HANDLE InterfaceHandle, _in UCHAR AltSettingNumber)
 	* \memberof KUSB_DRIVER_API
 	* \copydoc UsbK_SetCurrentAlternateSetting
 	*/
-	BOOL (KUSB_API* SetCurrentAlternateSetting) (_in KUSB_HANDLE InterfaceHandle, _in UCHAR AltSettingNumber);
+	KUSB_SetCurrentAlternateSetting* SetCurrentAlternateSetting;
 
 	/*! \fn BOOL KUSB_API GetCurrentAlternateSetting (_in KUSB_HANDLE InterfaceHandle, _out PUCHAR AltSettingNumber)
 	* \memberof KUSB_DRIVER_API
 	* \copydoc UsbK_GetCurrentAlternateSetting
 	*/
-	BOOL (KUSB_API* GetCurrentAlternateSetting) (_in KUSB_HANDLE InterfaceHandle, _out PUCHAR AltSettingNumber);
+	KUSB_GetCurrentAlternateSetting* GetCurrentAlternateSetting;
 
 	/*! \fn BOOL KUSB_API QueryPipe (_in KUSB_HANDLE InterfaceHandle, _in UCHAR AltSettingNumber, _in UCHAR PipeIndex, _out PWINUSB_PIPE_INFORMATION PipeInformation)
 	* \memberof KUSB_DRIVER_API
 	* \copydoc UsbK_QueryPipe
 	*/
-	BOOL (KUSB_API* QueryPipe) (_in KUSB_HANDLE InterfaceHandle, _in UCHAR AltSettingNumber, _in UCHAR PipeIndex, _out PWINUSB_PIPE_INFORMATION PipeInformation);
+	KUSB_QueryPipe* QueryPipe;
 
 	/*! \fn BOOL KUSB_API SetPipePolicy (_in KUSB_HANDLE InterfaceHandle, _in UCHAR PipeID, _in ULONG PolicyType, _in ULONG ValueLength, _in PVOID Value)
 	* \memberof KUSB_DRIVER_API
 	* \copydoc UsbK_SetPipePolicy
 	*/
-	BOOL (KUSB_API* SetPipePolicy) (_in KUSB_HANDLE InterfaceHandle, _in UCHAR PipeID, _in ULONG PolicyType, _in ULONG ValueLength, _in PVOID Value);
+	KUSB_SetPipePolicy* SetPipePolicy;
 
 	/*! \fn BOOL KUSB_API GetPipePolicy (_in KUSB_HANDLE InterfaceHandle, _in UCHAR PipeID, _in ULONG PolicyType, _ref PULONG ValueLength, _out PVOID Value)
 	* \memberof KUSB_DRIVER_API
 	* \copydoc UsbK_GetPipePolicy
 	*/
-	BOOL (KUSB_API* GetPipePolicy) (_in KUSB_HANDLE InterfaceHandle, _in UCHAR PipeID, _in ULONG PolicyType, _ref PULONG ValueLength, _out PVOID Value);
+	KUSB_GetPipePolicy* GetPipePolicy;
 
 	/*! \fn BOOL KUSB_API ReadPipe (_in KUSB_HANDLE InterfaceHandle, _in UCHAR PipeID, _out PUCHAR Buffer, _in ULONG BufferLength, _outopt PULONG LengthTransferred, _inopt LPOVERLAPPED Overlapped)
 	* \memberof KUSB_DRIVER_API
 	* \copydoc UsbK_ReadPipe
 	*/
-	BOOL (KUSB_API* ReadPipe) (_in KUSB_HANDLE InterfaceHandle, _in UCHAR PipeID, _out PUCHAR Buffer, _in ULONG BufferLength, _outopt PULONG LengthTransferred, _inopt LPOVERLAPPED Overlapped);
+	KUSB_ReadPipe* ReadPipe;
 
 	/*! \fn BOOL KUSB_API WritePipe (_in KUSB_HANDLE InterfaceHandle, _in UCHAR PipeID, _in PUCHAR Buffer, _in ULONG BufferLength, _outopt PULONG LengthTransferred, _inopt LPOVERLAPPED Overlapped)
 	* \memberof KUSB_DRIVER_API
 	* \copydoc UsbK_WritePipe
 	*/
-	BOOL (KUSB_API* WritePipe) (_in KUSB_HANDLE InterfaceHandle, _in UCHAR PipeID, _in PUCHAR Buffer, _in ULONG BufferLength, _outopt PULONG LengthTransferred, _inopt LPOVERLAPPED Overlapped);
+	KUSB_WritePipe* WritePipe;
 
 	/*! \fn BOOL KUSB_API ResetPipe (_in KUSB_HANDLE InterfaceHandle, _in UCHAR PipeID)
 	* \memberof KUSB_DRIVER_API
 	* \copydoc UsbK_ResetPipe
 	*/
-	BOOL (KUSB_API* ResetPipe) (_in KUSB_HANDLE InterfaceHandle, _in UCHAR PipeID);
+	KUSB_ResetPipe* ResetPipe;
 
 	/*! \fn BOOL KUSB_API AbortPipe (_in KUSB_HANDLE InterfaceHandle, _in UCHAR PipeID)
 	* \memberof KUSB_DRIVER_API
 	* \copydoc UsbK_AbortPipe
 	*/
-	BOOL (KUSB_API* AbortPipe) (_in KUSB_HANDLE InterfaceHandle, _in UCHAR PipeID);
+	KUSB_AbortPipe* AbortPipe;
 
 	/*! \fn BOOL KUSB_API FlushPipe (_in KUSB_HANDLE InterfaceHandle, _in UCHAR PipeID)
 	* \memberof KUSB_DRIVER_API
 	* \copydoc UsbK_FlushPipe
 	*/
-	BOOL (KUSB_API* FlushPipe) (_in KUSB_HANDLE InterfaceHandle, _in UCHAR PipeID);
+	KUSB_FlushPipe* FlushPipe;
 
 	/*! \fn BOOL KUSB_API IsoReadPipe (_in KUSB_HANDLE InterfaceHandle, _ref PKISO_CONTEXT IsoContext, _out PUCHAR Buffer, _in ULONG BufferLength, _in LPOVERLAPPED Overlapped)
 	* \memberof KUSB_DRIVER_API
 	* \copydoc UsbK_IsoReadPipe
 	*/
-	BOOL (KUSB_API* IsoReadPipe) (_in KUSB_HANDLE InterfaceHandle, _ref PKISO_CONTEXT IsoContext, _out PUCHAR Buffer, _in ULONG BufferLength, _in LPOVERLAPPED Overlapped);
+	KUSB_IsoReadPipe* IsoReadPipe;
 
 	/*! \fn BOOL KUSB_API IsoWritePipe (_in KUSB_HANDLE InterfaceHandle, _ref PKISO_CONTEXT IsoContext, _in PUCHAR Buffer, _in ULONG BufferLength, _in LPOVERLAPPED Overlapped)
 	* \memberof KUSB_DRIVER_API
 	* \copydoc UsbK_IsoWritePipe
 	*/
-	BOOL (KUSB_API* IsoWritePipe) (_in KUSB_HANDLE InterfaceHandle, _ref PKISO_CONTEXT IsoContext, _in PUCHAR Buffer, _in ULONG BufferLength, _in LPOVERLAPPED Overlapped);
+	KUSB_IsoWritePipe* IsoWritePipe;
 
 	/*! \fn BOOL KUSB_API GetCurrentFrameNumber (_in KUSB_HANDLE InterfaceHandle, _out PULONG FrameNumber)
 	* \memberof KUSB_DRIVER_API
 	* \copydoc UsbK_GetCurrentFrameNumber
 	*/
-	BOOL (KUSB_API* GetCurrentFrameNumber) (_in KUSB_HANDLE InterfaceHandle, _out PULONG FrameNumber);
+	KUSB_GetCurrentFrameNumber* GetCurrentFrameNumber;
 
 	/*! \fn BOOL KUSB_API GetOverlappedResult (_in KUSB_HANDLE InterfaceHandle, _in LPOVERLAPPED lpOverlapped, _out LPDWORD lpNumberOfBytesTransferred, _in BOOL bWait)
 	* \memberof KUSB_DRIVER_API
 	* \copydoc UsbK_GetOverlappedResult
 	*/
-	BOOL (KUSB_API* GetOverlappedResult) (_in KUSB_HANDLE InterfaceHandle, _in LPOVERLAPPED lpOverlapped, _out LPDWORD lpNumberOfBytesTransferred, _in BOOL bWait);
+	KUSB_GetOverlappedResult* GetOverlappedResult;
 
 	/*! \fn BOOL KUSB_API GetProperty (_in KUSB_HANDLE InterfaceHandle, _in KUSB_PROPERTY PropertyType, _ref PULONG PropertySize, _out PVOID Property)
 	* \memberof KUSB_DRIVER_API
 	* \copydoc UsbK_GetProperty
 	*/
-	BOOL (KUSB_API* GetProperty) (_in KUSB_HANDLE InterfaceHandle, _in KUSB_PROPERTY PropertyType, _ref PULONG PropertySize, _out PVOID Property);
+	KUSB_GetProperty* GetProperty;
 
 	//! fixed structure padding.
 	UCHAR z_F_i_x_e_d[512 - sizeof(KUSB_DRIVER_API_INFO) -  sizeof(UINT_PTR) * KUSB_FNID_COUNT];
@@ -1458,10 +1436,7 @@ typedef struct _KUSB_DRIVER_API
 } KUSB_DRIVER_API;
 typedef KUSB_DRIVER_API* PKUSB_DRIVER_API;
 C_ASSERT(sizeof(KUSB_DRIVER_API) == 512);
-
 /**@}*/
-#include <poppack.h>
-
 #endif
 
 #ifndef _LIBUSBK_HOTK_TYPES
@@ -1469,7 +1444,6 @@ C_ASSERT(sizeof(KUSB_DRIVER_API) == 512);
 /*! \addtogroup hotk
 * @{
 */
-#include <pshpack1.h>
 
 //! Hot plug config flags.
 typedef enum _KHOT_FLAG
@@ -1478,13 +1452,13 @@ typedef enum _KHOT_FLAG
     KHOT_FLAG_NONE,
 
     //! Notify all devices which match upon a succuessful call to \ref HotK_Init.
-    KHOT_FLAG_PLUG_ALL_ON_INIT				= (1 << 0),
+    KHOT_FLAG_PLUG_ALL_ON_INIT				= 0x0001,
 
     //! Allow other \ref KHOT_HANDLE instances to consume this match.
-    KHOT_FLAG_PASS_DUPE_INSTANCE			= (1 << 1),
+    KHOT_FLAG_PASS_DUPE_INSTANCE			= 0x0002,
 
     //! If a \c UserHwnd is specified, use \c PostMessage instead of \c SendMessage.
-    KHOT_FLAG_POST_USER_MESSAGE				= (1 << 2),
+    KHOT_FLAG_POST_USER_MESSAGE				= 0x0004,
 } KHOT_FLAG;
 
 //! Hot plug parameter structure.
@@ -1514,6 +1488,11 @@ typedef struct _KHOT_PATTERN_MATCH
 } KHOT_PATTERN_MATCH;
 C_ASSERT(sizeof(KHOT_PATTERN_MATCH) == 1024);
 
+typedef VOID KUSB_API KHOT_PLUG_CB(
+    _in KHOT_HANDLE HotHandle,
+    _in KLST_DEVINFO_HANDLE DeviceInfo,
+    _in KLST_SYNC_FLAG PlugType);
+
 //! Hot plug parameter structure.
 /*!
 * \fixedstruct{2048}
@@ -1523,13 +1502,16 @@ C_ASSERT(sizeof(KHOT_PATTERN_MATCH) == 1024);
 */
 typedef struct _KHOT_PARAMS
 {
-	//! User defined context pointer.
-	UINT_PTR UserState;
-
 	//! Hot plug event window handle to send/post messages when notifications occur.
 	HWND UserHwnd;
 
-	//! WM_USER message used when sending/posting messages.
+	//! WM_USER message start offset used when sending/posting messages, See details.
+	/*!
+	* \attention The \ref hotk will send UserMessage+1 for arrival notifications and UserMessage+0 for removal notifications.
+	*
+	* - WPARAM = \ref KHOT_HANDLE
+	* - LPARAM = \ref KLST_DEVINFO_HANDLE
+	*/
 	UINT UserMessage;
 
 	//! Additional init/config parameters
@@ -1542,10 +1524,10 @@ typedef struct _KHOT_PARAMS
 	/*! \fn VOID KUSB_API OnHotPlug (KHOT_HANDLE HotHandle, PKHOT_PARAMS HotParams, KLST_DEVINFO_HANDLE DeviceInfo, KLST_SYNC_FLAG PlugType)
 	* \memberof KHOT_PARAMS
 	*/
-	VOID (KUSB_API* OnHotPlug)(KHOT_HANDLE HotHandle, struct _KHOT_PARAMS* HotParams, KLST_DEVINFO_HANDLE DeviceInfo, KLST_SYNC_FLAG PlugType);
+	KHOT_PLUG_CB* OnHotPlug;
 
 	//! fixed structure padding.
-	UCHAR z_F_i_x_e_d[2048 - sizeof(KHOT_PATTERN_MATCH) - sizeof(UINT_PTR) * 3 - sizeof(UINT) * 2];
+	UCHAR z_F_i_x_e_d[2048 - sizeof(KHOT_PATTERN_MATCH) - sizeof(UINT_PTR) * 2 - sizeof(UINT) * 2];
 
 } KHOT_PARAMS;
 C_ASSERT(sizeof(KHOT_PARAMS) == 2048);
@@ -1553,17 +1535,11 @@ C_ASSERT(sizeof(KHOT_PARAMS) == 2048);
 //! Pointer to a \ref KHOT_PARAMS structure.
 typedef KHOT_PARAMS* PKHOT_PARAMS;
 
-//! Callback function typedef for hot plug events.
-typedef VOID KUSB_API KHOT_PLUG_CB(KHOT_HANDLE HotHandle, PKHOT_PARAMS HotParams, KLST_DEVINFO_HANDLE DeviceInfo, KLST_SYNC_FLAG PlugType);
-
-#include <poppack.h>
-
 /**@}*/
 
 #endif
 
 #ifndef _LIBUSBK_OVLK_TYPES
-#include <pshpack1.h>
 
 /*! \addtogroup ovlk
 *  @{
@@ -1576,7 +1552,7 @@ typedef VOID KUSB_API KHOT_PLUG_CB(KHOT_HANDLE HotHandle, PKHOT_PARAMS HotParams
 typedef enum _KOVL_WAIT_FLAG
 {
     //! Do not perform any additional actions upon exiting \ref OvlK_Wait.
-    KOVL_WAIT_FLAG_NONE							= 0,
+    KOVL_WAIT_FLAG_NONE							= 0L,
 
     //! If the i/o operation completes successfully, release the OverlappedK back to it's pool.
     KOVL_WAIT_FLAG_RELEASE_ON_SUCCESS			= 0x0001,
@@ -1591,10 +1567,10 @@ typedef enum _KOVL_WAIT_FLAG
     KOVL_WAIT_FLAG_CANCEL_ON_TIMEOUT			= 0x0004,
 
     //! If the i/o operation times-out, cancel it and release the OverlappedK back to its pool.
-    KOVL_WAIT_FLAG_RELEASE_ON_TIMEOUT			= KOVL_WAIT_FLAG_CANCEL_ON_TIMEOUT | 0x0008,
+    KOVL_WAIT_FLAG_RELEASE_ON_TIMEOUT			= 0x000C,
 
     //! Always release the OverlappedK back to its pool.  If the operation timed-out, cancel it before releasing back to its pool.
-    KOVL_WAIT_FLAG_RELEASE_ALWAYS				= KOVL_WAIT_FLAG_RELEASE_ON_SUCCESS_FAIL | KOVL_WAIT_FLAG_RELEASE_ON_TIMEOUT,
+    KOVL_WAIT_FLAG_RELEASE_ALWAYS				= 0x000F,
 
 } KOVL_WAIT_FLAG;
 
@@ -1604,16 +1580,14 @@ typedef enum _KOVL_WAIT_FLAG
 */
 typedef enum _KOVL_POOL_FLAG
 {
-    KOVL_POOL_FLAG_NONE	= 0,
+    KOVL_POOL_FLAG_NONE	= 0L,
 } KOVL_POOL_FLAG;
 
 /**@}*/
-#include <poppack.h>
 
 #endif
 
 #ifndef _LIBUSBK_STMK_TYPES
-#include <pshpack1.h>
 
 /*! \addtogroup stmk
 *  @{
@@ -1624,7 +1598,7 @@ typedef enum _KOVL_POOL_FLAG
 */
 typedef enum _KSTM_FLAG
 {
-    KSTM_FLAG_NONE		= 0,
+    KSTM_FLAG_NONE		= 0L,
 } KSTM_FLAG;
 
 //! Stream transfer context structure.
@@ -1669,13 +1643,13 @@ typedef struct _KSTM_INFO
 	UCHAR PipeID;
 
 	//! Maximum transfer read/write request allowed pending.
-	ULONG MaxPendingTransfers;
+	LONG MaxPendingTransfers;
 
 	//! Maximum transfer sage size.
-	ULONG MaxTransferSize;
+	LONG MaxTransferSize;
 
 	//! Maximum number of I/O request allowed pending.
-	ULONG MaxPendingIO;
+	LONG MaxPendingIO;
 
 	//! Populated with the endpoint descriptor for the specified \c PipeID.
 	USB_ENDPOINT_DESCRIPTOR EndpointDescriptor;
@@ -1689,40 +1663,50 @@ typedef struct _KSTM_INFO
 //! Pointer to a \ref KSTM_INFO structure.
 typedef KSTM_INFO* PKSTM_INFO;
 
+//! Function definition for an optional user-defined callback; executed when a transfer error occurs.
+/*! \fn LONG KUSB_API KSTM_ERROR_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LONG ErrorCode)
+* \memberof KSTM_CALLBACK
+*/
+typedef LONG KUSB_API KSTM_ERROR_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LONG ErrorCode);
+
+//! Function definition for an optional user-defined callback; executed to submit a transfer.
+/*! \fn LONG KUSB_API KSTM_SUBMIT_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LPOVERLAPPED Overlapped)
+* \memberof KSTM_CALLBACK
+*/
+typedef LONG KUSB_API KSTM_SUBMIT_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LPOVERLAPPED Overlapped);
+
+//! Function definition for an optional user-defined callback; executed when the stream is started with \ref LstK_Start.
+/*! \fn LONG KUSB_API KSTM_INITIALIZE_CB(_in PKSTM_INFO StreamInfo)
+* \memberof KSTM_CALLBACK
+*/
+typedef LONG KUSB_API KSTM_INITIALIZE_CB(_in PKSTM_INFO StreamInfo);
+
+//! Function definition for an optional user-defined callback; executed when a transfer competes.
+/*! \fn LONG KUSB_API KSTM_COMPLETE_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LONG ErrorCode)
+* \memberof KSTM_CALLBACK
+*/
+typedef LONG KUSB_API KSTM_COMPLETE_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LONG ErrorCode);
 
 //! Stream callback structure.
 /*!
 * \fixedstruct{64}
 *
-* These callback functions are executed from the streams internal thread at various stages of a transfer.
-* Thier purpose is to allow a high level of configurability of the stream transfer proccess.
+* These optional callback functions are executed from the streams internal thread at various stages of operetation.
 *
 */
 typedef struct _KSTM_CALLBACK
 {
 	//! Executed when a transfer error occurs.
-	/*! \fn ULONG KUSB_API Error (_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in ULONG ErrorCode)
-	* \memberof KSTM_CALLBACK
-	*/
-	ULONG (KUSB_API* Error) (_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in ULONG ErrorCode);
+	KSTM_ERROR_CB* Error;
 
 	//! Executed to submit a transfer.
-	/*! \fn ULONG KUSB_API Submit (_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LPOVERLAPPED Overlapped)
-	* \memberof KSTM_CALLBACK
-	*/
-	ULONG (KUSB_API* Submit) (_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LPOVERLAPPED Overlapped);
+	KSTM_SUBMIT_CB* Submit;
 
-	//! Executed when a new transfer context is initialized.
-	/*! \fn ULONG KUSB_API Initialize (_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext)
-	* \memberof KSTM_CALLBACK
-	*/
-	ULONG (KUSB_API* Initialize) (_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext);
+	//! Executed when the stream is started with \ref LstK_Start.
+	KSTM_INITIALIZE_CB* Initialize;
 
 	//! Executed when a transfer competes.
-	/*! \fn ULONG KUSB_API Complete (_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext)
-	* \memberof KSTM_CALLBACK
-	*/
-	ULONG (KUSB_API* Complete) (_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext);
+	KSTM_COMPLETE_CB* Complete;
 
 	//! fixed structure padding.
 	UCHAR z_F_i_x_e_d[64 - sizeof(UINT_PTR) * 4];
@@ -1734,7 +1718,6 @@ C_ASSERT(sizeof(KSTM_CALLBACK) == 64);
 
 /**@}*/
 
-#include <poppack.h>
 #endif
 ///////////////////////////////////////////////////////////////////////
 // L I B U S B K  PUBLIC FUNCTIONS ////////////////////////////////////
@@ -1815,7 +1798,7 @@ extern "C" {
 	KUSB_EXP BOOL KUSB_API LibK_SetCleanupCallback(
 	    _in KLIB_HANDLE Handle,
 	    _in KLIB_HANDLE_TYPE HandleType,
-	    _in PKLIB_HANDLE_CB CleanupCB);
+	    _in KLIB_HANDLE_CLEANUP_CB* CleanupCB);
 
 //! Initialize a driver API set.
 	/*!
@@ -1831,7 +1814,7 @@ extern "C" {
 	*/
 	KUSB_EXP BOOL KUSB_API LibK_LoadDriverAPI(
 	    _out PKUSB_DRIVER_API DriverAPI,
-	    _in ULONG DriverID);
+	    _in LONG DriverID);
 
 //! Copies the driver API set out of a \ref KUSB_HANDLE
 	/*!
@@ -1865,8 +1848,8 @@ extern "C" {
 	*/
 	KUSB_EXP BOOL KUSB_API LibK_GetProcAddress(
 	    _out KPROC* ProcAddress,
-	    _in ULONG DriverID,
-	    _in ULONG FunctionID);
+	    _in LONG DriverID,
+	    _in LONG FunctionID);
 
 	/**@}*/
 #endif
@@ -3059,7 +3042,7 @@ extern "C" {
 	*/
 	KUSB_EXP BOOL KUSB_API LstK_Enumerate(
 	    _in KLST_HANDLE DeviceList,
-	    _in PKLST_ENUM_DEVINFO_CB EnumDevListCB,
+	    _in KLST_ENUM_DEVINFO_CB* EnumDevListCB,
 	    _inopt PVOID Context);
 
 //! Gets the \ref KLST_DEVINFO element for the current position.
@@ -3150,8 +3133,8 @@ extern "C" {
 	*/
 	KUSB_EXP BOOL KUSB_API LstK_FindByVidPid(
 	    _in KLST_HANDLE DeviceList,
-	    _in UINT Vid,
-	    _in UINT Pid,
+	    _in LONG Vid,
+	    _in LONG Pid,
 	    _out KLST_DEVINFO_HANDLE* DeviceInfo);
 
 //! Counts the number of device info elements in a device list.
@@ -3170,101 +3153,6 @@ extern "C" {
 	    _in KLST_HANDLE DeviceList,
 	    _ref PULONG Count);
 
-//! Synchronize the device info elements of two device lists.
-	/*!
-	*
-	* \param[in] MasterList
-	* The device list handle to use as the master list.
-	*
-	* \param[in] SlaveList
-	* The device list handle to use as the master list.
-	*
-	* \param[in] SyncFlags
-	* One or more \ref KLST_SYNC_FLAG.
-	*
-	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
-	*
-	*/
-	KUSB_EXP BOOL KUSB_API LstK_Sync(
-	    _in KLST_HANDLE MasterList,
-	    _in KLST_HANDLE SlaveList,
-	    _inopt KLST_SYNC_FLAG SyncFlags);
-
-//! Creates a copy of an existing device list.
-	/*!
-	*
-	* \param[in] SrcList
-	* The device list to copy.
-	*
-	* \param[out] DstList
-	* Reference to a pointer that receives the cloned device list.
-	*
-	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
-	*
-	*/
-	KUSB_EXP BOOL KUSB_API LstK_Clone(
-	    _in KLST_HANDLE SrcList,
-	    _out KLST_HANDLE* DstList);
-
-//! Creates a copy of an existing device info handle.
-	/*!
-	*
-	* \param[in] SrcInfo
-	* The device info to copy.
-	*
-	* \param[out] DstInfo
-	* Reference to a pointer that receives the cloned device info.
-	*
-	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
-	*
-	*/
-	KUSB_EXP BOOL KUSB_API LstK_CloneInfo(
-	    _in KLST_DEVINFO_HANDLE SrcInfo,
-	    _out KLST_DEVINFO_HANDLE* DstInfo);
-
-//! Removes a device info handle for a device list.
-	/*!
-	*
-	* \param[in] DeviceList
-	* The device list of the info element.
-	*
-	* \param[in] DeviceInfo
-	* The device info element to remove from the list.
-	*
-	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
-	*
-	*/
-	KUSB_EXP BOOL KUSB_API LstK_DetachInfo(
-	    _in KLST_HANDLE DeviceList,
-	    _in KLST_DEVINFO_HANDLE DeviceInfo);
-
-//! Appends a device info handle for a device list.
-	/*!
-	*
-	* \param[in] DeviceList
-	* The device list to add the info element.
-	*
-	* \param[in] DeviceInfo
-	* The device info element to add to the list.
-	*
-	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
-	*
-	*/
-	KUSB_EXP BOOL KUSB_API LstK_AttachInfo(
-	    _in KLST_HANDLE DeviceList,
-	    _in KLST_DEVINFO_HANDLE DeviceInfo);
-
-//! Frees a device info handle that was detached with \ref LstK_DetachInfo.
-	/*!
-	*
-	* \param[in] DeviceInfo
-	* The device info element to free.
-	*
-	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
-	*
-	*/
-	KUSB_EXP BOOL KUSB_API LstK_FreeInfo(
-	    _in KLST_DEVINFO_HANDLE DeviceInfo);
 
 	/**@}*/
 
@@ -3379,10 +3267,10 @@ extern "C" {
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*
 	*/
-	KUSB_EXP BOOL KUSB_API OvlK_InitPool (
+	KUSB_EXP BOOL KUSB_API OvlK_Init (
 	    _out KOVL_POOL_HANDLE* PoolHandle,
 	    _in KUSB_HANDLE UsbHandle,
-	    _in USHORT MaxOverlappedCount,
+	    _in LONG MaxOverlappedCount,
 	    _inopt KOVL_POOL_FLAG Flags);
 
 //! Destroys the specified pool and all resources it created.
@@ -3398,8 +3286,8 @@ extern "C" {
 	* more information see \ref OvlK_WaitAndRelease or \ref OvlK_Release.
 	*
 	*/
-	KUSB_EXP BOOL KUSB_API OvlK_FreePool(
-	    _in KOVL_POOL_HANDLE Pool);
+	KUSB_EXP BOOL KUSB_API OvlK_Free(
+	    _in KOVL_POOL_HANDLE PoolHandle);
 
 
 //! Returns the internal event handle used to signal IO operations.
@@ -3464,7 +3352,7 @@ extern "C" {
 	*/
 	KUSB_EXP BOOL KUSB_API OvlK_Wait(
 	    _in KOVL_HANDLE OverlappedK,
-	    _inopt ULONG TimeoutMS,
+	    _inopt LONG TimeoutMS,
 	    _inopt KOVL_WAIT_FLAG WaitFlags,
 	    _out PULONG TransferredLength);
 
@@ -3492,7 +3380,7 @@ extern "C" {
 	*/
 	KUSB_EXP BOOL KUSB_API OvlK_WaitOrCancel(
 	    _in KOVL_HANDLE OverlappedK,
-	    _inopt ULONG TimeoutMS,
+	    _inopt LONG TimeoutMS,
 	    _out PULONG TransferredLength);
 
 //! Waits for overlapped I/O completion, cancels on a timeout error and always releases the OvlK handle back to its pool.
@@ -3519,7 +3407,7 @@ extern "C" {
 	*/
 	KUSB_EXP BOOL KUSB_API OvlK_WaitAndRelease(
 	    _in KOVL_HANDLE OverlappedK,
-	    _inopt ULONG TimeoutMS,
+	    _inopt LONG TimeoutMS,
 	    _out PULONG TransferredLength);
 
 //! Checks for i/o completion; returns immediately. (polling)
@@ -3613,9 +3501,9 @@ extern "C" {
 	    _out KSTM_HANDLE* StreamHandle,
 	    _in KUSB_HANDLE UsbHandle,
 	    _in UCHAR PipeID,
-	    _in ULONG MaxTransferSize,
-	    _in ULONG MaxPendingTransfers,
-	    _in ULONG MaxPendingIO,
+	    _in LONG MaxTransferSize,
+	    _in LONG MaxPendingTransfers,
+	    _in LONG MaxPendingIO,
 	    _inopt PKSTM_CALLBACK Callbacks,
 	    _inopt KSTM_FLAG Flags);
 
@@ -3678,7 +3566,7 @@ extern "C" {
 	*/
 	KUSB_EXP BOOL KUSB_API StmK_Stop(
 	    _in KSTM_HANDLE StreamHandle,
-	    _in ULONG TimeoutCancelMS);
+	    _in LONG TimeoutCancelMS);
 
 //! Reads data from the stream buffer.
 	/*!
@@ -3704,8 +3592,8 @@ extern "C" {
 	KUSB_EXP BOOL KUSB_API StmK_Read(
 	    _in KSTM_HANDLE StreamHandle,
 	    _out PUCHAR Buffer,
-	    _in LONG Offset,
-	    _in ULONG Length,
+	    _in INT Offset,
+	    _in LONG Length,
 	    _out PULONG TransferredLength);
 
 //! Writes data to the stream buffer.
@@ -3732,8 +3620,8 @@ extern "C" {
 	KUSB_EXP BOOL KUSB_API StmK_Write(
 	    _in KSTM_HANDLE StreamHandle,
 	    _in PUCHAR Buffer,
-	    _in LONG Offset,
-	    _in ULONG Length,
+	    _in INT Offset,
+	    _in LONG Length,
 	    _out PULONG TransferredLength);
 	/**@}*/
 
@@ -3775,9 +3663,9 @@ extern "C" {
 	*/
 	KUSB_EXP BOOL KUSB_API IsoK_Init(
 	    _out PKISO_CONTEXT* IsoContext,
-	    _in ULONG NumberOfPackets,
+	    _in LONG NumberOfPackets,
 	    _inopt UCHAR PipeID,
-	    _inopt ULONG StartFrame);
+	    _inopt LONG StartFrame);
 
 //! Destroys an isochronous transfer context.
 	/*!
@@ -3809,7 +3697,7 @@ extern "C" {
 	*/
 	KUSB_EXP BOOL KUSB_API IsoK_SetPackets(
 	    _in PKISO_CONTEXT IsoContext,
-	    _in ULONG PacketSize);
+	    _in LONG PacketSize);
 
 //! Convenience function for setting all fields of a \ref KISO_PACKET.
 	/*!
@@ -3827,7 +3715,7 @@ extern "C" {
 	*/
 	KUSB_EXP BOOL KUSB_API IsoK_SetPacket(
 	    _in PKISO_CONTEXT IsoContext,
-	    _in ULONG PacketIndex,
+	    _in LONG PacketIndex,
 	    _in PKISO_PACKET IsoPacket);
 
 //! Convenience function for getting all fields of a \ref KISO_PACKET.
@@ -3846,7 +3734,7 @@ extern "C" {
 	*/
 	KUSB_EXP BOOL KUSB_API IsoK_GetPacket(
 	    _in PKISO_CONTEXT IsoContext,
-	    _in ULONG PacketIndex,
+	    _in LONG PacketIndex,
 	    _out PKISO_PACKET IsoPacket);
 
 //! Convenience function for enumerating ISO packets of an isochronous transfer context.
@@ -3868,8 +3756,8 @@ extern "C" {
 	*/
 	KUSB_EXP BOOL KUSB_API IsoK_EnumPackets(
 	    _in PKISO_CONTEXT IsoContext,
-	    _in PKISO_ENUM_PACKETS_CB EnumPackets,
-	    _inopt ULONG StartPacketIndex,
+	    _in KISO_ENUM_PACKETS_CB* EnumPackets,
+	    _inopt LONG StartPacketIndex,
 	    _inopt PVOID UserState);
 
 //! Convenience function for re-using an isochronous transfer context in a subsequent request.

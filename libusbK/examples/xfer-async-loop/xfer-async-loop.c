@@ -280,7 +280,7 @@ DWORD __cdecl main(int argc, char* argv[])
 	/*!
 	Initialize a new OvlK pool handle.
 	*/
-	OvlK_InitPool(&gOvlPool, usbHandle, (MAX_PENDING_IO + 1) * 2, 0);
+	OvlK_Init(&gOvlPool, usbHandle, (MAX_PENDING_IO + 1) * 2, 0);
 
 	/*!
 	Configure the benchmark test device to accept/send data.
@@ -336,7 +336,7 @@ Done:
 	LstK_Free(deviceList);
 
 	// Free the overlapped pool.
-	OvlK_FreePool(gOvlPool);
+	OvlK_Free(gOvlPool);
 
 	return g_ErrorCode;
 }

@@ -21,9 +21,9 @@ binary distributions.
 
 KUSB_EXP BOOL KUSB_API IsoK_Init(
     _out PKISO_CONTEXT* IsoContext,
-    _in ULONG NumberOfPackets,
+    _in LONG NumberOfPackets,
     _inopt UCHAR PipeID,
-    _inopt ULONG StartFrame)
+    _inopt LONG StartFrame)
 {
 	PKISO_CONTEXT isoCtx = NULL;
 
@@ -64,10 +64,10 @@ Error:
 
 KUSB_EXP BOOL KUSB_API IsoK_SetPackets(
     _in PKISO_CONTEXT IsoContext,
-    _in ULONG PacketSize)
+    _in LONG PacketSize)
 {
-	ULONG packetIndex;
-	ULONG nextOffSet = 0;
+	LONG packetIndex;
+	LONG nextOffSet = 0;
 
 	ErrorHandle(!IsHandleValid(IsoContext), Error, "IsoContext");
 
@@ -85,7 +85,7 @@ Error:
 
 KUSB_EXP BOOL KUSB_API IsoK_SetPacket(
     _in PKISO_CONTEXT IsoContext,
-    _in ULONG PacketIndex,
+    _in LONG PacketIndex,
     _in PKISO_PACKET IsoPacket)
 {
 	ErrorHandle(!IsHandleValid(IsoContext), Error, "IsoContext");
@@ -102,7 +102,7 @@ Error:
 
 KUSB_EXP BOOL KUSB_API IsoK_GetPacket(
     _in PKISO_CONTEXT IsoContext,
-    _in ULONG PacketIndex,
+    _in LONG PacketIndex,
     _out PKISO_PACKET IsoPacket)
 {
 	ErrorHandle(!IsHandleValid(IsoContext), Error, "IsoContext");
@@ -118,8 +118,8 @@ Error:
 
 KUSB_EXP BOOL KUSB_API IsoK_EnumPackets(
     _in PKISO_CONTEXT IsoContext,
-    _in PKISO_ENUM_PACKETS_CB EnumPackets,
-    _inopt ULONG StartPacketIndex,
+    _in KISO_ENUM_PACKETS_CB* EnumPackets,
+    _inopt LONG StartPacketIndex,
     _inopt PVOID UserState)
 {
 	ErrorHandle(!IsHandleValid(IsoContext), Error, "IsoContext");
@@ -141,7 +141,7 @@ Error:
 KUSB_EXP BOOL KUSB_API IsoK_ReUse(
     _ref PKISO_CONTEXT IsoContext)
 {
-	ULONG packetIndex;
+	LONG packetIndex;
 
 	ErrorHandle(!IsHandleValid(IsoContext), Error, "IsoContext");
 

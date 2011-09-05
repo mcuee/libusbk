@@ -176,9 +176,9 @@ BOOL Ioctl_Async(__in HANDLE dev,
 
 //////////////////////////////////////////////////////////////////////////////
 
-BOOL GetProcAddress_UsbK(__out KPROC* ProcAddress, __in ULONG FunctionID);
-BOOL GetProcAddress_LUsb0(__out KPROC* ProcAddress, __in ULONG FunctionID);
-BOOL GetProcAddress_WUsb(__out KPROC* ProcAddress, __in ULONG FunctionID);
-BOOL GetProcAddress_Unsupported(__out KPROC* ProcAddress, __in ULONG FunctionID);
+BOOL GetProcAddress_UsbK(__out KPROC* ProcAddress, __in LONG FunctionID);
+BOOL GetProcAddress_LUsb0(__out KPROC* ProcAddress, __in LONG FunctionID);
+BOOL GetProcAddress_WUsb(__out KPROC* ProcAddress, __in LONG FunctionID);
+BOOL GetProcAddress_Unsupported(__out KPROC* ProcAddress, __in LONG FunctionID);
 
 #endif

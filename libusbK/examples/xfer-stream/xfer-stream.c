@@ -53,7 +53,7 @@ DWORD __cdecl main(int argc, char* argv[])
 	if (!Examples_GetTestDevice(&deviceList, &deviceInfo, argc, argv))
 		return GetLastError();
 
-	LibK_LoadDriverAPI(&Usb, deviceInfo->DrvId);
+	LibK_LoadDriverAPI(&Usb, deviceInfo->DriverID);
 
 	/*
 	Initialize the device. This creates the physical usb handle.
