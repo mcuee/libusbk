@@ -62,7 +62,6 @@ DWORD __cdecl main(int argc, char* argv[])
 
 	printf("Initialize a HotK device notification event monitor..\n");
 	printf("Looking for devices with instances IDs matching the pattern '%s'..\n", hotParams.PatternMatch.InstanceID);
-	printf("Press 'q' to exit..\n\n");
 
 	// Initializes a new HotK handle.
 	if (!HotK_Init(&hotHandle, &hotParams))
@@ -72,7 +71,8 @@ DWORD __cdecl main(int argc, char* argv[])
 		goto Done;
 	}
 
-	printf("HotK monitor initialized. ErrorCode: %08Xh\n",  errorCode);
+	printf("HotK monitor initialized successfully!\n");
+	printf("Press 'q' to exit...\n\n");
 
 	for(;;)
 	{
@@ -97,7 +97,7 @@ DWORD __cdecl main(int argc, char* argv[])
 		goto Done;
 	}
 
-	printf("HotK monitor closed. ErrorCode: %08Xh\n",  errorCode);
+	printf("HotK monitor closed successfully!\n");
 
 Done:
 	return errorCode;

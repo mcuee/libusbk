@@ -61,7 +61,7 @@ DWORD __cdecl main(int argc, char* argv[])
 	if (!Usb.Init(&usbHandle, deviceInfo))
 	{
 		errorCode = GetLastError();
-		printf("Init device failed. ErrorCode: %08Xh\n",  errorCode);
+		printf("Usb.Init failed. ErrorCode: %08Xh\n",  errorCode);
 		goto Done;
 	}
 	printf("Device opened successfully!\n");
@@ -70,7 +70,6 @@ DWORD __cdecl main(int argc, char* argv[])
 	Configure the benchmark test test type.
 	*/
 	success = Bench_Configure(usbHandle, BM_COMMAND_SET_TEST, 0, &Usb, &testType);
-	if (!success) goto Done;
 
 	/*
 	Initialize a new stream handle.
@@ -84,17 +83,24 @@ DWORD __cdecl main(int argc, char* argv[])
 	              MAX_PENDING_IO,
 	              NULL,
 	              KSTM_FLAG_NONE);
-	errorCode = (success) ? ERROR_SUCCESS  : GetLastError();
-	printf("[Init  Stream] result = %08Xh\n", errorCode);
-	if (!success) goto Done;
+	if (!success)
+	{
+		errorCode = GetLastError();
+		printf("StmK_Init failed. ErrorCode: %08Xh\n", errorCode);
+		goto Done;
+	}
 
 	/*
 	Start the stream.
 	*/
 	success = StmK_Start(streamHandle);
-	errorCode = (success) ? ERROR_SUCCESS  : GetLastError();
-	printf("[Start Stream] result = %08Xh\n", errorCode);
-	if (!success) goto Done;
+	if (!success)
+	{
+		errorCode = GetLastError();
+		printf("StmK_Start failed. ErrorCode: %08Xh\n", errorCode);
+		goto Done;
+	}
+	printf("[Start Stream] successful!\n");
 
 	mDcs_Init(&Dcs);
 
@@ -136,7 +142,7 @@ DWORD __cdecl main(int argc, char* argv[])
 				// Stop and start the stream; This is done here to excercise the API only.
 				success = StmK_Stop(streamHandle, 0);
 				errorCode = (success) ? ERROR_SUCCESS  : GetLastError();
-				if (!success) printf("[Stop  Stream] result = %08Xh\n", errorCode);
+				if (!success) printf("StmK_Stop failed. ErrorCode: %08Xh\n", errorCode);
 				if (!success) goto Done;
 
 				printf("[StreamResult] "
@@ -145,7 +151,7 @@ DWORD __cdecl main(int argc, char* argv[])
 
 				success = StmK_Start(streamHandle);
 				errorCode = (success) ? ERROR_SUCCESS  : GetLastError();
-				if (!success) printf("[Start Stream] result = %08Xh\n", errorCode);
+				if (!success) printf("StmK_Start failed. ErrorCode: %08Xh\n", errorCode);
 				if (!success) goto Done;
 				//////////////////////////////////////////////////////////////////////////
 
@@ -165,13 +171,20 @@ DWORD __cdecl main(int argc, char* argv[])
 	Stop the stream.
 	*/
 	success = StmK_Stop(streamHandle, 0);
-	errorCode = (success) ? ERROR_SUCCESS  : GetLastError();
-	printf("[Stop  Stream] result = %08Xh\n", errorCode);
-	if (!success) goto Done;
+	if (!success)
+	{
+		errorCode = GetLastError();
+		printf("StmK_Stop failed. ErrorCode: %08Xh\n", errorCode);
+		goto Done;
+	}
+	printf("[Stop Stream] successful!\n");
 
 Done:
 	// Free the stream handle.
-	StmK_Free(streamHandle);
+	if (streamHandle)
+	{
+		StmK_Free(streamHandle);
+	}
 
 	// Free the usb handle.
 	UsbK_Free(usbHandle);

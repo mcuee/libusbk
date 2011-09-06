@@ -24,13 +24,15 @@
 */
 #include "examples.h"
 
+// Globals
+KUSB_DRIVER_API Usb;
+
 DWORD __cdecl main(int argc, char* argv[])
 {
 	KLST_HANDLE deviceList = NULL;
 	KLST_DEVINFO_HANDLE deviceInfo = NULL;
 	KUSB_HANDLE handle = NULL;
 	DWORD errorCode = ERROR_SUCCESS;
-	KUSB_DRIVER_API K;
 
 	// Find the test device.  Uses "vid/pid=hhhh" arguments supplied
 	// on the command line. (default is: vid=04D8 pid=FA2E)
@@ -39,10 +41,10 @@ DWORD __cdecl main(int argc, char* argv[])
 
 	// load a dynamic driver api for this device.  The dynamic driver api
 	// is more versatile because it adds support for winusb.sys devices.
-	if (!LibK_LoadDriverAPI(&K, deviceInfo->DriverID))
+	if (!LibK_LoadDriverAPI(&Usb, deviceInfo->DriverID))
 	{
 		errorCode = GetLastError();
-		printf("Loading driver api failed. ErrorCode: %08Xh\n",  errorCode);
+		printf("LibK_LoadDriverAPI failed. ErrorCode: %08Xh\n",  errorCode);
 		goto Done;
 	}
 
@@ -69,10 +71,10 @@ DWORD __cdecl main(int argc, char* argv[])
 	*/
 
 	// Initialize the device with the "dynamic" Open function
-	if (!K.Init(&handle, deviceInfo))
+	if (!Usb.Init(&handle, deviceInfo))
 	{
 		errorCode = GetLastError();
-		printf("Init device failed. ErrorCode: %08Xh\n",  errorCode);
+		printf("Usb.Init failed. ErrorCode: %08Xh\n",  errorCode);
 		goto Done;
 	}
 	printf("Device opened successfully!\n");

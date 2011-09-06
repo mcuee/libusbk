@@ -46,20 +46,27 @@ DWORD __cdecl main(int argc, char* argv[])
 	int pass = 0;
 
 
-	/*!
+	/*
 	Find the test device. Uses "vid=hhhh pid=hhhh" arguments supplied on the
 	command line. (default is: vid=04D8 pid=FA2E)
 	*/
 	if (!Examples_GetTestDevice(&deviceList, &deviceInfo, argc, argv))
 		return GetLastError();
 
-	/*!
+	/*
 	This example will use the dynamic driver api so that it can be used
 	with all supported drivers.
 	*/
 	LibK_LoadDriverAPI(&Usb, deviceInfo->DriverID);
 
-	/*!
+	if (deviceInfo->DriverID == KUSB_DRVID_LIBUSB0 ||
+	        deviceInfo->DriverID == KUSB_DRVID_LIBUSB0_FILTER)
+	{
+		printf("Warning: libusb-win32 driver (libusb0.sys) does not support the\n");
+		printf("         timeout pipe policy with asynchronous transfers.\n");
+	}
+
+	/*
 	Initialize the device. This creates the physical usb handle.
 	*/
 	if (!Usb.Init(&usbHandle, deviceInfo))
@@ -111,7 +118,7 @@ DWORD __cdecl main(int argc, char* argv[])
 		goto Done;
 	}
 
-	/*!
+	/*
 	Initialize a new OvlK pool handle.
 	*/
 	OvlK_Init(&ovlPool, usbHandle, 1, 0);
@@ -142,7 +149,7 @@ DWORD __cdecl main(int argc, char* argv[])
 		{
 			errorCode = GetLastError();
 
-			/*!
+			/*
 			The OvlK module uses two different error codes to indicate a cancel I/O condition.
 			*/
 			if (errorCode == ERROR_CANCELLED || errorCode == ERROR_OPERATION_ABORTED)
@@ -167,13 +174,10 @@ DWORD __cdecl main(int argc, char* argv[])
 	}
 
 Done:
-	/*!
-	Close the usb handle.
-	*/
+	// Close the usb handle.
 	if (usbHandle) Usb.Free(usbHandle);
-	/*!
-	Free the device list.
-	*/
+
+	// Free the device list.
 	LstK_Free(deviceList);
 
 	return errorCode;

@@ -46,7 +46,7 @@ DWORD __cdecl main(int argc, char* argv[])
 	if (!Usb.Init(&handle, deviceInfo))
 	{
 		ec = GetLastError();
-		printf("Init device failed. Win32Error=%u (0x%08X)\n", ec, ec);
+		printf("Usb.Init failed. ErrorCode: %08Xh\n", ec);
 		goto Done;
 	}
 	printf("Device opened successfully!\n");
