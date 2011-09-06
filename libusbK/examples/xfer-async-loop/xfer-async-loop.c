@@ -140,8 +140,8 @@ BOOL Xfer_Submit(KUSB_HANDLE usbHandle,
 	if ((move->ErrorCode = GetLastError()) != ERROR_IO_PENDING)
 	{
 		g_ErrorCode = move->ErrorCode;
-		printf("Failed transfer on pipe-id %02Xh.  Win32Error=%u (0x%08X)\n",
-		       PipeID, g_ErrorCode, g_ErrorCode);
+		printf("UsbK_WritePipe failed on pipe-id %02Xh. ErrorCode: %08Xh\n",
+		       PipeID, g_ErrorCode);
 
 		// Abort the test.
 		g_LoopCounter = MAX_XFERS;
@@ -178,7 +178,7 @@ BOOL Xfer_Wait(MY_XFER_EL* PendingList, ULONG Timeout, UCHAR PipeID)
 		if (PendingList->ErrorCode == ERROR_IO_PENDING)
 		{
 			g_ErrorCode = PendingList->ErrorCode = GetLastError();
-			printf("Failed getting i/o results.  Win32Error=%u (0x%08X)\n", g_ErrorCode, g_ErrorCode);
+			printf("Failed getting i/o results. ErrorCode: %08Xh\n", g_ErrorCode);
 
 			// Abort the test.
 			g_LoopCounter = MAX_XFERS;
@@ -257,7 +257,7 @@ DWORD __cdecl main(int argc, char* argv[])
 	if (!UsbK_Init(&usbHandle, deviceInfo))
 	{
 		g_ErrorCode = GetLastError();
-		printf("Init device failed. Win32Error=%u (0x%08X)\n", g_ErrorCode, g_ErrorCode);
+		printf("UsbK_Init failed. ErrorCode: %08Xh\n", g_ErrorCode);
 		goto Done;
 	}
 

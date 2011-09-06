@@ -48,31 +48,31 @@ DWORD __cdecl main(int argc, char* argv[])
 	ULONG transferred = 0;
 	PKISO_CONTEXT isoCtx = NULL;
 	KOVL_HANDLE ovlkHandle = NULL;
-	ULONG posPacket;
+	LONG posPacket;
 	ULONG currentFrameNumber;
 	KOVL_POOL_HANDLE ovlPool = NULL;
 
 	UNREFERENCED_PARAMETER(currentFrameNumber);
 
-	/*!
+	/*
 	Find the test device. Uses "vid=hhhh pid=hhhh" arguments supplied on the
 	command line. (default is: vid=04D8 pid=FA2E)
 	*/
 	if (!Examples_GetTestDevice(&deviceList, &deviceInfo, argc, argv))
 		return GetLastError();
 
-	/*!
+	/*
 	Initialize the device. This creates the physical usb handle.
 	*/
 	if (!UsbK_Init(&handle, deviceInfo))
 	{
 		errorCode = GetLastError();
-		printf("Init device failed. ErrorCode: %08Xh\n",  errorCode);
+		printf("UsbK_Init failed. ErrorCode: %08Xh\n",  errorCode);
 		goto Done;
 	}
 	printf("Device opened successfully!\n");
 
-	/*!
+	/*
 	Configure the benchmark test device to accept/send data.
 	*/
 	success = Bench_Configure(handle, BM_COMMAND_SET_TEST, 0, NULL, &testType);
@@ -86,13 +86,13 @@ DWORD __cdecl main(int argc, char* argv[])
 	IsoK_Init(&isoCtx, ISO_PACKETS_PER_XFER, pipeID, 0);
 	IsoK_SetPackets(isoCtx, EP_PACKET_SIZE);
 
-	/*!
+	/*
 	Initialize a new OvlK pool handle.
 	*/
 	OvlK_Init(&ovlPool, handle, 4, 0);
 	OvlK_Acquire(&ovlkHandle, ovlPool);
 
-	UsbK_ResetPipe(handle, isoCtx->PipeID);
+	UsbK_ResetPipe(handle, (UCHAR)isoCtx->PipeID);
 
 #ifdef USE_STARTFRAME
 	success = UsbK_GetCurrentFrameNumber(handle, &currentFrameNumber);
@@ -125,8 +125,8 @@ DWORD __cdecl main(int argc, char* argv[])
 	for (posPacket = 0; posPacket < isoCtx->NumberOfPackets; posPacket++)
 	{
 		PKISO_PACKET isoPacket = &isoCtx->IsoPackets[posPacket];
-		ULONG posData = isoPacket->Offset;
-		ULONG posDataMax =  posPacket + 1 < isoCtx->NumberOfPackets ? isoCtx->IsoPackets[posPacket + 1].Offset : sizeof(dataBuffer);
+		LONG posData = isoPacket->Offset;
+		LONG posDataMax =  posPacket + 1 < isoCtx->NumberOfPackets ? isoCtx->IsoPackets[posPacket + 1].Offset : sizeof(dataBuffer);
 
 		//if (isoPacket->Length==EP_PACKET_SIZE)
 		//	continue;
@@ -144,22 +144,16 @@ DWORD __cdecl main(int argc, char* argv[])
 	}
 
 Done:
-	/*!
-	Close the device handle.
-	*/
+	// Close the device handle.
 	UsbK_Free(handle);
-	/*!
-	Free the device list.
-	*/
+
+	// Free the device list.
 	LstK_Free(&deviceList);
-	/*!
-	Free the iso context.
-	*/
+
+	// Free the iso context.
 	IsoK_Free(isoCtx);
 
-	/*!
-	Free the overlapped pool.
-	*/
+	// Free the overlapped pool.
 	OvlK_Free(ovlPool);
 
 	return errorCode;
