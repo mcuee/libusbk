@@ -354,6 +354,11 @@ volatile BYTE CtrlTrfData[USB_EP0_BUFF_SIZE];
 #endif
 
 extern ROM BYTE *ROM USB_SD_Ptr[];
+#if defined(WITH_WINDOWS8_WINUSB)
+extern ROM BYTE ROM USB_SD_OS;
+extern ROM BYTE *ROM Ext_CID_OS_FD;
+extern ROM BYTE *ROM Ext_P_OS_FD;
+#endif
 
 #if defined(DESCRIPTOR_COUNTING_ENABLED)
 extern unsigned char gDeviceDescriptorCount;
@@ -387,6 +392,10 @@ static void USBConfigureEndpoint(BYTE EPNum, BYTE direction);
 static void USBWakeFromSuspend(void);
 static void USBSuspend(void);
 static void USBStallHandler(void);
+#if defined(WITH_WINDOWS8_WINUSB)
+static void USBCheckVendorRequest(void);
+static void USBVendorGetOSHandler(void);
+#endif
 
 //static BOOL USBIsTxBusy(BYTE EPNumber);
 //static void USBPut(BYTE EPNum, BYTE Data);
@@ -1236,6 +1245,9 @@ static void USBCtrlTrfSetupHandler(void)
     //2. Now find out what was in the SETUP packet, and begin handling the request.
     //--------------------------------------------------------------------------
     USBCheckStdRequest();                                               //Check for standard USB "Chapter 9" requests.
+#if defined(WITH_WINDOWS8_WINUSB)
+    USBCheckVendorRequest();                                            //Check for OS specific Vendor Requests
+#endif
     USB_DISABLE_NONSTANDARD_EP0_REQUEST_HANDLER(EVENT_EP0_REQUEST,0,0); //Check for USB device class specific requests
 
 
@@ -1465,6 +1477,39 @@ static void USBCheckStdRequest(void)
             break;
     }//end switch
 }//end USBCheckStdRequest
+
+#if defined(WITH_WINDOWS8_WINUSB)
+/********************************************************************
+ * Function:        void USBCheckVendorRequest(void)
+ *
+ * PreCondition:    None
+ *
+ * Input:           None
+ *
+ * Output:          None
+ *
+ * Side Effects:    None
+ *
+ * Overview:        This routine checks the setup data packet to see
+ *                  if it knows how to handle it
+ *
+ * Note:            None
+ *******************************************************************/
+static void USBCheckVendorRequest(void)
+{
+    if(SetupPkt.RequestType != USB_SETUP_TYPE_VENDOR_BITFIELD) return;
+
+    switch(SetupPkt.bRequest)
+    {
+        case OS_VENDOR_CODE:
+            USBVendorGetOSHandler();
+            break;
+        case USB_REQUEST_SYNCH_FRAME:
+        default:
+            break;
+    }//end switch
+}//end USBCheckVendorRequest
+#endif
 
 /********************************************************************
  * Function:        void USBStdFeatureReqHandler(void)
@@ -1880,6 +1925,13 @@ static void USBStdGetDscHandler(void)
                     // Set data count
                     inPipes[0].wCount.Val = *inPipes[0].pSrc.bRom;                    
                 }
+#if defined(WITH_WINDOWS8_WINUSB)
+                else if(SetupPkt.bDscIndex == 0xEE)
+                {   //OS String Descriptor
+                    inPipes[0].pSrc.bRom = (ROM BYTE *ROM)&USB_SD_OS;
+                    inPipes[0].wCount.Val = *inPipes[0].pSrc.bRom;
+                }
+#endif
                 else
                 {
                     inPipes[0].info.Val = 0;
@@ -1891,6 +1943,52 @@ static void USBStdGetDscHandler(void)
         }//end switch
     }//end if
 }//end USBStdGetDscHandler
+
+#if defined(WITH_WINDOWS8_WINUSB)
+/********************************************************************
+ * Function:        void USBVendorGetOSHandler(void)
+ *
+ * PreCondition:    None
+ *
+ * Input:           None
+ *
+ * Output:          None
+ *
+ * Side Effects:    None
+ *
+ * Overview:        This routine handles OS Vendor Request for MS/WinUSB
+ *
+ * Note:            None
+ *******************************************************************/
+static void USBVendorGetOSHandler(void)
+{
+#if defined(WITH_SERIAL_DEBUG)
+    printf("USBVendorGetOSHandler\r\n");
+#endif
+    if(SetupPkt.bmRequestType | 0x80)
+    {
+        inPipes[0].info.Val = USB_EP0_ROM | USB_EP0_BUSY | USB_EP0_INCLUDE_ZERO;
+#if defined(WITH_SERIAL_DEBUG)
+        printf("SetupPkt.wIndex = %04X\r\n", SetupPkt.wIndex);
+#endif
+        switch(SetupPkt.wIndex)
+        {
+            case 0x04:
+                inPipes[0].pSrc.bRom = (ROM BYTE *ROM)&Ext_CID_OS_FD;
+                // NB: we're truncating a Little Endian DWORD to a WORD...
+                inPipes[0].wCount.Val = *inPipes[0].pSrc.bRom;
+                break;                   
+            case 0x05:
+                inPipes[0].pSrc.bRom = (ROM BYTE *ROM)&Ext_P_OS_FD;
+                inPipes[0].wCount.Val = *inPipes[0].pSrc.bRom;
+                break;
+            default:
+                inPipes[0].info.Val = 0;
+                break;
+        }//end switch
+    }//end if
+}//end USBVendorGetOSHandler
+#endif
 
 /********************************************************************
  * Function:        void USBStdGetStatusHandler(void)

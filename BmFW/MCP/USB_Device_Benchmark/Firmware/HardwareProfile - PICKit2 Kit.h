@@ -132,6 +132,9 @@
     // To make sure these pins don't interfere with our serial operations, we
     // set them as input.
     #define mDisableSCLSDA()    TRISC |= 0x03;	// Set as inputs
+
+    /** WinUSB automated driver installation in Windows 8 **************/
+    #define WITH_WINDOWS8_WINUSB
     
     /** I/O pin definitions ********************************************/
     #define INPUT_PIN 1

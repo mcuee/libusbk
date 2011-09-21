@@ -375,6 +375,46 @@ ROM struct
 
 #endif
 
+// Extended Compat ID OS Feature Descriptor
+ROM struct
+{
+	// Header
+	DWORD dwLength;
+	WORD  bcdVersion;
+	WORD  wIndex;
+	BYTE  bCount;
+	BYTE  bReserved1[7];
+	// Function Section 1
+	BYTE  bFirstInterfaceNumber;
+	BYTE  bReserved2;
+	CHAR  bCompatibleID[8];
+	BYTE  bSubCompatibleID[8];
+	BYTE  bReserved3[6];
+} Ext_CID_OS_FD = { sizeof(Ext_CID_OS_FD), 0x0100, 0x0004, 0x01, {0},
+                    0x00, 0x01, "WINUSB", {0}, {0} };
+                 // ^^^^ This must match your interface number
+
+// Extended Properties OS Feature Descriptor
+ROM struct
+{
+	// Header
+	DWORD dwLength;
+	WORD  bcdVersion;
+	WORD  wIndex;
+	WORD  wCount;
+	// Custom Property Section 1
+	DWORD dwSize;
+	DWORD dwPropertyDataType;
+	WORD  wPropertyNameLength;
+	WORD  bPropertyName[20];
+	DWORD dwPropertyDataLength;
+	WORD  bPropertyData[39];
+} Ext_P_OS_FD = { sizeof(Ext_P_OS_FD), 0x0100, 0x0005, 0x0001,
+                0x00000084, 0x00000001, 
+                0x0028,     {'D','e','v','i','c','e','I','n','t','e','r','f','a','c','e','G','U','I','D',0},
+                0x0000004E, {'{','F','7','0','2','4','2','C','7','-','F','B','2','5','-','4','4','3','B',
+                             '-','9','E','7','E','-','A','4','2','6','0','F','3','7','3','9','8','2','}',0} };
+
 //Array of configuration descriptors
 ROM BYTE *ROM USB_CD_Ptr[]=
 {
@@ -412,6 +452,14 @@ ROM struct
     BYTE bDscType;
     WORD string[SERIAL_NUMBER_LENGTH];
 } sd3={sizeof(sd3),USB_DESCRIPTOR_STRING, {SERIAL_NUMBER}};
+
+// OS String Descriptor
+ROM struct
+{
+    BYTE bLength;
+    BYTE bDscType;
+    WORD string[OS_STRING_LENGTH];
+} ROM USB_SD_OS={sizeof(USB_SD_OS), USB_DESCRIPTOR_STRING, {OS_STRING}};
 
 	//Array of string descriptors
 	ROM BYTE *ROM USB_SD_Ptr[]=
