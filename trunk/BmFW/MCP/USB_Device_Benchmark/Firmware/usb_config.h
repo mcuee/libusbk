@@ -106,6 +106,10 @@
 #define MANUFACTURER_STRING_LENGTH 15
 #define MANUFACTURER_STRING 'T','r','a','v','i','s',' ','R','o','b','i','n','s','o','n'
 
+#define OS_STRING_LENGTH 8
+#define OS_VENDOR_CODE   32 // We use a printable ASCII character for convenience
+#define OS_STRING 'M','S','F','T','1','0','0', OS_VENDOR_CODE
+
 #if !defined(DUAL_INTERFACE)
 	#define SERIAL_NUMBER_LENGTH 6
 	#define SERIAL_NUMBER 'L','U','S','B','W','1'
