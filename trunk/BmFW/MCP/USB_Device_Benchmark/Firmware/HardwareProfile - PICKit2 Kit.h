@@ -95,7 +95,7 @@
     //  final application design.
     #define DEMO_BOARD PICKIT2_KIT_USB
     #define PICKIT2_KIT_USB
-    #define CLOCK_FREQ 48000000
+    #define CLOCK_FREQ 20000000
 
     /** LED ************************************************************/
     #define mInitAllLEDs()      LATC &= 0xFE; TRISC &= 0xFE; LATB &= 0xEF; TRISB &= 0xEF;
