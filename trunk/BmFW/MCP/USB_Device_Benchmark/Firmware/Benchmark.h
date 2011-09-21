@@ -67,6 +67,9 @@ extern volatile CTRL_TRF_SETUP SetupPkt;
 /** BMARK DEFINES **************************************************/
 void Benchmark_ProcessIO(void);
 void Benchmark_Init(void);
+#if defined(WITH_SERIAL_DEBUG)
+void SerialDbg_Init(void);
+#endif
 
 #endif
 

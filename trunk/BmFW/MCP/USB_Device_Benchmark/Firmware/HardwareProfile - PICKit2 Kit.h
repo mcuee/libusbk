@@ -120,12 +120,17 @@
     #define mInitSwitch1()      TRISBbits.TRISB5=1;
     #define sw1                 PORTBbits.RB5
 
+    /** Serial Debug ***************************************************/
+    // Uncomment the following if you want serial debug
+    #define WITH_SERIAL_DEBUG
+    #define BAUDRATE 115200
+
     /** USART fix ******************************************************/
     // If you use one of the optional 24LC512 PCB location as connector for 
-	// (TTL) Serial output, then, if you didn't cut the traces, you will have
-	// SCL (RB1) connected to WP (RC6) and SDA (RB0) grounded.
-	// To make sure these pins don't interfere with our serial operations, we
-	// set them as input.
+    // (TTL) Serial output, then, if you didn't cut the traces, you will have
+    // SCL (RB1) connected to WP (RC6) and SDA (RB0) grounded.
+    // To make sure these pins don't interfere with our serial operations, we
+    // set them as input.
     #define mDisableSCLSDA()    TRISC |= 0x03;	// Set as inputs
     
     /** I/O pin definitions ********************************************/

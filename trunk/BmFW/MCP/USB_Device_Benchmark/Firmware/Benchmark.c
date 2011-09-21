@@ -35,6 +35,9 @@
 #include "Benchmark.h"
 #include "PicFWCommands.h"
 #include "BDT_transfer.h"
+#if defined(WITH_SERIAL_DEBUG)
+#include "usart.h"
+#endif
 
 /** VARIABLES ******************************************************/
 //NOTE:  The below endpoint buffers need to be located in a section of
@@ -323,6 +326,20 @@ void USBCBStdSetDscHandler(void)
 	}//end if
 #endif
 } // EndOf USBCBStdSetDscHandler
+
+#if defined(WITH_SERIAL_DEBUG)
+void SerialDbg_Init(void)
+{
+	OpenUSART(USART_TX_INT_OFF &
+	          USART_RX_INT_OFF &
+	          USART_ASYNCH_MODE &
+	          USART_EIGHT_BIT &
+	          USART_CONT_RX &
+	          USART_BRGH_HIGH,
+	          CLOCK_FREQ*10/BAUDRATE/64 - 2);
+	printf("Benchmark Firmware initializing...\r\n");
+}
+#endif
 
 void Benchmark_Init(void)
 {
