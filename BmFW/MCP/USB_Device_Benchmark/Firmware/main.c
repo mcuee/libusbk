@@ -638,6 +638,9 @@ void UserInit(void)
     mInitAllSwitches();
 
 	blinkStatusValid = TRUE;	//Blink the normal USB state on the LEDs.
+#if defined(WITH_SERIAL_DEBUG)
+	SerialDbg_Init();
+#endif
 	Benchmark_Init();
 
 }//end UserInit
