@@ -206,7 +206,7 @@ NTSTATUS Request_Descriptor(__in PDEVICE_CONTEXT deviceContext,
 	}
 	return status;
 }
-
+/*
 NTSTATUS Request_InitContext(__inout PREQUEST_CONTEXT requestContext,
                              __in WDFREQUEST request,
                              __in_opt libusb_request* libusbRequest,
@@ -216,7 +216,8 @@ NTSTATUS Request_InitContext(__inout PREQUEST_CONTEXT requestContext,
                              __in_opt ULONG inputBufferLength)
 {
 	NTSTATUS status = STATUS_SUCCESS;
-	ULONG ioctlMethod;
+
+	UNREFERENCED_PARAMETER(request);
 
 	// store the actual libusb_request in the WdfRequest context space
 	if (libusbRequest)
@@ -228,8 +229,6 @@ NTSTATUS Request_InitContext(__inout PREQUEST_CONTEXT requestContext,
 
 	if (ioControlCode)
 		requestContext->IoControlCode = ioControlCode;
-	else
-		ioControlCode = requestContext->IoControlCode;
 
 	switch(actualRequestType)
 	{
@@ -241,36 +240,17 @@ NTSTATUS Request_InitContext(__inout PREQUEST_CONTEXT requestContext,
 		requestContext->Length = inputBufferLength;
 		break;
 	}
-	ioctlMethod = METHOD_FROM_CTL_CODE(ioControlCode);
-	if (ioctlMethod == METHOD_IN_DIRECT || ioctlMethod == METHOD_OUT_DIRECT)
-	{
 
-		if (ioControlCode == LIBUSB_IOCTL_INTERRUPT_OR_BULK_READ ||
-		        ioControlCode == LIBUSB_IOCTL_INTERRUPT_OR_BULK_WRITE ||
-		        ioControlCode == LIBUSB_IOCTL_ISOCHRONOUS_READ ||
-		        ioControlCode == LIBUSB_IOCTL_ISOCHRONOUS_WRITE ||
-		        ioControlCode == LIBUSBK_IOCTL_ISOEX_WRITE ||
-		        ioControlCode == LIBUSBK_IOCTL_ISOEX_READ)
-		{
-
-			status = GetTransferMdl(request, actualRequestType, &requestContext->OriginalTransferMDL);
-			if (status == STATUS_BUFFER_TOO_SMALL)
-			{
-				requestContext->OriginalTransferMDL = NULL;
-				status = STATUS_SUCCESS;
-			}
-		}
-	}
 	return status;
 }
-
+*/
 
 VOID Request_PreIoInitialize(__in WDFDEVICE Device,
                              __in WDFREQUEST Request)
 {
 	NTSTATUS  status = STATUS_SUCCESS;
 	WDF_REQUEST_PARAMETERS  params;
-	PREQUEST_CONTEXT requestContext;
+	PREQUEST_CONTEXT requestContext = NULL;
 	libusb_request* libusbRequest;
 	size_t libusbRequestSize;
 
@@ -301,28 +281,19 @@ VOID Request_PreIoInitialize(__in WDFDEVICE Device,
 	requestContext->InputBuffer = libusbRequest;
 	requestContext->InputBufferLength = (ULONG)libusbRequestSize;
 
+	RtlCopyMemory(&requestContext->IoControlRequest, libusbRequest, sizeof(requestContext->IoControlRequest));
+
 	switch(params.Parameters.DeviceIoControl.IoControlCode)
 	{
 	case LIBUSBK_IOCTL_ISOEX_READ:
 	case LIBUSBK_IOCTL_ISOEX_WRITE:
-		// Lock the iso context for read. This allows the iso information to be used when submitting.
-		/*
-		status = WdfRequestProbeAndLockUserBufferForRead(Request, libusbRequest->IsoEx.IsoContext, libusbRequest->IsoEx.IsoContextSize, &requestContext->Iso.InContextMemory);
-		if(!NT_SUCCESS(status))
-		{
-			USBERR("WdfRequestProbeAndLockUserBufferForRead failed. status=%08Xh\n", status);
-			goto Done;
-		}
-		*/
-
 		// Lock the iso context for write. This allows the iso information to be updated upon completion.
-		status = WdfRequestProbeAndLockUserBufferForWrite(Request, libusbRequest->IsoEx.IsoContext, libusbRequest->IsoEx.IsoContextSize, &requestContext->Iso.ContextMemory);
+		status = WdfRequestProbeAndLockUserBufferForWrite(Request, libusbRequest->IsoEx.IsoContext, libusbRequest->IsoEx.IsoContextSize, &requestContext->IsoEx.ContextMemory);
 		if(!NT_SUCCESS(status))
 		{
 			USBERR("WdfRequestProbeAndLockUserBufferForWrite failed. status=%08Xh\n", status);
 			goto Done;
 		}
-
 		break;
 	}
 

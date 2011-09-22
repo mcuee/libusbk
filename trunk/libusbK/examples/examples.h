@@ -12,11 +12,21 @@
 #ifndef __EXAMPLE_H_
 #define __EXAMPLE_H_
 
+//! Enables/disables custom vendor control request (supported by the Benchmark Device Firmware).
+/*!
+* \note If your example device is not running Benchmark Firmware, set this define to "0".
+*/
+#define EXAMPLES_USE_BENCHMARK_CONFIGURE 1
+
 //! Default example vendor id
+#ifndef EXAMPLE_VID
 #define EXAMPLE_VID 0x04D8
+#endif
 
 //! Default example product id
+#ifndef EXAMPLE_PID
 #define EXAMPLE_PID 0xFA2E
+#endif
 
 //! Custom vendor requests that must be implemented in the benchmark firmware.
 typedef enum _BM_COMMAND

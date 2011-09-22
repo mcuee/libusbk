@@ -25,9 +25,9 @@ extern volatile LONG DeviceInstanceNumber;
 #pragma alloc_text(PAGE, Device_OnPrepareHardware)
 #pragma alloc_text(PAGE, Device_OnFileCreate)
 #pragma alloc_text(PAGE, Device_OnFileClose)
-#pragma alloc_text(PAGE, Device_ReadAndSelectDescriptors)
+#pragma alloc_text(PAGE, Device_Create)
+#pragma alloc_text(PAGE, Device_FetchConfigDescriptor)
 #pragma alloc_text(PAGE, Device_Configure)
-#pragma alloc_text(PAGE, Device_ConfigureInterfaces)
 #pragma alloc_text(PAGE, Device_Reset)
 #endif
 
@@ -212,26 +212,15 @@ Return Value:
 
 	WdfDeviceSetPnpCapabilities(device, &pnpCaps);
 
-	//
-	// Register I/O callbacks to tell the framework that you are interested
-	// in handling WdfRequestTypeRead, WdfRequestTypeWrite, and IRP_MJ_DEVICE_CONTROL requests.
-	// WdfIoQueueDispatchParallel means that we are capable of handling
-	// all the I/O request simultaneously and we are responsible for protecting
-	// data that could be accessed by these callbacks simultaneously.
-	// This queue will be,  by default,  automanaged by the framework with
-	// respect to PNP and Power events. That is, framework will take care
-	// of queuing, failing, dispatching incoming requests based on the current
-	// pnp/power state of the device.
-	//
-
-	WDF_IO_QUEUE_CONFIG_INIT_DEFAULT_QUEUE(&ioQueueConfig,
-	                                       WdfIoQueueDispatchParallel);
+	/*
+	Create the default queue. The default queue will be a power managed parallel queue.
+	While requests are pending in the default queue the device will not suspend.
+	*/
+	WDF_IO_QUEUE_CONFIG_INIT_DEFAULT_QUEUE(&ioQueueConfig, WdfIoQueueDispatchParallel);
 
 	ioQueueConfig.EvtIoRead = DefaultQueue_OnRead;
 	ioQueueConfig.EvtIoWrite = DefaultQueue_OnWrite;
 	ioQueueConfig.EvtIoDeviceControl = DefaultQueue_OnIoControl;
-	ioQueueConfig.EvtIoStop = Queue_OnDefaultStop;
-	ioQueueConfig.EvtIoResume = Queue_OnDefaultResume;
 
 	status = WdfIoQueueCreate(device,
 	                          &ioQueueConfig,
@@ -242,6 +231,8 @@ Return Value:
 		USBERR("WdfIoQueueCreate failed  for Default Queue. status=%Xh\n", status);
 		return status;
 	}
+
+	USBD_GetUSBDIVersion(&deviceContext->UsbVersionInfo);
 
 	//
 	// Register the DeviceInterfaceGUIDs set in the devices registry key
@@ -312,98 +303,50 @@ Return Value:
 {
 	NTSTATUS                    status = STATUS_SUCCESS;
 	PDEVICE_CONTEXT             deviceContext;
-	WDF_USB_DEVICE_INFORMATION  info;
 
 	UNREFERENCED_PARAMETER(ResourceList);
 	UNREFERENCED_PARAMETER(ResourceListTranslated);
 
-	USBMSG("begins\n");
-
 	deviceContext = GetDeviceContext(Device);
 
-	// Hardware is already prepared
+	// Hardware is already prepared.
 	if (deviceContext->WdfUsbTargetDevice)
+	{
+		USBMSGN("Hardware is already prepared. Skipping..");
 		return STATUS_SUCCESS;
+	}
 
-	//
-	// Read the device descriptor, configuration descriptor
-	// and select the interface descriptors
-	//
-	status = Device_ReadAndSelectDescriptors(Device);
-
+	// Create target device; fetch device descriptior and information.
+	status = Device_Create(Device);
 	if (!NT_SUCCESS(status))
 	{
-		USBERR("ReadandSelectDescriptors failed\n");
+		USBERRN("Device_Create Failed. Status=%08Xh", status);
 		return status;
 	}
 
-	WDF_USB_DEVICE_INFORMATION_INIT(&info);
-
-	//
-	// Retrieve USBD version information, port driver capabilites and device
-	// capabilites such as speed, power, etc.
-	//
-	deviceContext->DeviceSpeed = UsbLowSpeed;
-	deviceContext->RemoteWakeCapable = FALSE;
-	deviceContext->SelfPowered = FALSE;
-
-	status = WdfUsbTargetDeviceRetrieveInformation(deviceContext->WdfUsbTargetDevice, &info);
-	if (NT_SUCCESS(status))
+	// Fetch and store config descriptor to device context.
+	status = Device_FetchConfigDescriptor(Device);
+	if (!NT_SUCCESS(status))
 	{
-		if ((info.Traits & WDF_USB_DEVICE_TRAIT_AT_HIGH_SPEED))
-		{
-			deviceContext->DeviceSpeed = UsbHighSpeed;
-		}
-		if ((info.Traits & WDF_USB_DEVICE_TRAIT_REMOTE_WAKE_CAPABLE))
-		{
-			deviceContext->RemoteWakeCapable = TRUE;
-		}
-		if ((info.Traits & WDF_USB_DEVICE_TRAIT_SELF_POWERED))
-		{
-			deviceContext->SelfPowered = TRUE;
-		}
-	}
-	else
-	{
-		USBWRN("WdfUsbTargetDeviceRetrieveInformation failed, status=%Xh. Cannot properly determine device speed.\n", status);
+		USBERRN("Device_FetchConfigDescriptor Failed. Status=%08Xh", status);
+		return status;
 	}
 
-	// The winusb device speed policy is offet by speed+1.
-	GetPolicyValue(DEVICE_SPEED, deviceContext->DevicePolicy) = deviceContext->DeviceSpeed + 1;
+	// Select configuration and initialize interfaces.
+	status = Device_Configure(Device);
+	if (!NT_SUCCESS(status))
+	{
+		USBERRN("Device_Configure Failed. Status=%08Xh", status);
+		return status;
+	}
 
-	USBMSG("DeviceSpeed=%s RemoteWakeCapable=%s SelfPowered=%s\n",
-	       GetDeviceSpeedString(deviceContext->DeviceSpeed),
-	       GetBoolString(deviceContext->RemoteWakeCapable),
-	       GetBoolString(deviceContext->SelfPowered));
-
-
-	/*
-	WDF_DEVICE_POWER_POLICY_IDLE_SETTINGS_INIT(&deviceContext->PowerPolicy.IdleSettings, IdleCannotWakeFromS0);
-	deviceContext->PowerPolicy.IdleSettings.IdleTimeout = 5000; // 5-sec
-	deviceContext->PowerPolicy.IdleSettings.Enabled = WdfFalse;
-
-	WDF_DEVICE_POWER_POLICY_WAKE_SETTINGS_INIT(&deviceContext->PowerPolicy.WakeSettings);
-	deviceContext->PowerPolicy.WakeSettings.Enabled = WdfFalse;
-	*/
-	//
-	// Enable wait-wake and idle timeout if the device supports it
-	//
-	//if(deviceContext->WaitWakeEnable)
-	//{
-	//Policy_SetPower(deviceContext, Device);
-	//if (!NT_SUCCESS (status))
-	//{
-	//	USBERR("Policy_SetPower failed\n");
-	//	return status;
-	//}
-	//}
-
-	//
-	// Init the idle policy structure.
-	//
-
-	USBMSG("ends\n");
-
+	// Apply power policy settings presented in the registry.
+	status = Policy_InitPower(deviceContext);
+	if (!NT_SUCCESS(status))
+	{
+		USBWRNN("Policy_InitPower Failed. Status=%08Xh", status);
+		status = STATUS_SUCCESS;
+	}
 	return status;
 }
 
@@ -412,7 +355,7 @@ NTSTATUS Device_OnD0Entry(WDFDEVICE Device, WDF_POWER_DEVICE_STATE WdfPowerDevic
 	UNREFERENCED_PARAMETER(Device);
 	UNREFERENCED_PARAMETER(WdfPowerDeviceState);
 
-	USBMSG("old device power state=D%i\n", WdfPowerDeviceState - 1);
+	USBMSGN("Entering D0. Leaving D%u.", WdfPowerDeviceState - 1);
 
 	return STATUS_SUCCESS;
 }
@@ -422,7 +365,7 @@ NTSTATUS Device_OnD0Exit(WDFDEVICE Device, WDF_POWER_DEVICE_STATE WdfPowerDevice
 	UNREFERENCED_PARAMETER(Device);
 	UNREFERENCED_PARAMETER(WdfPowerDeviceState);
 
-	USBMSG("new device power state=D%i\n", WdfPowerDeviceState - 1);
+	USBMSGN("Leaving D0. Entering D%u.", WdfPowerDeviceState - 1);
 
 	return STATUS_SUCCESS;
 }
@@ -491,7 +434,7 @@ Return Value:
 			//
 			// found a match
 			//
-			pFileContext->PipeContext = pipeContext;
+			pFileContext->PipeID = pipeContext->PipeInformation.EndpointAddress;
 
 			WdfUsbTargetPipeSetNoMaximumPacketSizeCheck(pipeContext->Pipe);
 
@@ -503,10 +446,7 @@ Return Value:
 		}
 	}
 
-	if (InterlockedIncrement(&deviceContext->OpenedFileHandleCount) == 1)
-	{
-		Policy_SetAllPipesToDefault(deviceContext);
-	}
+	InterlockedIncrement(&deviceContext->OpenedFileHandleCount);
 	WdfRequestComplete(Request, status);
 
 	USBMSG("ends\n");
@@ -520,21 +460,18 @@ VOID Device_OnFileClose(__in WDFFILEOBJECT FileObject)
 
 	PAGED_CODE();
 
-	USBMSG("begins\n");
-
 	pFileContext = GetFileContext(FileObject);
 
 	if (pFileContext && pFileContext->DeviceContext)
 	{
 		Interface_ReleaseAll(pFileContext->DeviceContext, WdfFileObjectWdmGetFileObject(FileObject));
 		InterlockedDecrement(&pFileContext->DeviceContext->OpenedFileHandleCount);
-
+		USBDBGN("OpenedFileHandleCount=%u", pFileContext->DeviceContext->OpenedFileHandleCount);
 	}
-	USBMSG("ends\n");
 }
 
 
-NTSTATUS Device_ReadAndSelectDescriptors(__in WDFDEVICE Device)
+NTSTATUS Device_Create(__in WDFDEVICE Device)
 /*++
 
 Routine Description:
@@ -556,6 +493,7 @@ Return Value:
 {
 	NTSTATUS               status;
 	PDEVICE_CONTEXT        deviceContext;
+	WDF_USB_DEVICE_INFORMATION  info;
 
 	PAGED_CODE();
 
@@ -592,12 +530,49 @@ Return Value:
 
 	ASSERT(deviceContext->UsbDeviceDescriptor.bNumConfigurations);
 
-	status = Device_Configure(Device);
+	WDF_USB_DEVICE_INFORMATION_INIT(&info);
+
+	//
+	// Retrieve USBD version information, port driver capabilites and device
+	// capabilites such as speed, power, etc.
+	//
+	deviceContext->DeviceSpeed = UsbLowSpeed;
+	deviceContext->RemoteWakeCapable = FALSE;
+	deviceContext->SelfPowered = FALSE;
+
+	status = WdfUsbTargetDeviceRetrieveInformation(deviceContext->WdfUsbTargetDevice, &info);
+	if (NT_SUCCESS(status))
+	{
+		if ((info.Traits & WDF_USB_DEVICE_TRAIT_AT_HIGH_SPEED))
+		{
+			deviceContext->DeviceSpeed = UsbHighSpeed;
+		}
+		if ((info.Traits & WDF_USB_DEVICE_TRAIT_REMOTE_WAKE_CAPABLE))
+		{
+			deviceContext->RemoteWakeCapable = TRUE;
+		}
+		if ((info.Traits & WDF_USB_DEVICE_TRAIT_SELF_POWERED))
+		{
+			deviceContext->SelfPowered = TRUE;
+		}
+	}
+	else
+	{
+		USBWRN("WdfUsbTargetDeviceRetrieveInformation failed, status=%Xh. Cannot properly determine device speed.\n", status);
+	}
+
+	// The winusb device speed policy is offet by speed+1.
+	GetPolicyValue(DEVICE_SPEED, deviceContext->DevicePolicy) = deviceContext->DeviceSpeed + 1;
+
+	USBMSG("DeviceSpeed=%s RemoteWakeCapable=%s SelfPowered=%s\n",
+	       GetDeviceSpeedString(deviceContext->DeviceSpeed),
+	       GetBoolString(deviceContext->RemoteWakeCapable),
+	       GetBoolString(deviceContext->SelfPowered));
 
 	return status;
 }
 
-NTSTATUS Device_Configure(__in WDFDEVICE Device)
+NTSTATUS Device_FetchConfigDescriptor(__in WDFDEVICE Device)
 /*++
 
 Routine Description:
@@ -681,12 +656,10 @@ Return Value:
 	deviceContext->UsbConfigurationDescriptor = configurationDescriptor;
 	deviceContext->ConfigDescriptorIndex = 0;
 
-	status = Device_ConfigureInterfaces(Device);
-
 	return status;
 }
 
-NTSTATUS Device_ConfigureInterfaces(WDFDEVICE Device)
+NTSTATUS Device_Configure(WDFDEVICE Device)
 {
 	WDF_USB_DEVICE_SELECT_CONFIG_PARAMS		params;
 	PWDF_USB_INTERFACE_SETTING_PAIR			settingPairs = NULL;

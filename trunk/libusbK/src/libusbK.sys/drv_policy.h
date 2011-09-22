@@ -13,7 +13,6 @@ typedef struct _POLICY_DEFAULT
 	CONST ULONG		ValueByteCount;
 } POLICY_DEFAULT, *PPOLICY_DEFAULT;
 
-extern POLICY_DEFAULT PipePolicyDefaults[MAX_POLICY];
 extern POLICY_DEFAULT PowerPolicyDefaults[MAX_POLICY];
 extern POLICY_DEFAULT DevicePolicyDefaults[MAX_POLICY];
 

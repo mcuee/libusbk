@@ -36,6 +36,16 @@ NTSTATUS Pipe_Start(__in PDEVICE_CONTEXT deviceContext,
                     __in PPIPE_CONTEXT pipeContext);
 
 NTSTATUS Pipe_Stop(__in PPIPE_CONTEXT pipeContext,
-                   __in WDF_IO_TARGET_SENT_IO_ACTION WdfIoTargetSentIoAction);
+                   __in WDF_IO_TARGET_SENT_IO_ACTION WdfIoTargetSentIoAction,
+                   __in BOOLEAN purgeQueue);
+
+NTSTATUS Pipe_RefreshQueue(
+    __in PDEVICE_CONTEXT deviceContext,
+    __in PPIPE_CONTEXT pipeContext);
+
+ULONG Pipe_CalcMaxTransferSize(
+    __in BOOLEAN IsHS, WDF_USB_PIPE_TYPE pipeType,
+    __in ULONG maxPacketSize,
+    __in ULONG originalMaxTransferSize);
 
 #endif

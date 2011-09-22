@@ -180,7 +180,7 @@ static BOOL w_Init_Config(PKUSB_HANDLE_INTERNAL handle)
 
 	success = WinUsb.GetDescriptor(
 	              Intf_Handle(),
-	              USB_CONFIGURATION_DESCRIPTOR_TYPE,
+	              USB_DESCRIPTOR_TYPE_CONFIGURATION,
 	              0,
 	              0,
 	              (PUCHAR)&configCheck,
@@ -192,7 +192,7 @@ static BOOL w_Init_Config(PKUSB_HANDLE_INTERNAL handle)
 	ErrorMemory(!handle->Device->ConfigDescriptor, Error);
 
 	success = WinUsb.GetDescriptor(Intf_Handle(),
-	                               USB_CONFIGURATION_DESCRIPTOR_TYPE,
+	                               USB_DESCRIPTOR_TYPE_CONFIGURATION,
 	                               0,
 	                               0,
 	                               (PUCHAR)handle->Device->ConfigDescriptor,

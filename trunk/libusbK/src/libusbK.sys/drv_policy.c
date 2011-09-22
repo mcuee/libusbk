@@ -18,6 +18,9 @@ binary distributions.
 
 #include "drv_common.h"
 
+// warning C4127: conditional expression is constant.
+#pragma warning(disable: 4127)
+
 #if (defined(ALLOC_PRAGMA) && defined(PAGING_ENABLED))
 #pragma alloc_text(PAGE, Policy_InitPipe)
 //#pragma alloc_text(PAGE, Policy_SetPipe)
@@ -27,25 +30,18 @@ binary distributions.
 #pragma alloc_text(PAGE, Policy_GetPower)
 #endif
 
-POLICY_DEFAULT PipePolicyDefaults[MAX_POLICY] =
-{
-	{0, 0, 0},	// unused (internal use only)
-	{SHORT_PACKET_TERMINATE,	FALSE,		1},
-	{AUTO_CLEAR_STALL,			FALSE,		1},
-	{PIPE_TRANSFER_TIMEOUT,		0,			4},
-	{IGNORE_SHORT_PACKETS,		FALSE,		1},
-	{ALLOW_PARTIAL_READS,		TRUE,		1},
-	{AUTO_FLUSH,				FALSE,		1},
-	{RAW_IO,					FALSE,		1},
-	{MAXIMUM_TRANSFER_SIZE,		ULONG_MAX,	4},
-	{RESET_PIPE_ON_RESUME,		FALSE,		1},
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{MAX_TRANSFER_STAGE_SIZE, LIBUSB_MAX_READ_WRITE, 4},	// NEW!
-};
+#define mPipe_CheckValueLength(mStatus,mPolicyType,mPipeID,mMinValueLength,mCheckValueLength,mCheckValueUpdateLength,mErrorAction) do {	\
+	if ((int)(mMinValueLength) > (int)(mCheckValueLength)) 																				\
+	{  																																	\
+		mStatus = STATUS_INVALID_BUFFER_SIZE;  																							\
+		USBERRN("PipeID=%02Xh Invalid policy length %u for policy type %u. MinimumLength=%u",  											\
+			mPipeID,mCheckValueLength,mPolicyType,mMinValueLength);																		\
+	   																																	\
+		if (mCheckValueUpdateLength) ((PULONG)(mCheckValueUpdateLength))[0]=(ULONG)(mCheckValueLength); 								\
+		mErrorAction;  																													\
+	}  																																	\
+	if (mCheckValueUpdateLength) ((PULONG)(mCheckValueUpdateLength))[0]=(ULONG)(mCheckValueLength); 									\
+}while(0)
 
 POLICY_DEFAULT PowerPolicyDefaults[MAX_POLICY] =
 {
@@ -65,12 +61,44 @@ POLICY_DEFAULT PowerPolicyDefaults[MAX_POLICY] =
 	{0, 0, 0},	// unused
 	{0, 0, 0},	// unused
 	{0, 0, 0},	// unused
+	{0, 0, 0},	// unused
+	{0, 0, 0},	// unused
+	{0, 0, 0},	// unused
+	{0, 0, 0},	// unused
+	{0, 0, 0},	// unused
+	{0, 0, 0},	// unused
+	{0, 0, 0},	// unused
+	{0, 0, 0},	// unused
+	{0, 0, 0},	// unused
+	{0, 0, 0},	// unused
+	{0, 0, 0},	// unused
+	{0, 0, 0},	// unused
+	{0, 0, 0},	// unused
+	{0, 0, 0},	// unused
+	{0, 0, 0},	// unused
+	{0, 0, 0},	// unused
 };
 
 POLICY_DEFAULT DevicePolicyDefaults[MAX_POLICY] =
 {
 	{0, 0, 0},	// unused (internal use only)
 	{DEVICE_SPEED, FullSpeed, 1},
+	{0, 0, 0},	// unused
+	{0, 0, 0},	// unused
+	{0, 0, 0},	// unused
+	{0, 0, 0},	// unused
+	{0, 0, 0},	// unused
+	{0, 0, 0},	// unused
+	{0, 0, 0},	// unused
+	{0, 0, 0},	// unused
+	{0, 0, 0},	// unused
+	{0, 0, 0},	// unused
+	{0, 0, 0},	// unused
+	{0, 0, 0},	// unused
+	{0, 0, 0},	// unused
+	{0, 0, 0},	// unused
+	{0, 0, 0},	// unused
+	{0, 0, 0},	// unused
 	{0, 0, 0},	// unused
 	{0, 0, 0},	// unused
 	{0, 0, 0},	// unused
@@ -124,14 +152,6 @@ VOID Policy_GetValue(__out PVOID destValue,
 	}
 }
 
-PPOLICY_DEFAULT Policy_GetPipeDefault(__in ULONG policyType)
-{
-
-	if (policyType == 0 || policyType >= (sizeof(PipePolicyDefaults) / sizeof(POLICY_DEFAULT)))
-		return NULL;
-	return &PipePolicyDefaults[policyType];
-}
-
 PPOLICY_DEFAULT Policy_GetPowerDefault(__in ULONG policyType)
 {
 	policyType &= 0x7F;
@@ -170,18 +190,17 @@ VOID Policy_SetAllPipesToDefault(__in PDEVICE_CONTEXT deviceContext)
 
 VOID Policy_InitPipe(__inout PPIPE_CONTEXT pipeContext)
 {
-	PAGED_CODE();
+	PIPE_POLICIES defaultPolicies;
+	defaultPolicies.values = 0;
+	defaultPolicies.AllowPartialReads = TRUE;
 
 	if (pipeContext)
 	{
-		ULONG policyCount = (ULONG)(sizeof(pipeContext->Policy) / sizeof(pipeContext->Policy[0]));
-		ULONG policyIndex;
-		for (policyIndex = 0; policyIndex < policyCount; policyIndex++)
-		{
-			pipeContext->Policy[policyIndex] = PipePolicyDefaults[policyIndex].DefaultValue;
-		}
+		pipeContext->Policies.values = defaultPolicies.values;
 	}
 }
+
+#if 0
 
 NTSTATUS NONPAGABLE Policy_SetPipe(__inout PDEVICE_CONTEXT deviceContext,
                                    __in UCHAR pipeID,
@@ -192,6 +211,7 @@ NTSTATUS NONPAGABLE Policy_SetPipe(__inout PDEVICE_CONTEXT deviceContext,
 
 	PPIPE_CONTEXT pipeContext;
 	PPOLICY_DEFAULT defaultPolicy;
+	NTSTATUS status = STATUS_SUCCESS;
 
 	pipeContext = GetPipeContextByID(deviceContext, pipeID);
 	if (!pipeContext->IsValid)
@@ -205,6 +225,71 @@ NTSTATUS NONPAGABLE Policy_SetPipe(__inout PDEVICE_CONTEXT deviceContext,
 	{
 		USBERR("unknown pipe policy %d\n", policyType);
 		return STATUS_INVALID_PARAMETER;
+	}
+
+	if (policyType == ISO_AUTO_PACKET_TEMPLATE)
+	{
+		PQUEUE_CONTEXT queueContext = GetQueueContext(pipeContext->Queue);
+		PIPE_POLICIES_PACKED queuePipePolices;
+		ULONG polValue;
+
+		if (!queueContext || queueContext->Info.PipeType != WdfUsbPipeTypeIsochronous)
+		{
+			USBERR("Invalid PipeType=%s\n", GetPipeTypeString(queueContext->Info.PipeType));
+			return STATUS_INVALID_PARAMETER;
+		}
+
+		// Toggle the value for this policy so it is opposite of the current queue.  This will instruct
+		// Pipe_InitQueue that it must re-create the queue.
+		queuePipePolices._value = queueContext->Policy._value;
+		polValue = queuePipePolices.AutoIsoPacketsChanged ? 0 : 1;
+		Policy_SetValue(&GetPolicyValue(policyType, pipeContext->Policy), &polValue, defaultPolicy->ValueByteCount);
+
+		if (pipeContext->AutoIsoPacket.Memory) WdfObjectDelete(pipeContext->AutoIsoPacket.Memory);
+		if (valueLength)
+		{
+			WDF_OBJECT_ATTRIBUTES memAttributes;
+			WDF_OBJECT_ATTRIBUTES_INIT(&memAttributes);
+			memAttributes.ParentObject = deviceContext->WdfDevice;
+
+			if (valueLength % sizeof(KISO_PACKET))
+			{
+				USBERR("BufferLength must be an interval of KISO_PACKET\n", GetPipeTypeString(queueContext->Info.PipeType));
+				return STATUS_INVALID_PARAMETER;
+			}
+
+			status = WdfMemoryCreate(
+			             &memAttributes, NonPagedPool,
+			             POOL_TAG,
+			             valueLength,
+			             &pipeContext->AutoIsoPacket.Memory,
+			             &pipeContext->AutoIsoPacket.Buffer);
+
+			if (NT_SUCCESS(status))
+			{
+				status = WdfMemoryCopyFromBuffer(pipeContext->AutoIsoPacket.Memory, 0, value, valueLength);
+				if (NT_SUCCESS(status))
+				{
+					pipeContext->AutoIsoPacket.Length = valueLength;
+					return status;
+				}
+				else
+				{
+					WdfObjectDelete(pipeContext->AutoIsoPacket.Memory);
+					USBERRN("WdfMemoryCopyFromBuffer failed. Status=%08Xh", status);
+				}
+			}
+			else
+			{
+				WdfObjectDelete(pipeContext->AutoIsoPacket.Memory);
+				USBERRN("WdfMemoryCreate failed. Status=%08Xh", status);
+			}
+		}
+
+		pipeContext->AutoIsoPacket.Memory = NULL;
+		pipeContext->AutoIsoPacket.Buffer = NULL;
+		pipeContext->AutoIsoPacket.Length = 0;
+		return status;
 	}
 
 	if (valueLength < defaultPolicy->ValueByteCount)
@@ -218,97 +303,212 @@ NTSTATUS NONPAGABLE Policy_SetPipe(__inout PDEVICE_CONTEXT deviceContext,
 	return STATUS_SUCCESS;
 }
 
+#endif
+
+
 NTSTATUS NONPAGABLE Policy_GetPipe(__in PDEVICE_CONTEXT deviceContext,
                                    __in UCHAR pipeID,
                                    __in ULONG policyType,
                                    __out PVOID value,
                                    __inout PULONG valueLength)
 {
-	PPIPE_CONTEXT pipeContext;
-	PPOLICY_DEFAULT defaultPolicy;
+	PPIPE_CONTEXT pipeContext = NULL;
+	NTSTATUS status = STATUS_SUCCESS;
+	PIPE_POLICIES pipePolicies;
 
 	pipeContext = GetPipeContextByID(deviceContext, pipeID);
-	if (!pipeContext->IsValid)
+	if (!pipeContext->IsValid || !pipeContext->Pipe || !pipeContext->Queue)
 	{
-		USBERR("pipe %02Xh not found\n", pipeID);
-		return STATUS_INVALID_PARAMETER;
-	}
-
-	defaultPolicy = Policy_GetPipeDefault(policyType);
-	if (defaultPolicy == NULL || defaultPolicy->PolicyType != policyType)
-	{
-		USBERR("unknown pipe policy %d\n", policyType);
-		return STATUS_INVALID_PARAMETER;
-	}
-
-	if (*valueLength < defaultPolicy->ValueByteCount)
-	{
-		USBERR("pipe %02Xh valueLength = 0\n", pipeID);
-		return STATUS_BUFFER_TOO_SMALL;
-	}
-
-	*valueLength = defaultPolicy->ValueByteCount;
-	Policy_GetValue(value, GetPolicyValue(policyType, pipeContext->Policy), defaultPolicy->ValueByteCount);
-
-	return STATUS_SUCCESS;
-}
-
-NTSTATUS Policy_InitPower(__in PDEVICE_CONTEXT deviceContext)
-{
-
-	NTSTATUS    status = STATUS_SUCCESS;
-	WDF_DEVICE_POWER_POLICY_IDLE_SETTINGS idleSettings;
-	WDF_DEVICE_POWER_POLICY_WAKE_SETTINGS wakeSettings;
-
-	PAGED_CODE();
-
-	//
-	// Init wait-wake/idle policy structure.
-	//
-	WDF_DEVICE_POWER_POLICY_WAKE_SETTINGS_INIT(&wakeSettings);
-	WDF_DEVICE_POWER_POLICY_IDLE_SETTINGS_INIT(&idleSettings, IdleCannotWakeFromS0);
-
-	idleSettings.UserControlOfIdleSettings = IdleDoNotAllowUserControl;
-	idleSettings.IdleTimeout = deviceContext->DeviceRegSettings.DefaultIdleTimeout;
-	idleSettings.Enabled = WdfFalse;
-
-	if (deviceContext->DeviceRegSettings.DeviceIdleEnabled)
-	{
-		idleSettings.Enabled = WdfTrue;
-		if (
-		    (deviceContext->RemoteWakeCapable && deviceContext->DeviceRegSettings.DefaultIdleState) ||
-		    (deviceContext->DeviceRegSettings.DeviceIdleIgnoreWakeEnable && deviceContext->DeviceRegSettings.DefaultIdleState)
-		)
-		{
-			idleSettings.IdleCaps = IdleUsbSelectiveSuspend;
-		}
-
-		if (deviceContext->DeviceRegSettings.UserSetDeviceIdleEnabled)
-		{
-			idleSettings.UserControlOfIdleSettings = IdleAllowUserControl;
-		}
-	}
-
-	wakeSettings.Enabled = deviceContext->RemoteWakeCapable ? WdfTrue : WdfFalse;
-
-	status = WdfDeviceAssignS0IdleSettings(deviceContext->WdfDevice, &idleSettings);
-	if ( !NT_SUCCESS(status))
-	{
-		USBERR("WdfDeviceSetPowerPolicyS0IdlePolicy failed. status=%Xh\n", status);
+		status = STATUS_INVALID_PARAMETER;
+		USBERRN("Invalid PipeID=%02Xh", pipeID);
 		return status;
 	}
 
-	status = WdfDeviceAssignSxWakeSettings(deviceContext->WdfDevice, &wakeSettings);
-	if (!NT_SUCCESS(status))
+	if (!valueLength)
 	{
-		USBERR("WdfDeviceAssignSxWakeSettings failed. status=%Xh\n", status);
+		status = STATUS_INVALID_BUFFER_SIZE;
+		USBERRN("PipeID=%02Xh Invalid BufferLength.", pipeID);
 		return status;
+	}
+
+	RtlCopyMemory(&pipePolicies, &pipeContext->Policies, sizeof(pipePolicies));
+
+	switch(policyType)
+	{
+	case SHORT_PACKET_TERMINATE:	// 0x01
+		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength[0], valueLength, break);
+		if (value) ((PUCHAR)value)[0] = (UCHAR)pipePolicies.ShortPacketTerminate;
+		break;
+
+	case AUTO_CLEAR_STALL:			// 0x02
+		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength[0], valueLength, break);
+		if (value) ((PUCHAR)value)[0] = (UCHAR)pipePolicies.AutoClearStall;
+		break;
+
+	case PIPE_TRANSFER_TIMEOUT:		// 0x03
+		mPipe_CheckValueLength(status, policyType, pipeID, sizeof(ULONG), valueLength[0], valueLength, break);
+		if (value) ((PULONG)value)[0] = pipeContext->TimeoutPolicy;
+		break;
+
+	case IGNORE_SHORT_PACKETS:		// 0x04
+		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength[0], valueLength, break);
+		if (value) ((PUCHAR)value)[0] = (UCHAR)pipePolicies.IgnoreShortPackets;
+		break;
+
+	case ALLOW_PARTIAL_READS:		// 0x05
+		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength[0], valueLength, break);
+		if (value) ((PUCHAR)value)[0] = (UCHAR)pipePolicies.AllowPartialReads;
+		break;
+
+	case AUTO_FLUSH:				// 0x06
+		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength[0], valueLength, break);
+		if (value) ((PUCHAR)value)[0] = (UCHAR)pipePolicies.AutoFlush;
+		break;
+
+	case RAW_IO:					// 0x07
+		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength[0], valueLength, break);
+		if (value) ((PUCHAR)value)[0] = (UCHAR)pipePolicies.RawIO;
+		break;
+
+	case MAXIMUM_TRANSFER_SIZE:		// 0x08
+		mPipe_CheckValueLength(status, policyType, pipeID, sizeof(ULONG), valueLength[0], valueLength, break);
+		if (value) ((PULONG)value)[0] = pipeContext->PipeInformation.MaximumTransferSize;
+		break;
+
+	case RESET_PIPE_ON_RESUME:		// 0x09
+		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength[0], valueLength, break);
+		if (value) ((PUCHAR)value)[0] = (UCHAR)pipePolicies.ResetPipeOnResume;
+		break;
+
+	case ISO_AUTO_PACKET_TEMPLATE:	// 0x10
+		if (pipeContext->SharedAutoIsoExPacketMemory)
+		{
+			size_t bufferSize;
+			PVOID buffer = WdfMemoryGetBuffer(pipeContext->SharedAutoIsoExPacketMemory, &bufferSize);
+
+			mPipe_CheckValueLength(status, policyType, pipeID, ((ULONG)bufferSize), ((ULONG)bufferSize), valueLength, break);
+			if (value && buffer) status = WdfMemoryCopyToBuffer(pipeContext->SharedAutoIsoExPacketMemory, 0, value, bufferSize);
+		}
+		else
+		{
+			if (valueLength) valueLength[0] = 0;
+		}
+		break;
+
+	default:
+		status = STATUS_INVALID_PARAMETER;
+	}
+
+	if (NT_SUCCESS(status))
+	{
+		if (value && valueLength)
+		{
+			USBMSGN("PipeID=%02Xh returned value of length %u for policy type %u",
+			        pipeContext->PipeInformation.EndpointAddress, valueLength[0], policyType);
+		}
+	}
+	else
+	{
+		USBERRN("PipeID=%02Xh Failed appying policy type %u. Status=%08Xh",
+		        pipeID, policyType, status);
 	}
 
 	return status;
 }
 
+NTSTATUS Policy_InitPower(__in PDEVICE_CONTEXT deviceContext)
+{
 
+	NTSTATUS status = STATUS_SUCCESS;
+	WDF_DEVICE_POWER_POLICY_IDLE_SETTINGS idleSettings;
+	WDF_DEVICE_POWER_POLICY_WAKE_SETTINGS wakeSettings;
+
+	PAGED_CODE();
+
+	/* DeviceIdleIgnoreWakeEnable
+	Use this value if your USB-connected device supports both idling and
+	waking itself while the computer is in its working state. If your USB
+	device supports only idling, use IdleCannotWakeFromS0. (Drivers for USB
+	devices must not specify IdleCanWakeFromS0.)
+	*/
+	if (deviceContext->UsbVersionInfo.USBDI_Version < 0x600)
+		deviceContext->DeviceRegSettings.DeviceIdleIgnoreWakeEnable = FALSE;
+
+	/* IdleSettings.IdleCaps
+	For Windows XP, the framework supports USB selective suspend only if the
+	device's USB_CONFIGURATION_DESCRIPTOR structure shows that the device
+	supports remote wakeup. For Windows Vista and later versions of Windows,
+	the framework supports USB selective suspend whether or not the device
+	supports remote wakeup.
+	*/
+	if (deviceContext->RemoteWakeCapable)
+		WDF_DEVICE_POWER_POLICY_IDLE_SETTINGS_INIT(&idleSettings, IdleUsbSelectiveSuspend);
+	else if (deviceContext->DeviceRegSettings.DeviceIdleIgnoreWakeEnable)
+		WDF_DEVICE_POWER_POLICY_IDLE_SETTINGS_INIT(&idleSettings, IdleCannotWakeFromS0);
+	else
+		return STATUS_SUCCESS;
+
+	// IdleSettings.UserControlOfIdleSettings
+	if (!deviceContext->DeviceRegSettings.UserSetDeviceIdleEnabled)
+		idleSettings.UserControlOfIdleSettings = IdleDoNotAllowUserControl;
+	else
+		idleSettings.UserControlOfIdleSettings = IdleAllowUserControl;
+
+	// IdleSettings.Enabled
+	if (deviceContext->DeviceRegSettings.DeviceIdleEnabled && deviceContext->DeviceRegSettings.DefaultIdleState)
+		idleSettings.Enabled = WdfTrue;
+	else
+		idleSettings.Enabled = WdfFalse;
+
+	idleSettings.IdleTimeout = deviceContext->DeviceRegSettings.DefaultIdleTimeout;
+
+	/*
+	Assign idle settings.
+	NOTE: WdfDeviceAssignS0IdleSettings is not called until idle settings have been enabled for the first time.
+	*/
+	if (idleSettings.Enabled || (!idleSettings.Enabled && deviceContext->IsIdleSettingsInitialized))
+	{
+		USBMSGN("Assigning IdleSettings. Enabled=%u IdleTimeout=%u UserControl=%s IdleCaps=%s",
+		        idleSettings.Enabled,
+		        idleSettings.IdleTimeout,
+		        (idleSettings.UserControlOfIdleSettings == IdleAllowUserControl) ? "Allow" : "DoNotAllow",
+		        (idleSettings.IdleCaps == IdleUsbSelectiveSuspend) ? "SelectiveSuspend" : "CannotWakeFromS0");
+
+		status = WdfDeviceAssignS0IdleSettings(deviceContext->WdfDevice, &idleSettings);
+		if ( !NT_SUCCESS(status))
+		{
+			USBERR("WdfDeviceSetPowerPolicyS0IdlePolicy failed. status=%Xh\n", status);
+			return status;
+		}
+		deviceContext->IsIdleSettingsInitialized = TRUE;
+	}
+
+	WDF_DEVICE_POWER_POLICY_WAKE_SETTINGS_INIT(&wakeSettings);
+
+	// WakeSettings.Enabled
+	wakeSettings.Enabled = deviceContext->DeviceRegSettings.SystemWakeEnabled ? WdfTrue : WdfFalse;
+
+	// WakeSettings.UserControlOfWakeSettings
+	wakeSettings.UserControlOfWakeSettings = wakeSettings.Enabled;
+
+	/*
+	Assign wake settings.
+	*/
+	if (wakeSettings.Enabled)
+	{
+		USBMSGN("Assigning WakeSettings. Enabled=%u UserControl=%u",
+		        wakeSettings.Enabled, wakeSettings.UserControlOfWakeSettings);
+
+		status = WdfDeviceAssignSxWakeSettings(deviceContext->WdfDevice, &wakeSettings);
+		if (!NT_SUCCESS(status))
+		{
+			USBERR("WdfDeviceAssignSxWakeSettings failed. status=%Xh\n", status);
+			return status;
+		}
+	}
+
+	return status;
+}
 
 NTSTATUS Policy_SetPower(__inout PDEVICE_CONTEXT deviceContext,
                          __in ULONG policyType,
@@ -340,18 +540,24 @@ NTSTATUS Policy_SetPower(__inout PDEVICE_CONTEXT deviceContext,
 	switch(policyType)
 	{
 	case AUTO_SUSPEND:
-		deviceContext->DeviceRegSettings.DeviceIdleEnabled = tempValue ? 1 : 0;
-		Policy_InitPower(deviceContext);
-		Policy_SetValue(&deviceContext->PowerPolicy[policyType], value, defaultPolicy->ValueByteCount);
+		deviceContext->DeviceRegSettings.DefaultIdleState = tempValue ? 1 : 0;
+
+		status = Policy_InitPower(deviceContext);
+
+		if (NT_SUCCESS(status))
+			Policy_SetValue(&deviceContext->PowerPolicy[policyType], value, defaultPolicy->ValueByteCount);
 		break;
 	case SUSPEND_DELAY:
 		deviceContext->DeviceRegSettings.DefaultIdleTimeout = tempValue;
-		Policy_InitPower(deviceContext);
-		Policy_SetValue(&deviceContext->PowerPolicy[policyType], value, defaultPolicy->ValueByteCount);
+
+		status = Policy_InitPower(deviceContext);
+
+		if (NT_SUCCESS(status))
+			Policy_SetValue(&deviceContext->PowerPolicy[policyType], value, defaultPolicy->ValueByteCount);
 		break;
 	}
 
-	return STATUS_SUCCESS;
+	return status;
 }
 
 NTSTATUS Policy_GetPower(__in PDEVICE_CONTEXT deviceContext,
@@ -410,4 +616,216 @@ NTSTATUS Policy_GetDevice(__in PDEVICE_CONTEXT deviceContext,
 	Policy_GetValue(value, deviceContext->DevicePolicy[policyType], defaultPolicy->ValueByteCount);
 
 	return STATUS_SUCCESS;
+}
+
+NTSTATUS Policy_ApplyIsoAutoPacketTemplate(
+    __inout PDEVICE_CONTEXT deviceContext,
+    __in PPIPE_CONTEXT pipeContext,
+    __in PVOID value,
+    __in ULONG valueLength)
+{
+	BOOLEAN isHS;
+	SHORT minPackets;
+	SHORT maxPackets;
+	SHORT numPackets;
+	int lastOffset, iPacket;
+	WDF_OBJECT_ATTRIBUTES memAttributes;
+	NTSTATUS status;
+	WDFMEMORY sharedMemory;
+	KISO_PACKET* isoPackets;
+
+
+	if (pipeContext->PipeInformation.PipeType != WdfUsbPipeTypeIsochronous || !pipeContext->Queue)
+	{
+		USBERRN("PipeID=%02Xh Invalid PipeType=%s",
+		        pipeContext->PipeInformation.EndpointAddress, GetPipeTypeString(pipeContext->PipeInformation.PipeType));
+		return STATUS_INVALID_PARAMETER;
+	}
+
+	if (valueLength == 0)
+	{
+		if (pipeContext->SharedAutoIsoExPacketMemory)
+		{
+			WdfObjectAcquireLock(pipeContext->Queue);
+
+			WdfObjectDelete(pipeContext->SharedAutoIsoExPacketMemory);
+			pipeContext->SharedAutoIsoExPacketMemory = NULL;
+
+			WdfObjectReleaseLock(pipeContext->Queue);
+		}
+
+		return STATUS_SUCCESS;
+	}
+
+	numPackets = (SHORT)((valueLength - sizeof(KISO_CONTEXT)) / sizeof(KISO_PACKET));
+	if ((valueLength - sizeof(KISO_CONTEXT)) % sizeof(KISO_PACKET))
+	{
+		USBERRN("PipeID=%02Xh BufferLength not an interval of %u sizeof(KISO_PACKET)",
+		        pipeContext->PipeInformation.EndpointAddress, sizeof(KISO_PACKET));
+		return STATUS_INVALID_PARAMETER;
+	}
+
+	isHS = IsHighSpeedDevice(deviceContext);
+	if (isHS)
+	{
+		minPackets = 8;
+		maxPackets = 1024;
+	}
+	else
+	{
+		minPackets = 1;
+		maxPackets = 255;
+	}
+
+	if (numPackets % minPackets || numPackets > maxPackets || numPackets < minPackets)
+	{
+		USBERRN("PipeID=%02Xh NumberOfPackets must be an interval of %u and less than or equal to %u",
+		        pipeContext->PipeInformation.EndpointAddress, minPackets, maxPackets);
+		return STATUS_INVALID_PARAMETER;
+	}
+
+	lastOffset	= 0;
+	isoPackets	= (KISO_PACKET*) & (((PUCHAR)value)[sizeof(KISO_CONTEXT)]);
+	for (iPacket = 0; iPacket < (int)numPackets; iPacket++)
+	{
+		KISO_PACKET* nextIsoPacket = &isoPackets[iPacket];
+
+		if ((int)nextIsoPacket->Offset < lastOffset || (int)nextIsoPacket->Offset - lastOffset > (int)pipeContext->PipeInformation.MaximumPacketSize)
+		{
+			USBERRN("PipeID=%02Xh IsoPacket[%u] to long. Length=%u",
+			        pipeContext->PipeInformation.EndpointAddress, iPacket - 1, (int)nextIsoPacket->Offset - lastOffset);
+			return STATUS_INVALID_PARAMETER;
+		}
+	}
+
+	WDF_OBJECT_ATTRIBUTES_INIT(&memAttributes);
+	memAttributes.ParentObject = deviceContext->WdfDevice;
+	status = WdfMemoryCreate(&memAttributes, NonPagedPool, POOL_TAG, valueLength, &sharedMemory, NULL);
+	if (!NT_SUCCESS(status))
+	{
+		USBERRN("WdfMemoryCreate failed. Status=%08Xh", status);
+		return status;
+	}
+
+	status = WdfMemoryCopyFromBuffer(sharedMemory, 0, value, valueLength);
+	if (!NT_SUCCESS(status))
+	{
+		USBERRN("WdfMemoryCopyFromBuffer failed. Status=%08Xh", status);
+		return status;
+	}
+
+	WdfObjectAcquireLock(pipeContext->Queue);
+
+	sharedMemory = InterlockedExchangePointer(&pipeContext->SharedAutoIsoExPacketMemory, sharedMemory);
+	if (sharedMemory) WdfObjectDelete(sharedMemory);
+
+	WdfObjectReleaseLock(pipeContext->Queue);
+
+	USBMSGN("PipeID=%02Xh Assigned %u iso packet descriptors.", pipeContext->PipeInformation.EndpointAddress, numPackets);
+	return STATUS_SUCCESS;
+}
+
+NTSTATUS Policy_SetPipe(
+    __inout PDEVICE_CONTEXT deviceContext,
+    __in UCHAR pipeID,
+    __in ULONG policyType,
+    __in PVOID value,
+    __in ULONG valueLength)
+{
+	PPIPE_CONTEXT pipeContext = NULL;
+	NTSTATUS status = STATUS_SUCCESS;
+	PIPE_POLICIES pipePolicies;
+	ULONG tempVal;
+
+	pipeContext = GetPipeContextByID(deviceContext, pipeID);
+	if (!pipeContext->IsValid)
+	{
+		status = STATUS_INVALID_PARAMETER;
+		USBERRN("Invalid PipeID=%02Xh", pipeID);
+		return status;
+	}
+
+	pipePolicies.values = pipeContext->Policies.values;
+
+	switch(policyType)
+	{
+	case SHORT_PACKET_TERMINATE:	// 0x01
+		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength, NULL, break);
+		pipePolicies.ShortPacketTerminate = ((PUCHAR)value)[0] & 0xF;
+		break;
+
+	case AUTO_CLEAR_STALL:			// 0x02
+		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength, NULL, break);
+		pipePolicies.AutoClearStall = ((PUCHAR)value)[0] ? 1 : 0;
+		break;
+
+	case PIPE_TRANSFER_TIMEOUT:		// 0x03
+		mPipe_CheckValueLength(status, policyType, pipeID,  sizeof(ULONG), sizeof(ULONG), NULL, break);
+		pipeContext->TimeoutPolicy = ((PULONG)value)[0];
+		break;
+
+	case IGNORE_SHORT_PACKETS:		// 0x04
+		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength, NULL, break);
+		pipePolicies.IgnoreShortPackets = ((PUCHAR)value)[0] ? 1 : 0;
+		break;
+
+	case ALLOW_PARTIAL_READS:		// 0x05
+		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength, NULL, break);
+		pipePolicies.AllowPartialReads = ((PUCHAR)value)[0] ? 1 : 0;
+		break;
+
+	case AUTO_FLUSH:				// 0x06
+		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength, NULL, break);
+		pipePolicies.AutoFlush = ((PUCHAR)value)[0] ? 1 : 0;
+		break;
+
+	case RAW_IO:					// 0x07
+		if (pipeContext->PipeInformation.PipeType != WdfUsbPipeTypeBulk &&
+		        pipeContext->PipeInformation.PipeType != WdfUsbPipeTypeInterrupt)
+		{
+			status = STATUS_INVALID_PARAMETER;
+			break;
+		}
+		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength, NULL, break);
+		tempVal = ((PUCHAR)value)[0];
+
+		if ((tempVal & 0x1) != pipePolicies.RawIO)
+		{
+			pipePolicies.RawIO = ((PUCHAR)value)[0] ? 1 : 0;
+			pipeContext->IsQueueDirty = TRUE;
+		}
+		break;
+
+	case RESET_PIPE_ON_RESUME:		// 0x09
+		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength, NULL, break);
+		pipePolicies.ResetPipeOnResume = ((PUCHAR)value)[0] ? 1 : 0;
+		break;
+
+	case ISO_AUTO_PACKET_TEMPLATE:	// 0x10
+		status = Policy_ApplyIsoAutoPacketTemplate(deviceContext, pipeContext, value, valueLength);
+		break;
+
+	default:
+		status = STATUS_INVALID_PARAMETER;
+	}
+
+	if (NT_SUCCESS(status))
+	{
+		USBMSGN("PipeID=%02Xh Applied value of length %u to policy type %u",
+		        pipeContext->PipeInformation.EndpointAddress, valueLength, policyType);
+
+		pipeContext->Policies.values = pipePolicies.values;
+		if (pipeContext->IsQueueDirty)
+		{
+			status = Pipe_RefreshQueue(deviceContext, pipeContext);
+		}
+	}
+	else
+	{
+		USBERRN("PipeID=%02Xh Failed appying policy type %u. Status=%08Xh",
+		        pipeID, policyType, status);
+	}
+
+	return status;
+
 }

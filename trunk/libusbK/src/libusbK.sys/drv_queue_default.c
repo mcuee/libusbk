@@ -18,6 +18,9 @@ binary distributions.
 
 #include "drv_common.h"
 
+// warning C4127: conditional expression is constant.
+#pragma warning(disable: 4127)
+
 #if (defined(ALLOC_PRAGMA) && defined(PAGING_ENABLED))
 #pragma alloc_text(PAGE, DefaultQueue_OnIoControl)
 #pragma alloc_text(PAGE, DefaultQueue_OnRead)
@@ -55,8 +58,49 @@ if (OutputBufferPtr)																										\
 	((libusb_request*)OutputBufferPtr)->intf.interface_number=InterfaceContextPtr->InterfaceDescriptor.bInterfaceNumber;	\
 	((libusb_request*)OutputBufferPtr)->intf.interface_index=InterfaceContextPtr->InterfaceIndex;							\
 	((libusb_request*)OutputBufferPtr)->intf.altsetting_number=InterfaceContextPtr->InterfaceDescriptor.bAlternateSetting;	\
-	((libusb_request*)OutputBufferPtr)->intf.altsetting_index=InterfaceContextPtr->SettingIndex;								\
+	((libusb_request*)OutputBufferPtr)->intf.altsetting_index=InterfaceContextPtr->SettingIndex;							\
 }
+
+#define mRequest_InitAndForwardToQueue(mStatus,mRequestType, mActualRequestType, mIoControlCode, mRequestLength, mRequest, mDeviceContext, mRequestContext, mPipeID, mErrorAction) do { 	\
+	PPIPE_CONTEXT tempPipeCtx = GetPipeContextByID(mDeviceContext, mPipeID);  						\
+	if (!tempPipeCtx || !tempPipeCtx->IsValid || !tempPipeCtx->Queue) 								\
+	{ 																								\
+		mStatus = STATUS_INVALID_PARAMETER;   														\
+		USBERRN("Invalid pipe context."); 															\
+		mErrorAction; 																				\
+	} 																								\
+  																									\
+	mRequestContext->QueueContext = GetQueueContext(tempPipeCtx->Queue);  							\
+	if (!mRequestContext->QueueContext)   															\
+	{ 																								\
+		mStatus = STATUS_INVALID_PARAMETER;   														\
+		USBERRN("Invalid pipe context."); 															\
+		mErrorAction; 																				\
+	} 																								\
+  																									\
+	mRequestContext->RequestType	= mRequestType;   												\
+	mRequestContext->Length			= (ULONG)mRequestLength;   										\
+  																									\
+	if (mActualRequestType)   																		\
+		mRequestContext->ActualRequestType	= mActualRequestType;   								\
+  																									\
+	if (mIoControlCode)   																			\
+		mRequestContext->IoControlCode = mIoControlCode;  											\
+  																									\
+	mRequestContext->Policies.values = tempPipeCtx->Policies.values;  								\
+  																									\
+	mRequestContext->Timeout = 	tempPipeCtx->TimeoutPolicy;											\
+	if (mRequestContext->IoControlRequest.timeout)  												\
+		mRequestContext->Timeout = mRequestContext->IoControlRequest.timeout; 						\
+  																									\
+	mStatus = WdfRequestForwardToIoQueue(mRequest, tempPipeCtx->Queue);   							\
+	if(!NT_SUCCESS(mStatus))  																		\
+	{ 																								\
+		USBERRN("WdfRequestForwardToIoQueue failed. Status=%08Xh", mStatus);  						\
+		mErrorAction; 																				\
+	} 																								\
+}while(0)
+
 
 // DefaultQueue_OnIoControl
 // This event is called when the framework receives IRP_MJ_DEVICE_CONTROL requests from the system.
@@ -70,20 +114,21 @@ VOID DefaultQueue_OnIoControl(__in WDFQUEUE Queue,
                               __in size_t InputBufferLength,
                               __in ULONG IoControlCode)
 {
-	WDFDEVICE				device;
 	NTSTATUS				status;
+	WDFDEVICE				device;
 	PDEVICE_CONTEXT			deviceContext;
+	PREQUEST_CONTEXT		requestContext;
+	PINTERFACE_CONTEXT		interfaceContext;
+	PFILE_OBJECT			wdmFileObject;
+	PPIPE_CONTEXT			pipeContext;
 	PFILE_CONTEXT			pFileContext;
 	ULONG					length = 0;
-	libusb_request*			libusbRequest;
 	WDF_MEMORY_DESCRIPTOR	memoryDescriptor;
 	WDFMEMORY				memory;
 	PUCHAR					outputBuffer;
 	PUCHAR					inputBuffer;
 	size_t					outputBufferLen, inputBufferLen;
-	PFILE_OBJECT			wdmFileObject;
-	PREQUEST_CONTEXT		requestContext;
-	PINTERFACE_CONTEXT		interfaceContext;
+	libusb_request*			libusbRequest = NULL;
 
 	UNREFERENCED_PARAMETER(pFileContext);
 
@@ -107,88 +152,141 @@ VOID DefaultQueue_OnIoControl(__in WDFQUEUE Queue,
 		WdfRequestCompleteWithInformation(Request, status, 0);
 		return;
 	}
+
 	// All io control request must send the libusb_request struct.
+	// InputBuffer is assigned in Request_PreIoInitialize.
 	libusbRequest = (libusb_request*)requestContext->InputBuffer;
 	inputBufferLen = (size_t)requestContext->InputBufferLength;
-
-	/*
-	status = WdfRequestRetrieveInputBuffer(Request, sizeof(libusb_request), &libusbRequest, &inputBufferLen);
-	if(!NT_SUCCESS(status))
-	{
-		USBERR("invalid libusb_request size\n");
-		WdfRequestCompleteWithInformation(Request, status, 0);
-		return;
-	}
-	*/
-
-	// Stores the libusb_request in the WdfRequest context space.
-	// If this is a DIRECT transfer, gets the transfer MDL. If there isn't one, OriginalTransferMDL is set to NULL.
-	// If GetTransferMdl() fails for any other reason than STATUS_BUFFER_TOO_SMALL, the operation fails.
-	status = Request_InitContext(requestContext,
-	                             Request,
-	                             libusbRequest,
-	                             WdfRequestTypeDeviceControl,
-	                             IoControlCode,
-	                             (ULONG)OutputBufferLength,
-	                             (ULONG)InputBufferLength);
-
-	if(!NT_SUCCESS(status))
-	{
-		USBERR("Request_InitContext failed. status=%Xh\n", status);
-		WdfRequestCompleteWithInformation(Request, status, 0);
-		return;
-	}
 
 	switch(IoControlCode)
 	{
 	case LIBUSB_IOCTL_ISOCHRONOUS_READ:
 	case LIBUSB_IOCTL_INTERRUPT_OR_BULK_READ:
-		ForwardToPipeQueue(Request, deviceContext, requestContext, (UCHAR)libusbRequest->endpoint.endpoint, WdfRequestTypeRead);
+		mRequest_InitAndForwardToQueue(status, WdfRequestTypeRead,
+		                               WdfRequestTypeDeviceControl, IoControlCode, OutputBufferLength, Request, deviceContext, requestContext,
+		                               ((UCHAR)libusbRequest->endpoint.endpoint), break);
 		return;
 
 	case LIBUSBK_IOCTL_ISOEX_READ:
-		ForwardToPipeQueue(Request, deviceContext, requestContext, libusbRequest->IsoEx.PipeID, WdfRequestTypeRead);
+		mRequest_InitAndForwardToQueue(status, WdfRequestTypeRead,
+		                               WdfRequestTypeDeviceControl, IoControlCode, OutputBufferLength, Request, deviceContext, requestContext,
+		                               libusbRequest->IsoEx.PipeID, break);
+		return;
+
+	case LIBUSBK_IOCTL_AUTOISOEX_READ:
+		mRequest_InitAndForwardToQueue(status, WdfRequestTypeRead,
+		                               WdfRequestTypeDeviceControl, IoControlCode, OutputBufferLength, Request, deviceContext, requestContext,
+		                               libusbRequest->AutoIsoEx.PipeID, break);
 		return;
 
 	case LIBUSB_IOCTL_ISOCHRONOUS_WRITE:
 	case LIBUSB_IOCTL_INTERRUPT_OR_BULK_WRITE:
-		ForwardToPipeQueue(Request, deviceContext, requestContext, (UCHAR)libusbRequest->endpoint.endpoint, WdfRequestTypeWrite);
+		mRequest_InitAndForwardToQueue(status, WdfRequestTypeWrite,
+		                               WdfRequestTypeDeviceControl, IoControlCode, OutputBufferLength, Request, deviceContext, requestContext,
+		                               ((UCHAR)libusbRequest->endpoint.endpoint), break);
 		return;
 
 	case LIBUSBK_IOCTL_ISOEX_WRITE:
-		ForwardToPipeQueue(Request, deviceContext, requestContext, libusbRequest->IsoEx.PipeID, WdfRequestTypeWrite);
+		mRequest_InitAndForwardToQueue(status, WdfRequestTypeWrite,
+		                               WdfRequestTypeDeviceControl, IoControlCode, OutputBufferLength, Request, deviceContext, requestContext,
+		                               libusbRequest->IsoEx.PipeID, break);
+		return;
+
+	case LIBUSBK_IOCTL_AUTOISOEX_WRITE:
+		mRequest_InitAndForwardToQueue(status, WdfRequestTypeWrite,
+		                               WdfRequestTypeDeviceControl, IoControlCode, OutputBufferLength, Request, deviceContext, requestContext,
+		                               libusbRequest->AutoIsoEx.PipeID, break);
 		return;
 
 	case LIBUSB_IOCTL_CONTROL_WRITE:
+		mRequest_InitAndForwardToQueue(status, WdfRequestTypeWrite,
+		                               WdfRequestTypeDeviceControl, IoControlCode, OutputBufferLength, Request, deviceContext, requestContext,
+		                               0, break);
 
-		requestContext->PipeContext = GetPipeContextByID(deviceContext, 0);
-		if (!requestContext->PipeContext || !requestContext->PipeContext->IsValid)
-		{
-			USBERR("control_write: invalid pipe context\n");
-			status = STATUS_INVALID_PARAMETER;
-			break;
-		}
-		requestContext->RequestType = WdfRequestTypeWrite;
-		ForwardToQueue(Request, requestContext);
 		return;
 
 	case LIBUSB_IOCTL_CONTROL_READ:
+		mRequest_InitAndForwardToQueue(status, WdfRequestTypeRead,
+		                               WdfRequestTypeDeviceControl, IoControlCode, OutputBufferLength, Request, deviceContext, requestContext,
+		                               0, break);
+		return;
 
-		requestContext->PipeContext = GetPipeContextByID(deviceContext, 0);
-		if (!requestContext->PipeContext || !requestContext->PipeContext->IsValid)
-		{
-			USBERR("control_read: invalid pipe context\n");
-			status = STATUS_INVALID_PARAMETER;
-			break;
-		}
-		requestContext->RequestType = WdfRequestTypeRead;
-		ForwardToQueue(Request, requestContext);
+	case LIBUSB_IOCTL_GET_DESCRIPTOR:
+		FormatDescriptorRequestAsControlTransfer(requestContext, libusbRequest, FALSE);
+		mRequest_InitAndForwardToQueue(status, WdfRequestTypeRead,
+		                               WdfRequestTypeDeviceControl, IoControlCode, OutputBufferLength, Request, deviceContext, requestContext,
+		                               0, break);
+		return;
+
+	case LIBUSB_IOCTL_VENDOR_READ:
+
+		FormatVendorRequestAsControlTransfer(requestContext, libusbRequest, FALSE);
+		mRequest_InitAndForwardToQueue(status, WdfRequestTypeRead,
+		                               WdfRequestTypeDeviceControl, IoControlCode, OutputBufferLength, Request, deviceContext, requestContext,
+		                               0, break);
+		return;
+	case LIBUSB_IOCTL_SET_DESCRIPTOR:
+		requestContext->RequestType = WdfRequestTypeWrite;
+
+		// !IMPORTANT! This length must be reset to the total input buffer length
+		// for these legacy BUFFERED ioctl codes that are HostToDevice before they
+		// ae sent to the control pipe queue.
+		//requestContext->Length		= (ULONG)InputBufferLength;
+		//////////////////////////////////////////////////////////////////////////
+
+		FormatDescriptorRequestAsControlTransfer(requestContext, libusbRequest, TRUE);
+		mRequest_InitAndForwardToQueue(status, WdfRequestTypeWrite,
+		                               WdfRequestTypeDeviceControl, IoControlCode, InputBufferLength, Request, deviceContext, requestContext,
+		                               0, break);
+		return;
+
+	case LIBUSB_IOCTL_SET_FEATURE:
+		// !IMPORTANT! This length must be reset to the total input buffer length
+		// for these legacy BUFFERED ioctl codes that are HostToDevice before they
+		// ae sent to the control pipe queue.
+		// requestContext->Length		= (ULONG)InputBufferLength;
+		// requestContext->RequestType = WdfRequestTypeWrite;
+		//////////////////////////////////////////////////////////////////////////
+
+		FormatFeatureRequestAsControlTransfer(requestContext, libusbRequest, TRUE);
+		mRequest_InitAndForwardToQueue(status, WdfRequestTypeWrite,
+		                               WdfRequestTypeDeviceControl, IoControlCode, ((ULONG)InputBufferLength), Request, deviceContext, requestContext,
+		                               0, break);
+		return;
+
+	case LIBUSB_IOCTL_CLEAR_FEATURE:
+
+		// !IMPORTANT! This length must be reset to the total input buffer length
+		// for these legacy BUFFERED ioctl codes that are HostToDevice before they
+		// ae sent to the control pipe queue.
+		// requestContext->Length		= (ULONG)InputBufferLength;
+		// requestContext->RequestType = WdfRequestTypeWrite;
+		//////////////////////////////////////////////////////////////////////////
+
+		FormatFeatureRequestAsControlTransfer(requestContext, libusbRequest, FALSE);
+		mRequest_InitAndForwardToQueue(status, WdfRequestTypeWrite,
+		                               WdfRequestTypeDeviceControl, IoControlCode, ((ULONG)InputBufferLength), Request, deviceContext, requestContext,
+		                               0, break);
+		return;
+
+	case LIBUSB_IOCTL_VENDOR_WRITE:
+
+		// !IMPORTANT! This length must be reset to the total input buffer length
+		// for these legacy BUFFERED ioctl codes that are HostToDevice before they
+		// ae sent to the control pipe queue.
+		// requestContext->Length		= (ULONG)InputBufferLength;
+		// requestContext->RequestType = WdfRequestTypeWrite;
+		//////////////////////////////////////////////////////////////////////////
+
+		FormatVendorRequestAsControlTransfer(requestContext, libusbRequest, TRUE);
+		mRequest_InitAndForwardToQueue(status, WdfRequestTypeWrite,
+		                               WdfRequestTypeDeviceControl, IoControlCode, InputBufferLength, Request, deviceContext, requestContext,
+		                               0, break);
 		return;
 
 	case LIBUSB_IOCTL_GET_VERSION:
 
 		GET_OUT_BUFFER(sizeof(libusb_request), &libusbRequest, &outputBufferLen, "get_version");
-
 		length = sizeof(libusb_request);
 
 		libusbRequest->version.major = VERSION_MAJOR;
@@ -201,59 +299,14 @@ VOID DefaultQueue_OnIoControl(__in WDFQUEUE Queue,
 
 		break;
 
-	case LIBUSB_IOCTL_GET_DESCRIPTOR:
-
-		requestContext->PipeContext = GetPipeContextByID(deviceContext, 0);
-		if (!requestContext->PipeContext || !requestContext->PipeContext->IsValid)
-		{
-			USBERR("control_read: invalid pipe context\n");
-			status = STATUS_INVALID_PARAMETER;
-			break;
-		}
-		requestContext->RequestType = WdfRequestTypeRead;
-		FormatDescriptorRequestAsControlTransfer(requestContext, FALSE);
-		ForwardToQueue(Request, requestContext);
-
-		return;
-
-	case LIBUSB_IOCTL_SET_DESCRIPTOR:
-
-		requestContext->PipeContext = GetPipeContextByID(deviceContext, 0);
-		if (!requestContext->PipeContext || !requestContext->PipeContext->IsValid)
-		{
-			USBERR("set_feature: invalid pipe context\n");
-			status = STATUS_INVALID_PARAMETER;
-			break;
-		}
-
-		// !IMPORTANT! This length must be reset to the total input buffer length
-		// for these legacy BUFFERED ioctl codes that are HostToDevice before they
-		// ae sent to the control pipe queue.
-		requestContext->Length		= (ULONG)InputBufferLength;
-		requestContext->RequestType = WdfRequestTypeWrite;
-		//////////////////////////////////////////////////////////////////////////
-
-		FormatDescriptorRequestAsControlTransfer(requestContext, TRUE);
-		ForwardToQueue(Request, requestContext);
-
-		return;
-
 	case LIBUSB_IOCTL_SET_CONFIGURATION:
 
-		if ((deviceContext->UsbConfigurationDescriptor) &&
-		        (INT)deviceContext->UsbConfigurationDescriptor->bConfigurationValue == (INT)libusbRequest->configuration.configuration)
-		{
+		if ((deviceContext->UsbConfigurationDescriptor) && (INT)deviceContext->UsbConfigurationDescriptor->bConfigurationValue == (INT)libusbRequest->configuration.configuration)
 			status = STATUS_SUCCESS;
-		}
-		else if ((deviceContext->UsbConfigurationDescriptor) &&
-		         (INT)libusbRequest->configuration.configuration == -1)
-		{
+		else if ((deviceContext->UsbConfigurationDescriptor) && (INT)libusbRequest->configuration.configuration == -1)
 			status = STATUS_SUCCESS;
-		}
 		else
-		{
 			status = STATUS_NOT_IMPLEMENTED;
-		}
 
 		break;
 
@@ -356,88 +409,6 @@ VOID DefaultQueue_OnIoControl(__in WDFQUEUE Queue,
 		}
 		break;
 
-	case LIBUSB_IOCTL_SET_FEATURE:
-
-		requestContext->PipeContext = GetPipeContextByID(deviceContext, 0);
-		if (!requestContext->PipeContext || !requestContext->PipeContext->IsValid)
-		{
-			USBERR("set_feature: invalid pipe context\n");
-			status = STATUS_INVALID_PARAMETER;
-			break;
-		}
-
-		// !IMPORTANT! This length must be reset to the total input buffer length
-		// for these legacy BUFFERED ioctl codes that are HostToDevice before they
-		// ae sent to the control pipe queue.
-		requestContext->Length		= (ULONG)InputBufferLength;
-		requestContext->RequestType = WdfRequestTypeWrite;
-		//////////////////////////////////////////////////////////////////////////
-
-		FormatFeatureRequestAsControlTransfer(requestContext, TRUE);
-		ForwardToQueue(Request, requestContext);
-
-		return;
-
-	case LIBUSB_IOCTL_CLEAR_FEATURE:
-
-		requestContext->PipeContext = GetPipeContextByID(deviceContext, 0);
-		if (!requestContext->PipeContext || !requestContext->PipeContext->IsValid)
-		{
-			USBERR("clear_feature: invalid pipe context\n");
-			status = STATUS_INVALID_PARAMETER;
-			break;
-		}
-
-		// !IMPORTANT! This length must be reset to the total input buffer length
-		// for these legacy BUFFERED ioctl codes that are HostToDevice before they
-		// ae sent to the control pipe queue.
-		requestContext->Length		= (ULONG)InputBufferLength;
-		requestContext->RequestType = WdfRequestTypeWrite;
-		//////////////////////////////////////////////////////////////////////////
-
-		FormatFeatureRequestAsControlTransfer(requestContext, FALSE);
-		ForwardToQueue(Request, requestContext);
-
-		return;
-
-	case LIBUSB_IOCTL_VENDOR_READ:
-
-		requestContext->PipeContext = GetPipeContextByID(deviceContext, 0);
-		if (!requestContext->PipeContext || !requestContext->PipeContext->IsValid)
-		{
-			USBERR("vendor_read: invalid pipe context\n");
-			status = STATUS_INVALID_PARAMETER;
-			break;
-		}
-		requestContext->RequestType = WdfRequestTypeRead;
-
-		FormatVendorRequestAsControlTransfer(requestContext);
-		ForwardToQueue(Request, requestContext);
-
-		return;
-
-	case LIBUSB_IOCTL_VENDOR_WRITE:
-
-		requestContext->PipeContext = GetPipeContextByID(deviceContext, 0);
-		if (!requestContext->PipeContext || !requestContext->PipeContext->IsValid)
-		{
-			USBERR("vendor_write: invalid pipe context\n");
-			status = STATUS_INVALID_PARAMETER;
-			break;
-		}
-
-		// !IMPORTANT! This length must be reset to the total input buffer length
-		// for these legacy BUFFERED ioctl codes that are HostToDevice before they
-		// ae sent to the control pipe queue.
-		requestContext->Length		= (ULONG)InputBufferLength;
-		requestContext->RequestType = WdfRequestTypeWrite;
-		//////////////////////////////////////////////////////////////////////////
-
-		FormatVendorRequestAsControlTransfer(requestContext);
-		ForwardToQueue(Request, requestContext);
-
-		return;
-
 	case LIBUSB_IOCTL_GET_STATUS:
 
 		if (OutputBufferLength < 2)
@@ -474,42 +445,57 @@ VOID DefaultQueue_OnIoControl(__in WDFQUEUE Queue,
 		status = Device_Reset(device);
 		break;
 
+
+	case LIBUSB_IOCTL_GET_PIPE_POLICY:
+		status = WdfRequestRetrieveOutputBuffer(Request, 1, &outputBuffer, &OutputBufferLength);
+		if(!NT_SUCCESS(status))
+		{
+			USBERR("GetPipePolicy: WdfRequestRetrieveOutputBuffer failed status=%Xh\n", status);
+			break;
+		}
+
+		length = (ULONG)OutputBufferLength;
+
+		USBDBG("GetPipePolicy: pipeID=%02Xh policyType=%02Xh valueLength=%u\n",
+		       (UCHAR)libusbRequest->pipe_policy.pipe_id,
+		       libusbRequest->pipe_policy.policy_type,
+		       OutputBufferLength);
+
+		status = Policy_GetPipe(deviceContext,
+		                        (UCHAR)libusbRequest->pipe_policy.pipe_id,
+		                        libusbRequest->pipe_policy.policy_type,
+		                        outputBuffer,
+		                        &length);
+
+		if (!NT_SUCCESS(status))
+			length = 0;
+
+		break;
+
 	case LIBUSB_IOCTL_SET_PIPE_POLICY:
 
-		requestContext->PipeContext = GetPipeContextByID(deviceContext, (UCHAR)libusbRequest->pipe_policy.pipe_id);
-		if (!requestContext->PipeContext || !requestContext->PipeContext->IsValid || !requestContext->PipeContext->Queue)
+		pipeContext = GetPipeContextByID(deviceContext, (UCHAR)libusbRequest->pipe_policy.pipe_id);
+		if (!pipeContext || !pipeContext->IsValid || !pipeContext->Queue)
 		{
 			USBERR("SetPipePolicy: invalid pipe context\n");
 			status = STATUS_INVALID_PARAMETER;
 			break;
 		}
 
-		status = WdfRequestForwardToIoQueue(Request, requestContext->PipeContext->Queue);
-		if(!NT_SUCCESS(status))
-		{
-			USBERR("WdfRequestForwardToIoQueue failed. status=%Xh\n", status);
-			break;
-		}
-		return;
+		InputBufferLength -= sizeof(libusb_request);
+		inputBuffer = GetRequestDataPtr(libusbRequest);
 
-	case LIBUSB_IOCTL_GET_PIPE_POLICY:
+		USBDBG("SetPipePolicy: pipeID=%02Xh policyType=%02Xh valueLength=%u\n",
+		       (UCHAR)libusbRequest->pipe_policy.pipe_id,
+		       libusbRequest->pipe_policy.policy_type,
+		       InputBufferLength);
 
-		requestContext->PipeContext = GetPipeContextByID(deviceContext, (UCHAR)libusbRequest->pipe_policy.pipe_id);
-		if (!requestContext->PipeContext || !requestContext->PipeContext->IsValid || !requestContext->PipeContext->Queue)
-		{
-			USBERR("GetPipePolicy: invalid pipe context\n");
-			status = STATUS_INVALID_PARAMETER;
-			break;
-		}
-
-		status = WdfRequestForwardToIoQueue(Request, requestContext->PipeContext->Queue);
-		if(!NT_SUCCESS(status))
-		{
-			USBERR("WdfRequestForwardToIoQueue failed. status=%Xh\n", status);
-			break;
-		}
-		return;
-
+		status = Policy_SetPipe(deviceContext,
+		                        (UCHAR)libusbRequest->pipe_policy.pipe_id,
+		                        libusbRequest->pipe_policy.policy_type,
+		                        inputBuffer,
+		                        (ULONG)InputBufferLength);
+		break;
 
 	case LIBUSB_IOCTL_SET_POWER_POLICY:
 		inputBufferLen -= sizeof(libusb_request);
@@ -569,19 +555,45 @@ VOID DefaultQueue_OnIoControl(__in WDFQUEUE Queue,
 
 	case LIBUSB_IOCTL_FLUSH_PIPE:
 
-		USBDBG("FlushPipe: pipeID=%02Xh\n",
-		       (UCHAR)libusbRequest->endpoint.endpoint);
+		USBDBG("FlushPipe: pipeID=%02Xh\n", (UCHAR)libusbRequest->endpoint.endpoint);
 
-		requestContext->PipeContext = GetPipeContextByID(deviceContext, (UCHAR)libusbRequest->endpoint.endpoint);
-		if (!requestContext->PipeContext->IsValid || !requestContext->PipeContext->Pipe)
+		pipeContext = GetPipeContextByID(deviceContext, (UCHAR)libusbRequest->endpoint.endpoint);
+		if (!pipeContext->IsValid || !pipeContext->Pipe)
 		{
 			USBERR("pipe %02Xh not found\n", libusbRequest->endpoint.endpoint);
 			status = STATUS_INVALID_PARAMETER;
 			break;
 		}
 
-		if (NT_SUCCESS((status = Pipe_Stop(requestContext->PipeContext, WdfIoTargetCancelSentIo))))
-			status = Pipe_Start(deviceContext, requestContext->PipeContext);
+		status = Pipe_Stop(pipeContext, WdfIoTargetCancelSentIo, TRUE);
+		if (!NT_SUCCESS(status))
+		{
+			USBERRN("Pipe_Stop failed. PipeID=%02Xh Status=%08Xh", libusbRequest->endpoint.endpoint, status);
+			break;
+		}
+
+		if (pipeContext->Queue && pipeContext->PipeInformation.EndpointAddress & 0xF)
+		{
+			PQUEUE_CONTEXT queueContext;
+
+			WdfObjectAcquireLock(pipeContext->Queue);
+
+			queueContext = GetQueueContext(pipeContext->Queue);
+			if (queueContext)
+			{
+				queueContext->OverOfs.BufferLength = 0;
+				queueContext->OverOfs.BufferOffset = 0;
+			}
+
+			WdfObjectReleaseLock(pipeContext->Queue);
+		}
+
+		status = Pipe_Start(deviceContext, pipeContext);
+		if (!NT_SUCCESS(status))
+		{
+			USBERRN("Pipe_Start failed. PipeID=%02Xh Status=%08Xh", libusbRequest->endpoint.endpoint, status);
+			break;
+		}
 
 		break;
 	case LIBUSBK_IOCTL_GET_CURRENTFRAME_NUMBER:
@@ -622,62 +634,33 @@ VOID DefaultQueue_OnRead(__in WDFQUEUE Queue,
 	PFILE_CONTEXT           fileContext = NULL;
 	PREQUEST_CONTEXT        requestContext = NULL;
 	NTSTATUS				status = STATUS_SUCCESS;
+	DWORD					ioControlCode = LIBUSB_IOCTL_INTERRUPT_OR_BULK_READ;
+	PDEVICE_CONTEXT			deviceContext;
 
 	PAGED_CODE();
 
-	UNREFERENCED_PARAMETER(Queue); //the queue it came from.
+	deviceContext	= GetDeviceContext(WdfIoQueueGetDevice(Queue));
+	fileContext		= GetFileContext(WdfRequestGetFileObject(Request));
+	requestContext	= GetRequestContext(Request);
 
-	fileContext = GetFileContext(WdfRequestGetFileObject(Request));
-	requestContext = GetRequestContext(Request);
-
-	if (!requestContext || !fileContext || !fileContext->PipeContext || !fileContext->PipeContext->Pipe || !fileContext->PipeContext->IsValid)
+	if (!deviceContext || !requestContext || !fileContext)
 	{
-		USBERR("invalid pipe context or handle\n");
+		USBERRN("Invalid file context.");
 		status = STATUS_INVALID_PARAMETER;
 		goto Done;
 	}
 
-	requestContext->PipeContext = fileContext->PipeContext;
-	requestContext->RequestType = WdfRequestTypeRead;
-
-	switch(requestContext->PipeContext->PipeInformation.PipeType)
+	if (!(fileContext->PipeID & 0x0F) || !(fileContext->PipeID & 0x80) || fileContext->PipeType < WdfUsbPipeTypeIsochronous || fileContext->PipeType > WdfUsbPipeTypeInterrupt)
 	{
-	case WdfUsbPipeTypeIsochronous:
-		requestContext->IoControlCode = LIBUSB_IOCTL_ISOCHRONOUS_READ;
-		break;
-	case WdfUsbPipeTypeInterrupt:
-	case WdfUsbPipeTypeBulk:
-		requestContext->IoControlCode = LIBUSB_IOCTL_INTERRUPT_OR_BULK_READ;
-		break;
-	default:
-		USBERR("invalid PipeInformation.PipeType (%u)\n",
-		       requestContext->PipeContext->PipeInformation.PipeType);
-		status = STATUS_INVALID_PARAMETER;
-		goto Done;
-
-	}
-
-	// Stores the libusb_request in the WdfRequest context space.
-	// If this is a DIRECT transfer, gets the transfer MDL. If there isn't one, OriginalTransferMDL is set to NULL.
-	// If GetTransferMdl() fails for any other reason than STATUS_BUFFER_TOO_SMALL, the operation fails.
-	status = Request_InitContext(requestContext, Request, NULL, WdfRequestTypeRead, 0, (ULONG)Length, 0);
-	if(!NT_SUCCESS(status))
-	{
-		USBERR("Request_InitContext failed. status=%Xh\n", status);
-		goto Done;
-	}
-
-	if (!USB_ENDPOINT_DIRECTION_IN(GetRequestPipeID(requestContext)))
-	{
-		USBERR("pipeID=%02Xh cannot read from an outgoing pipe\n",
-		       GetRequestPipeID(requestContext));
+		USBERRN("Invalid PipeType PipeID=%02Xh PipeType=%s", fileContext->PipeID, GetPipeTypeString(fileContext->PipeType));
 		status = STATUS_INVALID_PARAMETER;
 		goto Done;
 	}
 
-	// For read/read request there is no libusb_request so it is 'ForwardToQueue' and
-	// not ForwardToPipeQueue here.
-	ForwardToQueue(Request, requestContext);
+	if (fileContext->PipeType == WdfUsbPipeTypeIsochronous)
+		ioControlCode = LIBUSB_IOCTL_ISOCHRONOUS_READ;
+
+	mRequest_InitAndForwardToQueue(status, WdfRequestTypeRead, WdfRequestTypeRead, ioControlCode, Length, Request, deviceContext, requestContext, fileContext->PipeID, goto Done);
 	return;
 
 Done:
@@ -693,58 +676,33 @@ VOID DefaultQueue_OnWrite(__in WDFQUEUE Queue,
 	PFILE_CONTEXT           fileContext = NULL;
 	PREQUEST_CONTEXT        requestContext = NULL;
 	NTSTATUS				status = STATUS_SUCCESS;
+	DWORD					ioControlCode = LIBUSB_IOCTL_INTERRUPT_OR_BULK_READ;
+	PDEVICE_CONTEXT			deviceContext;
 
 	PAGED_CODE();
 
-	UNREFERENCED_PARAMETER(Queue); //the queue it came from.
+	deviceContext	= GetDeviceContext(WdfIoQueueGetDevice(Queue));
+	fileContext		= GetFileContext(WdfRequestGetFileObject(Request));
+	requestContext	= GetRequestContext(Request);
 
-	fileContext = GetFileContext(WdfRequestGetFileObject(Request));
-	requestContext = GetRequestContext(Request);
-
-	if (!requestContext || !fileContext || !fileContext->PipeContext || !fileContext->PipeContext->Pipe || !fileContext->PipeContext->IsValid)
+	if (!requestContext || !fileContext)
 	{
-		USBERR("invalid pipe context or handle\n");
+		USBERRN("Invalid file context.");
 		status = STATUS_INVALID_PARAMETER;
 		goto Done;
 	}
 
-	requestContext->RequestType = WdfRequestTypeWrite;
-	requestContext->PipeContext = fileContext->PipeContext;
-
-	switch(requestContext->PipeContext->PipeInformation.PipeType)
+	if (!(fileContext->PipeID & 0x0F) || (fileContext->PipeID & 0x80) || fileContext->PipeType < WdfUsbPipeTypeIsochronous || fileContext->PipeType > WdfUsbPipeTypeInterrupt)
 	{
-	case WdfUsbPipeTypeIsochronous:
-		requestContext->IoControlCode = LIBUSB_IOCTL_ISOCHRONOUS_WRITE;
-		break;
-	case WdfUsbPipeTypeInterrupt:
-	case WdfUsbPipeTypeBulk:
-		requestContext->IoControlCode = LIBUSB_IOCTL_INTERRUPT_OR_BULK_WRITE;
-		break;
-	default:
-		USBERR("invalid PipeInformation.PipeType (%u)\n", requestContext->PipeContext->PipeInformation.PipeType);
-		status = STATUS_INVALID_PARAMETER;
-		goto Done;
-
-	}
-
-	status = Request_InitContext(requestContext, Request, NULL, WdfRequestTypeWrite, 0, 0, (ULONG)Length);
-	if(!NT_SUCCESS(status))
-	{
-		USBERR("Request_InitContext failed. status=%Xh\n", status);
-		goto Done;
-	}
-
-	if (USB_ENDPOINT_DIRECTION_IN(GetRequestPipeID(requestContext)))
-	{
-		USBERR("pipeID=%02Xh cannot write from an incoming pipe\n",
-		       GetRequestPipeID(requestContext));
+		USBERRN("Invalid PipeType PipeID=%02Xh PipeType=%s", fileContext->PipeID, GetPipeTypeString(fileContext->PipeType));
 		status = STATUS_INVALID_PARAMETER;
 		goto Done;
 	}
 
-	// For read/read request there is no libusb_request so it is 'ForwardToQueue' and
-	// not ForwardToPipeQueue here.
-	ForwardToQueue(Request, requestContext);
+	if (fileContext->PipeType == WdfUsbPipeTypeIsochronous)
+		ioControlCode = LIBUSB_IOCTL_ISOCHRONOUS_READ;
+
+	mRequest_InitAndForwardToQueue(status, WdfRequestTypeWrite, WdfRequestTypeWrite, ioControlCode, Length, Request, deviceContext, requestContext, fileContext->PipeID, goto Done);
 	return;
 
 Done:

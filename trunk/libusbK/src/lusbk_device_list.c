@@ -941,7 +941,13 @@ KUSB_EXP BOOL KUSB_API LstK_FindByVidPid(
 	{
 		if ((check->Public.Common.Vid & 0xFFFF) == (Vid & 0xFFFF) &&
 		        (check->Public.Common.Pid & 0xFFFF) == (Pid & 0xFFFF))
+		{
 			break;
+		}
+		else
+		{
+			USBDBGN("Skipping %04Xh:%04Xh", check->Public.Common.Vid, check->Public.Common.Pid);
+		}
 	}
 
 	*DeviceInfo = (KLST_DEVINFO_HANDLE)check;

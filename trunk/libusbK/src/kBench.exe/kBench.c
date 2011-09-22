@@ -345,7 +345,7 @@ BOOL Bench_Open(__in PBENCHMARK_TEST_PARAM test)
 		}
 
 		if (!K.GetDescriptor(test->InterfaceHandle,
-		                     USB_DEVICE_DESCRIPTOR_TYPE,
+		                     USB_DESCRIPTOR_TYPE_DEVICE,
 		                     0, 0,
 		                     (PUCHAR)&test->DeviceDescriptor,
 		                     sizeof(test->DeviceDescriptor),
@@ -459,8 +459,8 @@ BOOL Bench_Configure(__in KUSB_HANDLE handle,
 	KUSB_SETUP_PACKET* defPkt = (KUSB_SETUP_PACKET*)&Pkt;
 
 	memset(&Pkt, 0, sizeof(Pkt));
-	defPkt->BmRequest.Dir = BMREQUEST_DEVICE_TO_HOST;
-	defPkt->BmRequest.Type = BMREQUEST_VENDOR;
+	defPkt->BmRequest.Dir = BMREQUEST_DIR_DEVICE_TO_HOST;
+	defPkt->BmRequest.Type = BMREQUEST_TYPE_VENDOR;
 	defPkt->Request = (UCHAR)command;
 	defPkt->Value = (UCHAR) * testType;
 	defPkt->Index = intf;

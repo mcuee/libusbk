@@ -18,11 +18,36 @@ binary distributions.
 
 #include "drv_common.h"
 
-#define IF_IS_REQUEST_CONTEXT_INVALID() if ( \
-	!deviceContext               || \
-	!requestContext              || \
-	!requestContext->PipeContext || \
-	!requestContext->PipeContext->IsValid)
+//! Standard USB descriptor types. For more information, see section 9-5 of the USB 3.0 specifications.
+typedef enum _USB_DESCRIPTOR_TYPE
+{
+    //! Device descriptor type.
+    USB_DESCRIPTOR_TYPE_DEVICE = 0x01,
+
+    //! Configuration descriptor type.
+    USB_DESCRIPTOR_TYPE_CONFIGURATION = 0x02,
+
+    //! String descriptor type.
+    USB_DESCRIPTOR_TYPE_STRING = 0x03,
+
+    //! Interface descriptor type.
+    USB_DESCRIPTOR_TYPE_INTERFACE = 0x04,
+
+    //! Endpoint descriptor type.
+    USB_DESCRIPTOR_TYPE_ENDPOINT = 0x05,
+
+    //! Device qualifier descriptor type.
+    USB_DESCRIPTOR_TYPE_DEVICE_QUALIFIER = 0x06,
+
+    //! Config power descriptor type.
+    USB_DESCRIPTOR_TYPE_CONFIG_POWER = 0x07,
+
+    //! Interface power descriptor type.
+    USB_DESCRIPTOR_TYPE_INTERFACE_POWER = 0x08,
+
+    //! Interface association descriptor type.
+    USB_DESCRIPTOR_TYPE_INTERFACE_ASSOCIATION = 0x0B,
+} USB_DESCRIPTOR_TYPE;
 
 EVT_WDF_REQUEST_COMPLETION_ROUTINE XferCtrlComplete;
 
@@ -50,14 +75,6 @@ VOID XferCtrl (
 
 	deviceContext = GetDeviceContext(WdfIoQueueGetDevice(Queue));
 	requestContext = GetRequestContext(Request);
-
-	IF_IS_REQUEST_CONTEXT_INVALID()
-	{
-		USBERR("invalid device or request context\n");
-		status = STATUS_INVALID_PARAMETER;
-		goto Exit;
-	}
-
 
 	setupPacket = (PWDF_USB_CONTROL_SETUP_PACKET)&requestContext->IoControlRequest.control;
 	USBDBG("bmDir=%s bmType=%s bmRecipient=%s bmReserved=%03u bRequest=%u wIndex=%u wValue=%u wLength=%u\n",
@@ -90,11 +107,11 @@ VOID XferCtrl (
 		{
 			switch(descriptorType)
 			{
-			case USB_DEVICE_DESCRIPTOR_TYPE:
+			case USB_DESCRIPTOR_TYPE_DEVICE:
 				descriptorSize = sizeof(deviceContext->UsbDeviceDescriptor);
 				descriptorIn = &deviceContext->UsbDeviceDescriptor;
 				break;
-			case USB_CONFIGURATION_DESCRIPTOR_TYPE:
+			case USB_DESCRIPTOR_TYPE_CONFIGURATION:
 				if (setupPacket->Packet.wValue.Bytes.LowByte == 0)
 				{
 					descriptorSize = deviceContext->ConfigurationDescriptorSize;

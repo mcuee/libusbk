@@ -41,7 +41,7 @@ extern ULONG DebugLevel;
 #define GetListHeadEntry(ListHead)  ((ListHead)->Flink)
 
 // Max pipe/power/device policies.
-#define MAX_POLICY			(16)
+#define MAX_POLICY			(32)
 
 // These are pre-allocated to device context space.
 #define LIBUSB_MAX_INTERFACE_COUNT 32
@@ -114,6 +114,11 @@ extern CONST PCHAR BoolStrings[2];
 
 typedef struct _DEVICE_REGSETTINGS
 {
+	// This feature is controlled by the SystemWakeEnabled DWORD registry setting. This value value indicates whether or not the device
+	// should be allowed to wake the system from a low power state.
+	// Example: HKR,,SystemWakeEnabled,0x00010001,1
+	ULONG SystemWakeEnabled;
+
 	// DeviceIdleEnabled	This is a DWORD value. This registry value indicates whether or not the device is capable of being powered down when idle (Selective Suspend).
 	//
 	//    * A value of zero, or the absence of this value indicates that the device does not support being powered down when idle.
@@ -159,6 +164,24 @@ typedef struct _DEVICE_REGSETTINGS
 
 } DEVICE_REGSETTINGS, *PDEVICE_REGSETTINGS;
 
+#pragma warning(push)
+#pragma warning(disable:4201)	// nonstandard extension used : nameless struct/union
+typedef union _PIPE_POLICIES
+{
+	volatile long values;
+	struct
+	{
+		unsigned int AutoClearStall: 1;
+		unsigned int AllowPartialReads: 1;
+		unsigned int AutoFlush: 1;
+		unsigned int IgnoreShortPackets: 1;
+		unsigned int RawIO: 1;
+		unsigned int ResetPipeOnResume: 1;
+		unsigned int ShortPacketTerminate: 4;
+	};
+} PIPE_POLICIES;
+#pragma warning(pop)
+
 // This define in only here so this section and be folded in VStudio. //
 #ifdef CONTEXT_SECTION_START
 
@@ -168,13 +191,26 @@ typedef struct _DEVICE_REGSETTINGS
 
 typedef struct _PIPE_CONTEXT
 {
-	BOOLEAN IsValid;		// True only when the pipe exists and is ready.
-	WDFWAITLOCK PipeLock;	// Waitlock used for split transfers.
-	WDF_USB_PIPE_INFORMATION PipeInformation; // WDF pipe info.
-	WDFUSBPIPE Pipe;			// Pipe handle.
-	WDFQUEUE Queue;				// Pipe queue.
-	ULONG Policy[MAX_POLICY];	// Pipe policies.
-	INT64 TransferCounter;
+	volatile WDFQUEUE Queue;					// Pipe queue.
+	volatile ULONG TimeoutPolicy;
+
+	BOOLEAN IsValid;							// True only when the pipe exists and is ready.
+	WDF_USB_PIPE_INFORMATION PipeInformation;	// WDF pipe info.
+	WDFUSBPIPE Pipe;							// Pipe handle.
+
+	PIPE_POLICIES Policies;
+
+	/*! IMPORTANT:
+	* When in-use, the iso packet memory must be referenced with WdfObjectReference. It
+	* could be deleted/updated while iso transfers using it are pending. ALL iso transfers
+	* forwarded to a pipe queue MUST call WdfObjectDereference() before completing the main
+	* request.
+	*/
+	WDFMEMORY SharedAutoIsoExPacketMemory;
+
+	// Set when policies have changes that require queue settings to change.
+	BOOLEAN IsQueueDirty;
+
 } PIPE_CONTEXT, *PPIPE_CONTEXT;
 
 WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(PIPE_CONTEXT,
@@ -215,8 +251,9 @@ typedef struct _DEVICE_CONTEXT
 	INTERFACE_CONTEXT				InterfaceContext[LIBUSB_MAX_INTERFACE_COUNT];
 	ULONG							PowerPolicy[MAX_POLICY];
 	ULONG							DevicePolicy[MAX_POLICY];	// DeviceInformation (actually).
+	USBD_VERSION_INFORMATION		UsbVersionInfo;
 	DEVICE_REGSETTINGS				DeviceRegSettings; // Device regisitry settings (from inf Dev_AddReq)
-
+	BOOLEAN							IsIdleSettingsInitialized;
 	volatile long					OpenedFileHandleCount;
 } DEVICE_CONTEXT, *PDEVICE_CONTEXT;
 
@@ -230,75 +267,122 @@ typedef DEVICE_CONTEXT libusb_device_t;
 //
 typedef struct _FILE_CONTEXT
 {
-	PDEVICE_CONTEXT DeviceContext;
-	PPIPE_CONTEXT PipeContext;
+	PDEVICE_CONTEXT		DeviceContext;
+	UCHAR				PipeID;
+	WDF_USB_PIPE_TYPE	PipeType;
 } FILE_CONTEXT, *PFILE_CONTEXT;
 
 WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(FILE_CONTEXT,
                                    GetFileContext)
 
-//
-// This context is associated with every request recevied by the driver
-// from the app.C_ASSERT(sizeof(MAIN_REQUEST_CONTEXT) <=
-//         sizeof(((PIRP)0)->Tail.Overlay.DriverContext));
-
-//
-#pragma warning(disable:4201) // nonstandard extension used : nameless struct/union
-#pragma warning(disable:4214) // bit field types other than int
-typedef struct _REQUEST_PACKED_STORE
+typedef struct _QUEUE_CONTEXT
 {
-	union
+	WDFUSBPIPE					PipeHandle;	// Pipe handle.		[RO]
+	WDF_USB_PIPE_INFORMATION	Info;		// WDF pipe info.	[RO]
+
+	PPIPE_CONTEXT				PipeContext;
+
+	// Set in EvtResume and CancelRoutine (AUTO_CLEAR_STALL)
+	BOOLEAN						ResetPipeForResume;
+	BOOLEAN						ResetPipeForStall;
+
+	// RunOverOfs is zeroed when the queue is created; a BufferLegnth > 0 indicates RunOverOfs
+	//            is a valid range of bytes left over from a previous read when
+	//            AllowPartialReads=1 and AutoFlush=0.
+	// RunOverMem is pre-allocated when the first request is sent to a newly created queue; size always equals wMaxPacketSize.
+	WDFMEMORY_OFFSET	OverOfs;
+	WDFMEMORY			OverMem;
+	PUCHAR				OverBuf;
+
+	struct
 	{
-		ULONGLONG _value;
+		// UserMem represents the users transfer buffer.
+		// UserOfs represents the portion of the user buffer for a stage transfer.
+		WDFMEMORY_OFFSET	UserOfs;
+		WDFMEMORY			UserMem;
 
 		struct
 		{
-			BYTE IsQueueLocked: 1;
-			BYTE IsIoControl: 1;
-			BYTE IsIoReadFile: 1;
-			BYTE IsIoControlRead: 1;
+			UCHAR Required;
+			UCHAR Sent;
 
-			BYTE POL_SHORT_PACKET_TERMINATE: 1;
-			BYTE POL_AUTO_CLEAR_STALL: 1;
-			BYTE POL_IGNORE_SHORT_PACKETS: 1;
-			BYTE POL_ALLOW_PARTIAL_READS: 1;
-			BYTE POL_AUTO_FLUSH: 1;
-			BYTE POL_RAW_IO: 1;
-			BYTE POL_RESET_PIPE_ON_RESUME: 1;
-			BYTE POL_MAXIMUM_TRANSFER_SIZE: 1;
-			BYTE POL_PIPE_TRANSFER_TIMEOUT: 1;
-		};
-	};
-} REQUEST_PACKED_STORE, *PREQUEST_PACKED_STORE;
-#pragma warning(default:4214) // bit field types other than int
-#pragma warning(default:4201) // nonstandard extension used : nameless struct/union
+		} Zlps;
 
-typedef struct _REQUEST_CONTEXT
+		ULONG				Length;
+		ULONG				Transferred;
+	} Xfer;
+
+} QUEUE_CONTEXT, *PQUEUE_CONTEXT;
+WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(QUEUE_CONTEXT, GetQueueContext)
+
+
+typedef struct _XFER_AUTOISO_COLLECTION_CONTEXT
 {
+	WDFREQUEST					MainRequest;
+	struct _REQUEST_CONTEXT*	MainRequestContext;
+	PMDL				OriginalTransferMDL;
+	WDFCOLLECTION		SubRequestCollection;		// used for doing Isoch
+	WDFSPINLOCK			SubRequestCollectionLock; // used to sync access to collection at DISPATCH_LEVEL
 
-	WDFMEMORY         UrbMemory;
-	PMDL			  OriginalTransferMDL;
 	PMDL              Mdl;
-	ULONG             Length;					// remaining to xfer
 	ULONG             TotalTransferred;			// cumulate xfer
 	ULONG_PTR         VirtualAddress;			// va for next segment of xfer.
-	WDFCOLLECTION     SubRequestCollection;		// used for doing Isoch
-	WDFSPINLOCK		  SubRequestCollectionLock; // used to sync access to collection at DISPATCH_LEVEL
-	PPIPE_CONTEXT     PipeContext;
+} XFER_AUTOISO_COLLECTION_CONTEXT, *PXFER_AUTOISO_COLLECTION_CONTEXT;
+WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(XFER_AUTOISO_COLLECTION_CONTEXT, GetAutoIsoCollectionContext)
 
-	WDF_REQUEST_TYPE  ActualRequestType;	// Read/Write/DeviceIoControl
-	WDF_REQUEST_TYPE  RequestType;			// Read/Write
-	ULONG             IoControlCode;
-	libusb_request	  IoControlRequest;
-	UCHAR             QueueLocked;
-	PVOID			  InputBuffer;
-	ULONG			  InputBufferLength;
-	struct
+// C4201: nonstandard extension used : nameless struct/union
+#pragma warning(push)
+#pragma warning(disable:4201)
+typedef struct _REQUEST_CONTEXT
+{
+	ULONG Length;
+
+	// Read-Write-DeviceIoControl
+	WDF_REQUEST_TYPE ActualRequestType;
+	// Read-Write
+	WDF_REQUEST_TYPE RequestType;
+
+	ULONG			IoControlCode;
+	libusb_request	IoControlRequest;
+
+	PVOID	InputBuffer;
+	ULONG	InputBufferLength;
+
+	PQUEUE_CONTEXT		QueueContext;
+	PIPE_POLICIES		Policies;
+	ULONG				Timeout;
+
+	union
 	{
-		WDFMEMORY	ContextMemory;
-	} Iso;
-} REQUEST_CONTEXT, *PREQUEST_CONTEXT;
+		struct
+		{
+			WDFMEMORY			UrbMemory;
+			WDFMEMORY			ContextMemory;
+		} IsoEx;
+		struct
+		{
+			PXFER_AUTOISO_COLLECTION_CONTEXT Context;
+		} AutoIso;
+		struct
+		{
+			WDFMEMORY			UrbMemory;
+			ULONG				RequestedLength;
+			SHORT				NumPackets;
 
+			// Fixed packets are assigned in the xfer functions and come frome the pipe context.
+			struct
+			{
+				WDFMEMORY		Memory;
+				PUCHAR			Buffer;
+			} FixedIsoPackets;
+		} AutoIsoEx;
+	};
+
+} REQUEST_CONTEXT, *PREQUEST_CONTEXT;
+#pragma warning(pop)
+
+// This is only used to track the request context size.  It represents the actual size for a 64bit driver.
+// It can be safely removed without causing problems.
 C_ASSERT(sizeof(REQUEST_CONTEXT) <= 256);
 
 WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(REQUEST_CONTEXT            ,

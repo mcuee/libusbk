@@ -66,12 +66,12 @@ static void u_Add_Pipe(PKUSB_ALT_INTERFACE_EL altInterfaceEL, PDESCRIPTOR_ITERAT
 
 	while (u_Desc_Next(desc))
 	{
-		if (desc->Ptr.Comn->bDescriptorType == USB_INTERFACE_DESCRIPTOR_TYPE)
+		if (desc->Ptr.Comn->bDescriptorType == USB_DESCRIPTOR_TYPE_INTERFACE)
 		{
 			memcpy(desc, &descPrev, sizeof(*desc));
 			break;
 		}
-		else if (desc->Ptr.Comn->bDescriptorType == USB_ENDPOINT_DESCRIPTOR_TYPE)
+		else if (desc->Ptr.Comn->bDescriptorType == USB_DESCRIPTOR_TYPE_ENDPOINT)
 		{
 			FindPipeEL(altInterfaceEL, pipeEL, FALSE, desc->Ptr.Pipe->bEndpointAddress);
 			if (!pipeEL)
@@ -143,7 +143,7 @@ static BOOL u_Init_Config(__in PKUSB_HANDLE_INTERNAL Handle)
 
 	while(u_Desc_Next(&desc))
 	{
-		if (desc.Ptr.Comn->bDescriptorType == USB_INTERFACE_DESCRIPTOR_TYPE)
+		if (desc.Ptr.Comn->bDescriptorType == USB_DESCRIPTOR_TYPE_INTERFACE)
 			u_Add_Interface(Handle, &desc);
 	}
 

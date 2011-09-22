@@ -3,10 +3,13 @@ DIRS= \
      hot-plug-monitor \
      load-driver-api \
      open-device \
+     pipe-polcy-other \
      pipe-policy-timeout \
+     power-policy-suspend \
      show-device \
      xfer-async \
      xfer-async-loop \
      xfer-iso \
+     xfer-iso-read \
      xfer-stream \
      xfer-sync

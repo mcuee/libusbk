@@ -6,15 +6,66 @@
 
 #include "drv_private.h"
 
-#define GetRequestStageSize(ReqestContext) \
-	(GetPolicyValue(MAX_TRANSFER_STAGE_SIZE,ReqestContext->PipeContext->Policy))
+#define mXfer_HandlePipeResetScenarios(mStatus,mQueueContext, mRequestContext) do {  																			\
+	/* handle pipe reset scenarios: ResetPipeOnResume, AutoClearStall */   																		\
+	if ((mQueueContext->ResetPipeForResume && mRequestContext->Policies.ResetPipeOnResume) ||   													\
+			(mQueueContext->ResetPipeForStall && mRequestContext->Policies.AutoClearStall)) 														\
+	{   																																		\
+		mStatus = WdfUsbTargetPipeResetSynchronously(mQueueContext->PipeHandle, WDF_NO_HANDLE, NULL);   										\
+		if (!NT_SUCCESS(mStatus))   																											\
+		{   																																	\
+			USBERR(" PipeID=%02Xh WdfUsbTargetPipeResetSynchronously failed. Status=%08Xh\n", mQueueContext->Info.EndpointAddress, mStatus);	\
+		}   																																	\
+		mQueueContext->ResetPipeForResume = FALSE;  																							\
+		mQueueContext->ResetPipeForStall = FALSE;   																							\
+	}   																																		\
+} while(0)
 
+#define mXfer_HandlePipeResetScenariosForComplete(mStatus, mQueueContext, mRequestContext) do {									\
+	if (!NT_SUCCESS(mStatus)) 																									\
+	{ 																															\
+		if ((mRequestContext->Policies.AutoClearStall) && (mStatus != STATUS_DEVICE_NOT_CONNECTED && mStatus != STATUS_CANCELLED))	\
+		{ 																														\
+			USBMSGN("PipeID=%02Xh AutoClearStall engaged.", mQueueContext->Info.EndpointAddress); 								\
+			mQueueContext->ResetPipeForStall = TRUE;  																			\
+		} 																														\
+	} 																															\
+}while(0)
 
-VOID Xfer (
+// STATUS_IO_TIMEOUT is set by the driver when a timeout policy expires.
+// STATUS_CANCELLED is set as a result of the user cancelling the request.
+#define Xfer_CheckPipeStatus(status, pipeID)																	\
+	switch(status)																								\
+	{ 																											\
+	case STATUS_SUCCESS:  																						\
+		break;																									\
+	case STATUS_TIMEOUT:  																						\
+	case STATUS_IO_TIMEOUT:   																					\
+		USBWRNN("[Timeout] PipeID=%02Xh Status=%08Xh",pipeID, status); 											\
+		break;																									\
+	case STATUS_CANCELLED:																						\
+		USBWRNN("[Cancelled] PipeID=%02Xh Status=%08Xh",pipeID, status);										\
+		break;																									\
+	default:  																									\
+		USBERRN("[Failure] PipeID=%02Xh Status=%08Xh",pipeID, status); 											\
+		break;																									\
+	}
+
+VOID Xfer_ReadBulkRaw (
     __in WDFQUEUE Queue,
-    __in WDFREQUEST Request,
-    __in size_t InputBufferLength,
-    __in size_t OutputBufferLength);
+    __in WDFREQUEST Request);
+
+VOID Xfer_ReadBulk (
+    __in WDFQUEUE Queue,
+    __in WDFREQUEST Request);
+
+VOID Xfer_WriteBulkRaw (
+    __in WDFQUEUE Queue,
+    __in WDFREQUEST Request);
+
+VOID Xfer_WriteBulk (
+    __in WDFQUEUE Queue,
+    __in WDFREQUEST Request);
 
 VOID XferCtrl (
     __in WDFQUEUE Queue,
@@ -24,29 +75,27 @@ VOID XferCtrl (
 
 VOID XferIsoFS (
     __in WDFQUEUE Queue,
-    __in WDFREQUEST Request,
-    __in size_t InputBufferLength,
-    __in size_t OutputBufferLength);
+    __in WDFREQUEST Request);
 
-VOID XferIsoHS(__in WDFQUEUE Queue,
-               __in WDFREQUEST Request,
-               __in ULONG Length);
+VOID XferIsoHS(
+    __in WDFQUEUE Queue,
+    __in WDFREQUEST Request);
 
-VOID XferIsoEx(__in WDFQUEUE Queue,
-               __in WDFREQUEST Request,
-               __in size_t InputBufferLength,
-               __in size_t OutputBufferLength);
+VOID XferIsoEx(
+    __in WDFQUEUE Queue,
+    __in WDFREQUEST Request);
+
+VOID XferAutoIsoEx(
+    __in WDFQUEUE Queue,
+    __in WDFREQUEST Request);
 
 FORCEINLINE NTSTATUS SetRequestTimeout(__in PREQUEST_CONTEXT requestContext,
                                        __in WDFREQUEST wdfRequest,
                                        __inout PWDF_REQUEST_SEND_OPTIONS wdfSendOptions)
 {
 	NTSTATUS status = STATUS_SUCCESS;
-	UINT timeoutMS = ((requestContext->IoControlRequest.timeout > 0)
-	                  ? requestContext->IoControlRequest.timeout
-	                  : GetPolicyValue(PIPE_TRANSFER_TIMEOUT, requestContext->PipeContext->Policy));
-
-	if (timeoutMS)
+	UINT timeoutMS = requestContext->Timeout;
+	if (timeoutMS && timeoutMS != (UINT) - 1)
 	{
 		USBDBG("timeout=%ums\n", timeoutMS);
 		WDF_REQUEST_SEND_OPTIONS_SET_TIMEOUT(wdfSendOptions, WDF_REL_TIMEOUT_IN_MS(timeoutMS));
@@ -59,8 +108,8 @@ FORCEINLINE NTSTATUS SetRequestTimeout(__in PREQUEST_CONTEXT requestContext,
 	return status;
 }
 
-FORCEINLINE NTSTATUS SubmitAsyncRequest(
-    __in PREQUEST_CONTEXT requestContext,
+FORCEINLINE NTSTATUS SubmitAsyncQueueRequest(
+    __in PQUEUE_CONTEXT queueContext,
     __in WDFREQUEST wdfRequest,
     __in EVT_WDF_REQUEST_COMPLETION_ROUTINE completionRoutine,
     __in PWDF_REQUEST_SEND_OPTIONS wdfSendOptions,
@@ -68,11 +117,10 @@ FORCEINLINE NTSTATUS SubmitAsyncRequest(
 {
 	NTSTATUS status = STATUS_SUCCESS;
 	WdfRequestSetCompletionRoutine(wdfRequest, completionRoutine, completionContext);
-	if (!WdfRequestSend(wdfRequest, WdfUsbTargetPipeGetIoTarget(requestContext->PipeContext->Pipe), wdfSendOptions))
+	if (!WdfRequestSend(wdfRequest, WdfUsbTargetPipeGetIoTarget(queueContext->PipeHandle), wdfSendOptions))
 	{
 		status = WdfRequestGetStatus(wdfRequest);
-		USBERR("WdfRequestSend failed. pipeID=%02Xh status=%Xh\n",
-		       GetRequestPipeID(requestContext), status);
+		USBERR("WdfRequestSend failed. pipeID=%02Xh status=%Xh\n", queueContext->Info.EndpointAddress, status);
 
 		// [tr] I suspect this could only happen if a lower driver was buggy.
 		ASSERT(!NT_SUCCESS(status));
@@ -80,6 +128,7 @@ FORCEINLINE NTSTATUS SubmitAsyncRequest(
 	return status;
 }
 
+#if 0
 FORCEINLINE NTSTATUS UrbFormatBulkRequestContext(
     __in WDFREQUEST Request,
     __in PREQUEST_CONTEXT requestContext,
@@ -260,5 +309,6 @@ FORCEINLINE NTSTATUS UrbFormatBulkRequestContext(
 Exit:
 	return status;
 }
+#endif
 
 #endif
