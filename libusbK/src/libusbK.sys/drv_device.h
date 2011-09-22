@@ -17,8 +17,8 @@ EVT_WDF_DEVICE_FILE_CREATE Device_OnFileCreate;
 EVT_WDF_FILE_CLOSE Device_OnFileClose;
 
 NTSTATUS Device_Reset(__in WDFDEVICE Device);
-NTSTATUS Device_ReadAndSelectDescriptors(__in WDFDEVICE Device);
+NTSTATUS Device_Create(__in WDFDEVICE Device);
+NTSTATUS Device_FetchConfigDescriptor(__in WDFDEVICE Device);
 NTSTATUS Device_Configure(__in WDFDEVICE Device);
-NTSTATUS Device_ConfigureInterfaces(__in WDFDEVICE Device);
 
 #endif

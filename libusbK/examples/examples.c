@@ -123,14 +123,15 @@ BOOL Bench_Configure(KUSB_HANDLE UsbHandle,
                      PKUSB_DRIVER_API DriverAPI,
                      PBM_TEST_TYPE TestType)
 {
+#if (EXAMPLES_USE_BENCHMARK_CONFIGURE==1)
 	DWORD transferred = 0;
 	BOOL success;
 	WINUSB_SETUP_PACKET Pkt;
 	KUSB_SETUP_PACKET* defPkt = (KUSB_SETUP_PACKET*)&Pkt;
 
 	memset(&Pkt, 0, sizeof(Pkt));
-	defPkt->BmRequest.Dir	= BMREQUEST_DEVICE_TO_HOST;
-	defPkt->BmRequest.Type	= BMREQUEST_VENDOR;
+	defPkt->BmRequest.Dir	= BMREQUEST_DIR_DEVICE_TO_HOST;
+	defPkt->BmRequest.Type	= BMREQUEST_TYPE_VENDOR;
 	defPkt->Request			= (UCHAR) Command;
 	defPkt->Value			= (UCHAR) * TestType;
 	defPkt->Index			= InterfaceNumber;
@@ -140,6 +141,15 @@ BOOL Bench_Configure(KUSB_HANDLE UsbHandle,
 		success = DriverAPI->ControlTransfer(UsbHandle, Pkt, (PUCHAR)TestType, 1, &transferred, NULL);
 	else
 		success = UsbK_ControlTransfer(UsbHandle, Pkt, (PUCHAR)TestType, 1, &transferred, NULL);
+#else
+	UNREFERENCED_PARAMETER(UsbHandle);
+	UNREFERENCED_PARAMETER(Command);
+	UNREFERENCED_PARAMETER(InterfaceNumber);
+	UNREFERENCED_PARAMETER(DriverAPI);
+	UNREFERENCED_PARAMETER(TestType);
+
+	return TRUE;
+#endif
 
 	return success;
 }

@@ -88,12 +88,31 @@ NTSTATUS Interface_Start(__in PDEVICE_CONTEXT deviceContext,
 	return STATUS_SUCCESS;
 }
 
+NTSTATUS Interface_DeletePipeQueues(__in PINTERFACE_CONTEXT interfaceContext)
+{
+	UCHAR						pipeIndex;
+
+	// start all the pipes on interfaceContext.
+	for (pipeIndex = 0; pipeIndex < interfaceContext->PipeCount; pipeIndex++)
+	{
+		PPIPE_CONTEXT pipeContext = interfaceContext->PipeContextByIndex[pipeIndex];
+		WDFQUEUE queue = pipeContext->Queue;
+
+		if (pipeContext->IsValid == FALSE &&  queue && (pipeContext->PipeInformation.EndpointAddress & 0xF))
+		{
+			USBDBGN("pipeID=%02Xh Destroying pipe queue.", pipeContext->PipeInformation.EndpointAddress);
+			WdfObjectDelete(queue);
+			InterlockedExchangePointer(&pipeContext->Queue, (PVOID)NULL);
+		}
+	}
+	return STATUS_SUCCESS;
+}
+
 NTSTATUS Interface_InitContext(__in PDEVICE_CONTEXT deviceContext,
                                __in PINTERFACE_CONTEXT interfaceContext)
 {
 	NTSTATUS status = STATUS_SUCCESS;
 	UCHAR pipeIndex;
-	ULONG stageSize;
 
 	// get the interface handle
 	interfaceContext->Interface = WdfUsbTargetDeviceGetInterface(deviceContext->WdfUsbTargetDevice, interfaceContext->InterfaceIndex);
@@ -132,15 +151,11 @@ NTSTATUS Interface_InitContext(__in PDEVICE_CONTEXT deviceContext,
 		// get the pipe context by endpoint id from the master pipe list
 		pipeContext = GetPipeContextByID(deviceContext, pipeInfo.EndpointAddress);
 
-		// if the pipe has not been initialized, set the default pipe polices
+		// set the default pipe polices
 		if (!pipeContext->Pipe)
 		{
 			Policy_InitPipe(pipeContext);
 		}
-
-		// reset the transfer counter
-		pipeContext->TransferCounter = 0;
-
 
 		// set the pipe context by index in the interface context
 		interfaceContext->PipeContextByIndex[pipeIndex] = pipeContext;
@@ -148,19 +163,7 @@ NTSTATUS Interface_InitContext(__in PDEVICE_CONTEXT deviceContext,
 		// always update the pipe handle
 		pipeContext->Pipe = pipe;
 
-		// over this limit will fail.
-		stageSize = GetPolicyValue(MAXIMUM_TRANSFER_SIZE, pipeContext->Policy) = pipeInfo.MaximumTransferSize;
-
-		if (pipeInfo.MaximumTransferSize == ULONG_MAX)
-		{
-			// re-calculate the maximum transfer size.
-			if (pipeInfo.MaximumPacketSize)
-			{
-				// largest value of MaximumPacketSize*8 not to exceed LIBUSB_MAX_READ_WRITE.
-				stageSize = LIBUSB_MAX_READ_WRITE - (LIBUSB_MAX_READ_WRITE % (pipeInfo.MaximumPacketSize * 8));
-			}
-		}
-		GetPolicyValue(MAX_TRANSFER_STAGE_SIZE, pipeContext->Policy) = stageSize;
+		pipeInfo.MaximumTransferSize = Pipe_CalcMaxTransferSize(IsHighSpeedDevice(deviceContext), pipeInfo.PipeType, pipeInfo.MaximumPacketSize, pipeInfo.MaximumTransferSize);
 
 		// update the pipe information
 		RtlCopyMemory(&pipeContext->PipeInformation, &pipeInfo, sizeof(WDF_USB_PIPE_INFORMATION));
@@ -209,11 +212,22 @@ NTSTATUS Interface_SetAltSetting(__in  PDEVICE_CONTEXT deviceContext,
 	WDF_OBJECT_ATTRIBUTES_INIT(&pipesAttributes);
 	WDF_USB_INTERFACE_SELECT_SETTING_PARAMS_INIT_SETTING(&selectSettingParams, altsetting_index);
 
+	status = Interface_Stop(deviceContext, (*interfaceContext));
+	if (!NT_SUCCESS(status))
+	{
+		USBERR("Interface_Stop failed. status=%Xh", status);
+		goto Done;
+	}
 	status = WdfUsbInterfaceSelectSetting((*interfaceContext)->Interface, &pipesAttributes, &selectSettingParams);
 	if (!NT_SUCCESS(status))
 	{
 		USBERR("unable to set alt setting index %u on interface number %u\n", altsetting_index,
 		       (*interfaceContext)->InterfaceDescriptor.bInterfaceNumber);
+
+		if (!NT_SUCCESS(Interface_Start(deviceContext, (*interfaceContext))), FALSE)
+		{
+			USBERR("Interface_Start failed. status=%Xh", status);
+		}
 	}
 	else
 	{
@@ -222,7 +236,26 @@ NTSTATUS Interface_SetAltSetting(__in  PDEVICE_CONTEXT deviceContext,
 
 		(*interfaceContext)->SettingIndex = WdfUsbInterfaceGetConfiguredSettingIndex((*interfaceContext)->Interface);
 
+		status = Interface_DeletePipeQueues((*interfaceContext));
+		if (!NT_SUCCESS(status))
+		{
+			USBERR("Interface_DeletePipeQueues failed. status=%Xh", status);
+			goto Done;
+		}
+
 		status = Interface_InitContext(deviceContext, (*interfaceContext));
+		if (!NT_SUCCESS(status))
+		{
+			USBERR("Interface_InitContext failed. status=%Xh", status);
+			goto Done;
+		}
+
+		status = Interface_Start(deviceContext, (*interfaceContext));
+		if (!NT_SUCCESS(status))
+		{
+			USBERR("Interface_Start failed. status=%Xh", status);
+			goto Done;
+		}
 	}
 
 Done:

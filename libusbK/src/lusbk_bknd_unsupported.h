@@ -161,17 +161,19 @@ KUSB_EXP BOOL KUSB_API Unsupported_GetAltInterface(
 
 KUSB_EXP BOOL KUSB_API Unsupported_IsoReadPipe(
     _in KUSB_HANDLE InterfaceHandle,
-    _ref PKISO_CONTEXT IsoContext,
+    _in UCHAR PipeID,
     _out PUCHAR Buffer,
     _in ULONG BufferLength,
-    _in LPOVERLAPPED Overlapped);
+    _in LPOVERLAPPED Overlapped,
+    _refopt PKISO_CONTEXT IsoContext);
 
 KUSB_EXP BOOL KUSB_API Unsupported_IsoWritePipe(
     _in KUSB_HANDLE InterfaceHandle,
-    _ref PKISO_CONTEXT IsoContext,
+    _in UCHAR PipeID,
     _in PUCHAR Buffer,
     _in ULONG BufferLength,
-    _in LPOVERLAPPED Overlapped);
+    _in LPOVERLAPPED Overlapped,
+    _refopt PKISO_CONTEXT IsoContext);
 
 KUSB_EXP BOOL KUSB_API Unsupported_GetCurrentFrameNumber(
     _in KUSB_HANDLE InterfaceHandle,

@@ -20,7 +20,6 @@
 * @{
 */
 
-
 #define _in
 #define _inopt
 #define _out
@@ -351,8 +350,6 @@ typedef enum _KLST_FLAG
 
 } KLST_FLAG;
 
-
-
 //! Device list enumeration function callback typedef.
 /*!
 *
@@ -390,84 +387,84 @@ typedef BOOL KUSB_API KLST_ENUM_DEVINFO_CB (
 
 
 //! bmRequest.Dir
-enum BMREQUEST_DIR_ENUM
+typedef enum _BMREQUEST_DIR
 {
-    BMREQUEST_HOST_TO_DEVICE = 0,
-    BMREQUEST_DEVICE_TO_HOST = 1,
-};
+    BMREQUEST_DIR_HOST_TO_DEVICE = 0,
+    BMREQUEST_DIR_DEVICE_TO_HOST = 1,
+} BMREQUEST_DIR;
 
 //! bmRequest.Type
-enum BMREQUEST_TYPE_ENUM
+typedef enum _BMREQUEST_TYPE
 {
     //! Standard request. See \ref USB_REQUEST_ENUM
-    BMREQUEST_STANDARD = 0,
+    BMREQUEST_TYPE_STANDARD = 0,
 
     //! Class-specific request.
-    BMREQUEST_CLASS = 1,
+    BMREQUEST_TYPE_CLASS = 1,
 
     //! Vendor-specific request
-    BMREQUEST_VENDOR = 2,
-};
+    BMREQUEST_TYPE_VENDOR = 2,
+} BMREQUEST_TYPE;
 
 //! bmRequest.Recipient
-enum BMREQUEST_RECIPIENT_ENUM
+typedef enum _BMREQUEST_RECIPIENT
 {
     //! Request is for a device.
-    BMREQUEST_TO_DEVICE = 0,
+    BMREQUEST_RECIPIENT_DEVICE = 0,
 
     //! Request is for an interface of a device.
-    BMREQUEST_TO_INTERFACE = 1,
+    BMREQUEST_RECIPIENT_INTERFACE = 1,
 
     //! Request is for an endpoint of a device.
-    BMREQUEST_TO_ENDPOINT = 2,
+    BMREQUEST_RECIPIENT_ENDPOINT = 2,
 
     //! Request is for a vendor-specific purpose.
-    BMREQUEST_TO_OTHER = 3,
-};
+    BMREQUEST_RECIPIENT_OTHER = 3,
+} BMREQUEST_RECIPIENT;
 
 //! Maximum length (in bytes) of a usb string. USB strings are always stored in wide-char format.
 #define MAXIMUM_USB_STRING_LENGTH 255
 
 //! Values for the bits returned by the \ref USB_REQUEST_GET_STATUS request.
-enum USB_GETSTATUS_ENUM
+typedef enum _USB_GETSTATUS
 {
     //! Device is self powered
     USB_GETSTATUS_SELF_POWERED = 0x01,
 
     //! Device can wake the system from a low power/sleeping state.
     USB_GETSTATUS_REMOTE_WAKEUP_ENABLED = 0x02
-};
+} USB_GETSTATUS;
 
 //! Standard USB descriptor types. For more information, see section 9-5 of the USB 3.0 specifications.
-enum USB_DESCRIPTOR_TYPE_ENUM
+typedef enum _USB_DESCRIPTOR_TYPE
 {
     //! Device descriptor type.
-    USB_DEVICE_DESCRIPTOR_TYPE = 0x01,
+    USB_DESCRIPTOR_TYPE_DEVICE = 0x01,
 
     //! Configuration descriptor type.
-    USB_CONFIGURATION_DESCRIPTOR_TYPE = 0x02,
+    USB_DESCRIPTOR_TYPE_CONFIGURATION = 0x02,
 
     //! String descriptor type.
-    USB_STRING_DESCRIPTOR_TYPE = 0x03,
+    USB_DESCRIPTOR_TYPE_STRING = 0x03,
 
     //! Interface descriptor type.
-    USB_INTERFACE_DESCRIPTOR_TYPE = 0x04,
+    USB_DESCRIPTOR_TYPE_INTERFACE = 0x04,
 
     //! Endpoint descriptor type.
-    USB_ENDPOINT_DESCRIPTOR_TYPE = 0x05,
+    USB_DESCRIPTOR_TYPE_ENDPOINT = 0x05,
 
     //! Device qualifier descriptor type.
-    USB_DEVICE_QUALIFIER_DESCRIPTOR_TYPE = 0x06,
+    USB_DESCRIPTOR_TYPE_DEVICE_QUALIFIER = 0x06,
 
     //! Config power descriptor type.
-    USB_CONFIG_POWER_DESCRIPTOR_TYPE = 0x07,
+    USB_DESCRIPTOR_TYPE_CONFIG_POWER = 0x07,
 
     //! Interface power descriptor type.
-    USB_INTERFACE_POWER_DESCRIPTOR_TYPE = 0x08,
+    USB_DESCRIPTOR_TYPE_INTERFACE_POWER = 0x08,
 
     //! Interface association descriptor type.
-    USB_INTERFACE_ASSOCIATION_DESCRIPTOR_TYPE = 0x0B,
-};
+    USB_DESCRIPTOR_TYPE_INTERFACE_ASSOCIATION = 0x0B,
+} USB_DESCRIPTOR_TYPE;
 
 //! Makes \c wValue for a \ref USB_REQUEST_GET_DESCRIPTOR or \ref USB_REQUEST_SET_DESCRIPTOR request.
 #define USB_DESCRIPTOR_MAKE_TYPE_AND_INDEX(d, i)	\
@@ -1168,17 +1165,19 @@ typedef BOOL KUSB_API KUSB_FlushPipe (
 
 typedef BOOL KUSB_API KUSB_IsoReadPipe (
     _in KUSB_HANDLE InterfaceHandle,
-    _ref PKISO_CONTEXT IsoContext,
+    _in UCHAR PipeID,
     _out PUCHAR Buffer,
     _in ULONG BufferLength,
-    _in LPOVERLAPPED Overlapped);
+    _in LPOVERLAPPED Overlapped,
+    _refopt PKISO_CONTEXT IsoContext);
 
 typedef BOOL KUSB_API KUSB_IsoWritePipe (
     _in KUSB_HANDLE InterfaceHandle,
-    _ref PKISO_CONTEXT IsoContext,
+    _in UCHAR PipeID,
     _in PUCHAR Buffer,
     _in ULONG BufferLength,
-    _in LPOVERLAPPED Overlapped);
+    _in LPOVERLAPPED Overlapped,
+    _refopt PKISO_CONTEXT IsoContext);
 
 typedef BOOL KUSB_API KUSB_GetCurrentFrameNumber (
     _in KUSB_HANDLE InterfaceHandle,
@@ -1400,13 +1399,13 @@ typedef struct _KUSB_DRIVER_API
 	*/
 	KUSB_FlushPipe* FlushPipe;
 
-	/*! \fn BOOL KUSB_API IsoReadPipe (_in KUSB_HANDLE InterfaceHandle, _ref PKISO_CONTEXT IsoContext, _out PUCHAR Buffer, _in ULONG BufferLength, _in LPOVERLAPPED Overlapped)
+	/*! \fn BOOL KUSB_API IsoReadPipe (_in KUSB_HANDLE InterfaceHandle, _in UCHAR PipeID, _out PUCHAR Buffer, _in ULONG BufferLength, _in LPOVERLAPPED Overlapped, _refopt PKISO_CONTEXT IsoContext)
 	* \memberof KUSB_DRIVER_API
 	* \copydoc UsbK_IsoReadPipe
 	*/
 	KUSB_IsoReadPipe* IsoReadPipe;
 
-	/*! \fn BOOL KUSB_API IsoWritePipe (_in KUSB_HANDLE InterfaceHandle, _ref PKISO_CONTEXT IsoContext, _in PUCHAR Buffer, _in ULONG BufferLength, _in LPOVERLAPPED Overlapped)
+	/*! \fn BOOL KUSB_API IsoWritePipe (_in KUSB_HANDLE InterfaceHandle, _in UCHAR PipeID, _in PUCHAR Buffer, _in ULONG BufferLength, _in LPOVERLAPPED Overlapped, _refopt PKISO_CONTEXT IsoContext)
 	* \memberof KUSB_DRIVER_API
 	* \copydoc UsbK_IsoWritePipe
 	*/
@@ -1521,7 +1520,7 @@ typedef struct _KHOT_PARAMS
 	KHOT_PATTERN_MATCH PatternMatch;
 
 	//! Hot plug event callback function invoked when notifications occur.
-	/*! \fn VOID KUSB_API OnHotPlug (KHOT_HANDLE HotHandle, PKHOT_PARAMS HotParams, KLST_DEVINFO_HANDLE DeviceInfo, KLST_SYNC_FLAG PlugType)
+	/*! \fn VOID KUSB_API OnHotPlug (_in KHOT_HANDLE HotHandle, _in KLST_DEVINFO_HANDLE DeviceInfo, _in KLST_SYNC_FLAG PlugType)
 	* \memberof KHOT_PARAMS
 	*/
 	KHOT_PLUG_CB* OnHotPlug;
@@ -1615,10 +1614,10 @@ typedef struct _KSTM_XFER_CONTEXT
 	PUCHAR Buffer;
 
 	//! Size of internal stream buffer.
-	ULONG BufferSize;
+	LONG BufferSize;
 
 	//! Number of bytes to write or number of bytes read.
-	ULONG TransferLength;
+	LONG TransferLength;
 
 	//! User defined state.
 	PVOID UserState;
@@ -1675,7 +1674,7 @@ typedef LONG KUSB_API KSTM_ERROR_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CO
 */
 typedef LONG KUSB_API KSTM_SUBMIT_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LPOVERLAPPED Overlapped);
 
-//! Function definition for an optional user-defined callback; executed when the stream is started with \ref LstK_Start.
+//! Function definition for an optional user-defined callback; executed when the stream is started with \ref StmK_Start.
 /*! \fn LONG KUSB_API KSTM_INITIALIZE_CB(_in PKSTM_INFO StreamInfo)
 * \memberof KSTM_CALLBACK
 */
@@ -1702,7 +1701,7 @@ typedef struct _KSTM_CALLBACK
 	//! Executed to submit a transfer.
 	KSTM_SUBMIT_CB* Submit;
 
-	//! Executed when the stream is started with \ref LstK_Start.
+	//! Executed when the stream is started with \ref StmK_Start.
 	KSTM_INITIALIZE_CB* Initialize;
 
 	//! Executed when a transfer competes.
@@ -2811,8 +2810,9 @@ extern "C" {
 	* \param[in] InterfaceHandle
 	* An initialized usb handle, see \ref UsbK_Init.
 	*
-	* \param[in,out] IsoContext
-	* Pointer to an isochronous transfer context created with \ref IsoK_Init
+	* \param[in] PipeID
+	* An 8-bit value that consists of a 7-bit address and a direction bit. This parameter corresponds to the
+	* bEndpointAddress field in the endpoint descriptor.
 	*
 	* \param[out] Buffer
 	* A caller-allocated buffer that receives the data that is read.
@@ -2827,6 +2827,9 @@ extern "C" {
 	* \c UsbK_IsoReadPipe returns immediately rather than waiting synchronously for the operation to complete
 	* before returning. An event is signaled when the operation is complete.
 	*
+	* \param[in,out] IsoContext
+	* Pointer to an isochronous transfer context created with \ref IsoK_Init. If \c IsoContext is NULL,
+	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*
 	* \par Overlapped I/O considerations
@@ -2838,10 +2841,11 @@ extern "C" {
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_IsoReadPipe (
 	    _in KUSB_HANDLE InterfaceHandle,
-	    _ref PKISO_CONTEXT IsoContext,
+	    _in UCHAR PipeID,
 	    _out PUCHAR Buffer,
 	    _in ULONG BufferLength,
-	    _in LPOVERLAPPED Overlapped);
+	    _in LPOVERLAPPED Overlapped,
+	    _refopt PKISO_CONTEXT IsoContext);
 
 //! Writes to an isochronous pipe.
 	/*!
@@ -2849,8 +2853,9 @@ extern "C" {
 	* \param[in] InterfaceHandle
 	* An initialized usb handle, see \ref UsbK_Init.
 	*
-	* \param[in,out] IsoContext
-	* Pointer to an isochronous transfer context created with \ref IsoK_Init. See remarks below.
+	* \param[in] PipeID
+	* An 8-bit value that consists of a 7-bit address and a direction bit. This parameter corresponds to the
+	* bEndpointAddress field in the endpoint descriptor.
 	*
 	* \param[in] Buffer
 	* A caller-allocated buffer that receives the data that is read.
@@ -2865,15 +2870,19 @@ extern "C" {
 	* \c UsbK_IsoWritePipe returns immediately rather than waiting synchronously for the operation to complete
 	* before returning. An event is signaled when the operation is complete.
 	*
+	* \param[in,out] IsoContext
+	* Pointer to an isochronous transfer context created with \ref IsoK_Init. See remarks below.
+	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_IsoWritePipe (
 	    _in KUSB_HANDLE InterfaceHandle,
-	    _ref PKISO_CONTEXT IsoContext,
+	    _in UCHAR PipeID,
 	    _in PUCHAR Buffer,
 	    _in ULONG BufferLength,
-	    _in LPOVERLAPPED Overlapped);
+	    _in LPOVERLAPPED Overlapped,
+	    _refopt PKISO_CONTEXT IsoContext);
 
 //! Retrieves the current USB frame number.
 	/*!
@@ -3209,11 +3218,11 @@ extern "C" {
 //! Gets a preallocated \c OverlappedK structure from the specified/default pool.
 	/*!
 	*
-	* \param[in] Pool
-	* The overlapped pool used to retrieve the next available \c OverlappedK.
-	*
 	* \param[out] OverlappedK
 	* On Success, receives the overlapped handle.
+	*
+	* \param[in] PoolHandle
+	* The overlapped pool used to retrieve the next available \c OverlappedK.
 	*
 	* \returns On success, the next unused overlappedK available in the pool. Otherwise NULL. Use
 	* \c GetLastError() to get extended error information.
@@ -3228,7 +3237,7 @@ extern "C" {
 	*/
 	KUSB_EXP BOOL KUSB_API OvlK_Acquire(
 	    _out KOVL_HANDLE* OverlappedK,
-	    _in KOVL_POOL_HANDLE Pool);
+	    _in KOVL_POOL_HANDLE PoolHandle);
 
 //! Returns an \c OverlappedK structure to it's pool.
 	/*!
@@ -3276,7 +3285,7 @@ extern "C" {
 //! Destroys the specified pool and all resources it created.
 	/*!
 	*
-	* \param[in] Pool
+	* \param[in] PoolHandle
 	* The overlapped pool to destroy. Once destroyed, the pool and all resources which belong to it can no
 	* longer be used.
 	*
@@ -3643,11 +3652,6 @@ extern "C" {
 	* \ref KISO_CONTEXT::NumberOfPackets. The \ref KISO_CONTEXT::NumberOfPackets field is assignable by
 	* \c IsoK_Init only and must not be changed by the user.
 	*
-	* \param[in] PipeID
-	* The USB endpoint address assigned to \ref KISO_CONTEXT::PipeID. The driver uses this field to determine
-	* which pipe will receive the transfer request. The \ref KISO_CONTEXT::PipeID may be chamged by the user in
-	* subsequent request.
-	*
 	* \param[in] StartFrame
 	* The USB frame number this request must start on (or \b 0 for ASAP) and assigned to
 	* \ref KISO_CONTEXT::StartFrame. The \ref KISO_CONTEXT::StartFrame may be chamged by the user in subsequent
@@ -3664,7 +3668,6 @@ extern "C" {
 	KUSB_EXP BOOL KUSB_API IsoK_Init(
 	    _out PKISO_CONTEXT* IsoContext,
 	    _in LONG NumberOfPackets,
-	    _inopt UCHAR PipeID,
 	    _inopt LONG StartFrame);
 
 //! Destroys an isochronous transfer context.
@@ -3693,6 +3696,11 @@ extern "C" {
 	* - The offset of the first (0-index) packet is 0.
 	* - The offset of the second (1-index) packet is PacketSize.
 	* - The offset of the third (2-index) packet is PacketSize*2.
+	*
+	* \code
+	* for (packetIndex = 0; packetIndex < IsoContext->NumberOfPackets; packetIndex++)
+	* 	IsoContext->IsoPackets[packetIndex].Offset = packetIndex * PacketSize;
+	* \endcode
 	*
 	*/
 	KUSB_EXP BOOL KUSB_API IsoK_SetPackets(

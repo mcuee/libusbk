@@ -26,6 +26,7 @@ SOURCES= \
      drv_request.c \
      drv_pipe.c  \
      drv_xfer_simple.c \
+     drv_xfer_bulk.c \
      drv_xfer_iso.c \
      drv_xfer_control.c \
      drv_queue_default.c \

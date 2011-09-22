@@ -18,6 +18,9 @@ binary distributions.
 
 #include "drv_common.h"
 
+// warning C4127: conditional expression is constant.
+#pragma warning(disable: 4127)
+
 #if (defined(ALLOC_PRAGMA) && defined(PAGING_ENABLED))
 #pragma alloc_text(PAGE, Pipe_AbortAll)
 #pragma alloc_text(PAGE, Pipe_Reset)
@@ -82,7 +85,6 @@ NTSTATUS Pipe_Reset(__in PDEVICE_CONTEXT deviceContext,
 		{
 			USBERR("WdfUsbTargetPipeResetSynchronously failed pipeID=%02Xh status=%Xh\n", pipeID, status);
 		}
-		pipeContext->TransferCounter = 0;
 	}
 	else
 	{
@@ -119,8 +121,31 @@ NTSTATUS Pipe_Abort(__in PDEVICE_CONTEXT deviceContext,
 	return status;
 }
 
+NTSTATUS Pipe_RefreshQueue(__in PDEVICE_CONTEXT deviceContext, __in PPIPE_CONTEXT pipeContext)
+{
+	NTSTATUS status;
+
+	status = Pipe_Stop(pipeContext, WdfIoTargetCancelSentIo, TRUE);
+	if (!NT_SUCCESS(status))
+	{
+		USBERRN("Pipe_Stop failed. PipeID=%02Xh Status=%08Xh", pipeContext->PipeInformation.EndpointAddress, status);
+		goto Done;
+	}
+
+	status = Pipe_Start(deviceContext, pipeContext);
+	if (!NT_SUCCESS(status))
+	{
+		USBERRN("Pipe_Start failed. PipeID=%02Xh Status=%08Xh", pipeContext->PipeInformation.EndpointAddress, status);
+		goto Done;
+	}
+
+Done:
+	return status;
+}
+
 NTSTATUS Pipe_Stop(__in PPIPE_CONTEXT pipeContext,
-                   __in WDF_IO_TARGET_SENT_IO_ACTION WdfIoTargetSentIoAction)
+                   __in WDF_IO_TARGET_SENT_IO_ACTION WdfIoTargetSentIoAction,
+                   __in BOOLEAN purgeQueue)
 {
 	NTSTATUS status = STATUS_SUCCESS;
 	PAGED_CODE();
@@ -129,7 +154,7 @@ NTSTATUS Pipe_Stop(__in PPIPE_CONTEXT pipeContext,
 	{
 		pipeContext->IsValid = FALSE; // mark context invalid.
 
-		if (pipeContext->Queue)	// stop queue, cancel any outstanding requests
+		if (pipeContext->Queue && purgeQueue)	// stop queue, cancel any outstanding requests
 			WdfIoQueuePurgeSynchronously(pipeContext->Queue);
 
 		if (pipeContext->Pipe)
@@ -193,10 +218,165 @@ VOID Pipe_StopAll(__in PDEVICE_CONTEXT deviceContext)
 		for (pipeIndex = 0; pipeIndex < pipeCount; pipeIndex++)
 		{
 			pipeContext = deviceContext->InterfaceContext[interfaceIndex].PipeContextByIndex[pipeIndex];
-			Pipe_Stop(pipeContext, WdfIoTargetCancelSentIo);
+			Pipe_Stop(pipeContext, WdfIoTargetCancelSentIo, TRUE);
 		}
 	}
 }
+
+NTSTATUS Pipe_InitQueue(
+    __in PDEVICE_CONTEXT deviceContext,
+    __in PPIPE_CONTEXT pipeContext,
+    __out WDFQUEUE* queueRef)
+{
+	WDF_IO_QUEUE_DISPATCH_TYPE queueDispatchType = WdfIoQueueDispatchInvalid;
+	WDF_IO_QUEUE_CONFIG queueConfig;
+	WDF_OBJECT_ATTRIBUTES objectAttributes;
+	NTSTATUS status = STATUS_INVALID_HANDLE;
+	WDFQUEUE queue = NULL;
+	PQUEUE_CONTEXT queueContext;
+	WDF_OBJECT_ATTRIBUTES memAttributes;
+	PFN_WDF_IO_QUEUE_IO_STOP evtStop = NULL;
+
+	WDF_OBJECT_ATTRIBUTES_INIT(&objectAttributes);
+	objectAttributes.SynchronizationScope = WdfSynchronizationScopeQueue;
+
+	*queueRef = NULL;
+
+	// All queues get a context. At the very least, they will use a local copy of policy and pipe information
+	WDF_OBJECT_ATTRIBUTES_SET_CONTEXT_TYPE(&objectAttributes, QUEUE_CONTEXT);
+
+	if (pipeContext->Pipe)
+	{
+		if (pipeContext->PipeInformation.PipeType == WdfUsbPipeTypeIsochronous)
+		{
+			// Isochronous read or write pipe.
+			USBDBGN("Configuring parallel queue..");
+			queueDispatchType = WdfIoQueueDispatchParallel;
+			WDF_IO_QUEUE_CONFIG_INIT(&queueConfig,	queueDispatchType);
+
+			queueConfig.EvtIoDeviceControl = PipeQueue_OnIoControl;
+
+			if (USB_ENDPOINT_DIRECTION_IN(pipeContext->PipeInformation.EndpointAddress))
+			{
+				// Isochronous Read Pipe
+				queueConfig.EvtIoRead = PipeQueue_OnRead;
+			}
+			else
+			{
+				// Isochronous Write Pipe
+				queueConfig.EvtIoWrite = PipeQueue_OnWrite;
+				queueConfig.AllowZeroLengthRequests = TRUE;
+
+			}
+			queueConfig.EvtIoStop = Queue_OnIsoStop;
+		}
+		else if (USB_ENDPOINT_DIRECTION_IN(pipeContext->PipeInformation.EndpointAddress))
+		{
+			// Bulk/Int Read Pipe
+			if (pipeContext->Policies.RawIO)
+			{
+				// Configure for BulkReadRaw
+				USBDBGN("Configuring parallel queue..");
+				queueDispatchType = WdfIoQueueDispatchParallel;
+				evtStop = Queue_OnReadBulkRawStop;
+			}
+			else
+			{
+				// Configure for BulkRead
+				USBDBGN("Configuring sequential queue..");
+				queueDispatchType = WdfIoQueueDispatchSequential;
+				evtStop = Queue_OnReadBulkStop;
+
+			}
+			WDF_IO_QUEUE_CONFIG_INIT(&queueConfig,	queueDispatchType);
+
+			queueConfig.EvtIoDeviceControl = PipeQueue_OnIoControl;
+			queueConfig.EvtIoRead = PipeQueue_OnRead;
+			queueConfig.EvtIoStop = evtStop;
+		}
+		else
+		{
+			// Bulk/Int Write Pipe
+			if (pipeContext->Policies.RawIO)
+			{
+				// Configure for BulkWriteRaw
+				USBDBGN("Configuring parallel queue..");
+				queueDispatchType = WdfIoQueueDispatchParallel;
+				evtStop = Queue_OnReadBulkRawStop;
+			}
+			else
+			{
+				// Configure for BulkWrite
+				USBDBGN("Configuring sequential queue..");
+				queueDispatchType = WdfIoQueueDispatchSequential;
+			}
+			WDF_IO_QUEUE_CONFIG_INIT(&queueConfig,	queueDispatchType);
+
+			queueConfig.EvtIoDeviceControl = PipeQueue_OnIoControl;
+			queueConfig.EvtIoWrite = PipeQueue_OnWrite;
+			queueConfig.AllowZeroLengthRequests = TRUE;
+			queueConfig.EvtIoStop = evtStop;
+		}
+	}
+	else
+	{
+		// Default (Control) pipe
+		queueDispatchType = WdfIoQueueDispatchSequential;
+		WDF_IO_QUEUE_CONFIG_INIT(&queueConfig,	queueDispatchType);
+
+		queueConfig.EvtIoDeviceControl = PipeQueue_OnIoControl;
+
+	}
+
+	if (queueDispatchType != WdfIoQueueDispatchInvalid)
+	{
+		status = WdfIoQueueCreate(deviceContext->WdfDevice,
+		                          &queueConfig,
+		                          &objectAttributes,
+		                          &queue);
+		if (!NT_SUCCESS(status))
+		{
+			USBERR("WdfIoQueueCreate failed. pipeID=%02Xh status=%Xh\n", pipeContext->PipeInformation.EndpointAddress, status);
+			goto Exit;
+		}
+
+		// Create the memory for partial read storage
+		queueContext = GetQueueContext(queue);
+
+		// SET queueContext->OverOfs
+		RtlZeroMemory(&queueContext->OverOfs, sizeof(queueContext->OverOfs));
+
+		// SET queueContext->PipeHandle
+		queueContext->PipeHandle = pipeContext->Pipe;
+
+		// SET queueContext->Info
+		RtlCopyMemory(&queueContext->Info, &pipeContext->PipeInformation, sizeof(queueContext->Info));
+
+		WDF_OBJECT_ATTRIBUTES_INIT(&memAttributes);
+		memAttributes.ParentObject = queue;
+
+		// Only bulk and interrupt pipes have an OverMem buffer and it is only used
+		// when the queue type is sequential. (RAW_IO=FALSE)
+		if ((queueContext->Info.MaximumPacketSize) &&
+		        (queueContext->Info.PipeType == WdfUsbPipeTypeBulk || queueContext->Info.PipeType == WdfUsbPipeTypeInterrupt))
+		{
+			// SET queueContext->OverMem
+			// SET queueContext->OverBuf
+			status = WdfMemoryCreate(&memAttributes, NonPagedPool, POOL_TAG, queueContext->Info.MaximumPacketSize, &queueContext->OverMem, &queueContext->OverBuf);
+			if (!NT_SUCCESS(status))
+			{
+				USBERRN("WdfMemoryCreate failed. status=%08Xh", status);
+				goto Exit;
+			}
+		}
+	}
+
+	*queueRef = queue;
+
+Exit:
+	return status;
+}
+
 
 //
 // PRE REQUIREMENTS:
@@ -209,10 +389,8 @@ VOID Pipe_StopAll(__in PDEVICE_CONTEXT deviceContext)
 NTSTATUS Pipe_InitContext(__in PDEVICE_CONTEXT deviceContext,
                           __in PPIPE_CONTEXT pipeContext)
 {
-	WDF_IO_QUEUE_DISPATCH_TYPE queueDispatchType = WdfIoQueueDispatchInvalid;
-	WDF_IO_QUEUE_CONFIG queueConfig;
-	WDF_OBJECT_ATTRIBUTES objectAttributes;
 	NTSTATUS status = STATUS_INVALID_HANDLE;
+	WDFQUEUE queue	= pipeContext->Queue;
 
 	if (!pipeContext->Pipe && pipeContext->PipeInformation.PipeType != WdfUsbPipeTypeControl)
 	{
@@ -220,64 +398,32 @@ NTSTATUS Pipe_InitContext(__in PDEVICE_CONTEXT deviceContext,
 		goto Done;
 	}
 
-	// A Queue is created only once for each pipe.
-	if (!pipeContext->Queue)
+	if (!queue || ((pipeContext->PipeInformation.EndpointAddress & 0xF) && pipeContext->IsQueueDirty))
 	{
-		WDF_OBJECT_ATTRIBUTES_INIT(&objectAttributes);
-
-		// TODO: It would be good to add options for sequential/parallel queueing to the inf.
-		// This could be a huge benefit to some for very little effort.
-		//
-		switch(pipeContext->PipeInformation.PipeType)
+		pipeContext->IsQueueDirty = FALSE;
+		USBDBGN("pipeID=%02Xh Creating pipe queue.", pipeContext->PipeInformation.EndpointAddress);
+		status = Pipe_InitQueue(deviceContext, pipeContext, &queue);
+		if (!NT_SUCCESS(status))
 		{
-		case WdfUsbPipeTypeIsochronous:
-			objectAttributes.SynchronizationScope = WdfSynchronizationScopeQueue;
-			queueDispatchType = WdfIoQueueDispatchParallel;
-			break;
-		case WdfUsbPipeTypeInterrupt:
-			objectAttributes.SynchronizationScope = WdfSynchronizationScopeQueue;
-			queueDispatchType = WdfIoQueueDispatchParallel;
-			break;
-		case WdfUsbPipeTypeBulk:
-			objectAttributes.SynchronizationScope = WdfSynchronizationScopeQueue;
-			queueDispatchType = WdfIoQueueDispatchParallel;
-			break;
-		case WdfUsbPipeTypeControl:
-			objectAttributes.SynchronizationScope = WdfSynchronizationScopeQueue;
-			queueDispatchType = WdfIoQueueDispatchSequential;
-			break;
+			USBERRN("Pipe_InitQueue failed. pipeID=%02Xh status=%08Xh", pipeContext->PipeInformation.EndpointAddress, status);
+			goto Done;
 		}
 
-		if (queueDispatchType != WdfIoQueueDispatchInvalid)
+		queue = InterlockedExchangePointer(&pipeContext->Queue, queue);
+		if (queue)
 		{
-			WDF_IO_QUEUE_CONFIG_INIT(&queueConfig,	queueDispatchType);
-
-			if (pipeContext->PipeInformation.EndpointAddress & 0xF)
-			{
-				if (USB_ENDPOINT_DIRECTION_IN(pipeContext->PipeInformation.EndpointAddress))
-					queueConfig.EvtIoRead = PipeQueue_OnRead;
-				else
-					queueConfig.EvtIoWrite = PipeQueue_OnWrite;
-			}
-			queueConfig.EvtIoDeviceControl = PipeQueue_OnIoControl;
-
-			status = WdfIoQueueCreate(deviceContext->WdfDevice,
-			                          &queueConfig,
-			                          &objectAttributes,
-			                          &pipeContext->Queue);
-			if (!NT_SUCCESS(status))
-			{
-				USBERR("WdfIoQueueCreate failed. pipeID=%02Xh status=%Xh\n", pipeContext->PipeInformation.EndpointAddress, status);
-			}
+			USBDBGN("pipeID=%02Xh Destroying old pipe queue.", pipeContext->PipeInformation.EndpointAddress);
+			WdfObjectDelete(queue);
 		}
+		queue = pipeContext->Queue;
 
 	}
 	else
 	{
-		// Queue is already created.
+		// Queue is already created and does not need to be updated.
 		status = STATUS_SUCCESS;
 	}
-	if (!pipeContext->Queue && NT_SUCCESS(status))
+	if (!queue && NT_SUCCESS(status))
 		status = STATUS_INVALID_PIPE_STATE;
 
 	if (NT_SUCCESS(status))
@@ -289,37 +435,17 @@ NTSTATUS Pipe_InitContext(__in PDEVICE_CONTEXT deviceContext,
 			status = PipeStart(pipeContext);
 			if (!NT_SUCCESS(status))
 			{
-				WdfObjectDelete(pipeContext->Queue);
-				pipeContext->Queue = NULL;
+				WdfObjectDelete(queue);
+				queue = NULL;
 				pipeContext->IsValid = FALSE;
 				USBERR("WdfIoTargetStart failed. status=%Xh\n", status);
 				goto Done;
 			}
 		}
 
-		if (pipeContext->PipeLock == WDF_NO_HANDLE)
-		{
-			// create pipe transfer wait lock
-			WDF_OBJECT_ATTRIBUTES_INIT(&objectAttributes);
-			objectAttributes.ParentObject = deviceContext->WdfDevice;
-			status = WdfWaitLockCreate(&objectAttributes, &pipeContext->PipeLock);
-			if (!NT_SUCCESS(status))
-			{
-				if (pipeContext->PipeInformation.PipeType != WdfUsbPipeTypeControl)
-					PipeStop(pipeContext, WdfIoTargetCancelSentIo);
-
-				WdfObjectDelete(pipeContext->Queue);
-				pipeContext->Queue = NULL;
-				pipeContext->IsValid = FALSE;
-				USBERR("WdfWaitLockCreate failed. status=%Xh\n", status);
-				goto Done;
-			}
-		}
-
 		// start queue
 		USBDBG("pipeID=%02Xh queue starting..\n", pipeContext->PipeInformation.EndpointAddress);
-		WdfIoQueueStart(pipeContext->Queue);
-
+		WdfIoQueueStart(queue);
 		pipeContext->IsValid = TRUE;
 
 	}
@@ -423,15 +549,36 @@ NTSTATUS Pipe_InitDefaultContext(__in PDEVICE_CONTEXT deviceContext)
 	pipeContext->Pipe = WDF_NO_HANDLE;
 	pipeContext->Queue = WDF_NO_HANDLE;
 
-	pipeContext->PipeInformation.MaximumPacketSize = deviceContext->UsbDeviceDescriptor.bMaxPacketSize0;
-	pipeContext->PipeInformation.MaximumTransferSize = MAX_CONTROL_TRANSFER_SIZE;
-	pipeContext->PipeInformation.EndpointAddress = 0x00;
-	pipeContext->PipeInformation.PipeType = WdfUsbPipeTypeControl;
+	pipeContext->PipeInformation.MaximumPacketSize		= deviceContext->UsbDeviceDescriptor.bMaxPacketSize0;
+	pipeContext->PipeInformation.MaximumTransferSize	= MAX_CONTROL_TRANSFER_SIZE;
+	pipeContext->PipeInformation.EndpointAddress		= 0x00;
+	pipeContext->PipeInformation.PipeType				= WdfUsbPipeTypeControl;
 
-	GetPolicyValue(MAX_TRANSFER_STAGE_SIZE, pipeContext->Policy) = MAX_CONTROL_TRANSFER_SIZE;
-	GetPolicyValue(MAXIMUM_TRANSFER_SIZE, pipeContext->Policy) = MAX_CONTROL_TRANSFER_SIZE;
+	pipeContext->TimeoutPolicy							= 5000;
 
 	return Pipe_InitContext(deviceContext, pipeContext);
 }
 
+ULONG Pipe_CalcMaxTransferSize(
+    __in BOOLEAN IsHS,
+    __in WDF_USB_PIPE_TYPE pipeType,
+    __in ULONG maxPacketSize,
+    __in ULONG originalMaxTransferSize)
+{
+	ULONG maxTransferSize;
 
+	switch (pipeType)
+	{
+	case WdfUsbPipeTypeIsochronous:
+		maxTransferSize = IsHS ? (1024 * maxPacketSize) : (255 * maxPacketSize);
+		break;
+	case WdfUsbPipeTypeBulk:
+	case WdfUsbPipeTypeInterrupt:
+		maxTransferSize = maxPacketSize * 4096;
+		break;
+	default:
+		return originalMaxTransferSize;
+	}
+
+	return maxTransferSize > originalMaxTransferSize ? originalMaxTransferSize : maxTransferSize;
+}

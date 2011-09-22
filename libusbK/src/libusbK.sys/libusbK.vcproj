@@ -149,6 +149,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\drv_xfer_bulk.c"
+				>
+			</File>
+			<File
 				RelativePath=".\drv_xfer_control.c"
 				>
 			</File>

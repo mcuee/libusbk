@@ -18,8 +18,10 @@
 EVT_WDF_IO_QUEUE_IO_READ DefaultQueue_OnRead;
 EVT_WDF_IO_QUEUE_IO_WRITE DefaultQueue_OnWrite;
 EVT_WDF_IO_QUEUE_IO_DEVICE_CONTROL DefaultQueue_OnIoControl;
-EVT_WDF_IO_QUEUE_IO_STOP Queue_OnDefaultStop;
-EVT_WDF_IO_QUEUE_IO_RESUME Queue_OnDefaultResume;
+
+EVT_WDF_IO_QUEUE_IO_STOP Queue_OnIsoStop;
+EVT_WDF_IO_QUEUE_IO_STOP Queue_OnReadBulkStop;
+#define Queue_OnReadBulkRawStop Queue_OnIsoStop
 
 EVT_WDF_IO_QUEUE_IO_READ PipeQueue_OnRead;
 EVT_WDF_IO_QUEUE_IO_WRITE PipeQueue_OnWrite;
@@ -32,43 +34,11 @@ FORCEINLINE VOID ForwardToQueue(__in WDFREQUEST Request,
 	ULONG                   packetSize;
 	NTSTATUS                status = STATUS_SUCCESS;
 
-	packetSize = requestContext->PipeContext->PipeInformation.MaximumPacketSize;
-	if(packetSize == 0)
-	{
-		USBERR("MaximumPacketSize=0\n");
-		status = STATUS_INVALID_DEVICE_STATE;
-		goto Exit;
-	}
+	packetSize = requestContext->QueueContext->Info.MaximumPacketSize;
 
-	//
-	// check that the transfer length is an interval of wMaxPacketSize.
-	//
-	if(requestContext->Length % packetSize)
-	{
-		if (requestContext->PipeContext->PipeInformation.PipeType == WdfUsbPipeTypeControl)
-		{
-			// no restrictions..
-		}
-		if (requestContext->PipeContext->PipeInformation.PipeType == WdfUsbPipeTypeIsochronous)
-		{
-			USBERR("isochronous transfers require the transfer length be an interval of wMaxPacketSize. %d %% %d = %d\n",
-			       requestContext->Length, packetSize, requestContext->Length % packetSize);
-			status = STATUS_INVALID_PARAMETER;
-			goto Exit;
-
-		}
-		else if (USB_ENDPOINT_DIRECTION_IN(GetRequestPipeID(requestContext)))
-		{
-			// This is generally not a good thing, but still allowed.
-			USBWRN("total transfer length is not an interval of wMaxPacketSize.%d %% %d = %d\n",
-			       requestContext->Length, packetSize, requestContext->Length % packetSize);
-		}
-	}
-
-	//
 	// forward the requests to their own queues.
 	//
-	status = WdfRequestForwardToIoQueue(Request, requestContext->PipeContext->Queue);
+	status = WdfRequestForwardToIoQueue(Request, WdfObjectContextGetObject(requestContext->QueueContext));
 	if(!NT_SUCCESS(status))
 	{
 		USBERR("WdfRequestForwardToIoQueue failed. status=%Xh\n", status);
@@ -90,26 +60,32 @@ FORCEINLINE VOID ForwardToPipeQueue(__in WDFREQUEST Request,
                                     __in UCHAR PipeID,
                                     __in WDF_REQUEST_TYPE requestType)
 {
+
 	NTSTATUS status;
-	requestContext->PipeContext = GetPipeContextByID(deviceContext, PipeID);
-	VALIDATE_REQUEST_CONTEXT(requestContext, status);
-	if (!NT_SUCCESS(status))
+	WDFQUEUE pipeQueue;
+
+	if ((pipeQueue = GetPipeContextByID(deviceContext, PipeID)->Queue) == NULL)
 	{
-		WdfRequestCompleteWithInformation(Request, status, 0);
-		return;
+		status = STATUS_INVALID_DEVICE_STATE;
+		USBERR("Invalid pipe queue.\n");
+		goto Exit;
 	}
 
-	if (!(requestContext->PipeContext->PipeInformation.EndpointAddress & 0xF))
-	{
-		USBERR("invalid pipe type\n");
-		status = STATUS_INVALID_PIPE_STATE;
-		WdfRequestCompleteWithInformation(Request, status, 0);
-		return;
-	}
-
+	requestContext->QueueContext = GetQueueContext(pipeQueue);
 	requestContext->RequestType = requestType;
-	ForwardToQueue(Request, requestContext);
+
+	status = WdfRequestForwardToIoQueue(Request, pipeQueue);
+	if(!NT_SUCCESS(status))
+	{
+		USBERR("WdfRequestForwardToIoQueue failed. status=%Xh\n", status);
+		goto Exit;
+	}
+
 	return;
+Exit:
+	WdfRequestCompleteWithInformation(Request, status, 0);
+	return;
+
 }
 
 #endif

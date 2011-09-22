@@ -18,10 +18,185 @@ binary distributions.
 
 #include "drv_common.h"
 
-static VOID XferIsoExComplete(__in WDFREQUEST Request,
-                              __in WDFIOTARGET Target,
-                              __in PWDF_REQUEST_COMPLETION_PARAMS CompletionParams,
-                              __in PKISO_CONTEXT IsoContext);
+// warning C4127: conditional expression is constant.
+#pragma warning(disable: 4127)
+
+#define mXfer_CreateAutoIso(mStatus, mRequest, mRequestContext, mAutoIsoCtx, mErrorAction) do {					\
+	/* Create a collection to store all the sub requests */  													\
+	WDFCOLLECTION hCollection;   																				\
+	WDF_OBJECT_ATTRIBUTES objAttributes; 																		\
+ 																												\
+	WDF_OBJECT_ATTRIBUTES_INIT(&objAttributes);  																\
+	objAttributes.ParentObject = mRequest;   																	\
+ 																												\
+	WDF_OBJECT_ATTRIBUTES_SET_CONTEXT_TYPE(&objAttributes, XFER_AUTOISO_COLLECTION_CONTEXT); 					\
+	mStatus = WdfCollectionCreate(&objAttributes, &hCollection); 												\
+	if (!NT_SUCCESS(mStatus))																					\
+	{																											\
+		USBERR("WdfCollectionCreate failed. Status=%08Xh\n", mStatus);   										\
+		mErrorAction;;   																						\
+	}																											\
+	mAutoIsoCtx = GetAutoIsoCollectionContext(hCollection);  													\
+	mAutoIsoCtx->MainRequest = mRequest; 																		\
+	mAutoIsoCtx->MainRequestContext = mRequestContext;   														\
+	mAutoIsoCtx->SubRequestCollection = hCollection; 															\
+ 	mAutoIsoCtx->MainRequestContext->AutoIso.Context = mAutoIsoCtx; 											\
+	mStatus = GetTransferMdl(mRequest,mRequestContext->ActualRequestType, &mAutoIsoCtx->OriginalTransferMDL);	\
+	if (!NT_SUCCESS(mStatus))																					\
+	{																											\
+		USBERR("Zero-length buffer. pipeID=%02Xh\n", mRequestContext->QueueContext->Info.EndpointAddress); 		\
+		mErrorAction;;   																						\
+	}																											\
+ 																												\
+	WDF_OBJECT_ATTRIBUTES_INIT(&objAttributes);  																\
+	objAttributes.ParentObject = hCollection;																	\
+	mStatus = WdfSpinLockCreate(&objAttributes, &mAutoIsoCtx->SubRequestCollectionLock); 						\
+	if (!NT_SUCCESS(mStatus))																					\
+	{																											\
+		USBERR("WdfSpinLockCreate failed. Status=%08Xh\n", mStatus); 											\
+		mErrorAction;;   																						\
+	}																											\
+}while(0)
+
+#define mXfer_IsoReadPacketsFromUrb(mIsoPacketArray,mUrb,mNumberOfPackets,mCumulativeLength) do {					\
+	LONG mPos;																										\
+	for (mPos = 0; mPos < (mNumberOfPackets); mPos++)																\
+	{																												\
+		mIsoPacketArray[mPos].Length = (USHORT)(mUrb)->UrbIsochronousTransfer.IsoPacket[mPos].Length;				\
+		mIsoPacketArray[mPos].Status = (USHORT)((mUrb)->UrbIsochronousTransfer.IsoPacket[mPos].Status & 0xFFFF);	\
+		(mCumulativeLength) = (mCumulativeLength) + (mUrb)->UrbIsochronousTransfer.IsoPacket[mPos].Length;			\
+	}																												\
+}while(0)
+
+#define mXfer_IsoPacketsToUrb(mIsoPacketArray,mUrb,mNumberOfPackets,mDataLength,mErrorAction) do {  	\
+	LONG mPos; 																							\
+	for (mPos = 0; mPos < (LONG)mNumberOfPackets; mPos++)  												\
+	{  																									\
+		if (mIsoPacketArray[mPos].Offset >= mDataLength)   												\
+		{  																								\
+			status = STATUS_INVALID_BUFFER_SIZE;   														\
+			USBERRN("Last packet offset references data that is out-of-range. IsoPacket[%u].Offset=%u",	\
+					mPos, mIsoPacketArray[mPos].Offset);   												\
+			mErrorAction; 																				\
+		}  																								\
+		(mUrb)->UrbIsochronousTransfer.IsoPacket[mPos].Offset = mIsoPacketArray[mPos].Offset;  			\
+	}  																									\
+}while(0)
+
+#define mXfer_AutoIsoNextStageNumberOfPackets(mNumStagePackets, mTotalmAccumulativeNumPackets, mMaxStageNumPackets) do {	\
+		if(mTotalmAccumulativeNumPackets <= mMaxStageNumPackets)															\
+		{   																												\
+			mNumStagePackets = mTotalmAccumulativeNumPackets;																\
+			mTotalmAccumulativeNumPackets = 0;  																			\
+		}   																												\
+		else																												\
+		{   																												\
+			mNumStagePackets = mMaxStageNumPackets;  																		\
+			mTotalmAccumulativeNumPackets -= mMaxStageNumPackets;   														\
+		}   																												\
+		ASSERT(mNumStagePackets <= mMaxStageNumPackets); 																	\
+}while(0)
+
+#define mXfer_AutoIsoCreateSubRequest(mStatus,mMainRequest,mSubRequest, mSubRequestContext,mAttributes, mWdfUsbTargetDevice,ErrorAction) do {	\
+		WDF_OBJECT_ATTRIBUTES_INIT(&mAttributes);																								\
+		WDF_OBJECT_ATTRIBUTES_SET_CONTEXT_TYPE(&mAttributes, SUB_REQUEST_CONTEXT);   															\
+		mStatus = WdfRequestCreate(  																											\
+					 &mAttributes,   																											\
+					 WdfUsbTargetDeviceGetIoTarget(mWdfUsbTargetDevice), 																		\
+					 &mSubRequest);  																											\
+ 																																				\
+		if(!NT_SUCCESS(mStatus)) 																												\
+		{																																		\
+			USBERR("WdfRequestCreate failed. Status=%08Xh\n", mStatus);  																		\
+			ErrorAction; 																														\
+		}																																		\
+ 																																				\
+		mSubRequestContext = GetSubRequestContext(mSubRequest);  																				\
+		mSubRequestContext->UserRequest = mMainRequest;  																						\
+}while(0)
+
+#define	mXfer_AutoIsoCreateSubUrb(mStatus, mSubRequest, mSubRequestContext,mUrbSize,mSubUrbMemory, mSubUrbBuffer, mAttributes, ErrorAction) do { 	\
+		WDF_OBJECT_ATTRIBUTES_INIT(&mAttributes);  											\
+		mAttributes.ParentObject = mSubRequest;												\
+		mStatus = WdfMemoryCreate( 															\
+					 &mAttributes, 															\
+					 NonPagedPool, 															\
+					 POOL_TAG, 																\
+					 mUrbSize, 																\
+					 &subUrbMemory,															\
+					 (PVOID*) &mSubUrbBuffer); 												\
+   																							\
+		if (!NT_SUCCESS(mStatus))  															\
+		{  																					\
+			WdfObjectDelete(mSubRequest);  													\
+			mSubRequest=NULL;  																\
+			USBERRN("WdfMemoryCreate failed in AutoIsoCreateSubUrb. Status=%08Xh",mStatus);	\
+			ErrorAction;   																	\
+		}  																					\
+		mSubRequestContext->SubUrb = mSubUrbBuffer;											\
+}while(0)
+
+#define mXfer_AutoIsoCreateSubMdl(mStatus, mOriginalMdl, mSubMdl, mSubRequest, mSubRequestContext, mCumulativeVirtualAddress, mAccumulativeTotalLength, mDataBufferStageSize) do { 	\
+	mSubMdl = IoAllocateMdl((PVOID) mCumulativeVirtualAddress, mDataBufferStageSize, FALSE, FALSE, NULL);	\
+	if(mSubMdl == NULL)  																					\
+	{																										\
+		mStatus = STATUS_INSUFFICIENT_RESOURCES; 															\
+		USBERRN("IoAllocateMdl failed in AutoIsoCreateSubMdl. Status=%08Xh",mStatus);						\
+		WdfObjectDelete(mSubRequest);																		\
+		goto Exit;   																						\
+	}																										\
+ 																											\
+	IoBuildPartialMdl(mOriginalMdl,  																		\
+					  mSubMdl,   																			\
+					  (PVOID) mCumulativeVirtualAddress, 													\
+					  mDataBufferStageSize); 																\
+ 																											\
+	mSubRequestContext->SubMdl = mSubMdl;																	\
+ 																											\
+	mCumulativeVirtualAddress += mDataBufferStageSize;   													\
+	mAccumulativeTotalLength -= mDataBufferStageSize;														\
+}while(0)
+
+#define mXfer_AutoIsoFormatSubUrb(mWdmPipeHandle, mRequestContext, mSubUrbBuffer, mUrbSize, mNumberOfPackets,mBufferStageSize, mSubMdl) do {	\
+	mSubUrbBuffer->UrbIsochronousTransfer.Hdr.Length = (USHORT) mUrbSize;   																	\
+	mSubUrbBuffer->UrbIsochronousTransfer.Hdr.Function = URB_FUNCTION_ISOCH_TRANSFER;   														\
+	mSubUrbBuffer->UrbIsochronousTransfer.PipeHandle = mWdmPipeHandle;  																		\
+																																				\
+	mSubUrbBuffer->UrbIsochronousTransfer.TransferFlags = (mRequestContext->RequestType==WdfRequestTypeRead) ?  								\
+		USBD_TRANSFER_DIRECTION_IN : USBD_TRANSFER_DIRECTION_OUT;   																			\
+																																				\
+	mSubUrbBuffer->UrbIsochronousTransfer.TransferBufferLength = mBufferStageSize;  															\
+	mSubUrbBuffer->UrbIsochronousTransfer.TransferBufferMDL = mSubMdl;  																		\
+																																				\
+	if (mSubUrbBuffer->UrbIsochronousTransfer.StartFrame)   																					\
+		mSubUrbBuffer->UrbIsochronousTransfer.TransferFlags |= USBD_START_ISO_TRANSFER_ASAP;													\
+																																				\
+	mSubUrbBuffer->UrbIsochronousTransfer.NumberOfPackets = mNumberOfPackets;   																\
+	mSubUrbBuffer->UrbIsochronousTransfer.UrbLink = NULL;   																					\
+}while(0)
+
+#define mXfer_AutoIsoFormatAndAddSubRequest(mStatus, mSubRequest, mSubRequestContext, mSubRequestsList, mWdfPipeHandle, mSubUrbMemory, mSubMdl, mCompletionRoutine, mCompletionContext, mErrorAction) do { 	\
+		mStatus = WdfUsbTargetPipeFormatRequestForUrb(mWdfPipeHandle, mSubRequest, mSubUrbMemory, NULL);						\
+		if (!NT_SUCCESS(mStatus))   																							\
+		{   																													\
+			USBERRN("WdfUsbTargetPipeFormatRequestForUrb failed in AutoIsoFormatAndAddSubRequest. Status=%08Xh\n", mStatus);	\
+			WdfObjectDelete(mSubRequest);   																					\
+			IoFreeMdl(mSubMdl); 																								\
+			mErrorAction;   																									\
+		}   																													\
+		WdfRequestSetCompletionRoutine(mSubRequest, mCompletionRoutine, mCompletionContext);									\
+																																\
+		mStatus = WdfCollectionAdd(hCollection, mSubRequest);   																\
+		if (!NT_SUCCESS(mStatus))   																							\
+		{   																													\
+			USBERRN("WdfCollectionAdd failed in AutoIsoFormatAndAddSubRequest. Status=%08Xh", mStatus); 						\
+			WdfObjectDelete(mSubRequest);   																					\
+			IoFreeMdl(mSubMdl); 																								\
+			mErrorAction;   																									\
+		}   																													\
+		InsertTailList(&mSubRequestsList, &mSubRequestContext->ListEntry);  													\
+}while(0)
+
 //
 // Required for doing ISOCH transfer. This context is associated with every
 // subrequest created by the driver to do ISOCH transfer.
@@ -41,9 +216,20 @@ EVT_WDF_REQUEST_CANCEL UsbK_EvtRequestCancel;
 EVT_WDF_REQUEST_COMPLETION_ROUTINE XferIsoComplete;
 EVT_WDF_REQUEST_COMPLETION_ROUTINE ReadWriteCompletion;
 
-VOID
-XferIsoCleanup(
-    PREQUEST_CONTEXT    MainRequestContext,
+VOID XferAutoIsoExComplete(
+    __in WDFREQUEST Request,
+    __in WDFIOTARGET Target,
+    __in PWDF_REQUEST_COMPLETION_PARAMS CompletionParams,
+    __in PREQUEST_CONTEXT requestContext);
+
+VOID XferIsoExComplete(
+    __in WDFREQUEST Request,
+    __in WDFIOTARGET Target,
+    __in PWDF_REQUEST_COMPLETION_PARAMS CompletionParams,
+    __in PKISO_CONTEXT IsoContext);
+
+VOID XferIsoCleanup(
+    PXFER_AUTOISO_COLLECTION_CONTEXT AutoIsoCtx,
     PLIST_ENTRY         SubRequestsList,
     PBOOLEAN            CompleteRequest);
 
@@ -66,9 +252,7 @@ Arguments:
 */
 VOID XferIsoFS (
     __in WDFQUEUE Queue,
-    __in WDFREQUEST Request,
-    __in size_t InputBufferLength,
-    __in size_t OutputBufferLength)
+    __in WDFREQUEST Request)
 {
 	ULONG                   packetSize;
 	ULONG                   numSubRequests;
@@ -77,8 +261,6 @@ VOID XferIsoFS (
 	NTSTATUS               status;
 	PDEVICE_CONTEXT         deviceContext;
 	PREQUEST_CONTEXT        requestContext;
-	WDFCOLLECTION           hCollection = NULL;
-	WDFSPINLOCK            hSpinLock = NULL;
 	WDF_OBJECT_ATTRIBUTES   attributes;
 	WDFREQUEST              subRequest = NULL;
 	PSUB_REQUEST_CONTEXT    subReqContext = NULL;
@@ -88,9 +270,8 @@ VOID XferIsoFS (
 	USBD_PIPE_HANDLE        usbdPipeHandle;
 	BOOLEAN                 cancelable;
 	ULONG					TotalLength;
-
-	UNREFERENCED_PARAMETER(InputBufferLength);
-	UNREFERENCED_PARAMETER(OutputBufferLength);
+	PXFER_AUTOISO_COLLECTION_CONTEXT autoIsoCtx = NULL;
+	PQUEUE_CONTEXT			queueContext = NULL;
 
 	cancelable = FALSE;
 
@@ -98,48 +279,23 @@ VOID XferIsoFS (
 
 	requestContext = GetRequestContext(Request);
 	deviceContext = GetDeviceContext(WdfIoQueueGetDevice(Queue));
+	VALIDATE_REQUEST_CONTEXT(requestContext, status);
+	if (!NT_SUCCESS(status)) goto Exit;
 
-	if (!requestContext->OriginalTransferMDL)
+	if ((queueContext = GetQueueContext(Queue)) == NULL)
 	{
-		// ZLPs are not supported for iso.
-		USBERR("Zero-length buffer. pipeID=%02Xh\n", GetRequestPipeID(requestContext));
-		status = STATUS_BUFFER_TOO_SMALL;
+		status = STATUS_INVALID_DEVICE_REQUEST;
+		USBERRN("Invalid queue context");
 		goto Exit;
 	}
 
 	TotalLength = requestContext->Length;
+	mXfer_CreateAutoIso(status, Request, requestContext, autoIsoCtx, goto Exit);
 
-	//
-	// Create a collection to store all the sub requests.
-	//
-	WDF_OBJECT_ATTRIBUTES_INIT(&attributes);
-	attributes.ParentObject = Request;
-	status = WdfCollectionCreate(&attributes, &hCollection);
-	if (!NT_SUCCESS(status))
-	{
-		USBERR("WdfCollectionCreate failed. status=%Xh\n", status);
-		goto Exit;
-	}
-
-	WDF_OBJECT_ATTRIBUTES_INIT(&attributes);
-	attributes.ParentObject = hCollection;
-	status = WdfSpinLockCreate(&attributes, &hSpinLock);
-	if (!NT_SUCCESS(status))
-	{
-		USBERR("WdfSpinLockCreate failed. status=%Xh\n", status);
-		goto Exit;
-	}
-
-
-	//
-	// Each packet can hold this much info
-	// Use the user defined packet size if available; otherwise use MaximumPacketSize.
+	// Use a user defined packet size if one was specfied else use MaximumPacketSize
 	packetSize = requestContext->IoControlRequest.endpoint.packet_size;
 	if (!packetSize)
-		packetSize = requestContext->PipeContext->PipeInformation.MaximumPacketSize;
-
-	USBMSG("totalLength = %d\n", requestContext->Length);
-	USBMSG("packetSize = %d\n", packetSize);
+		packetSize = queueContext->Info.MaximumPacketSize;
 
 	//
 	// there is an inherent limit on the number of packets
@@ -172,10 +328,7 @@ VOID XferIsoFS (
 
 	USBMSG("numSubRequests = %d\n", numSubRequests);
 
-	requestContext->SubRequestCollection = hCollection;
-	requestContext->SubRequestCollectionLock = hSpinLock;
-
-	virtualAddress = (PUCHAR) MmGetMdlVirtualAddress(requestContext->OriginalTransferMDL);
+	virtualAddress = (PUCHAR) MmGetMdlVirtualAddress(autoIsoCtx->OriginalTransferMDL);
 
 	for(i = 0; i < numSubRequests; i++)
 	{
@@ -184,7 +337,7 @@ VOID XferIsoFS (
 		PURB                    subUrb;
 		PMDL                    subMdl;
 		ULONG                   nPackets;
-		ULONG                   siz;
+		ULONG                   subUrbSize;
 		ULONG                   offset;
 
 		//
@@ -203,7 +356,7 @@ VOID XferIsoFS (
 		USBMSG("nPackets = %d for Irp/URB pair %d\n", nPackets, i);
 
 		ASSERT(nPackets <= 255);
-		siz = GET_ISO_URB_SIZE(nPackets);
+		subUrbSize = GET_ISO_URB_SIZE(nPackets);
 
 		WDF_OBJECT_ATTRIBUTES_INIT(&attributes);
 		WDF_OBJECT_ATTRIBUTES_SET_CONTEXT_TYPE(&attributes, SUB_REQUEST_CONTEXT);
@@ -216,7 +369,7 @@ VOID XferIsoFS (
 		if(!NT_SUCCESS(status))
 		{
 
-			USBERR("WdfRequestCreate failed. status=%Xh\n", status);
+			USBERR("WdfRequestCreate failed. Status=%08Xh\n", status);
 			goto Exit;
 		}
 
@@ -232,7 +385,7 @@ VOID XferIsoFS (
 		             &attributes,
 		             NonPagedPool,
 		             POOL_TAG,
-		             siz,
+		             subUrbSize,
 		             &subUrbMemory,
 		             (PVOID*) &subUrb);
 
@@ -263,7 +416,7 @@ VOID XferIsoFS (
 			goto Exit;
 		}
 
-		IoBuildPartialMdl(requestContext->OriginalTransferMDL,
+		IoBuildPartialMdl(autoIsoCtx->OriginalTransferMDL,
 		                  subMdl,
 		                  (PVOID) virtualAddress,
 		                  stageSize);
@@ -276,9 +429,9 @@ VOID XferIsoFS (
 		//
 		// Initialize the subsidiary urb
 		//
-		usbdPipeHandle = WdfUsbTargetPipeWdmGetPipeHandle(requestContext->PipeContext->Pipe);
+		usbdPipeHandle = WdfUsbTargetPipeWdmGetPipeHandle(queueContext->PipeHandle);
 
-		subUrb->UrbIsochronousTransfer.Hdr.Length = (USHORT) siz;
+		subUrb->UrbIsochronousTransfer.Hdr.Length = (USHORT) subUrbSize;
 		subUrb->UrbIsochronousTransfer.Hdr.Function = URB_FUNCTION_ISOCH_TRANSFER;
 		subUrb->UrbIsochronousTransfer.PipeHandle = usbdPipeHandle;
 
@@ -392,7 +545,7 @@ VOID XferIsoFS (
 		//
 		// Associate the URB with the request.
 		//
-		status = WdfUsbTargetPipeFormatRequestForUrb(requestContext->PipeContext->Pipe,
+		status = WdfUsbTargetPipeFormatRequestForUrb(queueContext->PipeHandle,
 		         subRequest,
 		         subUrbMemory,
 		         NULL);
@@ -405,9 +558,7 @@ VOID XferIsoFS (
 			goto Exit;
 		}
 
-		WdfRequestSetCompletionRoutine(subRequest,
-		                               XferIsoComplete,
-		                               requestContext);
+		WdfRequestSetCompletionRoutine(subRequest, XferIsoComplete, autoIsoCtx);
 
 		if(TotalLength > (packetSize * 255))
 		{
@@ -424,10 +575,10 @@ VOID XferIsoFS (
 		// WdfCollectionAdd takes a reference on the request object and removes
 		// it when you call WdfCollectionRemove.
 		//
-		status = WdfCollectionAdd(hCollection, subRequest);
+		status = WdfCollectionAdd(autoIsoCtx->SubRequestCollection, subRequest);
 		if (!NT_SUCCESS(status))
 		{
-			USBERR("WdfCollectionAdd failed. status=%Xh\n", status);
+			USBERR("WdfCollectionAdd failed. Status=%08Xh\n", status);
 			WdfObjectDelete(subRequest);
 			IoFreeMdl(subMdl);
 			goto Exit;
@@ -463,14 +614,14 @@ VOID XferIsoFS (
 		subReqContext = CONTAINING_RECORD(thisEntry, SUB_REQUEST_CONTEXT, ListEntry);
 		subRequest = WdfObjectContextGetObject(subReqContext);
 		USBMSG("sending subRequest 0x%p\n", subRequest);
-		if (WdfRequestSend(subRequest, WdfUsbTargetPipeGetIoTarget(requestContext->PipeContext->Pipe), WDF_NO_SEND_OPTIONS) == FALSE)
+		if (WdfRequestSend(subRequest, WdfUsbTargetPipeGetIoTarget(queueContext->PipeHandle), WDF_NO_SEND_OPTIONS) == FALSE)
 		{
 			status = WdfRequestGetStatus(subRequest);
 			//
 			// Insert the subrequest back into the subrequestlist so cleanup can find it and delete it
 			//
 			InsertHeadList(&subRequestsList, &subReqContext->ListEntry);
-			USBMSG("WdfRequestSend failed. status=%Xh\n", status);
+			USBMSG("WdfRequestSend failed. Status=%08Xh\n", status);
 			ASSERT(!NT_SUCCESS(status));
 			goto Exit;
 		}
@@ -506,9 +657,9 @@ Exit:
 		completeRequest = TRUE;
 		tempStatus = STATUS_SUCCESS;
 
-		if(hCollection)
+		if(autoIsoCtx->SubRequestCollection)
 		{
-			XferIsoCleanup(requestContext, &subRequestsList, &completeRequest);
+			XferIsoCleanup(autoIsoCtx, &subRequestsList, &completeRequest);
 		}
 
 		if (completeRequest)
@@ -530,13 +681,13 @@ Exit:
 				}
 			}
 
-			if (requestContext->TotalTransferred > 0 )
+			if (autoIsoCtx->TotalTransferred > 0 )
 			{
-				WdfRequestCompleteWithInformation(Request, STATUS_SUCCESS, requestContext->TotalTransferred);
+				WdfRequestCompleteWithInformation(Request, STATUS_SUCCESS, autoIsoCtx->TotalTransferred);
 			}
 			else
 			{
-				WdfRequestCompleteWithInformation(Request, status, requestContext->TotalTransferred);
+				WdfRequestCompleteWithInformation(Request, status, autoIsoCtx->TotalTransferred);
 			}
 		}
 
@@ -547,134 +698,8 @@ Exit:
 }
 
 VOID XferIsoHS(
-    __in WDFQUEUE         Queue,
-    __in WDFREQUEST       Request,
-    __in ULONG            Length)
-/*++
-
-Routine Description:
-
-    High Speed Isoch Transfers requires packets in multiples of 8.
-    (Argument: 8 micro-frames per ms frame)
-    Another restriction is that each Irp/Urb pair can be associated
-    with a max of 1024 packets.
-
-    Here is one of the ways of creating Irp/Urb pairs.
-    Depending on the characteristics of real-world device,
-    the algorithm may be different
-
-    This algorithm will distribute data evenly among all the packets.
-
-    Input:
-    TotalLength - no. of bytes to be transferred.
-
-    Other parameters:
-    packetSize - max size of each packet for this pipe.
-
-    Implementation Details:
-
-    Step 1:
-    ASSERT(TotalLength >= 8)
-
-    Step 2:
-    Find the exact number of packets required to transfer all of this data
-
-    numberOfPackets = (TotalLength + packetSize - 1) / packetSize
-
-    Step 3:
-    Number of packets in multiples of 8.
-
-    if(0 == (numberOfPackets % 8)) {
-
-        actualPackets = numberOfPackets;
-    }
-    else {
-
-        actualPackets = numberOfPackets +
-                        (8 - (numberOfPackets % 8));
-    }
-
-    Step 4:
-    Determine the min. data in each packet.
-
-    minDataInEachPacket = TotalLength / actualPackets;
-
-    Step 5:
-    After placing min data in each packet,
-    determine how much data is left to be distributed.
-
-    dataLeftToBeDistributed = TotalLength -
-                              (minDataInEachPacket * actualPackets);
-
-    Step 6:
-    Start placing the left over data in the packets
-    (above the min data already placed)
-
-    numberOfPacketsFilledToBrim = dataLeftToBeDistributed /
-                                  (packetSize - minDataInEachPacket);
-
-    Step 7:
-    determine if there is any more data left.
-
-    dataLeftToBeDistributed -= (numberOfPacketsFilledToBrim *
-                                (packetSize - minDataInEachPacket));
-
-    Step 8:
-    The "dataLeftToBeDistributed" is placed in the packet at index
-    "numberOfPacketsFilledToBrim"
-
-    Algorithm at play:
-
-    TotalLength  = 8193
-    packetSize   = 8
-    Step 1
-
-    Step 2
-    numberOfPackets = (8193 + 8 - 1) / 8 = 1025
-
-    Step 3
-    actualPackets = 1025 + 7 = 1032
-
-    Step 4
-    minDataInEachPacket = 8193 / 1032 = 7 bytes
-
-    Step 5
-    dataLeftToBeDistributed = 8193 - (7 * 1032) = 969.
-
-    Step 6
-    numberOfPacketsFilledToBrim = 969 / (8 - 7) = 969.
-
-    Step 7
-    dataLeftToBeDistributed = 969 - (969 * 1) = 0.
-
-    Step 8
-    Done :)
-
-    Another algorithm
-    Completely fill up (as far as possible) the early packets.
-    Place 1 byte each in the rest of them.
-    Ensure that the total number of packets is multiple of 8.
-
-    This routine then
-    1. Creates a Sub Request for each irp/urb pair.
-       (Each irp/urb pair can transfer a max of 1024 packets.)
-    2. All the irp/urb pairs are initialized
-    3. The subsidiary irps (of the irp/urb pair) are passed
-       down the stack at once.
-    4. The main Read/Write is completed in the XferIsoComplete
-       even if one SubRequest is sent successfully.
-
-Arguments:
-
-    Device - Device handle
-    Request - Default queue handle
-    Request - Read/Write Request received from the user app.
-    TotalLength - Length of the user buffer.
-
-Return Value:
-
-    VOID
---*/
+    __in WDFQUEUE Queue,
+    __in WDFREQUEST Request)
 {
 	ULONG                   numberOfPackets;
 	ULONG                   actualPackets;
@@ -689,7 +714,6 @@ Return Value:
 	PDEVICE_CONTEXT         deviceContext;
 	PREQUEST_CONTEXT        requestContext;
 	WDFCOLLECTION           hCollection = NULL;
-	WDFSPINLOCK             hSpinLock = NULL;
 	WDF_OBJECT_ATTRIBUTES   attributes;
 	WDFREQUEST              subRequest;
 	PSUB_REQUEST_CONTEXT    subReqContext;
@@ -699,471 +723,168 @@ Return Value:
 	USBD_PIPE_HANDLE        usbdPipeHandle;
 	BOOLEAN                 cancelable;
 	ULONG					TotalLength;
+	PXFER_AUTOISO_COLLECTION_CONTEXT autoIsoCtx = NULL;
+	PQUEUE_CONTEXT			queueContext = NULL;
 
 	cancelable = FALSE;
-	TotalLength = Length;
 
 	InitializeListHead(&subRequestsList);
-	requestContext = GetRequestContext(Request);
 
-	switch(requestContext->RequestType)
+	requestContext = GetRequestContext(Request);
+	deviceContext = GetDeviceContext(WdfIoQueueGetDevice(Queue));
+	VALIDATE_REQUEST_CONTEXT(requestContext, status);
+	if (!NT_SUCCESS(status)) goto Exit;
+
+	if ((queueContext = GetQueueContext(Queue)) == NULL)
 	{
-	case WdfRequestTypeRead:
-		USBMSG("read length=%d\n", TotalLength);
-		break;
-	case WdfRequestTypeWrite:
-		USBMSG("write length=%d\n", TotalLength);
-		break;
-	default:
 		status = STATUS_INVALID_DEVICE_REQUEST;
-		USBERR("transfer-request types must be either read or write\n");
+		USBERRN("Invalid queue context");
 		goto Exit;
 	}
 
+	TotalLength = requestContext->Length;
 	if(TotalLength < 8)
 	{
-
 		status = STATUS_INVALID_PARAMETER;
 		goto Exit;
 	}
+	mXfer_CreateAutoIso(status, Request, requestContext, autoIsoCtx, goto Exit);
 
-	deviceContext = GetDeviceContext(WdfIoQueueGetDevice(Queue));
+	// Use a user defined packet size if one was specfied else use MaximumPacketSize
+	packetSize = requestContext->IoControlRequest.endpoint.packet_size;
+	if (!packetSize)
+		packetSize = queueContext->Info.MaximumPacketSize;
 
-	//
-	// Create a collection to store all the sub requests.
-	//
-	WDF_OBJECT_ATTRIBUTES_INIT(&attributes);
-	attributes.ParentObject = Request;
-	status = WdfCollectionCreate(&attributes,
-	                             &hCollection);
-	if (!NT_SUCCESS(status))
-	{
-		USBERR("WdfCollectionCreate failed. status=%Xh\n", status);
-		goto Exit;
-	}
-
-	WDF_OBJECT_ATTRIBUTES_INIT(&attributes);
-	attributes.ParentObject = hCollection;
-	status = WdfSpinLockCreate(&attributes, &hSpinLock);
-	if (!NT_SUCCESS(status))
-	{
-		USBERR("WdfSpinLockCreate failed. status=%Xh\n", status);
-		goto Exit;
-	}
-
-	//
-	// each packet can hold this much info
-	//
-	packetSize = requestContext->PipeContext->PipeInformation.MaximumPacketSize;
-
-	numberOfPackets = (TotalLength + packetSize - 1) / packetSize;
-
-	if(0 == (numberOfPackets % 8))
-	{
-
-		actualPackets = numberOfPackets;
-	}
+	// multiples of 8 packets only.
+	numberOfPackets	= (TotalLength + packetSize - 1) / packetSize;
+	if(numberOfPackets % 8)
+		actualPackets = numberOfPackets + (8 - (numberOfPackets % 8));
 	else
-	{
-
-		//
-		// we need multiple of 8 packets only.
-		//
-		actualPackets = numberOfPackets +
-		                (8 - (numberOfPackets % 8));
-	}
+		actualPackets = numberOfPackets;
 
 	minDataInEachPacket = TotalLength / actualPackets;
-
 	if(minDataInEachPacket == packetSize)
 	{
-
 		numberOfPacketsFilledToBrim = actualPackets;
 		dataLeftToBeDistributed     = 0;
-
-		USBMSG("TotalLength = %d\n", TotalLength);
-		USBMSG("PacketSize  = %d\n", packetSize);
-		USBMSG("Each of %d packets has %d bytes\n",
-		       numberOfPacketsFilledToBrim,
-		       packetSize);
 	}
 	else
 	{
-
-		dataLeftToBeDistributed = TotalLength -
-		                          (minDataInEachPacket * actualPackets);
-
-		numberOfPacketsFilledToBrim = dataLeftToBeDistributed /
-		                              (packetSize - minDataInEachPacket);
-
-		dataLeftToBeDistributed -= (numberOfPacketsFilledToBrim *
-		                            (packetSize - minDataInEachPacket));
-
-
-		USBMSG("TotalLength = %d\n", TotalLength);
-		USBMSG("PacketSize  = %d\n", packetSize);
-		USBMSG("Each of %d packets has %d bytes\n",
-		       numberOfPacketsFilledToBrim,
-		       packetSize);
-		if(dataLeftToBeDistributed)
-		{
-
-			USBMSG("One packet has %d bytes\n",
-			       minDataInEachPacket + dataLeftToBeDistributed);
-			USBMSG("Each of %d packets has %d bytes\n",
-			       actualPackets - (numberOfPacketsFilledToBrim + 1),
-			       minDataInEachPacket);
-		}
-		else
-		{
-			USBMSG("Each of %d packets has %d bytes\n",
-			       actualPackets - numberOfPacketsFilledToBrim,
-			       minDataInEachPacket);
-		}
+		dataLeftToBeDistributed = TotalLength - (minDataInEachPacket * actualPackets);
+		numberOfPacketsFilledToBrim = dataLeftToBeDistributed / (packetSize - minDataInEachPacket);
+		dataLeftToBeDistributed -= (numberOfPacketsFilledToBrim * (packetSize - minDataInEachPacket));
 	}
 
-	//
-	// determine how many stages of transfer needs to be done.
-	// in other words, how many irp/urb pairs required.
-	// this irp/urb pair is also called the subsidiary irp/urb pair
-	//
+	// Number of transfer stages in this request, each stage will have it's own URB/IRP pair.
 	numSubRequests = (actualPackets + 1023) / 1024;
 
-	USBMSG("numSubRequests = %d\n", numSubRequests);
+	virtualAddress = (PUCHAR) MmGetMdlVirtualAddress(autoIsoCtx->OriginalTransferMDL);
 
-	requestContext->SubRequestCollection = hCollection;
-	requestContext->SubRequestCollectionLock = hSpinLock;
-//	requestContext->OriginalTransferMDL = TransferMDL;
-
-	if (requestContext->OriginalTransferMDL)
-	{
-		virtualAddress = (PUCHAR) MmGetMdlVirtualAddress(requestContext->OriginalTransferMDL);
-	}
 	for(i = 0; i < numSubRequests; i++)
 	{
-
 		WDFMEMORY               subUrbMemory;
 		PURB                    subUrb;
 		PMDL                    subMdl;
 		ULONG                   nPackets;
-		ULONG                   siz;
+		ULONG                   subUrbSize;
 		ULONG                   offset;
 
+		mXfer_AutoIsoNextStageNumberOfPackets(nPackets, actualPackets, 1024);
 
-		//
-		// For every stage of transfer we need to do the following
-		// tasks
-		// 1. allocate a request
-		// 2. allocate an urb
-		// 3. allocate a mdl.
-		// 4. Format the request for transfering URB
-		// 5. Send the Request.
+		subUrbSize = GET_ISO_URB_SIZE(nPackets);
 
-		//
-		if(actualPackets <= 1024)
-		{
+		mXfer_AutoIsoCreateSubRequest(status, Request, subRequest, subReqContext, attributes, deviceContext->WdfUsbTargetDevice, goto Exit);
 
-			nPackets = actualPackets;
-			actualPackets = 0;
-		}
-		else
-		{
-
-			nPackets = 1024;
-			actualPackets -= 1024;
-		}
-
-		USBMSG("nPackets = %d for Irp/URB pair %d\n", nPackets, i);
-
-		ASSERT(nPackets <= 1024);
-
-		siz = GET_ISO_URB_SIZE(nPackets);
-
-
-		WDF_OBJECT_ATTRIBUTES_INIT(&attributes);
-		WDF_OBJECT_ATTRIBUTES_SET_CONTEXT_TYPE(&attributes, SUB_REQUEST_CONTEXT            );
-
-
-		status = WdfRequestCreate(
-		             &attributes,
-		             WdfUsbTargetDeviceGetIoTarget(deviceContext->WdfUsbTargetDevice),
-		             &subRequest);
-
-		if(!NT_SUCCESS(status))
-		{
-
-			USBERR("WdfRequestCreate failed. status=%Xh\n", status);
-			goto Exit;
-		}
-
-		subReqContext = GetSubRequestContext(subRequest);
-		subReqContext->UserRequest = Request;
-
-		//
-		// Allocate memory for URB.
-		//
-		WDF_OBJECT_ATTRIBUTES_INIT(&attributes);
-		attributes.ParentObject = subRequest;
-		status = WdfMemoryCreate(
-		             &attributes,
-		             NonPagedPool,
-		             POOL_TAG,
-		             siz,
-		             &subUrbMemory,
-		             (PVOID*) &subUrb);
-
-		if (!NT_SUCCESS(status))
-		{
-			WdfObjectDelete(subRequest);
-			USBERR("Failed to alloc MemoryBuffer for suburb\n");
-			goto Exit;
-		}
-
-		subReqContext->SubUrb = subUrb;
-
+		// Create urb memory and assign it to the sub request context.
+		mXfer_AutoIsoCreateSubUrb(status, subRequest, subReqContext, subUrbSize, subUrbMemory, subUrb, attributes, goto Exit);
 
 		if(nPackets > numberOfPacketsFilledToBrim)
 		{
-
 			stageSize =  packetSize * numberOfPacketsFilledToBrim;
-			stageSize += (minDataInEachPacket *
-			              (nPackets - numberOfPacketsFilledToBrim));
+			stageSize += (minDataInEachPacket * (nPackets - numberOfPacketsFilledToBrim));
 			stageSize += dataLeftToBeDistributed;
 		}
 		else
 		{
-
 			stageSize = packetSize * nPackets;
 		}
 
-		//
-		// allocate a mdl.
-		//
-		subMdl = IoAllocateMdl((PVOID) virtualAddress,
-		                       stageSize,
-		                       FALSE,
-		                       FALSE,
-		                       NULL);
+		// Create the subMdl describing this section of the buffer; increase virtualAddress and descrease TotalLength by stageSize
+		mXfer_AutoIsoCreateSubMdl(status, autoIsoCtx->OriginalTransferMDL, subMdl, subRequest, subReqContext, virtualAddress, TotalLength, stageSize);
 
-		if(subMdl == NULL)
+		usbdPipeHandle = WdfUsbTargetPipeWdmGetPipeHandle(queueContext->PipeHandle);
+
+		mXfer_AutoIsoFormatSubUrb(usbdPipeHandle, requestContext, subUrb, subUrbSize, nPackets, stageSize, subMdl);
+
+		offset = 0;
+		for(j = 0; j < nPackets; j++)
 		{
-
-			USBERR("failed to alloc mem for sub context mdl\n");
-			WdfObjectDelete(subRequest);
-			status = STATUS_INSUFFICIENT_RESOURCES;
-			goto Exit;
-		}
-
-		IoBuildPartialMdl(requestContext->OriginalTransferMDL,
-		                  subMdl,
-		                  (PVOID) virtualAddress,
-		                  stageSize);
-
-		subReqContext->SubMdl = subMdl;
-
-		virtualAddress += stageSize;
-		TotalLength -= stageSize;
-
-		usbdPipeHandle = WdfUsbTargetPipeWdmGetPipeHandle(requestContext->PipeContext->Pipe);
-		subUrb->UrbIsochronousTransfer.Hdr.Length = (USHORT) siz;
-		subUrb->UrbIsochronousTransfer.Hdr.Function = URB_FUNCTION_ISOCH_TRANSFER;
-		subUrb->UrbIsochronousTransfer.PipeHandle = usbdPipeHandle;
-
-		if(requestContext->RequestType == WdfRequestTypeRead)
-		{
-
-			subUrb->UrbIsochronousTransfer.TransferFlags =
-			    USBD_TRANSFER_DIRECTION_IN;
-		}
-		else
-		{
-
-			subUrb->UrbIsochronousTransfer.TransferFlags =
-			    USBD_TRANSFER_DIRECTION_OUT;
-		}
-
-		subUrb->UrbIsochronousTransfer.TransferBufferLength = stageSize;
-		subUrb->UrbIsochronousTransfer.TransferBufferMDL = subMdl;
-		/*
-		        This is a way to set the start frame and NOT specify ASAP flag.
-
-		        status = WdfUsbTargetDeviceRetrieveCurrentFrameNumber(wdfUsbDevice, &frameNumber);
-		        subUrb->UrbIsochronousTransfer.StartFrame = frameNumber  + SOME_LATENCY;
-		*/
-		subUrb->UrbIsochronousTransfer.TransferFlags |=
-		    USBD_START_ISO_TRANSFER_ASAP;
-
-		subUrb->UrbIsochronousTransfer.NumberOfPackets = nPackets;
-		subUrb->UrbIsochronousTransfer.UrbLink = NULL;
-
-		//
-		// set the offsets for every packet for reads/writes
-		//
-		if(requestContext->RequestType == WdfRequestTypeRead)
-		{
-
-			offset = 0;
-
-			for(j = 0; j < nPackets; j++)
+			subUrb->UrbIsochronousTransfer.IsoPacket[j].Offset = offset;
+			if(numberOfPacketsFilledToBrim)
 			{
-
-				subUrb->UrbIsochronousTransfer.IsoPacket[j].Offset = offset;
-				subUrb->UrbIsochronousTransfer.IsoPacket[j].Length = 0;
-
-				if(numberOfPacketsFilledToBrim)
-				{
-
-					offset += packetSize;
-					numberOfPacketsFilledToBrim--;
-					status = RtlULongSub(stageSize, packetSize, &stageSize);
-					ASSERT(NT_SUCCESS(status));
-				}
-				else if(dataLeftToBeDistributed)
-				{
-
-					offset += (minDataInEachPacket + dataLeftToBeDistributed);
-					stageSize -= (minDataInEachPacket + dataLeftToBeDistributed);
-					dataLeftToBeDistributed = 0;
-				}
-				else
-				{
-
-					offset += minDataInEachPacket;
-					stageSize -= minDataInEachPacket;
-				}
+				offset += packetSize;
+				numberOfPacketsFilledToBrim--;
+				stageSize -= packetSize;
 			}
-
-			ASSERT(stageSize == 0);
-		}
-		else
-		{
-
-			offset = 0;
-
-			for(j = 0; j < nPackets; j++)
+			else if(dataLeftToBeDistributed)
 			{
+				offset += (minDataInEachPacket + dataLeftToBeDistributed);
+				stageSize -= (minDataInEachPacket + dataLeftToBeDistributed);
+				dataLeftToBeDistributed = 0;
 
-				subUrb->UrbIsochronousTransfer.IsoPacket[j].Offset = offset;
-
-				if(numberOfPacketsFilledToBrim)
-				{
-
-					subUrb->UrbIsochronousTransfer.IsoPacket[j].Length = packetSize;
-					offset += packetSize;
-					numberOfPacketsFilledToBrim--;
-					stageSize -= packetSize;
-				}
-				else if(dataLeftToBeDistributed)
-				{
-
-					subUrb->UrbIsochronousTransfer.IsoPacket[j].Length =
-					    minDataInEachPacket + dataLeftToBeDistributed;
-					offset += (minDataInEachPacket + dataLeftToBeDistributed);
-					stageSize -= (minDataInEachPacket + dataLeftToBeDistributed);
-					dataLeftToBeDistributed = 0;
-
-				}
-				else
-				{
-					subUrb->UrbIsochronousTransfer.IsoPacket[j].Length = minDataInEachPacket;
-					offset += minDataInEachPacket;
-					stageSize -= minDataInEachPacket;
-				}
 			}
-
-			ASSERT(stageSize == 0);
+			else
+			{
+				offset += minDataInEachPacket;
+				stageSize -= minDataInEachPacket;
+			}
 		}
+		ASSERT(stageSize == 0);
 
-		//
-		// Associate the URB with the request.
-		//
-		status = WdfUsbTargetPipeFormatRequestForUrb(requestContext->PipeContext->Pipe,
-		         subRequest,
-		         subUrbMemory,
-		         NULL );
-		if (!NT_SUCCESS(status))
-		{
-			USBERR("Failed to format requset for urb\n");
-			WdfObjectDelete(subRequest);
-			IoFreeMdl(subMdl);
-			goto Exit;
-		}
-
-		WdfRequestSetCompletionRoutine(subRequest,
-		                               XferIsoComplete,
-		                               requestContext);
-
-		//
-		// WdfCollectionAdd takes a reference on the request object and removes
-		// it when you call WdfCollectionRemove.
-		//
-		status = WdfCollectionAdd(hCollection, subRequest);
-		if (!NT_SUCCESS(status))
-		{
-			USBERR("WdfCollectionAdd failed. status=%Xh\n", status);
-			WdfObjectDelete(subRequest);
-			IoFreeMdl(subMdl);
-			goto Exit;
-		}
-
-		InsertTailList(&subRequestsList, &subReqContext->ListEntry);
-
+		mXfer_AutoIsoFormatAndAddSubRequest(status, subRequest, subReqContext, subRequestsList, queueContext->PipeHandle, subUrbMemory, subMdl, XferIsoComplete, autoIsoCtx, goto Exit);
 	}
 
-	//
-	// There is a subtle race condition which can happen if the cancel
-	// routine is running while the sub-request completion routine is
-	// trying to mark the request as uncancellable followed by completing
-	// the request.
-	//
-	// We take a reference to prevent the above race condition.
-	// The reference is released in the sub-request completion routine
-	// if the request wasn't cancelled or in the cancel routine if it was.
-	//
-	// NOTE: The reference just keeps the request context  from being deleted but
-	// if you need to access anything in the WDFREQUEST itself in the cancel or the
-	// completion routine make sure that you synchronise the completion of the request with
-	// accessing anything in it.
-	// You can also use a spinlock  and use that to synchronise
-	// the cancel routine with the completion routine.
-	//
+	/*
+	* There is a subtle race condition which can happen if the cancel
+	* routine is running while the sub-request completion routine is
+	* trying to mark the request as uncancellable followed by completing
+	* the request.
+	*
+	* We take a reference to prevent the above race condition. The
+	* reference is released in the sub-request completion routine if the
+	* request wasn't cancelled or in the cancel routine if it was.
+	*
+	* NOTE: The reference just keeps the request context from being
+	* deleted but if you need to access anything in the WDFREQUEST
+	* itself in the cancel or the completion routine make sure that you
+	* synchronise the completion of the request with accessing anything
+	* in it. You can also use a spinlock and use that to synchronise the
+	* cancel routine with the completion routine.
+	*/
 	WdfObjectReference(Request);
-	//
-	// Mark the main request cancelable so that we can cancel the subrequests
-	// if the main requests gets cancelled for any reason.
-	//
+
+	// Mark the main request cancelable so that we can cancel the subrequests; if the main requests gets cancelled for any reason.
 	WdfRequestMarkCancelable(Request, UsbK_EvtRequestCancel);
 	cancelable = TRUE;
 
 	while(!IsListEmpty(&subRequestsList))
 	{
-
 		thisEntry = RemoveHeadList(&subRequestsList);
 		subReqContext = CONTAINING_RECORD(thisEntry, SUB_REQUEST_CONTEXT, ListEntry);
 		subRequest = WdfObjectContextGetObject(subReqContext);
-		USBMSG("Sending subRequest 0x%p\n", subRequest);
 
-		if (WdfRequestSend(subRequest, WdfUsbTargetPipeGetIoTarget(requestContext->PipeContext->Pipe), WDF_NO_SEND_OPTIONS) == FALSE)
+		if (WdfRequestSend(subRequest, WdfUsbTargetPipeGetIoTarget(queueContext->PipeHandle), WDF_NO_SEND_OPTIONS) == FALSE)
 		{
 			status = WdfRequestGetStatus(subRequest);
 			//
 			// Insert the subrequest back into the subrequestlist so cleanup can find it and delete it
 			//
 			InsertHeadList(&subRequestsList, &subReqContext->ListEntry);
-			USBERR("WdfRequestSend failed. status=%Xh\n", status);
+			USBERR("WdfRequestSend failed. Status=%08Xh\n", status);
 			WdfVerifierDbgBreakPoint(); // break into the debugger if the registry value is set.
 			goto Exit;
 		}
-
-
-		//
-		// Don't touch the subrequest after it has been sent.
-		// Make a note that at least one subrequest is sent. This will be used
-		// in deciding whether we should free the subrequests in case of failure.
-		//
 	}
-
-
 
 Exit:
 
@@ -1174,10 +895,7 @@ Exit:
 	//
 	if(NT_SUCCESS(status) && IsListEmpty(&subRequestsList))
 	{
-		//
-		// We will let the completion routine to cleanup and complete the
-		// main request.
-		//
+		// We will let the completion routine to cleanup and complete the main request.
 		return;
 	}
 	else
@@ -1188,53 +906,39 @@ Exit:
 		completeRequest = TRUE;
 		tempStatus = STATUS_SUCCESS;
 
-		if(hCollection)
+		if(autoIsoCtx->SubRequestCollection)
 		{
-			XferIsoCleanup(requestContext, &subRequestsList, &completeRequest);
+			XferIsoCleanup(autoIsoCtx, &subRequestsList, &completeRequest);
 		}
 
 		if (completeRequest)
 		{
 			if (cancelable)
 			{
-				//
 				// Mark the main request as not cancelable before completing it.
-				//
 				tempStatus = WdfRequestUnmarkCancelable(Request);
 				if (NT_SUCCESS(tempStatus))
 				{
-					//
-					// If WdfRequestUnmarkCancelable returns STATUS_SUCCESS
-					// that means the cancel routine has been removed. In that case
-					// we release the reference otherwise the cancel routine does it.
-					//
+					// If WdfRequestUnmarkCancelable returns STATUS_SUCCESS that means the cancel routine has
+					// been removed. In that case we release the reference otherwise the cancel routine does it.
 					WdfObjectDereference(Request);
 				}
 			}
 
-			if (requestContext->TotalTransferred > 0 )
-			{
-				WdfRequestCompleteWithInformation(Request, STATUS_SUCCESS, requestContext->TotalTransferred);
-			}
+			if (autoIsoCtx->TotalTransferred > 0)
+				WdfRequestCompleteWithInformation(Request, STATUS_SUCCESS, autoIsoCtx->TotalTransferred);
 			else
-			{
-				WdfRequestCompleteWithInformation(Request, status, requestContext->TotalTransferred);
-			}
-
+				WdfRequestCompleteWithInformation(Request, status, autoIsoCtx->TotalTransferred);
 		}
-
 	}
 
-	USBMSG("ends\n");
 	return;
 }
 
-VOID
-XferIsoCleanup(
-    PREQUEST_CONTEXT    MainRequestContext,
+VOID XferIsoCleanup(
+    PXFER_AUTOISO_COLLECTION_CONTEXT AutoIsoCtx,
     PLIST_ENTRY         SubRequestsList,
-    PBOOLEAN            CompleteRequest
-)
+    PBOOLEAN            CompleteRequest)
 {
 	PLIST_ENTRY           thisEntry;
 	PSUB_REQUEST_CONTEXT  subReqContext;
@@ -1242,14 +946,14 @@ XferIsoCleanup(
 	ULONG                 numPendingRequests;
 
 	*CompleteRequest = TRUE;
-	WdfSpinLockAcquire(MainRequestContext->SubRequestCollectionLock);
+	WdfSpinLockAcquire(AutoIsoCtx->SubRequestCollectionLock);
 
 	while(!IsListEmpty(SubRequestsList))
 	{
 		thisEntry = RemoveHeadList(SubRequestsList);
 		subReqContext = CONTAINING_RECORD(thisEntry, SUB_REQUEST_CONTEXT, ListEntry);
 		subRequest = WdfObjectContextGetObject(subReqContext);
-		WdfCollectionRemove(MainRequestContext->SubRequestCollection, subRequest);
+		WdfCollectionRemove(AutoIsoCtx->SubRequestCollection, subRequest);
 
 		if(subReqContext->SubMdl)
 		{
@@ -1259,8 +963,8 @@ XferIsoCleanup(
 
 		WdfObjectDelete(subRequest);
 	}
-	numPendingRequests = WdfCollectionGetCount(MainRequestContext->SubRequestCollection);
-	WdfSpinLockRelease(MainRequestContext->SubRequestCollectionLock);
+	numPendingRequests = WdfCollectionGetCount(AutoIsoCtx->SubRequestCollection);
+	WdfSpinLockRelease(AutoIsoCtx->SubRequestCollectionLock);
 
 	if (numPendingRequests > 0)
 	{
@@ -1270,40 +974,19 @@ XferIsoCleanup(
 	return;
 }
 
-VOID
-XferIsoComplete(
-    __in WDFREQUEST                  Request,
-    __in WDFIOTARGET                 Target,
-    PWDF_REQUEST_COMPLETION_PARAMS CompletionParams,
-    __in WDFCONTEXT                  Context
-)
-/*++
+VOID XferIsoComplete(
+    __in WDFREQUEST Request,
+    __in WDFIOTARGET Target,
+    __in PWDF_REQUEST_COMPLETION_PARAMS CompletionParams,
+    __in WDFCONTEXT Context)
 
-Routine Description:
-
-    Completion Routine
-
-Arguments:
-
-    Context - Driver supplied context
-    Target - Target handle
-    Request - Request handle
-    Params - request completion params
-
-
-Return Value:
-
-    VOID
-
---*/
 {
-	PURB                    urb;
-	ULONG                   i;
-	ULONG                   numPendingRequests;
-	NTSTATUS                status;
-	PREQUEST_CONTEXT        requestContext;
-	WDFREQUEST              mainRequest;
-	PSUB_REQUEST_CONTEXT    subReqContext;
+	PURB								urb;
+	ULONG								i;
+	ULONG								numPendingRequests;
+	NTSTATUS							status;
+	PXFER_AUTOISO_COLLECTION_CONTEXT	autoIsoCtx;
+	PSUB_REQUEST_CONTEXT				subReqContext;
 
 	UNREFERENCED_PARAMETER(Target);
 
@@ -1314,113 +997,49 @@ Return Value:
 	IoFreeMdl(subReqContext->SubMdl);
 	subReqContext->SubMdl = NULL;
 
-	requestContext = (PREQUEST_CONTEXT) Context;
-	ASSERT(requestContext);
+	autoIsoCtx	= (PXFER_AUTOISO_COLLECTION_CONTEXT) Context;
+	ASSERT(autoIsoCtx);
 
-	status = CompletionParams->IoStatus.Status;
+	status		= CompletionParams->IoStatus.Status;
+	autoIsoCtx->TotalTransferred += urb->UrbIsochronousTransfer.TransferBufferLength;
 
-	if(NT_SUCCESS(status) &&
-	        USBD_SUCCESS(urb->UrbHeader.Status))
-	{
-
-		requestContext->TotalTransferred +=
-		    urb->UrbIsochronousTransfer.TransferBufferLength;
-
-		USBMSG("requestContext->TotalTransferred = %d\n", requestContext->TotalTransferred);
-	}
-	else
-	{
-
-		USBERR("read-write irp failed. status=%Xh\n", status);
-		USBERR("urb header status=%Xh\n", urb->UrbHeader.Status);
-
-	}
 
 	if(!NT_SUCCESS(status))
 	{
 		for(i = 0; i < urb->UrbIsochronousTransfer.NumberOfPackets; i++)
 		{
-
-			USBDBG("IsoPacket[%d].Length = %X IsoPacket[%d].Status = %X\n",
-			       i,
-			       urb->UrbIsochronousTransfer.IsoPacket[i].Length,
-			       i,
-			       urb->UrbIsochronousTransfer.IsoPacket[i].Status);
+			USBDBGN("IsoPacket[%d].Length = %X IsoPacket[%d].Status = %08Xh",
+			        i, urb->UrbIsochronousTransfer.IsoPacket[i].Length,
+			        i, urb->UrbIsochronousTransfer.IsoPacket[i].Status);
 		}
 	}
 
-	//
 	// Remove the SubRequest from the collection.
-	//
-	WdfSpinLockAcquire(requestContext->SubRequestCollectionLock);
+	WdfSpinLockAcquire(autoIsoCtx->SubRequestCollectionLock);
 
-	WdfCollectionRemove(requestContext->SubRequestCollection, Request);
+	WdfCollectionRemove(autoIsoCtx->SubRequestCollection, Request);
+	numPendingRequests = WdfCollectionGetCount(autoIsoCtx->SubRequestCollection);
 
-	numPendingRequests = WdfCollectionGetCount(requestContext->SubRequestCollection);
+	WdfSpinLockRelease(autoIsoCtx->SubRequestCollectionLock);
 
-	WdfSpinLockRelease(requestContext->SubRequestCollectionLock);
-
-	//
-	// If all the sub requests are completed. Complete the main request sent
-	// by the user application.
-	//
+	// If all the sub requests are completed. Complete the main request sent by the user application.
 	if(numPendingRequests == 0)
 	{
-
-		USBMSG("no more pending sub requests\n");
-
-		if(NT_SUCCESS(status))
-		{
-
-			USBMSG("urb start frame %X\n",
-			       urb->UrbIsochronousTransfer.StartFrame);
-		}
-
-		mainRequest = WdfObjectContextGetObject(requestContext);
-
-		//
-		// if we transferred some data, main Irp completes with success
-		//
-		USBMSG("Total data transferred = %u\n", requestContext->TotalTransferred);
-
-		USBMSG("XferIsoComplete %s completed\n",
-		       requestContext->RequestType == WdfRequestTypeRead ? "Read" : "Write");
-		//
 		// Mark the main request as not cancelable before completing it.
-		//
-		status = WdfRequestUnmarkCancelable(mainRequest);
+		status = WdfRequestUnmarkCancelable(autoIsoCtx->MainRequest);
 		if (NT_SUCCESS(status))
 		{
-			//
-			// If WdfRequestUnmarkCancelable returns STATUS_SUCCESS
-			// that means the cancel routine has been removed. In that case
-			// we release the reference otherwise the cancel routine does it.
-			//
-			WdfObjectDereference(mainRequest);
+			// If WdfRequestUnmarkCancelable returns STATUS_SUCCESS that means the cancel routine has been
+			// removed. In that case we release the reference otherwise the cancel routine does it.
+			WdfObjectDereference(autoIsoCtx->MainRequest);
 		}
 
-		if (requestContext->TotalTransferred > 0 )
-		{
-			WdfRequestCompleteWithInformation(mainRequest,
-			                                  STATUS_SUCCESS, requestContext->TotalTransferred);
-		}
-		else
-		{
-			USBMSG("XferIsoComplete failed. status=%Xh\n",
-			       CompletionParams->IoStatus.Status);
-
-			WdfRequestCompleteWithInformation(mainRequest,
-			                                  CompletionParams->IoStatus.Status, requestContext->TotalTransferred);
-		}
-
+		USBMSG("Transferred=%u Status=%08Xh", autoIsoCtx->TotalTransferred, CompletionParams->IoStatus.Status);
+		WdfRequestCompleteWithInformation(autoIsoCtx->MainRequest, CompletionParams->IoStatus.Status, autoIsoCtx->TotalTransferred);
 	}
 
-	//
-	// Since we created the subrequests, we should free it by removing the
-	// reference.
-	//
+	// Since we created the subrequests, we should free it by removing the reference.
 	WdfObjectDelete(Request);
-
 	return;
 }
 
@@ -1460,10 +1079,9 @@ Return Value:
 	//
 	requestContext = GetRequestContext(Request);
 
-	if(!requestContext->SubRequestCollection)
+	if(!requestContext->AutoIso.Context || !requestContext->AutoIso.Context->SubRequestCollection)
 	{
-		ASSERTMSG("Very unlikely, collection is created before\
-                        the request is made cancellable", FALSE);
+		ASSERTMSG("Very unlikely, collection is created before the request is made cancellable", FALSE);
 		return;
 	}
 
@@ -1479,13 +1097,13 @@ Return Value:
 	// Then we drop the lock, walk the list and call WdfRequestCancelSentRequest and
 	// remove the extra reference.
 	//
-	WdfSpinLockAcquire(requestContext->SubRequestCollectionLock);
+	WdfSpinLockAcquire(requestContext->AutoIso.Context->SubRequestCollectionLock);
 
-	for(i = 0; i < WdfCollectionGetCount(requestContext->SubRequestCollection); i++)
+	for(i = 0; i < WdfCollectionGetCount(requestContext->AutoIso.Context->SubRequestCollection); i++)
 	{
 
 
-		subRequest = WdfCollectionGetItem(requestContext->SubRequestCollection, i);
+		subRequest = WdfCollectionGetItem(requestContext->AutoIso.Context->SubRequestCollection, i);
 
 		subReqContext = GetSubRequestContext(subRequest);
 
@@ -1494,7 +1112,7 @@ Return Value:
 		InsertTailList(&cancelList, &subReqContext->ListEntry);
 	}
 
-	WdfSpinLockRelease(requestContext->SubRequestCollectionLock);
+	WdfSpinLockRelease(requestContext->AutoIso.Context->SubRequestCollectionLock);
 
 	while(!IsListEmpty(&cancelList))
 	{
@@ -1523,83 +1141,8 @@ Return Value:
 	return;
 }
 
-VOID
-Queue_OnDefaultStop(
-    __in WDFQUEUE         Queue,
-    __in WDFREQUEST       Request,
-    __in ULONG            ActionFlags
-)
-/*++
-
-Routine Description:
-
-    This callback is invoked on every inflight request when the device
-    is suspended or removed. Since our inflight read and write requests
-    are actually pending in the target device, we will just acknowledge
-    its presence. Until we acknowledge, complete, or requeue the requests
-    framework will wait before allowing the device suspend or remove to
-    proceeed. When the underlying USB stack gets the request to suspend or
-    remove, it will fail all the pending requests.
-
-Arguments:
-
-Return Value:
-    None
-
---*/
-{
-	PREQUEST_CONTEXT reqContext;
-
-	UNREFERENCED_PARAMETER(Queue);
-
-
-	reqContext = GetRequestContext(Request);
-
-	if (ActionFlags & WdfRequestStopActionSuspend )
-	{
-		WdfRequestStopAcknowledge(Request, FALSE); // Don't requeue
-	}
-	else if(ActionFlags & WdfRequestStopActionPurge)
-	{
-		WdfRequestCancelSentRequest(Request);
-	}
-	return;
-}
-
-VOID
-Queue_OnDefaultResume(
-    __in WDFQUEUE   Queue,
-    __in WDFREQUEST Request
-)
-/*++
-
-Routine Description:
-
-     This callback is invoked for every request pending in the driver - in-flight
-     request - to notify that the hardware is ready for contiuing the processing
-     of the request.
-
-Arguments:
-
-    Queue - Queue the request currently belongs to
-    Request - Request that is currently out of queue and being processed by the driver
-
-Return Value:
-
-    None.
-
---*/
-{
-	UNREFERENCED_PARAMETER(Queue);
-	UNREFERENCED_PARAMETER(Request);
-	// Leave this function here for now in case we want to add anything in the future
-}
-
-
 VOID XferIsoEx(__in WDFQUEUE Queue,
-               __in WDFREQUEST Request,
-               __in size_t InputBufferLength,
-               __in size_t OutputBufferLength)
+               __in WDFREQUEST Request)
 {
 	NTSTATUS status = STATUS_NOT_SUPPORTED;
 	PDEVICE_CONTEXT deviceContext;
@@ -1608,35 +1151,34 @@ VOID XferIsoEx(__in WDFQUEUE Queue,
 	size_t isoContextSize;
 	WDF_OBJECT_ATTRIBUTES attributes;
 	PURB urb;
+	PMDL mdl;
 	ULONG urbSize;
 	USBD_PIPE_HANDLE usbdPipeHandle;
-	LONG posPacket;
-	LONG nextOffset;
-	ULONG nextLength;
-	INT64 transferCounter;
-	WDF_REQUEST_SEND_OPTIONS sendOptions;
-
-	UNREFERENCED_PARAMETER(InputBufferLength);
-	UNREFERENCED_PARAMETER(OutputBufferLength);
-
-	USBDBG("begin");
+	PQUEUE_CONTEXT queueContext;
 
 	// Local vars pre-initialization //////////////////////////////////
 	requestContext = GetRequestContext(Request);
 	deviceContext = GetDeviceContext(WdfIoQueueGetDevice(Queue));
+	VALIDATE_REQUEST_CONTEXT(requestContext, status);
+	if (!NT_SUCCESS(status)) goto Exit;
 
-	USBDBG("ContextMemory=%p\n", requestContext->Iso.ContextMemory);
+	if ((queueContext = GetQueueContext(Queue)) == NULL)
+	{
+		status = STATUS_INVALID_DEVICE_REQUEST;
+		USBERRN("Invalid queue context");
+		goto Exit;
+	}
 
-	transferCounter = ++requestContext->PipeContext->TransferCounter;
+	USBDBG("ContextMemory=%p\n", requestContext->IsoEx.ContextMemory);
 
-	if (!requestContext->Iso.ContextMemory)
+	if (!requestContext->IsoEx.ContextMemory)
 	{
 		status = STATUS_INVALID_DEVICE_REQUEST;
 		USBERR("NULL ISO context.\n");
 		goto Exit;
 	}
 
-	isoContext = (PKISO_CONTEXT)WdfMemoryGetBuffer(requestContext->Iso.ContextMemory, &isoContextSize);
+	isoContext = (PKISO_CONTEXT)WdfMemoryGetBuffer(requestContext->IsoEx.ContextMemory, &isoContextSize);
 	if (!isoContext)
 	{
 		status = STATUS_INVALID_DEVICE_REQUEST;
@@ -1644,9 +1186,7 @@ VOID XferIsoEx(__in WDFQUEUE Queue,
 		goto Exit;
 	}
 
-	isoContext->TransferCounter = transferCounter;
-
-	usbdPipeHandle = WdfUsbTargetPipeWdmGetPipeHandle(requestContext->PipeContext->Pipe);
+	usbdPipeHandle = WdfUsbTargetPipeWdmGetPipeHandle(queueContext->PipeHandle);
 	if (!usbdPipeHandle)
 	{
 		status = STATUS_INVALID_DEVICE_REQUEST;
@@ -1671,16 +1211,25 @@ VOID XferIsoEx(__in WDFQUEUE Queue,
 	urbSize = GET_ISO_URB_SIZE(isoContext->NumberOfPackets);
 	///////////////////////////////////////////////////////////////////
 
+	status = GetTransferMdl(Request, requestContext->ActualRequestType, &mdl);
+	if (!NT_SUCCESS(status))
+	{
+		USBERR("GetTransferMdl failed.Status=%08Xh\n", urbSize, status);
+		goto Exit;
+	}
 	// Allocate URB memory 	///////////////////////////////////////////
 	WDF_OBJECT_ATTRIBUTES_INIT(&attributes);
 	attributes.ParentObject = Request;
-	status = WdfMemoryCreate(&attributes, NonPagedPool, POOL_TAG, urbSize, &requestContext->UrbMemory, &urb);
+	status = WdfMemoryCreate(&attributes, NonPagedPool, POOL_TAG, urbSize, &requestContext->IsoEx.UrbMemory, &urb);
 	if (!NT_SUCCESS(status))
 	{
-		USBERR("WdfMemoryCreate failed. size=%u status=%08Xh\n", urbSize, status);
+		USBERR("WdfMemoryCreate failed. size=%u Status=%08Xh\n", urbSize, status);
 		goto Exit;
 	}
 	///////////////////////////////////////////////////////////////////
+
+	// handle pipe reset scenarios: ResetPipeOnResume, AutoClearStall
+	mXfer_HandlePipeResetScenarios(status, queueContext, requestContext);
 
 	// Init URB ///////////////////////////////////////////////////////
 	RtlZeroMemory(urb, urbSize);
@@ -1689,144 +1238,266 @@ VOID XferIsoEx(__in WDFQUEUE Queue,
 	urb->UrbIsochronousTransfer.PipeHandle = usbdPipeHandle;
 
 	urb->UrbIsochronousTransfer.TransferBufferLength = requestContext->Length;
-	urb->UrbIsochronousTransfer.TransferBufferMDL = requestContext->OriginalTransferMDL;
-	urb->UrbIsochronousTransfer.StartFrame = isoContext->StartFrame;
+	urb->UrbIsochronousTransfer.TransferBufferMDL = mdl;
 
 	if(requestContext->RequestType == WdfRequestTypeRead)
 		urb->UrbIsochronousTransfer.TransferFlags |= USBD_TRANSFER_DIRECTION_IN;
-	else
-		urb->UrbIsochronousTransfer.TransferFlags |= USBD_TRANSFER_DIRECTION_OUT;
 
-	if (!urb->UrbIsochronousTransfer.StartFrame)
+	if (isoContext->Flags & KISO_FLAG_NO_START_ASAP)
+	{
+		urb->UrbIsochronousTransfer.StartFrame = isoContext->StartFrame;
+	}
+	else
+	{
 		urb->UrbIsochronousTransfer.TransferFlags |= USBD_START_ISO_TRANSFER_ASAP;
+	}
 
 	urb->UrbIsochronousTransfer.NumberOfPackets = isoContext->NumberOfPackets;
 	///////////////////////////////////////////////////////////////////
 
 	// Init URB iso packets ///////////////////////////////////////////
-	nextOffset = 0;
-	nextLength = 0;
-	if(requestContext->RequestType == WdfRequestTypeRead)
-	{
-		// DeviceToHost packet setup
-		for (posPacket = 0; posPacket < isoContext->NumberOfPackets; posPacket++)
-		{
-			INT offset = isoContext->IsoPackets[posPacket].Offset;
-			isoContext->IsoPackets[posPacket].Status = 0;
-
-			if (offset < nextOffset || offset >= (LONG)requestContext->Length)
-			{
-				status = STATUS_INVALID_DEVICE_REQUEST;
-				USBERR("Invalid packet offset. IsoPackets[%u].Offset=%u.\n",
-				       posPacket, offset);
-				goto Exit;
-			}
-
-			nextOffset = offset;
-
-			urb->UrbIsochronousTransfer.IsoPacket[posPacket].Offset = nextOffset;
-			urb->UrbIsochronousTransfer.IsoPacket[posPacket].Length = 0;
-		}
-	}
-	else
-	{
-		// HostToDevice packet setup
-		for (posPacket = 0; posPacket < isoContext->NumberOfPackets; posPacket++)
-		{
-			INT offset = isoContext->IsoPackets[posPacket].Offset;
-			isoContext->IsoPackets[posPacket].Status = 0;
-
-			if (offset < nextOffset || offset >= (LONG)requestContext->Length)
-			{
-				status = STATUS_INVALID_DEVICE_REQUEST;
-				USBERR("Invalid packet offset. IsoPackets[%u].Offset=%u.\n",
-				       posPacket, offset);
-				goto Exit;
-			}
-
-			nextLength = offset - nextOffset;
-			nextOffset = offset;
-
-			urb->UrbIsochronousTransfer.IsoPacket[posPacket].Offset = nextOffset;
-			urb->UrbIsochronousTransfer.IsoPacket[posPacket].Length = nextLength;
-		}
-	}
+	mXfer_IsoPacketsToUrb(isoContext->IsoPackets, urb, isoContext->NumberOfPackets, requestContext->Length, goto Exit);
 	///////////////////////////////////////////////////////////////////
 
 	// Assign the new urb to the request and prepare it for WdfRequestSend.
-	status = WdfUsbTargetPipeFormatRequestForUrb(requestContext->PipeContext->Pipe, Request, requestContext->UrbMemory, NULL);
+	status = WdfUsbTargetPipeFormatRequestForUrb(queueContext->PipeHandle, Request, requestContext->IsoEx.UrbMemory, NULL);
 	if (!NT_SUCCESS(status))
 	{
-		USBERR("WdfUsbTargetPipeFormatRequestForUrb failed. status=%Xh\n", status);
+		USBERR("WdfUsbTargetPipeFormatRequestForUrb failed. Status=%08Xh\n", status);
 		goto Exit;
 	}
 
-	WDF_REQUEST_SEND_OPTIONS_INIT(&sendOptions, 0);
-	status = SetRequestTimeout(requestContext, Request, &sendOptions);
-	if (!NT_SUCCESS(status))
-	{
-		USBERR("SetRequestTimeout failed. status=%Xh\n", status);
-		goto Exit;
-	}
-
-	status = SubmitAsyncRequest(requestContext, Request, XferIsoExComplete, &sendOptions, isoContext);
+	status = SubmitAsyncQueueRequest(queueContext, Request, XferIsoExComplete, NULL, isoContext);
 	if (NT_SUCCESS(status))
 		return;
 
-	USBERR("SubmitAsyncRequest failed. status=%Xh\n", status);
+	USBERR("SubmitAsyncQueueRequest failed. Status=%08Xh\n", status);
 
 Exit:
-	if (!NT_SUCCESS(status))
-	{
-		WdfRequestCompleteWithInformation(Request, status, 0);
-	}
-	USBDBG("end");
+	WdfRequestCompleteWithInformation(Request, status, 0);
 }
 
-static VOID XferIsoExComplete(__in WDFREQUEST Request,
-                              __in WDFIOTARGET Target,
-                              __in PWDF_REQUEST_COMPLETION_PARAMS CompletionParams,
-                              __in PKISO_CONTEXT IsoContext)
+VOID XferAutoIsoEx(
+    __in WDFQUEUE Queue,
+    __in WDFREQUEST Request)
+{
+	NTSTATUS status = STATUS_NOT_SUPPORTED;
+	PDEVICE_CONTEXT deviceContext;
+	PREQUEST_CONTEXT requestContext;
+	WDF_OBJECT_ATTRIBUTES attributes;
+	PURB urb;
+	PMDL mdl;
+	ULONG urbSize;
+	PQUEUE_CONTEXT queueContext;
+	KISO_PACKET* isoSourcePackets = NULL;
+	LONG isoPacketContextLength = 0;
+	size_t size;
+
+
+	// Local vars pre-initialization //////////////////////////////////
+	requestContext = GetRequestContext(Request);
+	deviceContext = GetDeviceContext(WdfIoQueueGetDevice(Queue));
+	VALIDATE_REQUEST_CONTEXT(requestContext, status);
+	if (!NT_SUCCESS(status)) goto Exit;
+
+	if ((queueContext = GetQueueContext(Queue)) == NULL)
+	{
+		status = STATUS_INVALID_DEVICE_REQUEST;
+		USBERRN("Invalid queue context");
+		goto Exit;
+	}
+
+	/*
+	When PipeContext->SharedAutoIsoExPacketMemory is updated in set pipe policy, the queue sync lock is acquired.
+	This guarantees it is valid (or null) while in the main queue transfer function. e.g. OnIoControl, OnRead, OnWrite.
+	*/
+	requestContext->AutoIsoEx.FixedIsoPackets.Memory = queueContext->PipeContext->SharedAutoIsoExPacketMemory;
+	if (!requestContext->AutoIsoEx.FixedIsoPackets.Memory)
+	{
+		status = STATUS_INVALID_DEVICE_REQUEST;
+		USBERRN("Auto iso packets not set.");
+		goto Exit;
+	}
+
+	requestContext->AutoIsoEx.FixedIsoPackets.Buffer	= WdfMemoryGetBuffer(requestContext->AutoIsoEx.FixedIsoPackets.Memory, &size);
+	requestContext->AutoIsoEx.NumPackets				= (SHORT)(((ULONG)size - sizeof(KISO_CONTEXT)) / sizeof(KISO_PACKET));
+	requestContext->AutoIsoEx.RequestedLength			= requestContext->Length;
+
+	urbSize					= GET_ISO_URB_SIZE(requestContext->AutoIsoEx.NumPackets);
+	isoSourcePackets		= (KISO_PACKET*)&requestContext->AutoIsoEx.FixedIsoPackets.Buffer[sizeof(KISO_CONTEXT)];
+	isoPacketContextLength	= sizeof(KISO_CONTEXT) + (requestContext->AutoIsoEx.NumPackets * sizeof(KISO_PACKET));
+
+	if (requestContext->AutoIsoEx.NumPackets < 0 || requestContext->AutoIsoEx.NumPackets > 1024)
+	{
+		status = STATUS_INVALID_DEVICE_REQUEST;
+		USBERRN("Invalid NumberOfPacket=%i.", requestContext->AutoIsoEx.NumPackets);
+		goto Exit;
+	}
+
+	if (USB_ENDPOINT_DIRECTION_IN(queueContext->Info.EndpointAddress))
+	{
+		if ((((LONG)requestContext->Length) - isoPacketContextLength) < 0)
+		{
+			status = STATUS_INVALID_BUFFER_SIZE;
+			USBERRN("PipeID=%02Xh Buffer to small to accommodate KISO_CONTEXT.", queueContext->Info.EndpointAddress);
+			goto Exit;
+		}
+		requestContext->AutoIsoEx.RequestedLength -= isoPacketContextLength;
+	}
+
+	///////////////////////////////////////////////////////////////////
+	status = GetTransferMdl(Request, requestContext->ActualRequestType, &mdl);
+	if (!NT_SUCCESS(status))
+	{
+		USBERR("GetTransferMdl failed.Status=%08Xh\n", urbSize, status);
+		goto Exit;
+	}
+
+	// Allocate URB memory 	///////////////////////////////////////////
+	WDF_OBJECT_ATTRIBUTES_INIT(&attributes);
+	attributes.ParentObject = Request;
+	status = WdfMemoryCreate(&attributes, NonPagedPool, POOL_TAG, urbSize, &requestContext->AutoIsoEx.UrbMemory, &urb);
+	if (!NT_SUCCESS(status))
+	{
+		USBERR("WdfMemoryCreate failed. size=%u Status=%08Xh\n", urbSize, status);
+		goto Exit;
+	}
+	///////////////////////////////////////////////////////////////////
+
+	// handle pipe reset scenarios: ResetPipeOnResume, AutoClearStall
+	mXfer_HandlePipeResetScenarios(status, queueContext, requestContext);
+
+	// Init URB ///////////////////////////////////////////////////////
+	RtlZeroMemory(urb, urbSize);
+	urb->UrbIsochronousTransfer.Hdr.Length				= (USHORT) urbSize;
+	urb->UrbIsochronousTransfer.Hdr.Function			= URB_FUNCTION_ISOCH_TRANSFER;
+	urb->UrbIsochronousTransfer.PipeHandle				= WdfUsbTargetPipeWdmGetPipeHandle(queueContext->PipeHandle);
+	urb->UrbIsochronousTransfer.TransferBufferMDL		= mdl;
+	urb->UrbIsochronousTransfer.TransferBufferLength	= requestContext->AutoIsoEx.RequestedLength;
+	urb->UrbIsochronousTransfer.NumberOfPackets			= requestContext->AutoIsoEx.NumPackets;
+
+	//urb->UrbIsochronousTransfer.StartFrame				= requestContext->IoControlRequest.AutoIsoEx.StartFrame;
+	if (urb->UrbIsochronousTransfer.StartFrame == 0)
+		urb->UrbIsochronousTransfer.TransferFlags |= USBD_START_ISO_TRANSFER_ASAP;
+
+	if (USB_ENDPOINT_DIRECTION_IN(queueContext->Info.EndpointAddress))
+		urb->UrbIsochronousTransfer.TransferFlags |= USBD_TRANSFER_DIRECTION_IN;
+	///////////////////////////////////////////////////////////////////
+
+	// Init URB iso packets ///////////////////////////////////////////
+	mXfer_IsoPacketsToUrb(isoSourcePackets, urb, requestContext->AutoIsoEx.NumPackets, requestContext->AutoIsoEx.RequestedLength, goto Exit);
+	///////////////////////////////////////////////////////////////////
+
+	// Assign the new urb to the request and prepare it for WdfRequestSend.
+	status = WdfUsbTargetPipeFormatRequestForUrb(queueContext->PipeHandle, Request, requestContext->AutoIsoEx.UrbMemory, NULL);
+	if (!NT_SUCCESS(status))
+	{
+		USBERR("WdfUsbTargetPipeFormatRequestForUrb failed. Status=%08Xh\n", status);
+		goto Exit;
+	}
+
+	status = SubmitAsyncQueueRequest(queueContext, Request, XferAutoIsoExComplete, NULL, requestContext);
+	if (NT_SUCCESS(status))
+		return;
+	USBERR("SubmitAsyncQueueRequest failed. Status=%08Xh\n", status);
+
+Exit:
+	WdfRequestCompleteWithInformation(Request, status, 0);
+}
+
+VOID XferAutoIsoExComplete(
+    __in WDFREQUEST Request,
+    __in WDFIOTARGET Target,
+    __in PWDF_REQUEST_COMPLETION_PARAMS CompletionParams,
+    __in PREQUEST_CONTEXT requestContext)
+{
+	PURB urb;
+	NTSTATUS status;
+	ULONG transferred = 0;
+	ULONG errorCount = 0;
+	ULONG startFrame = 0;
+	UNREFERENCED_PARAMETER(Target);
+
+	status = CompletionParams->IoStatus.Status;
+	urb = WdfMemoryGetBuffer(requestContext->AutoIsoEx.UrbMemory, NULL);
+
+	// update the iso context
+	errorCount = urb->UrbIsochronousTransfer.ErrorCount;
+	startFrame = urb->UrbIsochronousTransfer.StartFrame;
+
+	mXfer_HandlePipeResetScenariosForComplete(status, requestContext->QueueContext, requestContext);
+
+	if (requestContext->RequestType == WdfRequestTypeRead)
+	{
+		PUCHAR pCh	= NULL;
+		KISO_PACKET* isoDstPackets = NULL;
+		KISO_CONTEXT* isoDstContext = NULL;
+
+		NTSTATUS status2 = WdfRequestRetrieveOutputBuffer(Request, requestContext->Length, &pCh, NULL);
+		if (!NT_SUCCESS(status2))
+		{
+			status = status2;
+			USBERRN("WdfRequestRetrieveOutputBuffer failed. Status=%08Xh", status);
+			goto Exit;
+		}
+
+		pCh += requestContext->AutoIsoEx.RequestedLength;
+
+		isoDstContext	= (KISO_CONTEXT*)&pCh[0];
+		isoDstPackets	= (KISO_PACKET*) &pCh[sizeof(KISO_CONTEXT)];
+
+		isoDstContext->ErrorCount		= (SHORT)errorCount;
+		isoDstContext->StartFrame		= startFrame;
+		isoDstContext->NumberOfPackets	= (SHORT)urb->UrbIsochronousTransfer.NumberOfPackets;
+
+		// update the iso packet status & lengths
+		mXfer_IsoReadPacketsFromUrb(isoDstPackets, urb, (LONG)requestContext->AutoIsoEx.NumPackets, transferred);
+	}
+
+	if (!transferred)
+		transferred = urb->UrbIsochronousTransfer.TransferBufferLength;
+
+	USBE_SUCCESS(NT_SUCCESS(status), "Transferred=%u StartFrame=%08Xh Errors=%d Status=%08Xh\n",
+	             transferred, startFrame, errorCount, status);
+Exit:
+
+	WdfRequestCompleteWithInformation(Request, status, transferred);
+}
+
+VOID XferIsoExComplete(
+    __in WDFREQUEST Request,
+    __in WDFIOTARGET Target,
+    __in PWDF_REQUEST_COMPLETION_PARAMS CompletionParams,
+    __in PKISO_CONTEXT IsoContext)
 {
 	PURB urb;
 	NTSTATUS status;
 	PREQUEST_CONTEXT requestContext;
-	LONG posPacket;
-
+	ULONG transferred = 0;
 	UNREFERENCED_PARAMETER(Target);
 
 	requestContext = GetRequestContext(Request);
-
 	status = CompletionParams->IoStatus.Status;
-	urb = WdfMemoryGetBuffer(requestContext->UrbMemory, NULL);
+
+	Xfer_CheckPipeStatus(status, requestContext->QueueContext->Info.EndpointAddress);
+
+	urb = WdfMemoryGetBuffer(requestContext->IsoEx.UrbMemory, NULL);
+
+	mXfer_HandlePipeResetScenariosForComplete(status, requestContext->QueueContext, requestContext);
 
 	// update the iso context
-	IsoContext->ErrorCount = urb->UrbIsochronousTransfer.ErrorCount;
+	IsoContext->ErrorCount = (SHORT)urb->UrbIsochronousTransfer.ErrorCount;
 	IsoContext->StartFrame = urb->UrbIsochronousTransfer.StartFrame;
 
 	// update the iso packet status & lengths
-	for (posPacket = 0; posPacket < IsoContext->NumberOfPackets; posPacket++)
-	{
-		IsoContext->IsoPackets[posPacket].Length = (USHORT)urb->UrbIsochronousTransfer.IsoPacket[posPacket].Length;
-		IsoContext->IsoPackets[posPacket].Status = (USHORT)(urb->UrbIsochronousTransfer.IsoPacket[posPacket].Status & 0xFFFF);
-		requestContext->TotalTransferred += urb->UrbIsochronousTransfer.IsoPacket[posPacket].Length;
-	}
+	mXfer_IsoReadPacketsFromUrb(IsoContext->IsoPackets, urb, IsoContext->NumberOfPackets, transferred);
 
-	// http://msdn.microsoft.com/en-us/library/ff539084%28v=vs.85%29.aspx
-	// The Length parameter should only update for DeviceToHost (IN) transfers, but
-	// this is not always the case.
-	// * If the host is updating packet lengths, they are used to calculate
-	//   TotalTransferred. (above)
-	// * If the host is Not updating the packet lengths, the URB
-	//   TransferBufferLength is used to calculate TotalTransferred. (below)
-	//
-	if (NT_SUCCESS(status) && !requestContext->TotalTransferred)
-	{
-		requestContext->TotalTransferred += urb->UrbIsochronousTransfer.TransferBufferLength;
-	}
+	if (!transferred)
+		transferred = urb->UrbIsochronousTransfer.TransferBufferLength;
 
-	USBE_SUCCESS(NT_SUCCESS(status), "transferred=%d start-frame=%08Xh packet-errors=%d status=%08Xh\n",
-	             requestContext->TotalTransferred, IsoContext->StartFrame, IsoContext->ErrorCount, status);
 
-	WdfRequestCompleteWithInformation(Request, status, requestContext->TotalTransferred);
+	USBE_SUCCESS(NT_SUCCESS(status), "Transferred=%u StartFrame=%08Xh Errors=%d Status=%08Xh\n",
+	             transferred, IsoContext->StartFrame, IsoContext->ErrorCount, status);
+
+	WdfRequestCompleteWithInformation(Request, status, transferred);
 }

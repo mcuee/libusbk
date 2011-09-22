@@ -159,6 +159,12 @@ enum
 #define LIBUSBK_IOCTL_ISOEX_READ CTL_CODE(FILE_DEVICE_UNKNOWN,\
         0x914, METHOD_OUT_DIRECT, FILE_ANY_ACCESS)
 
+#define LIBUSBK_IOCTL_AUTOISOEX_WRITE CTL_CODE(FILE_DEVICE_UNKNOWN,\
+        0x915, METHOD_IN_DIRECT, FILE_ANY_ACCESS)
+
+#define LIBUSBK_IOCTL_AUTOISOEX_READ CTL_CODE(FILE_DEVICE_UNKNOWN,\
+        0x916, METHOD_OUT_DIRECT, FILE_ANY_ACCESS)
+
 /////////////////////////////////////////////////////////////////////////////
 
 #include <pshpack1.h>
@@ -226,7 +232,10 @@ typedef struct
 			ULONG IsoContextSize;
 			PKISO_CONTEXT IsoContext;
 		} IsoEx;
-
+		struct
+		{
+			UCHAR PipeID;
+		} AutoIsoEx;
 		struct
 		{
 			unsigned int type;

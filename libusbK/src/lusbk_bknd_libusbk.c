@@ -153,7 +153,7 @@ static BOOL k_Init_Config(PKUSB_HANDLE_INTERNAL handle)
 	while(success)
 	{
 		Mem_Zero(&request, sizeof(request));
-		request.descriptor.type = USB_CONFIGURATION_DESCRIPTOR_TYPE;
+		request.descriptor.type = USB_DESCRIPTOR_TYPE_CONFIGURATION;
 		request.descriptor.index = configIndex++;
 
 		if (configIndex == UCHAR_MAX)
@@ -1034,10 +1034,11 @@ KUSB_EXP BOOL KUSB_API UsbK_WritePipe(
 
 KUSB_EXP BOOL KUSB_API UsbK_IsoReadPipe(
     _in KUSB_HANDLE InterfaceHandle,
-    _ref PKISO_CONTEXT IsoContext,
+    _in UCHAR PipeID,
     _out PUCHAR Buffer,
     _in ULONG BufferLength,
-    _in LPOVERLAPPED Overlapped)
+    _in LPOVERLAPPED Overlapped,
+    _refopt PKISO_CONTEXT IsoContext)
 {
 	libusb_request request;
 	ULONG IsoContextSize;
@@ -1048,20 +1049,31 @@ KUSB_EXP BOOL KUSB_API UsbK_IsoReadPipe(
 	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
 
 	ErrorParam(!IsHandleValid(Overlapped), Error, "Overlapped");
-	ErrorParam(!IsHandleValid(IsoContext), Error, "IsoContext");
+	if (IsoContext)
+	{
+		IsoContextSize = sizeof(KISO_CONTEXT) + (IsoContext->NumberOfPackets * sizeof(KISO_PACKET));
 
-	IsoContextSize = sizeof(KISO_CONTEXT) + (IsoContext->NumberOfPackets * sizeof(KISO_PACKET));
+		Mem_Zero(&request, sizeof(request));
+		request.IsoEx.IsoContext		= IsoContext;
+		request.IsoEx.IsoContextSize	= IsoContextSize;
+		request.IsoEx.PipeID			= (UCHAR)PipeID;
 
-	Mem_Zero(&request, sizeof(request));
-	request.IsoEx.IsoContext = IsoContext;
-	request.IsoEx.IsoContextSize = IsoContextSize;
-	request.IsoEx.PipeID = (UCHAR)IsoContext->PipeID;
+		success = Ioctl_Async(Dev_Handle(), LIBUSBK_IOCTL_ISOEX_READ,
+		                      &request, sizeof(request),
+		                      Buffer, BufferLength,
+		                      Overlapped);
+	}
+	else
+	{
+		Mem_Zero(&request, sizeof(request));
+		request.AutoIsoEx.PipeID		= PipeID;
 
-	success = Ioctl_Async(Dev_Handle(), LIBUSBK_IOCTL_ISOEX_READ,
-	                      &request, sizeof(request),
-	                      Buffer, BufferLength,
-	                      Overlapped);
+		success = Ioctl_Async(Dev_Handle(), LIBUSBK_IOCTL_AUTOISOEX_READ,
+		                      &request, sizeof(request),
+		                      Buffer, BufferLength,
+		                      Overlapped);
 
+	}
 	PoolHandle_Dec_UsbK(handle);
 	return success;
 Error:
@@ -1071,10 +1083,11 @@ Error:
 
 KUSB_EXP BOOL KUSB_API UsbK_IsoWritePipe(
     _in KUSB_HANDLE InterfaceHandle,
-    _ref PKISO_CONTEXT IsoContext,
+    _in UCHAR PipeID,
     _in PUCHAR Buffer,
     _in ULONG BufferLength,
-    _in LPOVERLAPPED Overlapped)
+    _in LPOVERLAPPED Overlapped,
+    _refopt PKISO_CONTEXT IsoContext)
 {
 	libusb_request request;
 	ULONG IsoContextSize;
@@ -1085,20 +1098,31 @@ KUSB_EXP BOOL KUSB_API UsbK_IsoWritePipe(
 	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
 
 	ErrorParam(!IsHandleValid(Overlapped), Error, "Overlapped");
-	ErrorParam(!IsHandleValid(IsoContext), Error, "IsoContext");
 
-	IsoContextSize = sizeof(KISO_CONTEXT) + (IsoContext->NumberOfPackets * sizeof(KISO_PACKET));
+	if (IsoContext)
+	{
+		IsoContextSize = sizeof(KISO_CONTEXT) + (IsoContext->NumberOfPackets * sizeof(KISO_PACKET));
 
-	Mem_Zero(&request, sizeof(request));
-	request.IsoEx.IsoContext = IsoContext;
-	request.IsoEx.IsoContextSize = IsoContextSize;
-	request.IsoEx.PipeID = (UCHAR)IsoContext->PipeID;
+		Mem_Zero(&request, sizeof(request));
+		request.IsoEx.IsoContext		= IsoContext;
+		request.IsoEx.IsoContextSize	= IsoContextSize;
+		request.IsoEx.PipeID			= PipeID;
 
-	success = Ioctl_Async(Dev_Handle(), LIBUSBK_IOCTL_ISOEX_WRITE,
-	                      &request, sizeof(request),
-	                      Buffer, BufferLength,
-	                      Overlapped);
+		success = Ioctl_Async(Dev_Handle(), LIBUSBK_IOCTL_ISOEX_WRITE,
+		                      &request, sizeof(request),
+		                      Buffer, BufferLength,
+		                      Overlapped);
+	}
+	else
+	{
+		Mem_Zero(&request, sizeof(request));
+		request.AutoIsoEx.PipeID		= PipeID;
 
+		success = Ioctl_Async(Dev_Handle(), LIBUSBK_IOCTL_AUTOISOEX_WRITE,
+		                      &request, sizeof(request),
+		                      Buffer, BufferLength,
+		                      Overlapped);
+	}
 	PoolHandle_Dec_UsbK(handle);
 	return success;
 Error:

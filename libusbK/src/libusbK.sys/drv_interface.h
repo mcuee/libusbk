@@ -22,6 +22,9 @@ NTSTATUS Interface_InitContext(
     __in PDEVICE_CONTEXT deviceContext,
     __in PINTERFACE_CONTEXT interfaceContext);
 
+NTSTATUS Interface_DeletePipeQueues(
+    __in PINTERFACE_CONTEXT interfaceContext);
+
 NTSTATUS Interface_SetAltSetting(
     __in  PDEVICE_CONTEXT deviceContext,
     __in  PREQUEST_CONTEXT requestContext,

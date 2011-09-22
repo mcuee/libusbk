@@ -32,14 +32,19 @@ VOID NONPAGABLE PipeQueue_OnIoControl(__in WDFQUEUE Queue,
 {
 	NTSTATUS status;
 	ULONG length = 0;
-	PUCHAR inputBuffer, outputBuffer;
-	libusb_request* libusbRequest;
 	PDEVICE_CONTEXT deviceContext = GetDeviceContext(WdfIoQueueGetDevice(Queue));
 	PREQUEST_CONTEXT requestContext = GetRequestContext(Request);
+	PQUEUE_CONTEXT queueContext = NULL;
 
 	VALIDATE_REQUEST_CONTEXT(requestContext, status);
-	if (!NT_SUCCESS(status))
+	if (!NT_SUCCESS(status)) goto Done;
+
+	if ((queueContext = GetQueueContext(Queue)) == NULL)
+	{
+		status = STATUS_INVALID_DEVICE_REQUEST;
+		USBERRN("Invalid queue context");
 		goto Done;
+	}
 
 	switch(IoControlCode)
 	{
@@ -48,42 +53,65 @@ VOID NONPAGABLE PipeQueue_OnIoControl(__in WDFQUEUE Queue,
 	case LIBUSB_IOCTL_INTERRUPT_OR_BULK_WRITE:
 	case LIBUSB_IOCTL_INTERRUPT_OR_BULK_READ:
 
-		switch (requestContext->PipeContext->PipeInformation.PipeType)
+		switch (queueContext->Info.PipeType)
 		{
 		case WdfUsbPipeTypeIsochronous:
 
 			if (IsHighSpeedDevice(deviceContext))
 			{
-				XferIsoHS(Queue, Request, (ULONG)OutputBufferLength);
+				XferIsoHS(Queue, Request);
 			}
 			else
 			{
-				XferIsoFS(Queue, Request, InputBufferLength, OutputBufferLength);
+				XferIsoFS(Queue, Request);
 			}
 
 			return;
 
 		case WdfUsbPipeTypeBulk:
 		case WdfUsbPipeTypeInterrupt:
-
-			Xfer(Queue, Request, InputBufferLength, OutputBufferLength);
-
+			if(requestContext->Policies.RawIO)
+			{
+				if (USB_ENDPOINT_DIRECTION_IN(queueContext->Info.EndpointAddress))
+					Xfer_ReadBulkRaw(Queue, Request);
+				else
+					Xfer_WriteBulkRaw(Queue, Request);
+			}
+			else
+			{
+				if (USB_ENDPOINT_DIRECTION_IN(queueContext->Info.EndpointAddress))
+					Xfer_ReadBulk(Queue, Request);
+				else
+					Xfer_WriteBulk(Queue, Request);
+			}
 			return;
 
+		default:
+			status = STATUS_INVALID_PARAMETER;
+			USBERRN("Invalid PipeType=%s\n", GetPipeTypeString(queueContext->Info.PipeType));
+			break;
 		}
-		status = STATUS_INVALID_PARAMETER;
-		USBERR("invalid pipeType=%u\n", requestContext->PipeContext->PipeInformation.PipeType);
-		break;
 
 	case LIBUSBK_IOCTL_ISOEX_READ:
 	case LIBUSBK_IOCTL_ISOEX_WRITE:
-		if (requestContext->PipeContext->PipeInformation.PipeType == WdfUsbPipeTypeIsochronous)
+		if (queueContext->Info.PipeType == WdfUsbPipeTypeIsochronous)
 		{
-			XferIsoEx(Queue, Request, InputBufferLength, OutputBufferLength);
+			XferIsoEx(Queue, Request);
 			return;
 		}
 		status = STATUS_INVALID_PARAMETER;
-		USBERR("invalid pipeType=%u\n", requestContext->PipeContext->PipeInformation.PipeType);
+		USBERRN("Invalid PipeType=%s\n", GetPipeTypeString(queueContext->Info.PipeType));
+		break;
+
+	case LIBUSBK_IOCTL_AUTOISOEX_READ:
+	case LIBUSBK_IOCTL_AUTOISOEX_WRITE:
+		if (queueContext->Info.PipeType == WdfUsbPipeTypeIsochronous)
+		{
+			XferAutoIsoEx(Queue, Request);
+			return;
+		}
+		status = STATUS_INVALID_PARAMETER;
+		USBERRN("Invalid PipeType=%s\n", GetPipeTypeString(queueContext->Info.PipeType));
 		break;
 
 	case LIBUSB_IOCTL_SET_FEATURE:
@@ -97,65 +125,6 @@ VOID NONPAGABLE PipeQueue_OnIoControl(__in WDFQUEUE Queue,
 
 		XferCtrl(Queue, Request, InputBufferLength, OutputBufferLength);
 		return;
-
-	case LIBUSB_IOCTL_GET_PIPE_POLICY:
-
-		status = WdfRequestRetrieveInputBuffer(Request, sizeof(libusb_request), &libusbRequest, &InputBufferLength);
-		if(!NT_SUCCESS(status))
-		{
-			USBERR("GetPipePolicy: WdfRequestRetrieveInputBuffer failed status=%Xh\n", status);
-			break;
-		}
-
-		status = WdfRequestRetrieveOutputBuffer(Request, 1, &outputBuffer, &OutputBufferLength);
-		if(!NT_SUCCESS(status))
-		{
-			USBERR("GetPipePolicy: WdfRequestRetrieveOutputBuffer failed status=%Xh\n", status);
-			break;
-		}
-
-		length = (ULONG)OutputBufferLength;
-
-		USBDBG("GetPipePolicy: pipeID=%02Xh policyType=%02Xh valueLength=%u\n",
-		       (UCHAR)libusbRequest->pipe_policy.pipe_id,
-		       libusbRequest->pipe_policy.policy_type,
-		       OutputBufferLength);
-
-		status = Policy_GetPipe(deviceContext,
-		                        (UCHAR)libusbRequest->pipe_policy.pipe_id,
-		                        libusbRequest->pipe_policy.policy_type,
-		                        outputBuffer,
-		                        &length);
-
-		if (!NT_SUCCESS(status))
-			length = 0;
-
-		break;
-
-	case LIBUSB_IOCTL_SET_PIPE_POLICY:
-
-		status = WdfRequestRetrieveInputBuffer(Request, sizeof(libusb_request), &libusbRequest, &InputBufferLength);
-		if(!NT_SUCCESS(status))
-		{
-			USBERR("SetPipePolicy: WdfRequestRetrieveInputBuffer failed status=%Xh\n", status);
-			break;
-		}
-
-		InputBufferLength -= sizeof(libusb_request);
-		inputBuffer = GetRequestDataPtr(libusbRequest);
-
-		USBDBG("SetPipePolicy: pipeID=%02Xh policyType=%02Xh valueLength=%u\n",
-		       (UCHAR)libusbRequest->pipe_policy.pipe_id,
-		       libusbRequest->pipe_policy.policy_type,
-		       InputBufferLength);
-
-		status = Policy_SetPipe(deviceContext,
-		                        (UCHAR)libusbRequest->pipe_policy.pipe_id,
-		                        libusbRequest->pipe_policy.policy_type,
-		                        inputBuffer,
-		                        (ULONG)InputBufferLength);
-
-		break;
 
 	default:
 
@@ -178,32 +147,62 @@ VOID NONPAGABLE PipeQueue_OnRead(__in WDFQUEUE Queue,
 	NTSTATUS				status = STATUS_SUCCESS;
 	PDEVICE_CONTEXT         deviceContext;
 	PREQUEST_CONTEXT		requestContext;
+	PQUEUE_CONTEXT queueContext = NULL;
+
+	UNREFERENCED_PARAMETER(OutputBufferLength);
 
 	deviceContext = GetDeviceContext(WdfIoQueueGetDevice(Queue));
 	requestContext = GetRequestContext(Request);
 
 	VALIDATE_REQUEST_CONTEXT(requestContext, status);
-	if (!NT_SUCCESS(status))
-		goto Done;
+	if (!NT_SUCCESS(status)) goto Done;
 
-	if (!requestContext->PipeContext->Pipe)
+	if ((queueContext = GetQueueContext(Queue)) == NULL)
+	{
+		status = STATUS_INVALID_DEVICE_REQUEST;
+		USBERRN("Invalid queue context");
+		goto Done;
+	}
+
+	if (!queueContext->PipeHandle)
 	{
 		USBERR("null pipe handle\n");
 		status = STATUS_INVALID_HANDLE;
 		goto Done;
 	}
 
-	if (requestContext->PipeContext->PipeInformation.PipeType == WdfUsbPipeTypeIsochronous)
+	switch(queueContext->Info.PipeType)
 	{
+	case WdfUsbPipeTypeIsochronous:
+		if (queueContext->PipeContext->SharedAutoIsoExPacketMemory)
+		{
+			XferAutoIsoEx(Queue, Request);
+			return;
+		}
 		if(IsHighSpeedDevice(deviceContext))
-			XferIsoHS(Queue, Request, (ULONG)OutputBufferLength);
+			XferIsoHS(Queue, Request);
 		else
-			XferIsoFS(Queue, Request, SIZE_T_MAX, OutputBufferLength);
-	}
-	else // bulk/interrupt pipe.
-		Xfer(Queue, Request, SIZE_T_MAX, OutputBufferLength);
+			XferIsoFS(Queue, Request);
+		return;
+	case WdfUsbPipeTypeBulk:
+	case WdfUsbPipeTypeInterrupt:
 
-	return;
+		if (!USB_ENDPOINT_DIRECTION_IN(queueContext->Info.EndpointAddress))
+		{
+			status = STATUS_INVALID_DEVICE_REQUEST;
+			USBERRN("Cannot read from an OUT pipe.");
+			goto Done;
+		}
+		if(requestContext->Policies.RawIO)
+			Xfer_ReadBulkRaw(Queue, Request);
+		else
+			Xfer_ReadBulk(Queue, Request);
+
+		return;
+	}
+
+	status = STATUS_INVALID_DEVICE_REQUEST;
+	USBERRN("PipeID=%02Xh Invalid request", queueContext->Info.EndpointAddress);
 
 Done:
 	WdfRequestCompleteWithInformation(Request, status, 0);
@@ -217,34 +216,140 @@ VOID NONPAGABLE PipeQueue_OnWrite(__in WDFQUEUE Queue,
 	NTSTATUS				status = STATUS_SUCCESS;
 	PDEVICE_CONTEXT         deviceContext;
 	PREQUEST_CONTEXT		requestContext;
+	PQUEUE_CONTEXT queueContext = NULL;
+
+	UNREFERENCED_PARAMETER(InputBufferLength);
 
 	deviceContext = GetDeviceContext(WdfIoQueueGetDevice(Queue));
 	requestContext = GetRequestContext(Request);
 
 	VALIDATE_REQUEST_CONTEXT(requestContext, status);
-	if (!NT_SUCCESS(status))
-		goto Done;
+	if (!NT_SUCCESS(status)) goto Done;
 
-	if (!requestContext->PipeContext->Pipe)
+	if ((queueContext = GetQueueContext(Queue)) == NULL)
+	{
+		status = STATUS_INVALID_DEVICE_REQUEST;
+		USBERRN("Invalid queue context");
+		goto Done;
+	}
+
+	if (!queueContext->PipeHandle)
 	{
 		USBERR("null pipe handle\n");
 		status = STATUS_INVALID_HANDLE;
 		goto Done;
 	}
 
-	if (requestContext->PipeContext->PipeInformation.PipeType == WdfUsbPipeTypeIsochronous)
+	switch(queueContext->Info.PipeType)
 	{
+	case WdfUsbPipeTypeIsochronous:
+		if (queueContext->PipeContext->SharedAutoIsoExPacketMemory)
+		{
+			XferAutoIsoEx(Queue, Request);
+			return;
+		}
 		if(IsHighSpeedDevice(deviceContext))
-			XferIsoHS(Queue, Request, (ULONG)InputBufferLength);
+			XferIsoHS(Queue, Request);
 		else
-			XferIsoFS(Queue, Request, InputBufferLength, SIZE_T_MAX);
+			XferIsoFS(Queue, Request);
+		return;
+	case WdfUsbPipeTypeBulk:
+	case WdfUsbPipeTypeInterrupt:
+		if (USB_ENDPOINT_DIRECTION_IN(queueContext->Info.EndpointAddress))
+		{
+			status = STATUS_INVALID_DEVICE_REQUEST;
+			USBERRN("Cannot write to an IN pipe.");
+			goto Done;
+		}
+		if(requestContext->Policies.RawIO)
+			Xfer_WriteBulkRaw(Queue, Request);
+		else
+			Xfer_WriteBulk(Queue, Request);
 	}
-	else // bulk/interrupt pipe.
-		Xfer(Queue, Request, InputBufferLength, SIZE_T_MAX);
 
-	return;
+	status = STATUS_INVALID_DEVICE_REQUEST;
+	USBERRN("PipeID=%02Xh Invalid request", queueContext->Info.EndpointAddress);
 
 Done:
 	WdfRequestCompleteWithInformation(Request, status, 0);
 
+}
+
+/*++
+
+Routine Description:
+
+    This callback is invoked on every inflight request when the device
+    is suspended or removed. Since our inflight read and write requests
+    are actually pending in the target device, we will just acknowledge
+    its presence. Until we acknowledge, complete, or requeue the requests
+    framework will wait before allowing the device suspend or remove to
+    proceeed. When the underlying USB stack gets the request to suspend or
+    remove, it will fail all the pending requests.
+
+Arguments:
+
+Return Value:
+    None
+
+--*/
+VOID Queue_OnIsoStop(
+    __in WDFQUEUE Queue,
+    __in WDFREQUEST Request,
+    __in ULONG ActionFlags)
+{
+	PQUEUE_CONTEXT queueContext;
+
+	if ((queueContext = GetQueueContext(Queue)) == NULL)
+	{
+		USBERRN("Invalid queue context.");
+		WdfRequestCancelSentRequest(Request);
+		return;
+	}
+
+	if (ActionFlags & WdfRequestStopActionSuspend )
+	{
+		USBDBGN("pipeID=%02Xh StopAcknowledge request for suspend. Requeue=FALSE", queueContext->Info.EndpointAddress);
+		queueContext->ResetPipeForResume = TRUE;
+		WdfRequestStopAcknowledge(Request, FALSE);
+
+		return;
+	}
+
+	if(ActionFlags & WdfRequestStopActionPurge)
+	{
+		USBDBGN("pipeID=%02Xh CancelSentRequest for purge.", queueContext->Info.EndpointAddress);
+		WdfRequestCancelSentRequest(Request);
+		return;
+	}
+}
+
+VOID Queue_OnReadBulkStop(
+    __in WDFQUEUE Queue,
+    __in WDFREQUEST Request,
+    __in ULONG ActionFlags)
+{
+	PQUEUE_CONTEXT queueContext;
+
+	if ((queueContext = GetQueueContext(Queue)) == NULL)
+	{
+		USBERRN("Invalid queue context.");
+		WdfRequestCancelSentRequest(Request);
+		return;
+	}
+
+	if (ActionFlags & WdfRequestStopActionSuspend )
+	{
+		USBDBGN("pipeID=%02Xh StopAcknowledge request for suspend. Requeue=TRUE", queueContext->Info.EndpointAddress);
+		queueContext->ResetPipeForResume = TRUE;
+		WdfRequestStopAcknowledge(Request, TRUE);
+		return;
+	}
+
+	if(ActionFlags & WdfRequestStopActionPurge)
+	{
+		USBDBGN("pipeID=%02Xh CancelSentRequest for purge.", queueContext->Info.EndpointAddress);
+		WdfRequestCancelSentRequest(Request);
+		return;
+	}
 }

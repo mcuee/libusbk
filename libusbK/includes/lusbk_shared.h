@@ -25,6 +25,8 @@ typedef enum _USBD_PIPE_TYPE
 
 #endif
 
+#define ISO_AUTO_PACKET_TEMPLATE		0x10
+
 #if !defined(__WINUSB_COMPAT_IO_H__) && !defined(__WUSBIO_H__)
 
 // pipe policy types ///////////////
@@ -37,8 +39,6 @@ typedef enum _USBD_PIPE_TYPE
 #define RAW_IO                  0x07
 #define MAXIMUM_TRANSFER_SIZE   0x08
 #define RESET_PIPE_ON_RESUME    0x09
-// [tr] !NEW! (mainly for testing)
-#define MAX_TRANSFER_STAGE_SIZE    0x0F
 
 // Power policy types //////////////
 #define AUTO_SUSPEND            0x81
@@ -123,7 +123,7 @@ typedef struct _KISO_PACKET
 	*
 	* \note This field is assigned by the user application only and used by the driver upon transfer submission and completion.
 	*/
-	INT Offset;
+	ULONG Offset;
 
 	//! Set by the host controller to indicate the actual number of bytes received by the device for isochronous IN transfers. Length not used for isochronous OUT transfers.
 	/*!
@@ -145,8 +145,34 @@ typedef KISO_PACKET* PKISO_PACKET;
 
 #pragma warning(disable:4200)
 
+//! Additional ISO transfer flags.
+typedef enum _KISO_FLAG
+{
+    KISO_FLAG_NONE = 0,
+
+    //! Do not start the transfer immediately, instead use \ref KISO_CONTEXT::StartFrame.
+    /*!
+    * By default, isochronous transfers start on the next frame and \ref KISO_CONTEXT::StartFrame is
+    * ignored.  If this flag is specified, the transfer is postponed until the current usb frame number
+    * equals that specified by \ref KISO_CONTEXT::StartFrame.
+    *
+    * Under certain circumstances, the driver can specify 0 for \ref KISO_CONTEXT::StartFrame, and the bus
+    * driver will begin the transaction in the next available frame.
+    *
+    * Specifing \b 0 for \ref KISO_CONTEXT::StartFrame (start transfer ASAP) is restricted to the first
+    * transaction on a newly opened or reset pipe. Furthermore, the USB stack contains a bug in Microsoft
+    * Windows Server 2003 and Windows XP that limits the use of this to an isochronous context with 255 or fewer
+    * packets.
+    *
+    * For more information about resetting pipes, see \ref UsbK_ResetPipe.
+    */
+    KISO_FLAG_NO_START_ASAP = 0x00000001,
+} KISO_FLAG;
+
 //! Structure describing a user defined isochronous transfer.
 /*!
+*
+* \fixedstruct{16}
 *
 * The \ref KISO_CONTEXT::StartFrame member of the \ref KISO_CONTEXT specifies the starting USB frame number
 * for the transaction. The driver can use \ref UsbK_GetCurrentFrameNumber to request the current frame
@@ -199,62 +225,38 @@ typedef KISO_PACKET* PKISO_PACKET;
 */
 typedef struct _KISO_CONTEXT
 {
-	//! An 8-bit value that consists of a 7-bit address and a direction bit.
-	/*
-	* This parameter corresponds to the bEndpointAddress field in the endpoint
-	* descriptor.
-	*
-	* \note This field is assigned by the user application only and used by the driver upon transfer submission.
-	*/
-	LONG PipeID;
+	//! Additional ISO transfer flags. See \ref KISO_FLAG.
+	KISO_FLAG Flags;
 
 	//! Specifies the frame number that the transfer should begin on (0 for ASAP).
 	/*!
 	* This variable must be within a system-defined range of the current frame. The range is specified by the
 	* constant \ref USBD_ISO_START_FRAME_RANGE.
 	*
-	* If 0 was specified (start ASAP), this member contains the frame number that the transfer began on when the
-	* request is returned by the host controller driver. Otherwise, this member must contain the frame number
-	* that this transfer begins on.
-	*
-	* Under certain circumstances, the driver can specify 0 for \ref KISO_CONTEXT::StartFrame, and the bus
-	* driver will begin the transaction in the next available frame.
-	*
-	* Specifing \b 0 for \ref KISO_CONTEXT::StartFrame (start transfer ASAP) is restricted to the first
-	* transaction on a newly opened or reset pipe. Furthermore, the USB stack contains a bug in Microsoft
-	* Windows Server 2003 and Windows XP that limits the use of this to an isochronous context with 255 or fewer
-	* packets.
-	*
-	* For more information about resetting pipes, see \ref UsbK_ResetPipe.
+	* If /ref KISO_FLAG_NO_START_ASAP was specified, this member contains the frame number that the transfer should begin on.
+	* When the request is returned by the host controller driver, this member is updated to reflect the frame number this transfer
+	* did begin on.
 	*
 	* \note This field may be assigned by the user application and is updated by the driver upon transfer
 	* completion.
 	*/
-	LONG StartFrame;
+	ULONG StartFrame;
 
 	//! Contains the number of packets that completed with an error condition on return from the host controller driver.
 	/*!
 	* \note This field is is not user assignable and is updated by the driver upon transfer completion.
 	*/
-	LONG ErrorCount;
+	SHORT ErrorCount;
 
 	//! Specifies the number of packets that are described by the variable-length array member \c IsoPacket.
 	/*
 	* \note This field is assigned by the user application only and used by the driver upon transfer submission
 	* and completion.
 	*/
-	LONG NumberOfPackets;
+	SHORT NumberOfPackets;
 
-	//! Contains aunique per-pipe transfer counter.
-	/*
-	*
-	* For each pipe, libusbK maintains a transfer counter which increments each time a transfer is submitted.
-	* This 32-bit unsigned integer intially starts with \c 1 and is reset to \c 1 when new alternate settings
-	* are selected or a pipe reset occurs. This counter is \c 0 \b only when it reaches a \b rollover condition.
-	*
-	* \note This field is is not user assignable and is updated by the driver upon transfer submission.
-	*/
-	INT64 TransferCounter;
+	//! fixed structure padding.
+	UCHAR z_F_i_x_e_d[16 - sizeof(ULONG) * 2 - sizeof(SHORT) * 2];
 
 	//! Contains a variable-length array of \c KISO_PACKET structures that describe the isochronous transfer packets to be transferred on the USB bus.
 	/*
@@ -264,6 +266,8 @@ typedef struct _KISO_CONTEXT
 	KISO_PACKET IsoPackets[0];
 
 } KISO_CONTEXT;
+C_ASSERT(sizeof(KISO_CONTEXT) == 16);
+
 //! pointer to a \c KISO_CONTEXT structure
 typedef KISO_CONTEXT* PKISO_CONTEXT;
 

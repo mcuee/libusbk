@@ -1,892 +1,771 @@
-/* libusb-win32 WDF, Generic KMDF Windows USB Driver
- * Copyright (c) 2010-2011 Travis Robinson <libusbdotnet@gmail.com>
- * Copyright (c) 2002-2005 Stephan Meyer <ste_meyer@web.de>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
+/*!********************************************************************
+libusbK - WDF USB driver.
+Copyright (C) 2011 All Rights Reserved.
+libusb-win32.sourceforge.net
 
-#include "drv_private.h"
+Development : Travis Lee Robinson  (libusbdotnet@gmail.com)
+Testing     : Xiaofan Chen         (xiaofanc@gmail.com)
 
-#ifdef ALLOC_PRAGMA
+At the discretion of the user of this library, this software may be
+licensed under the terms of the GNU Public License v3 or a BSD-Style
+license as outlined in the following files:
+* LICENSE-gpl3.txt
+* LICENSE-bsd.txt
 
+License files are located in a license folder at the root of source and
+binary distributions.
+********************************************************************!*/
+
+#include "drv_common.h"
+#include "drv_xfer.h"
+
+// warning C4127: conditional expression is constant.
+#pragma warning(disable: 4127)
+
+#if (defined(ALLOC_PRAGMA) && defined(PAGING_ENABLED))
 #endif
 
-EVT_WDF_WORKITEM ReadWriteWorkItem;
+EVT_WDF_REQUEST_COMPLETION_ROUTINE Xfer_ReadBulkRawComplete;
+EVT_WDF_REQUEST_COMPLETION_ROUTINE Xfer_ReadBulkComplete;
+
+EVT_WDF_REQUEST_COMPLETION_ROUTINE Xfer_WriteBulkRawComplete;
+EVT_WDF_REQUEST_COMPLETION_ROUTINE Xfer_WriteBulkComplete;
+
+#define mXfer_CopyPartialReadToUserMemory(mStatus,mQueueContext, mTransferBuffer, mTransferLength, ErrorAction)	do {	\
+	mStatus = WdfMemoryCopyFromBuffer( 																					\
+		mQueueContext->Xfer.UserMem,   																					\
+		mQueueContext->Xfer.Transferred,   																				\
+		mTransferBuffer,   																								\
+		mTransferLength);  																								\
+		   																												\
+	if (!NT_SUCCESS(mStatus))  																							\
+	{  																													\
+		USBERR("WdfMemoryCopyFromBuffer failed. Status=%08Xh\n", mStatus); 												\
+		ErrorAction;   																									\
+	}  																													\
+   																														\
+	mQueueContext->OverOfs.BufferOffset	+= mTransferLength; 															\
+	mQueueContext->OverOfs.BufferLength	-= mTransferLength; 															\
+	mQueueContext->Xfer.Transferred		+= mTransferLength; 															\
+}while(0)
 
 
-#if !defined(BUFFERED_READ_WRITE) // if doing DIRECT_IO
+/*
+* Sumbmits a bulk/interrupt read stage transfer.
+* REQUIRES:
+* - ULONG remainingLength [out]
+* - ULONG stageLength [out]
+* - ULONG remainderLength [out]
+* - WDF_REQUEST_SEND_OPTIONS sendOptions [out]
+*/
+#define mXfer_SubmitNextRead(mStatus, mQueueContext, mRequestContext, mRequest, mCompletionRoutine, mErrorAction) do { 							\
+	/* One or more transfers required  */  																										\
+	remainingLength	= mQueueContext->Xfer.Length - mQueueContext->Xfer.Transferred; 															\
+	stageLength		= remainingLength > mQueueContext->Info.MaximumTransferSize ? mQueueContext->Info.MaximumTransferSize : remainingLength;	\
+	remainderLength = stageLength % mQueueContext->Info.MaximumPacketSize; 																		\
+   																																				\
+   																																				\
+	if (stageLength < mQueueContext->Info.MaximumPacketSize)   																					\
+	{  																																			\
+		if (!mRequestContext->Policies.AllowPartialReads)  																						\
+		{  																																		\
+			mStatus = STATUS_INVALID_BUFFER_SIZE;  																								\
+			USBERRN("Read buffer is not an interval of MaximumPacketSize. MaximumPacketSize: %u RemainderLength: %u",  							\
+					mQueueContext->Info.MaximumPacketSize, remainderLength);   																	\
+			mErrorAction;  																														\
+		}  																																		\
+		/* Use the over-run buffer; CompletionRoutine must update UserMem */   																	\
+		mQueueContext->OverOfs.BufferOffset = 0;   																								\
+		mQueueContext->OverOfs.BufferLength = stageLength; 																						\
+   																																				\
+		mStatus = WdfUsbTargetPipeFormatRequestForRead(mQueueContext->PipeHandle, mRequest, mQueueContext->OverMem, NULL); 						\
+	}  																																			\
+	else   																																		\
+	{  																																			\
+		/* One or more whole packets can be read directly into the user buffer. */ 																\
+		stageLength -= remainderLength;																											\
+		mQueueContext->Xfer.UserOfs.BufferOffset = mQueueContext->Xfer.Transferred;																\
+		mQueueContext->Xfer.UserOfs.BufferLength = stageLength;																					\
+   																																				\
+		mStatus = WdfUsbTargetPipeFormatRequestForRead(mQueueContext->PipeHandle, mRequest, mQueueContext->Xfer.UserMem, &mQueueContext->Xfer.UserOfs); 	\
+	}  																																			\
+   																																				\
+	if (!NT_SUCCESS(mStatus))  																													\
+	{  																																			\
+		USBERR("WdfIoTargetFormatRequestForRead failed. Status=%08Xh\n", mStatus); 																\
+		mErrorAction;  																															\
+	}  																																			\
+   																																				\
+	WDF_REQUEST_SEND_OPTIONS_INIT(&sendOptions, 0);																								\
+	mStatus = SetRequestTimeout(mRequestContext, mRequest, &sendOptions);  																		\
+	if (!NT_SUCCESS(mStatus))  																													\
+	{  																																			\
+		USBERR("SetRequestTimeout failed. Status=%08Xh\n", mStatus);   																			\
+		mErrorAction;  																															\
+	}  																																			\
+   																																				\
+	USBMSG("PipeID=%02Xh Staging=%u\n",	mQueueContext->Info.EndpointAddress, stageLength);  													\
+	mStatus = SubmitAsyncQueueRequest(mQueueContext, mRequest, mCompletionRoutine, &sendOptions, mQueueContext);   								\
+	if (!NT_SUCCESS(mStatus))  																													\
+	{  																																			\
+		USBERR("SubmitAsyncQueueRequest failed. Status=%08Xh\n", mStatus); 																		\
+		mErrorAction;  																															\
+	}  																																			\
+}while(0)
 
-VOID Xfer_Bulk(
-    __in WDFQUEUE         Queue,
-    __in WDFREQUEST       Request,
-    __in ULONG            Length
-)
-/*++
+#define mXfer_SubmitNextWrite(mStatus, mQueueContext, mRequestContext, mRequest, mCompletionRoutine, mErrorAction) do {							\
+	/* One or more transfers required  */  																										\
+	remainingLength	= mQueueContext->Xfer.Length - mQueueContext->Xfer.Transferred; 															\
+	stageLength		= remainingLength > mQueueContext->Info.MaximumTransferSize ? mQueueContext->Info.MaximumTransferSize : remainingLength;	\
+   																																				\
+	mQueueContext->Xfer.UserOfs.BufferOffset = mQueueContext->Xfer.Transferred;																	\
+	mQueueContext->Xfer.UserOfs.BufferLength = stageLength;																						\
+   																																				\
+	if (stageLength)   																															\
+		mStatus = WdfUsbTargetPipeFormatRequestForWrite(mQueueContext->PipeHandle, mRequest, mQueueContext->Xfer.UserMem, &mQueueContext->Xfer.UserOfs); 	\
+	else   																																		\
+		mStatus = WdfUsbTargetPipeFormatRequestForWrite(mQueueContext->PipeHandle, mRequest, NULL, NULL);  										\
+	   																																			\
+	if (!NT_SUCCESS(mStatus))  																													\
+	{  																																			\
+		USBERR("WdfIoTargetFormatRequestForWrite failed. Status=%08Xh\n", mStatus);																\
+		mErrorAction;  																															\
+	}  																																			\
+   																																				\
+	WDF_REQUEST_SEND_OPTIONS_INIT(&sendOptions, 0);																								\
+	mStatus = SetRequestTimeout(mRequestContext, mRequest, &sendOptions);  																		\
+	if (!NT_SUCCESS(mStatus))  																													\
+	{  																																			\
+		USBERR("SetRequestTimeout failed. Status=%08Xh\n", mStatus);   																			\
+		mErrorAction;  																															\
+	}  																																			\
+   																																				\
+	USBMSG("PipeID=%02Xh Staging=%u\n",	mQueueContext->Info.EndpointAddress, stageLength);  													\
+	mStatus = SubmitAsyncQueueRequest(mQueueContext, mRequest, mCompletionRoutine, &sendOptions, mQueueContext);   								\
+	if (!NT_SUCCESS(mStatus))  																													\
+	{  																																			\
+		USBERR("SubmitAsyncQueueRequest failed. Status=%08Xh\n", mStatus); 																		\
+		mErrorAction;  																															\
+	}  																																			\
+}while(0)
 
-Routine Description:
-
-    This callback is invoked when the framework received  WdfRequestTypeRead or
-    WdfRequestTypeWrite request. This read/write is performed in stages of
-    MAX_TRANSFER_SIZE. Once a stage of transfer is complete, then the
-    request is circulated again, until the requested length of transfer is
-    performed.
-
-Arguments:
-
-    Queue - Handle to the framework queue object that is associated
-            with the I/O request.
-
-    Request - Handle to a framework request object. This one represents
-              the WdfRequestTypeRead/WdfRequestTypeWrite IRP received by the framework.
-
-    Length - Length of the input/output buffer.
-
-Return Value:
-
-   VOID
-
---*/
+VOID Xfer_ReadBulk (
+    __in WDFQUEUE Queue,
+    __in WDFREQUEST Request)
 {
-	PMDL                    newMdl = NULL;
-	PURB                    urb = NULL;
-	WDFMEMORY               urbMemory;
-	ULONG                   totalLength = Length;
-	ULONG                   stageLength = 0;
-	ULONG                   urbFlags = 0;
 	NTSTATUS                status;
-	ULONG_PTR               virtualAddress = 0;
 	PREQUEST_CONTEXT        requestContext = NULL;
-	WDF_OBJECT_ATTRIBUTES   objectAttribs;
-	USBD_PIPE_HANDLE        usbdPipeHandle;
+	PQUEUE_CONTEXT			queueContext = NULL;
 	PDEVICE_CONTEXT         deviceContext;
+	ULONG					remainingLength;
+	ULONG					stageLength = 0;
+	ULONG					remainderLength = 0;
+	WDF_REQUEST_SEND_OPTIONS sendOptions;
+	PUCHAR					transferBuffer;
 
-	//
-	// First validate input parameters.
-	//
+
 	deviceContext = GetDeviceContext(WdfIoQueueGetDevice(Queue));
 	requestContext = GetRequestContext(Request);
-	if (!deviceContext || !requestContext)
-	{
-		USBERR("Invalid device or request context\n");
-		status = STATUS_INVALID_PARAMETER;
-		goto Exit;
-	}
 
-	if (!requestContext->PipeContext)
-	{
-		USBERR("Invalid pipe context\n");
-		status = STATUS_INVALID_PARAMETER;
-		goto Exit;
-	}
+	VALIDATE_REQUEST_CONTEXT(requestContext, status);
+	if (!NT_SUCCESS(status)) goto Exit;
 
-	if (totalLength > requestContext->PipeContext->PipeInformation.MaximumTransferSize)
+	if ((queueContext = GetQueueContext(Queue)) == NULL)
 	{
-		USBERR("Transfer-length > MaximumTransferSize\n");
-		status = STATUS_INVALID_PARAMETER;
-		goto Exit;
-	}
-
-	switch(requestContext->RequestType)
-	{
-	case WdfRequestTypeRead:
-		urbFlags |= USBD_TRANSFER_DIRECTION_IN;
-		USBMSG("Read length=%d\n", Length);
-		break;
-	case WdfRequestTypeWrite:
-		urbFlags |= USBD_TRANSFER_DIRECTION_OUT;
-		USBMSG("Write length=%d\n", Length);
-		break;
-	default:
 		status = STATUS_INVALID_DEVICE_REQUEST;
-		USBERR("Transfer-request types must be either read or write\n");
+		USBERRN("Invalid queue context");
 		goto Exit;
 	}
 
-	urbFlags |= USBD_SHORT_TRANSFER_OK;
+	queueContext->Xfer.Transferred = 0;
+	queueContext->Xfer.Length = requestContext->Length;
 
-	if (requestContext->OriginalTransferMDL)
+	if (!queueContext->OverMem)
 	{
-		virtualAddress = (ULONG_PTR) MmGetMdlVirtualAddress(requestContext->OriginalTransferMDL);
-	}
-
-	//
-	// the transfer request is for totalLength.
-	// we can perform a max of MAX_TRANSFER_SIZE
-	// in each stage.
-	//
-	if (totalLength > MAX_TRANSFER_SIZE)
-	{
-		stageLength = MAX_TRANSFER_SIZE;
-	}
-	else
-	{
-		stageLength = totalLength;
-	}
-
-	newMdl = IoAllocateMdl((PVOID) virtualAddress,
-	                       totalLength,
-	                       FALSE,
-	                       FALSE,
-	                       NULL);
-
-	if (newMdl == NULL)
-	{
-		USBERR("Failed to alloc mem for mdl\n");
-		status = STATUS_INSUFFICIENT_RESOURCES;
+		status = STATUS_INVALID_DEVICE_REQUEST;
+		USBERRN("Invalid queue context:OverMem");
 		goto Exit;
 	}
 
-	//
-	// map the portion of user-buffer described by an mdl to another mdl
-	//
-	IoBuildPartialMdl(requestContext->OriginalTransferMDL,
-	                  newMdl,
-	                  (PVOID) virtualAddress,
-	                  stageLength);
+	if (!queueContext->Info.MaximumPacketSize)
+	{
+		status = STATUS_PIPE_BROKEN;
+		USBERRN("PipeID=%02Xh MaximumPacketSize=0", queueContext->Info.EndpointAddress);
+		goto Exit;
+	}
 
-	WDF_OBJECT_ATTRIBUTES_INIT(&objectAttribs);
-	objectAttribs.ParentObject = Request;
+	// handle pipe reset scenarios: ResetPipeOnResume, AutoClearStall
+	mXfer_HandlePipeResetScenarios(status, queueContext, requestContext);
 
-	status = WdfMemoryCreate(&objectAttribs,
-	                         NonPagedPool,
-	                         POOL_TAG,
-	                         sizeof(struct _URB_BULK_OR_INTERRUPT_TRANSFER),
-	                         &urbMemory,
-	                         (PVOID*) &urb);
+	// Handle special case scenario where read length = 0
+	if (!queueContext->Xfer.Length)
+	{
+		// if AllowPartialReads complete successfully for 0 bytes
+		status = requestContext->Policies.AllowPartialReads ? STATUS_SUCCESS : STATUS_INVALID_BUFFER_SIZE;
+		goto Exit;
+	}
 
+	// Init queue user memory
+	status = GetTransferMemory(Request, requestContext->ActualRequestType, &queueContext->Xfer.UserMem);
 	if (!NT_SUCCESS(status))
 	{
-		USBERR("Failed to alloc mem for urb\n");
-		status = STATUS_INSUFFICIENT_RESOURCES;
+		USBERR("GetTransferMemory failed. Status=%08Xh\n", status);
 		goto Exit;
 	}
+	queueContext->Xfer.UserOfs.BufferOffset = 0;
+	queueContext->Xfer.UserOfs.BufferLength = queueContext->Xfer.Length;
 
-	usbdPipeHandle = WdfUsbTargetPipeWdmGetPipeHandle(requestContext->PipeContext->Pipe);
-
-	UsbBuildInterruptOrBulkTransferRequest(urb,
-	                                       sizeof(struct _URB_BULK_OR_INTERRUPT_TRANSFER),
-	                                       usbdPipeHandle,
-	                                       NULL,
-	                                       newMdl,
-	                                       stageLength,
-	                                       urbFlags,
-	                                       NULL);
-
-	status = WdfUsbTargetPipeFormatRequestForUrb(requestContext->PipeContext->Pipe, Request, urbMemory, NULL  );
-	if (!NT_SUCCESS(status))
+	// Check if there are bytes left over from a previous transfer.
+	if (queueContext->OverOfs.BufferLength > 0)
 	{
-		USBERR("Failed to format requset for urb.\n");
-		status = STATUS_INSUFFICIENT_RESOURCES;
-		goto Exit;
-	}
+		// Copy partial read bytes bytes into UserMem
+		remainingLength = queueContext->Xfer.Length - queueContext->Xfer.Transferred;
+		stageLength = (ULONG)queueContext->OverOfs.BufferLength > remainingLength ? remainingLength : (ULONG)queueContext->OverOfs.BufferLength;
+		transferBuffer = &queueContext->OverBuf[queueContext->OverOfs.BufferOffset];
 
-	WdfRequestSetCompletionRoutine(Request, ReadWriteCompletion, NULL);
+		mXfer_CopyPartialReadToUserMemory(status, queueContext, transferBuffer, stageLength, goto Exit);
 
-	//
-	// setup requestContext transfer parameters.
-	//
-	requestContext->UrbMemory			= urbMemory;
-	requestContext->Mdl					= newMdl;
-	requestContext->Length				= totalLength;
-	requestContext->TotalTransferred	= 0;
-	requestContext->VirtualAddress		= virtualAddress;
-//	requestContext->OriginalTransferMDL	= TransferMDL;
+		USBDBGN("PipeID=%02Xh Transferred %u bytes from a previous partial read.",
+		        queueContext->Info.EndpointAddress, queueContext->Xfer.Transferred);
 
-	if ((totalLength - stageLength) > 0)
-	{
-		//
-		// This large transfer will be broken into smaller sub-request.
-		// Temporarily stop this queue, otherwise request behind this one will
-		// proccess before the sub requests.
-		//
-		USBMSG("Stopping %s queue.\n",
-		       (requestContext->RequestType == WdfRequestTypeRead) ? "read" : "write");
-		WdfIoQueueStop(requestContext->PipeContext->Queue, NULL, NULL);
-	}
-
-	if (!WdfRequestSend(Request, WdfUsbTargetPipeGetIoTarget(requestContext->PipeContext->Pipe), WDF_NO_SEND_OPTIONS))
-	{
-		status = WdfRequestGetStatus(Request);
-		ASSERT(!NT_SUCCESS(status));
-	}
-	else
-	{
-
-	}
-Exit:
-	if (!NT_SUCCESS(status))
-	{
-		if ((totalLength - stageLength) > 0)
+		if (queueContext->Xfer.Transferred >= queueContext->Xfer.Length)
 		{
-			// if the queue was stopped, restart it
-			USBMSG("Starting %s queue.\n",
-			       (requestContext->RequestType == WdfRequestTypeRead) ? "read" : "write");
-			WdfIoQueueStart(requestContext->PipeContext->Queue);
-		}
-		WdfRequestCompleteWithInformation(Request, status, 0);
+			if (requestContext->Policies.AutoFlush)
+			{
+				// discard any extra partial read bytes
+				queueContext->OverOfs.BufferLength = 0;
+				queueContext->OverOfs.BufferOffset = 0;
+			}
 
-		if (newMdl != NULL)
+			USBMSGN("PipeID=%02Xh DoneReason: Transferred==Requested. Transferred=%u",
+			        queueContext->Info.EndpointAddress,	queueContext->Xfer.Transferred);
+			status = STATUS_SUCCESS;
+			goto Exit;
+		}
+
+		/*
+		It would seem if IgnoreShortPackets=FALSE we would complete the request here.
+		However, WinUSB does not handle it this way and will still submit the request.
+		*/
+#if 0
+		else if (!requestContext->Policies.IgnoreShortPackets)
 		{
-			IoFreeMdl(newMdl);
+			USBMSGN("PipeID=%02Xh DoneReason: IgnoreShortPackets=FALSE. Transferred=%u",
+			        queueContext->Info.EndpointAddress,	queueContext->Xfer.Transferred);
+			status = STATUS_SUCCESS;
+			goto Exit;
 		}
+#endif
 	}
 
+	mXfer_SubmitNextRead(status, queueContext, requestContext, Request, Xfer_ReadBulkComplete, goto Exit);
 	return;
-}
-
-
-VOID
-ReadWriteCompletion(
-    __in WDFREQUEST                  Request,
-    __in WDFIOTARGET                 Target,
-    PWDF_REQUEST_COMPLETION_PARAMS CompletionParams,
-    __in WDFCONTEXT                  Context
-)
-/*++
-
-Routine Description:
-
-    This is the completion routine for reads/writes
-    If the irp completes with success, we check if we
-    need to recirculate this irp for another stage of
-    transfer.
-
-Arguments:
-
-    Context - Driver supplied context
-    Device - Device handle
-    Request - Request handle
-    Params - request completion params
-
-Return Value:
-    None
-
---*/
-{
-	WDFUSBPIPE              pipe;
-	ULONG                   stageLength;
-	NTSTATUS               status;
-	PREQUEST_CONTEXT        requestContext;
-	PURB                    urb;
-	PCHAR                   operation;
-	ULONG                   transferred;
-	ULONG					remaining = 0;
-	WDFQUEUE				queue;
-
-	UNREFERENCED_PARAMETER(Context);
-
-	requestContext = GetRequestContext(Request);
-	if (requestContext->RequestType == WdfRequestTypeRead)
-		operation = "Read";
-	else
-		operation = "Write";
-
-	pipe = (WDFUSBPIPE) Target;
-	queue = requestContext->PipeContext->Queue;
-	status = CompletionParams->IoStatus.Status;
-
-	if (!NT_SUCCESS(status))
-	{
-		//
-		// Queue a workitem to reset the pipe because the completion could be
-		// running at DISPATCH_LEVEL.
-		//
-		//QueuePassiveLevelCallback(WdfIoTargetGetDevice(Target), pipe);
-		goto End;
-	}
-
-	urb = (PURB) WdfMemoryGetBuffer(requestContext->UrbMemory, NULL);
-	transferred = urb->UrbBulkOrInterruptTransfer.TransferBufferLength;
-	remaining = requestContext->Length - transferred;
-
-	requestContext->TotalTransferred += transferred;
-	requestContext->VirtualAddress += transferred;
-	requestContext->Length -= transferred;
-
-	//
-	// if there is nothing left to transfer or
-	// we transferred less than what was requested and the SHORT_TRANSFER_OK flag is set
-	//
-	if (remaining == 0 ||
-	        (transferred < MAX_TRANSFER_SIZE && urb->UrbBulkOrInterruptTransfer.TransferFlags & USBD_SHORT_TRANSFER_OK))
-	{
-		//
-		// complete the request
-		//
-		WdfRequestSetInformation(Request, requestContext->TotalTransferred);
-		goto End;
-	}
-
-	//
-	// Start another transfer
-	//
-	USBMSG("stage next %s transfer...\n", operation);
-
-	if (remaining > MAX_TRANSFER_SIZE)
-	{
-		stageLength = MAX_TRANSFER_SIZE;
-	}
-	else
-	{
-		stageLength = remaining;
-	}
-
-
-	//
-	// Following call is required to free any mapping made on the partial MDL
-	// and reset internal MDL state.
-	//
-	MmPrepareMdlForReuse(requestContext->Mdl);
-
-	IoBuildPartialMdl(requestContext->OriginalTransferMDL,
-	                  requestContext->Mdl,
-	                  (PVOID) requestContext->VirtualAddress,
-	                  stageLength);
-
-	//
-	// reinitialize the urb
-	//
-	urb->UrbBulkOrInterruptTransfer.TransferBufferLength = stageLength;
-
-
-	//
-	// Format the request to send a URB to a USB pipe.
-	//
-	status = WdfUsbTargetPipeFormatRequestForUrb(pipe,
-	         Request,
-	         requestContext->UrbMemory,
-	         NULL);
-	if (!NT_SUCCESS(status))
-	{
-		USBERR("Failed to format requset for urb\n");
-		status = STATUS_INSUFFICIENT_RESOURCES;
-		goto End;
-	}
-
-	WdfRequestSetCompletionRoutine(Request, ReadWriteCompletion, NULL);
-
-	//
-	// Send the request asynchronously.
-	//
-	if (!WdfRequestSend(Request, WdfUsbTargetPipeGetIoTarget(pipe), WDF_NO_SEND_OPTIONS))
-	{
-		USBERR("WdfRequestSend for %s failed\n", operation);
-		status = WdfRequestGetStatus(Request);
-		goto End;
-	}
-
-	if ((remaining - stageLength) == 0)
-	{
-		USBMSG("restarting %s queue.\n", operation);
-		WdfIoQueueStart(queue);
-//		if (WDF_IO_QUEUE_STOPPED(WdfIoQueueGetState(queue, NULL, NULL)))
-//		{
-//		}
-	}
-	//
-	// Else when the request completes, this completion routine will be
-	// called again.
-	//
-	return;
-
-End:
-	//
-	// We are here because the request failed or some other call failed.
-	// Dump the request context, complete the request and return.
-	//
-	DbgPrintRWContext(requestContext);
-
-	IoFreeMdl(requestContext->Mdl);
-
-	USBMSG("%s request completed. status=%Xh\n",
-	       operation, status);
-
-	if (queue)
-	{
-		if (WDF_IO_QUEUE_STOPPED(WdfIoQueueGetState(queue, NULL, NULL)))
-		{
-			USBMSG("restarting %s queue.\n", operation);
-			WdfIoQueueStart(queue);
-		}
-	}
-
-	WdfRequestComplete(Request, status);
-
-	return;
-}
-
-#else
-
-VOID
-Xfer_Bulk(
-    __in WDFQUEUE         Queue,
-    __in WDFREQUEST       Request,
-    __in ULONG            Length,
-    __in WDF_REQUEST_TYPE RequestType
-)
-/*++
-
-Routine Description:
-
-    This callback is invoked when the framework received  WdfRequestTypeRead or
-    RP_MJ_WRITE request. This read/write is performed in stages of
-    MAX_TRANSFER_SIZE. Once a stage of transfer is complete, then the
-    request is circulated again, until the requested length of transfer is
-    performed.
-
-Arguments:
-
-    Queue - Handle to the framework queue object that is associated
-            with the I/O request.
-
-    Request - Handle to a framework request object. This one represents
-              the WdfRequestTypeRead/WdfRequestTypeWrite IRP received by the framework.
-
-    Length - Length of the input/output buffer.
-
-Return Value:
-
-   VOID
-
---*/
-{
-	size_t                totalLength = Length;
-	size_t                stageLength = 0;
-	NTSTATUS              status;
-	PVOID                 virtualAddress = 0;
-	PREQUEST_CONTEXT      requestContext = NULL;
-	PFILE_CONTEXT         fileContext = NULL;
-	WDFUSBPIPE            pipe;
-	WDFMEMORY             reqMemory;
-	WDFMEMORY_OFFSET      offset;
-	WDF_OBJECT_ATTRIBUTES objectAttribs;
-	PDEVICE_CONTEXT       deviceContext;
-
-	USBMSG("begins\n");
-
-	//
-	// First validate input parameters.
-	//
-	deviceContext = GetDeviceContext(WdfIoQueueGetDevice(Queue));
-
-	if (totalLength > deviceContext->MaximumTransferSize)
-	{
-		USBERR("Transfer-length > circular buffer\n");
-		status = STATUS_INVALID_PARAMETER;
-		goto Exit;
-	}
-
-	if ((RequestType != WdfRequestTypeRead) &&
-	        (RequestType != WdfRequestTypeWrite))
-	{
-		USBERR("RequestType has to be either Read or Write\n");
-		status = STATUS_INVALID_PARAMETER;
-		goto Exit;
-	}
-
-	//
-	// Get the pipe associate with this request.
-	//
-	fileContext = GetFileContext(WdfRequestGetFileObject(Request));
-	pipe = fileContext->Pipe;
-
-	requestContext = GetRequestContext(Request);
-
-	if(RequestType == WdfRequestTypeRead)
-	{
-		status = WdfRequestRetrieveOutputBuffer(Request, Length, &virtualAddress, &totalLength);
-		requestContext->Read = TRUE;
-
-	}
-	else     //Write
-	{
-
-		status = WdfRequestRetrieveInputBuffer(Request, Length, &virtualAddress, &totalLength);
-		requestContext->Read = FALSE;
-	}
-
-	if(!NT_SUCCESS(status))
-	{
-		USBERR("WdfRequestRetrieveInputBuffer failed\n");
-		goto Exit;
-	}
-
-	//
-	// If the totalLength exceeds MAX_TRANSFER_SIZE, we will break
-	// that into multiple transfer of size no more than MAX_TRANSFER_SIZE
-	// in each stage.
-	//
-	if (totalLength > MAX_TRANSFER_SIZE)
-	{
-		stageLength = MAX_TRANSFER_SIZE;
-	}
-	else
-	{
-		stageLength = totalLength;
-	}
-
-	WDF_OBJECT_ATTRIBUTES_INIT(&objectAttribs);
-	objectAttribs.ParentObject = Request;
-	status = WdfMemoryCreatePreallocated(&objectAttribs,
-	                                     virtualAddress,
-	                                     totalLength,
-	                                     &reqMemory);
-	if(!NT_SUCCESS(status))
-	{
-		USBERR("WdfMemoryCreatePreallocated failed\n");
-		goto Exit;
-	}
-
-	offset.BufferOffset = 0;
-	offset.BufferLength = stageLength;
-
-	//
-	// The framework format call validates to make sure that you are reading or
-	// writing to the right pipe type, sets the appropriate transfer flags,
-	// creates an URB and initializes the request.
-	//
-	if(RequestType == WdfRequestTypeRead)
-	{
-
-		USBMSG("Read operation\n");
-		status = WdfUsbTargetPipeFormatRequestForRead(pipe,
-		         Request,
-		         reqMemory,
-		         &offset);
-	}
-	else
-	{
-
-		USBMSG("Write operation\n");
-		status = WdfUsbTargetPipeFormatRequestForWrite(pipe,
-		         Request,
-		         reqMemory,
-		         &offset);
-	}
-
-	if (!NT_SUCCESS(status))
-	{
-		USBERR("WdfUsbTargetPipeFormatRequest failed 0x%x\n", status));
-		goto Exit;
-	}
-
-	WdfRequestSetCompletionRoutine(
-	    Request,
-	    ReadWriteCompletion,
-	    NULL);
-	//
-	// set REQUEST_CONTEXT parameters.
-	//
-	requestContext->Length  = totalLength - stageLength;
-	requestContext->TotalTransferred = 0;
-
-	//
-	// Send the request asynchronously.
-	//
-	if (WdfRequestSend(Request, WdfUsbTargetPipeGetIoTarget(pipe), WDF_NO_SEND_OPTIONS) == FALSE)
-	{
-		USBERR("WdfRequestSend failed\n");
-		status = WdfRequestGetStatus(Request);
-		goto Exit;
-	}
-
 
 Exit:
-	if (!NT_SUCCESS(status))
+	if (queueContext)
 	{
-		WdfRequestCompleteWithInformation(Request, status, 0);
+		WdfRequestCompleteWithInformation(Request, status, queueContext->Xfer.Transferred);
+		return;
 	}
-
-	USBMSG("ends\n");
-
-	return;
+	WdfRequestCompleteWithInformation(Request, status, 0);
 }
 
-// TODO: Use mouser sample trick to avoid stack recursion
-
-VOID
-ReadWriteCompletion(
-    __in WDFREQUEST                  Request,
-    __in WDFIOTARGET                 Target,
-    PWDF_REQUEST_COMPLETION_PARAMS CompletionParams,
-    __in WDFCONTEXT                  Context
-)
-/*++
-
-Routine Description:
-
-    This is the completion routine for reads/writes
-    If the irp completes with success, we check if we
-    need to recirculate this irp for another stage of
-    transfer.
-
-Arguments:
-
-    Context - Driver supplied context
-    Device - Device handle
-    Request - Request handle
-    Params - request completion params
-
-Return Value:
-    None
-
---*/
+VOID Xfer_ReadBulkComplete(
+    __in WDFREQUEST Request,
+    __in WDFIOTARGET Target,
+    __in PWDF_REQUEST_COMPLETION_PARAMS CompletionParams,
+    __in WDFCONTEXT Context)
 {
-	WDFUSBPIPE              pipe;
-	ULONG                   stageLength;
-	NTSTATUS               status;
-	PREQUEST_CONTEXT        requestContext;
-	ULONG                   bytesReadWritten;
-	WDFMEMORY_OFFSET       offset;
-	PCHAR                   operation;
+	NTSTATUS                status;
+	PREQUEST_CONTEXT        requestContext = NULL;
+	PQUEUE_CONTEXT			queueContext = NULL;
+	ULONG					remainingLength;
+	ULONG					transferredLength;
+	ULONG					stageLength = 0;
+	ULONG					remainderLength = 0;
+	WDF_REQUEST_SEND_OPTIONS sendOptions;
+	PUCHAR					transferBuffer;
 	PWDF_USB_REQUEST_COMPLETION_PARAMS usbCompletionParams;
 
-	UNREFERENCED_PARAMETER(Context);
-	requestContext = GetRequestContext(Request);
+	UNREFERENCED_PARAMETER(Target);
 
+	// Make sure the request context is still valid.
+	requestContext	= GetRequestContext(Request);
+	queueContext	= (PQUEUE_CONTEXT)Context;
+
+	status				= CompletionParams->IoStatus.Status;
 	usbCompletionParams = CompletionParams->Parameters.Usb.Completion;
-	requestContext = GetRequestContext(Request);
+	transferredLength	= (ULONG)usbCompletionParams->Parameters.PipeRead.Length;
 
-	if (requestContext->Read)
+	if (!queueContext || !usbCompletionParams)
 	{
-		operation = "Read";
-		bytesReadWritten =  usbCompletionParams->Parameters.PipeRead.Length;
-	}
-	else
-	{
-		operation = "Write";
-		bytesReadWritten =  usbCompletionParams->Parameters.PipeWrite.Length;
+		status = STATUS_INVALID_DEVICE_REQUEST;
+		USBERRN("Invalid queue context.");
+		goto Exit;
 	}
 
-	pipe = (WDFUSBPIPE) Target;
-	status = CompletionParams->IoStatus.Status;
+	Xfer_CheckPipeStatus(status, queueContext->Info.EndpointAddress);
 
-	if (!NT_SUCCESS(status))
+	mXfer_HandlePipeResetScenariosForComplete(status, queueContext, requestContext);
+
+	if (queueContext->OverOfs.BufferLength)
 	{
-		//
-		// Queue a workitem to reset the pipe because the completion could be
-		// running at DISPATCH_LEVEL.
-		// TODO: preallocate per pipe workitem to avoid allocation failure.
-		QueuePassiveLevelCallback(WdfIoTargetGetDevice(Target), pipe);
-		goto End;
-	}
-
-	requestContext->TotalTransferred += bytesReadWritten;
-
-	//
-	// If there is anything left to transfer.
-	//
-	if (requestContext->Length == 0)
-	{
-		//
-		// this is the last transfer
-		//
-		WdfRequestSetInformation(Request, requestContext->TotalTransferred);
-		goto End;
-	}
-
-	//
-	// Start another transfer
-	//
-	USBMSG("Stage next %s transfer...\n", operation));
-
-	if (requestContext->Length > MAX_TRANSFER_SIZE)
-{
-	stageLength = MAX_TRANSFER_SIZE;
-}
-else
-{
-	stageLength = requestContext->Length;
-}
-
-offset.BufferOffset = requestContext->TotalTransferred;
-                      offset.BufferLength = stageLength;
-
-                              requestContext->Length -= stageLength;
-
-                                      if (requestContext->Read)
-{
-
-	status = WdfUsbTargetPipeFormatRequestForRead(
-	             pipe,
-	             Request,
-	             usbCompletionParams->Parameters.PipeRead.Buffer,
-	             &offset);
-
-	}
-	else
-	{
-
-		status = WdfUsbTargetPipeFormatRequestForWrite(
-		             pipe,
-		             Request,
-		             usbCompletionParams->Parameters.PipeWrite.Buffer,
-		             &offset);
-
-	}
-
-	if (!NT_SUCCESS(status))
-	{
-		USBERR("WdfUsbTargetPipeFormat%sRequest failed 0x%x\n",
-		       operation, status));
-		goto End;
-	}
-
-	WdfRequestSetCompletionRoutine(
-	    Request,
-	    ReadWriteCompletion,
-	    NULL);
-
-	//
-	// Send the request asynchronously.
-	//
-	if (!WdfRequestSend(Request, WdfUsbTargetPipeGetIoTarget(pipe), WDF_NO_SEND_OPTIONS))
-	{
-		USBERR("WdfRequestSend for %s failed\n", operation));
-		status = WdfRequestGetStatus(Request);
-		         goto End;
-	}
-
-	         //
-	         // Else when the request completes, this completion routine will be
-	         // called again.
-	         //
-	         return;
-
-               End:
-	               //
-	               // We are here because the request failed or some other call failed.
-	               // Dump the request context, complete the request and return.
-	               //
-	               DbgPrintRWContext(requestContext);
-
-	               USBMSG("%s request completed. status=%Xh\n",
-	                      operation, status));
-
-	               WdfRequestComplete(Request, status);
-
-	               return;
-}
-
-#endif
-
-#if 0
-VOID
-ReadWriteWorkItem(
-    __in WDFWORKITEM  WorkItem
-)
-{
-	PWORKITEM_CONTEXT pItemContext;
-	NTSTATUS status;
-
-	USBMSG("ReadWriteWorkItem called\n");
-
-	pItemContext = GetWorkItemContext(WorkItem);
-
-	status = ResetPipe(pItemContext->Pipe);
-	if (!NT_SUCCESS(status))
-	{
-
-		USBERR("ResetPipe failed. status=%Xh\n", status);
-
-		status = Device_Reset(pItemContext->Device);
-		if(!NT_SUCCESS(status))
+		// Received data to queue OverMem
+		if (transferredLength)
 		{
+			// Copy partial read bytes bytes into UserMem
+			stageLength		= (ULONG)queueContext->OverOfs.BufferLength > transferredLength ? transferredLength : (ULONG)queueContext->OverOfs.BufferLength;
+			transferBuffer	= queueContext->OverBuf;
+			queueContext->OverOfs.BufferLength = transferredLength;
 
-			USBERR("Device_Reset failed. status=%Xh\n", status);
+			mXfer_CopyPartialReadToUserMemory(status, queueContext, transferBuffer, stageLength, goto Exit);
+
+			if (queueContext->Xfer.Transferred >= queueContext->Xfer.Length)
+			{
+				if (requestContext->Policies.AutoFlush)
+				{
+					// discard any extra partial read bytes
+					queueContext->OverOfs.BufferLength = 0;
+					queueContext->OverOfs.BufferOffset = 0;
+				}
+
+				// DONE REASON: Transferred==Requested
+				USBDBGN("PipeID=%02Xh DoneReason: Transferred==Requested. Staged=%u Total=%u Requested=%u",
+				        queueContext->Info.EndpointAddress,	stageLength, queueContext->Xfer.Transferred, queueContext->Xfer.Length);
+				goto Exit;
+			}
+			if (!NT_SUCCESS(status)) goto Exit;
+
+		}
+		else
+		{
+			if (!NT_SUCCESS(status)) goto Exit;
+
+			// Received a ZLP
+			USBDBGN("PipeID=%02Xh ZLP received.", queueContext->Info.EndpointAddress);
+			queueContext->OverOfs.BufferLength = 0;
+		}
+		if (!NT_SUCCESS(status)) goto Exit;
+
+		if (!requestContext->Policies.IgnoreShortPackets)
+		{
+			// DONE REASON: IgnoreShortPackets = 0
+			USBDBGN("PipeID=%02Xh DoneReason: IgnoreShortPackets=FALSE. Staged=%u Total=%u Requested=%u",
+			        queueContext->Info.EndpointAddress,	stageLength, queueContext->Xfer.Transferred, queueContext->Xfer.Length);
+
+			goto Exit;
+		}
+	}
+	else
+	{
+		// Received data to UserMem
+		queueContext->Xfer.Transferred += transferredLength;
+		if (!NT_SUCCESS(status)) goto Exit;
+
+		if (!transferredLength)
+		{
+			// Received a ZLP
+			USBDBGN("PipeID=%02Xh ZLP received.", queueContext->Info.EndpointAddress);
+		}
+
+		if (queueContext->Xfer.Transferred >= queueContext->Xfer.Length)
+		{
+			// DONE REASON: Transferred==Requested
+			USBDBGN("PipeID=%02Xh DoneReason: Transferred==Requested. Staged=%u Total=%u Requested=%u",
+			        queueContext->Info.EndpointAddress,	transferredLength, queueContext->Xfer.Transferred, queueContext->Xfer.Length);
+			goto Exit;
+		}
+		else if (transferredLength && transferredLength == queueContext->Xfer.UserOfs.BufferLength)
+		{
+			// bytes transferred equals bytes requested and we have more bytes to go. (split transfers)
+			goto NextRead;
+		}
+
+		if (!requestContext->Policies.IgnoreShortPackets)
+		{
+			// DONE REASON: IgnoreShortPackets = 0
+			USBDBGN("PipeID=%02Xh DoneReason: IgnoreShortPackets=FALSE. Staged=%u Total=%u Requested=%u",
+			        queueContext->Info.EndpointAddress,	transferredLength, queueContext->Xfer.Transferred, queueContext->Xfer.Length);
+			goto Exit;
 		}
 	}
 
-	WdfObjectDelete(WorkItem);
-
+NextRead:
+	mXfer_SubmitNextRead(status, queueContext, requestContext, Request, Xfer_ReadBulkComplete, goto Exit);
 	return;
+
+Exit:
+	WdfRequestCompleteWithInformation(Request, status, queueContext->Xfer.Transferred);
+
 }
 
-NTSTATUS
-QueuePassiveLevelCallback(
-    __in WDFDEVICE    Device,
-    __in WDFUSBPIPE   Pipe
-)
-/*++
-
-Routine Description:
-
-    This routine is used to queue workitems so that the callback
-    functions can be executed at PASSIVE_LEVEL in the conext of
-    a system thread.
-
-Arguments:
-
-
-Return Value:
-
---*/
+VOID Xfer_ReadBulkRaw (
+    __in WDFQUEUE Queue,
+    __in WDFREQUEST Request)
 {
-	NTSTATUS                       status = STATUS_SUCCESS;
-	PWORKITEM_CONTEXT               context;
-	WDF_OBJECT_ATTRIBUTES           attributes;
-	WDF_WORKITEM_CONFIG             workitemConfig;
-	WDFWORKITEM                     hWorkItem;
+	NTSTATUS                status;
+	PREQUEST_CONTEXT        requestContext = NULL;
+	PDEVICE_CONTEXT         deviceContext;
+	WDFMEMORY				transferMemory;
+	PQUEUE_CONTEXT			queueContext = NULL;
 
-	WDF_OBJECT_ATTRIBUTES_INIT(&attributes);
-	WDF_OBJECT_ATTRIBUTES_SET_CONTEXT_TYPE(&attributes, WORKITEM_CONTEXT);
-	attributes.ParentObject = Device;
+	WDF_REQUEST_SEND_OPTIONS sendOptions;
 
-	WDF_WORKITEM_CONFIG_INIT(&workitemConfig, ReadWriteWorkItem);
+	deviceContext = GetDeviceContext(WdfIoQueueGetDevice(Queue));
+	requestContext = GetRequestContext(Request);
 
-	status = WdfWorkItemCreate( &workitemConfig,
-	                            &attributes,
-	                            &hWorkItem);
+	VALIDATE_REQUEST_CONTEXT(requestContext, status);
+	if (!NT_SUCCESS(status)) goto Exit;
+
+	if ((queueContext = GetQueueContext(Queue)) == NULL)
+	{
+		status = STATUS_INVALID_DEVICE_REQUEST;
+		USBERRN("Invalid queue context");
+		goto Exit;
+	}
+
+	if (!queueContext->Info.MaximumPacketSize)
+	{
+		status = STATUS_INVALID_DEVICE_REQUEST;
+		USBERRN("PipeID=%02Xh MaximumPacketSize=0", queueContext->Info.EndpointAddress);
+		goto Exit;
+	}
+
+	if ((requestContext->Length % queueContext->Info.MaximumPacketSize) > 0)
+	{
+		USBERR("PipeID=%02Xh transfer must be an interval of the MaximumPacketSize (%u bytes)\n",
+		       queueContext->Info.EndpointAddress, queueContext->Info.MaximumPacketSize);
+		status = STATUS_INVALID_BUFFER_SIZE;
+		goto Exit;
+	}
+
+	status = GetTransferMemory(Request, requestContext->ActualRequestType, &transferMemory);
+	if (!NT_SUCCESS(status))
+	{
+		USBERR("GetTransferMemory failed. Status=%08Xh\n", status);
+		goto Exit;
+	}
+
+	status = WdfUsbTargetPipeFormatRequestForRead(
+	             queueContext->PipeHandle,
+	             Request,
+	             transferMemory,
+	             NULL);
 
 	if (!NT_SUCCESS(status))
 	{
-		return status;
+		USBERR("WdfIoTargetFormatRequestForRead failed. Status=%08Xh\n", status);
+		goto Exit;
 	}
 
-	context = GetWorkItemContext(hWorkItem);
+	WDF_REQUEST_SEND_OPTIONS_INIT(&sendOptions, 0);
+	status = SetRequestTimeout(requestContext, Request, &sendOptions);
+	if (!NT_SUCCESS(status))
+	{
+		USBERR("SetRequestTimeout failed. Status=%08Xh\n", status);
+		goto Exit;
+	}
 
-	context->Device = Device;
-	context->Pipe = Pipe;
+	USBMSG("PipeID=%02Xh Length=%u\n",	queueContext->Info.EndpointAddress,	requestContext->Length);
+	status = SubmitAsyncQueueRequest(queueContext, Request, Xfer_ReadBulkRawComplete, &sendOptions, queueContext);
+	if (!NT_SUCCESS(status))
+	{
+		USBERR("SubmitAsyncRequest failed. Status=%08Xh\n", status);
+		goto Exit;
+	}
 
-	//
-	// Execute this work item.
-	//
-	WdfWorkItemEnqueue(hWorkItem);
-
-	return STATUS_SUCCESS;
-}
-#endif
-
-VOID
-DbgPrintRWContext(
-    PREQUEST_CONTEXT requestContext
-)
-{
-	UNREFERENCED_PARAMETER(requestContext);
-
-	USBDBG("requestContext->UrbMemory       = %p\n",
-	       requestContext->UrbMemory);
-	USBDBG("requestContext->Mdl             = %p\n",
-	       requestContext->Mdl);
-	USBDBG("requestContext->Length          = %d\n",
-	       requestContext->Length);
-	USBDBG("requestContext->TotalTransferred= %d\n",
-	       requestContext->TotalTransferred);
-	USBDBG("requestContext->VirtualAddress  = %p\n",
-	       requestContext->VirtualAddress);
 	return;
+
+Exit:
+	WdfRequestCompleteWithInformation(Request, status, 0);
 }
 
+VOID Xfer_ReadBulkRawComplete(
+    __in WDFREQUEST Request,
+    __in WDFIOTARGET Target,
+    __in PWDF_REQUEST_COMPLETION_PARAMS CompletionParams,
+    __in WDFCONTEXT Context)
+{
+	NTSTATUS status;
+	PREQUEST_CONTEXT requestContext;
+	size_t length = 0;
+	PWDF_USB_REQUEST_COMPLETION_PARAMS usbCompletionParams;
+	PQUEUE_CONTEXT queueContext;
 
+	UNREFERENCED_PARAMETER(Target);
+
+	// Make sure the request context is still valid.
+	requestContext = GetRequestContext(Request);
+	queueContext = (PQUEUE_CONTEXT)Context;
+
+	status = CompletionParams->IoStatus.Status;
+	usbCompletionParams = CompletionParams->Parameters.Usb.Completion;
+
+	length = usbCompletionParams->Parameters.PipeRead.Length;
+	Xfer_CheckPipeStatus(status, queueContext->Info.EndpointAddress);
+
+	mXfer_HandlePipeResetScenariosForComplete(status, queueContext, requestContext);
+
+	if (NT_SUCCESS(status) || length)
+	{
+		USBMSGN("PipeID=%02Xh Done. Total=%u Requested=%u", queueContext->Info.EndpointAddress,	length, requestContext->Length);
+	}
+	WdfRequestCompleteWithInformation(Request, status, length);
+
+}
+
+VOID Xfer_WriteBulk (
+    __in WDFQUEUE Queue,
+    __in WDFREQUEST Request)
+{
+	NTSTATUS                status;
+	PREQUEST_CONTEXT        requestContext = NULL;
+	PQUEUE_CONTEXT			queueContext = NULL;
+	PDEVICE_CONTEXT         deviceContext;
+	ULONG					remainingLength;
+	ULONG					stageLength = 0;
+	WDF_REQUEST_SEND_OPTIONS sendOptions;
+
+	deviceContext = GetDeviceContext(WdfIoQueueGetDevice(Queue));
+	requestContext = GetRequestContext(Request);
+
+	VALIDATE_REQUEST_CONTEXT(requestContext, status);
+	if (!NT_SUCCESS(status)) goto Exit;
+
+	if ((queueContext = GetQueueContext(Queue)) == NULL)
+	{
+		status = STATUS_INVALID_DEVICE_REQUEST;
+		USBERRN("Invalid queue context");
+		goto Exit;
+	}
+
+	queueContext->Xfer.Transferred = 0;
+	queueContext->Xfer.Length = requestContext->Length;
+
+	if (!queueContext->Info.MaximumPacketSize && queueContext->Xfer.Length)
+	{
+		status = STATUS_INVALID_BUFFER_SIZE;
+		USBERRN("PipeID=%02Xh MaximumPacketSize=0", queueContext->Info.EndpointAddress);
+		goto Exit;
+	}
+
+	mXfer_HandlePipeResetScenarios(status, queueContext, requestContext);
+
+	// Handle zlp scenario
+	if (queueContext->Xfer.Length)
+	{
+		// Init queue user memory
+		status = GetTransferMemory(Request, requestContext->ActualRequestType, &queueContext->Xfer.UserMem);
+		if (!NT_SUCCESS(status))
+		{
+			USBERR("GetTransferMemory failed. Status=%08Xh\n", status);
+			goto Exit;
+		}
+		queueContext->Xfer.UserOfs.BufferOffset = 0;
+		queueContext->Xfer.UserOfs.BufferLength = queueContext->Xfer.Length;
+	}
+	else
+	{
+		queueContext->Xfer.UserMem = NULL;
+		queueContext->Xfer.UserOfs.BufferOffset = 0;
+		queueContext->Xfer.UserOfs.BufferLength = 0;
+	}
+
+	queueContext->Xfer.Zlps.Required = (UCHAR)requestContext->Policies.ShortPacketTerminate;
+	mXfer_SubmitNextWrite(status, queueContext, requestContext, Request, Xfer_WriteBulkComplete, goto Exit);
+	return;
+
+Exit:
+	if (queueContext)
+	{
+		WdfRequestCompleteWithInformation(Request, status, queueContext->Xfer.Transferred);
+		return;
+	}
+	WdfRequestCompleteWithInformation(Request, status, 0);
+}
+
+VOID Xfer_WriteBulkComplete(
+    __in WDFREQUEST Request,
+    __in WDFIOTARGET Target,
+    __in PWDF_REQUEST_COMPLETION_PARAMS CompletionParams,
+    __in WDFCONTEXT Context)
+{
+	NTSTATUS                status;
+	PREQUEST_CONTEXT        requestContext = NULL;
+	PQUEUE_CONTEXT			queueContext = NULL;
+	ULONG					remainingLength;
+	ULONG					transferredLength;
+	ULONG					stageLength = 0;
+	WDF_REQUEST_SEND_OPTIONS sendOptions;
+	PWDF_USB_REQUEST_COMPLETION_PARAMS usbCompletionParams;
+
+	UNREFERENCED_PARAMETER(Target);
+
+	// Make sure the request context is still valid.
+	requestContext	= GetRequestContext(Request);
+	queueContext	= (PQUEUE_CONTEXT)Context;
+
+	status				= CompletionParams->IoStatus.Status;
+	usbCompletionParams = CompletionParams->Parameters.Usb.Completion;
+	transferredLength	= (ULONG)usbCompletionParams->Parameters.PipeWrite.Length;
+
+	if (!queueContext || !usbCompletionParams)
+	{
+		status = STATUS_INVALID_DEVICE_REQUEST;
+		USBERRN("Invalid queue context.");
+		goto Exit;
+	}
+
+	Xfer_CheckPipeStatus(status, queueContext->Info.EndpointAddress);
+
+	queueContext->Xfer.Transferred += transferredLength;
+	if (NT_SUCCESS(status))
+	{
+		if (queueContext->Xfer.Transferred >= queueContext->Xfer.Length)
+		{
+			if (queueContext->Xfer.Zlps.Sent >= queueContext->Xfer.Zlps.Required)
+			{
+				// DONE REASON: Transferred==Requested
+				USBDBGN("PipeID=%02Xh DoneReason: Transferred==Requested. Staged=%u Total=%u Requested=%u",
+				        queueContext->Info.EndpointAddress,	transferredLength, queueContext->Xfer.Transferred, queueContext->Xfer.Length);
+				goto Exit;
+			}
+			else
+			{
+				queueContext->Xfer.Zlps.Sent++;
+				USBDBGN("PipeID=%02Xh Terminating with ZLP %u of %u..",
+				        queueContext->Info.EndpointAddress, queueContext->Xfer.Zlps.Sent, queueContext->Xfer.Zlps.Required);
+
+				goto NextWrite;
+
+			}
+		}
+	}
+	else
+	{
+		// Cannot continue;
+		goto Exit;
+	}
+
+	/* More bytes to transfer and no errors have occured. */
+
+NextWrite:
+	mXfer_SubmitNextWrite(status, queueContext, requestContext, Request, Xfer_WriteBulkComplete, goto Exit);
+
+	return;
+
+Exit:
+	WdfRequestCompleteWithInformation(Request, status, queueContext->Xfer.Transferred);
+
+}
+
+VOID Xfer_WriteBulkRaw (
+    __in WDFQUEUE Queue,
+    __in WDFREQUEST Request)
+{
+	NTSTATUS                status;
+	PREQUEST_CONTEXT        requestContext = NULL;
+	PDEVICE_CONTEXT         deviceContext;
+	WDFMEMORY				transferMemory;
+	PQUEUE_CONTEXT			queueContext = NULL;
+
+	WDF_REQUEST_SEND_OPTIONS sendOptions;
+
+	deviceContext = GetDeviceContext(WdfIoQueueGetDevice(Queue));
+	requestContext = GetRequestContext(Request);
+
+	VALIDATE_REQUEST_CONTEXT(requestContext, status);
+	if (!NT_SUCCESS(status)) goto Exit;
+
+	if ((queueContext = GetQueueContext(Queue)) == NULL)
+	{
+		status = STATUS_INVALID_DEVICE_REQUEST;
+		USBERRN("Invalid queue context");
+		goto Exit;
+	}
+
+	if (!queueContext->Info.MaximumPacketSize && requestContext->Length)
+	{
+		status = STATUS_INVALID_DEVICE_REQUEST;
+		USBERRN("PipeID=%02Xh MaximumPacketSize=0", queueContext->Info.EndpointAddress);
+		goto Exit;
+	}
+
+	if (requestContext->Length)
+	{
+		status = GetTransferMemory(Request, requestContext->ActualRequestType, &transferMemory);
+		if (!NT_SUCCESS(status))
+		{
+			USBERR("GetTransferMemory failed. Status=%08Xh\n", status);
+			goto Exit;
+		}
+	}
+	else
+	{
+		// Zlp write
+		transferMemory = NULL;
+	}
+	status = WdfUsbTargetPipeFormatRequestForWrite(
+	             queueContext->PipeHandle,
+	             Request,
+	             transferMemory,
+	             NULL);
+
+	if (!NT_SUCCESS(status))
+	{
+		USBERR("WdfIoTargetFormatRequestForWrite failed. Status=%08Xh\n", status);
+		goto Exit;
+	}
+
+	WDF_REQUEST_SEND_OPTIONS_INIT(&sendOptions, 0);
+	status = SetRequestTimeout(requestContext, Request, &sendOptions);
+	if (!NT_SUCCESS(status))
+	{
+		USBERR("SetRequestTimeout failed. Status=%08Xh\n", status);
+		goto Exit;
+	}
+
+	USBMSG("PipeID=%02Xh Length=%u\n",	queueContext->Info.EndpointAddress,	requestContext->Length);
+	status = SubmitAsyncQueueRequest(queueContext, Request, Xfer_WriteBulkRawComplete, &sendOptions, queueContext);
+	if (!NT_SUCCESS(status))
+	{
+		USBERR("SubmitAsyncRequest failed. Status=%08Xh\n", status);
+		goto Exit;
+	}
+
+	return;
+
+Exit:
+	WdfRequestCompleteWithInformation(Request, status, 0);
+}
+
+VOID Xfer_WriteBulkRawComplete(
+    __in WDFREQUEST Request,
+    __in WDFIOTARGET Target,
+    __in PWDF_REQUEST_COMPLETION_PARAMS CompletionParams,
+    __in WDFCONTEXT Context)
+{
+	NTSTATUS status;
+	PREQUEST_CONTEXT requestContext;
+	size_t length = 0;
+	PWDF_USB_REQUEST_COMPLETION_PARAMS usbCompletionParams;
+	PQUEUE_CONTEXT queueContext;
+
+	UNREFERENCED_PARAMETER(Target);
+
+	// Make sure the request context is still valid.
+	requestContext = GetRequestContext(Request);
+	queueContext = (PQUEUE_CONTEXT)Context;
+
+	status = CompletionParams->IoStatus.Status;
+	usbCompletionParams = CompletionParams->Parameters.Usb.Completion;
+
+	length = usbCompletionParams->Parameters.PipeWrite.Length;
+	Xfer_CheckPipeStatus(status, queueContext->Info.EndpointAddress);
+
+	if (NT_SUCCESS(status) || length)
+	{
+		USBMSGN("PipeID=%02Xh Done. Total=%u Requested=%u", queueContext->Info.EndpointAddress,	length, requestContext->Length);
+	}
+	WdfRequestCompleteWithInformation(Request, status, length);
+}

@@ -226,7 +226,7 @@ static BOOL Stm_Thread_ProcessPending(PKSTM_THREAD_INTERNAL stm, DWORD timeoutOv
 	DL_DELETE(stm->pendingList, stm->xferNext);
 	DL_DELETE(stm->ovlList, stm->ovlNext);
 
-	stm->success = GetOverlappedResult(stm->handle->Info->DeviceHandle, &stm->ovlNext->Overlapped, &stm->xferNext->Xfer->Public.TransferLength, FALSE);
+	stm->success = GetOverlappedResult(stm->handle->Info->DeviceHandle, &stm->ovlNext->Overlapped, (LPDWORD)&stm->xferNext->Xfer->Public.TransferLength, FALSE);
 	if (!stm->success)
 	{
 		stm->errorCode = GetLastError();

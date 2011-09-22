@@ -69,21 +69,21 @@ static void o_Reuse(PKOVL_HANDLE_INTERNAL overlapped)
 
 KUSB_EXP BOOL KUSB_API OvlK_Acquire(
     _out KOVL_HANDLE* OverlappedK,
-    _in KOVL_POOL_HANDLE Pool)
+    _in KOVL_POOL_HANDLE PoolHandle)
 {
 	PKOVL_HANDLE_INTERNAL overlapped = NULL;
-	PKOVL_POOL_HANDLE_INTERNAL pool;
+	PKOVL_POOL_HANDLE_INTERNAL handle;
 	BOOL isNewFromPool = FALSE;
 
 	ErrorParamAction(!IsHandleValid(OverlappedK), "OverlappedK", return FALSE);
 	*OverlappedK = NULL;
 
-	Pub_To_Priv_OvlPoolK(Pool, pool, return FALSE);
-	ErrorSetAction(!PoolHandle_Inc_OvlPoolK(pool), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_OvlPoolK");
+	Pub_To_Priv_OvlPoolK(PoolHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_OvlPoolK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_OvlPoolK");
 
-	if (AL_PopHead_Ovl(pool->List, &overlapped) == ERROR_NO_MORE_ITEMS)
+	if (AL_PopHead_Ovl(handle->List, &overlapped) == ERROR_NO_MORE_ITEMS)
 	{
-		if (pool->MasterList->Idx.Count >= pool->MasterList->MaxCount)
+		if (handle->MasterList->Idx.Count >= handle->MasterList->MaxCount)
 		{
 			LusbwError(ERROR_NO_MORE_ITEMS);
 			goto Error;
@@ -94,7 +94,7 @@ KUSB_EXP BOOL KUSB_API OvlK_Acquire(
 		ErrorNoSet(!overlapped, Error, "->PoolHandle_Acquire_OvlK");
 
 		isNewFromPool = TRUE;
-		if (AL_PushTail_Ovl(pool->MasterList, overlapped) == ERROR_NO_MORE_ITEMS)
+		if (AL_PushTail_Ovl(handle->MasterList, overlapped) == ERROR_NO_MORE_ITEMS)
 		{
 			PoolHandle_Dec_OvlK(overlapped);
 			LusbwError(ERROR_NO_MORE_ITEMS);
@@ -102,16 +102,16 @@ KUSB_EXP BOOL KUSB_API OvlK_Acquire(
 		}
 	}
 
-	overlapped->Pool = pool;
+	overlapped->Pool = handle;
 	overlapped->IsAcquired = 1;
 	o_Reuse(overlapped);
 
 	*OverlappedK = (KOVL_HANDLE)overlapped;
 	if (isNewFromPool) PoolHandle_Live_OvlK(overlapped);
-	PoolHandle_Dec_OvlPoolK(pool);
+	PoolHandle_Dec_OvlPoolK(handle);
 	return TRUE;
 Error:
-	PoolHandle_Dec_OvlPoolK(pool);
+	PoolHandle_Dec_OvlPoolK(handle);
 	return FALSE;
 }
 

@@ -163,6 +163,7 @@ NTSTATUS Registry_ReadAllDeviceKeys(__in PDEVICE_CONTEXT deviceContext)
 	GetDeviceRegSettingKey(UserSetDeviceIdleEnabled, FALSE);
 	GetDeviceRegSettingKey(DefaultIdleState, FALSE);
 	GetDeviceRegSettingKey(DefaultIdleTimeout, 5000);
+	GetDeviceRegSettingKey(SystemWakeEnabled, FALSE);
 
 	status = STATUS_SUCCESS;
 

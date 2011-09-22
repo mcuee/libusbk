@@ -22,7 +22,6 @@ binary distributions.
 KUSB_EXP BOOL KUSB_API IsoK_Init(
     _out PKISO_CONTEXT* IsoContext,
     _in LONG NumberOfPackets,
-    _inopt UCHAR PipeID,
     _inopt LONG StartFrame)
 {
 	PKISO_CONTEXT isoCtx = NULL;
@@ -35,8 +34,7 @@ KUSB_EXP BOOL KUSB_API IsoK_Init(
 		ErrorMemory(!IsHandleValid(isoCtx), Error);
 	}
 
-	isoCtx->NumberOfPackets = NumberOfPackets;
-	isoCtx->PipeID = PipeID;
+	isoCtx->NumberOfPackets = (SHORT)NumberOfPackets;
 	isoCtx->StartFrame = StartFrame;
 
 	*IsoContext = isoCtx;

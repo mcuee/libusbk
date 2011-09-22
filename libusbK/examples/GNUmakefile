@@ -50,6 +50,9 @@ all: xfer-async
 all: xfer-stream
 all: xfer-iso
 all: xfer-async-loop
+all: power-policy-suspend
+all: pipe-polcy-other
+all: xfer-iso-read
 
 # make the hot-plug-monitor example for the specified "arch" (default is x86)
 #
@@ -106,6 +109,21 @@ xfer-iso:
 .PHONY: xfer-async-loop
 xfer-async-loop:
 	$(MAKE) --no-print-directory --directory=./xfer-async-loop $(subst w -- ,,$(MAKEFLAGS)) all
+# make the power-policy-suspend example for the specified "arch" (default is x86)
+#
+.PHONY: power-policy-suspend
+power-policy-suspend:
+	$(MAKE) --no-print-directory --directory=./power-policy-suspend $(subst w -- ,,$(MAKEFLAGS)) all
+# make the pipe-polcy-other example for the specified "arch" (default is x86)
+#
+.PHONY: pipe-polcy-other
+pipe-polcy-other:
+	$(MAKE) --no-print-directory --directory=./pipe-polcy-other $(subst w -- ,,$(MAKEFLAGS)) all
+# make the xfer-iso-read example for the specified "arch" (default is x86)
+#
+.PHONY: xfer-iso-read
+xfer-iso-read:
+	$(MAKE) --no-print-directory --directory=./xfer-iso-read $(subst w -- ,,$(MAKEFLAGS)) all
 
 # make all examples for x86 and amd64 archs. ("arch" argument not used)
 #
@@ -129,4 +147,7 @@ clean:
 	$(MAKE) --directory=./xfer-stream $(MAKEFLAGS) clean
 	$(MAKE) --directory=./xfer-iso $(MAKEFLAGS) clean
 	$(MAKE) --directory=./xfer-async-loop $(MAKEFLAGS) clean
+	$(MAKE) --directory=./power-policy-suspend $(MAKEFLAGS) clean
+	$(MAKE) --directory=./pipe-polcy-other $(MAKEFLAGS) clean
+	$(MAKE) --directory=./xfer-iso-read $(MAKEFLAGS) clean
 	$(RM) ./_ReSharper*
