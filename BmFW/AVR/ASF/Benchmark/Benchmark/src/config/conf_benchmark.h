@@ -83,7 +83,7 @@ typedef void (*Bm_RunTestDelegate) (void);
 #define  BM_INTF_NUMBER				0
 
 //! Benchmark TX/RX endpoint packet size.					(User Assignable)
-#define BM_EP_MAX_PACKET_SIZE       512
+#define BM_EP_MAX_PACKET_SIZE       64
 
 /*!
 * Endpoint type-specific configuration options.				(User Assignable)
@@ -96,7 +96,7 @@ typedef void (*Bm_RunTestDelegate) (void);
 	#define BM_EP_INTERVAL		4
 #elif (BM_EP_TYPE==EP_TYPE_ISO)
 	#define BM_EP_ATTRIBUTES	BM_EP_TYPE|EP_ISO_SYNC_NS|EP_ISO_USAGE_DE
-	#define BM_EP_INTERVAL		1
+	#define BM_EP_INTERVAL		4
 #endif
 
 //! Number of benchmark endpoints.

@@ -32,7 +32,7 @@ THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef CONF_BM_ISO_H_
 #define CONF_BM_ISO_H_
 
-//#define BM_MANAGE_SOF_PERIOD
+#define BM_MANAGE_SOF_PERIOD
 
 #if (BM_EP_TYPE==EP_TYPE_ISO)
 	#ifndef USB_DEVICE_HS_SUPPORT
@@ -55,17 +55,17 @@ THE POSSIBILITY OF SUCH DAMAGE.
 	#else
 		// HS ISO Setup
 		#if (BM_EP_INTERVAL == 1)
-			#define BM_EP_POLLCOUNT			2
-			#define BM_BUFFER_MULTIPLIER	16
+			#define BM_EP_POLLCOUNT			4
+			#define BM_BUFFER_MULTIPLIER	32
 		#elif (BM_EP_INTERVAL == 2)
-			#define BM_EP_POLLCOUNT			2
-			#define BM_BUFFER_MULTIPLIER	4
+			#define BM_EP_POLLCOUNT			4
+			#define BM_BUFFER_MULTIPLIER	16
 		#elif (BM_EP_INTERVAL == 3)
 			#define BM_EP_POLLCOUNT			4
-			#define BM_BUFFER_MULTIPLIER	2
+			#define BM_BUFFER_MULTIPLIER	8
 		#elif (BM_EP_INTERVAL == 4)
-			#define BM_EP_POLLCOUNT			8
-			#define BM_BUFFER_MULTIPLIER	1
+			#define BM_EP_POLLCOUNT			4
+			#define BM_BUFFER_MULTIPLIER	4
 		#else
 			#error "BM_EP_INTERVAL is out of range."
 		#endif
