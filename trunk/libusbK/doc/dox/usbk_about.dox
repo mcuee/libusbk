@@ -51,6 +51,15 @@ but can still be achieved with manual builds and custom driver installations.
 The libusbK kernel driver uses an extended libusb-win32 (libusb0.sys) compatible
 driver api and provides higher-level functionality when compared to libusb0.sys.
 
+The following user mode usb libraries support the \c libusbK.sys kernel driver:
+- \b libusbK.dll
+- \b libusb0.dll
+
+*/
+
+//! libusbK.sys compared to other USB kernel drivers
+/*! \page usbk_comparisons libusbK.sys Comparisons
+
 libusbK.sys advantages when compared to libusb0.sys:
 - Winusb-like power management
 - Winusb-like pipe policies
@@ -64,8 +73,16 @@ libusbK.sys disadvantages when compared to libusb0.sys:
 - Significantly larger device driver installation packages
 - Less tolerant of usb devices which or not fully compliant with usb specifications
 
-The following user mode usb libraries support the \c libusbK.sys kernel driver:
-- \b libusbK.dll
-- \b libusb0.dll
+libusbK.sys advantages when compared to WinUSB.sys:
+- Full isochronous transfer support
+- Supports of XP64, Windows 2003, and Win2K (unofficial, see above comments)
+- Supports Device Reset
+- Open source nature eliminates the need for UDMF solutions.
+- Allows mutiple proccesses to access to the same device at the same time.
+- Smaller driver installation packages.
 
+libusbK.sys disadvantages when compared to WinUSB.sys:
+- libusbK will not function as a lower filter driver of a UDMF driver as WinUSB.sys will.
+- WinUSB is pre-packaged with Vista and up.
+- Windows 8 has unique native support for WinUSB devices. 
 */

@@ -1674,11 +1674,17 @@ typedef LONG KUSB_API KSTM_ERROR_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CO
 */
 typedef LONG KUSB_API KSTM_SUBMIT_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LPOVERLAPPED Overlapped);
 
-//! Function definition for an optional user-defined callback; executed when the stream is started with \ref StmK_Start.
-/*! \fn LONG KUSB_API KSTM_INITIALIZE_CB(_in PKSTM_INFO StreamInfo)
+//! Function definition for an optional user-defined callback; executed for each transfer context when the stream is started with \ref StmK_Start.
+/*! \fn LONG KUSB_API KSTM_STARTED_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LONG XferContextIndex)
 * \memberof KSTM_CALLBACK
 */
-typedef LONG KUSB_API KSTM_INITIALIZE_CB(_in PKSTM_INFO StreamInfo);
+typedef LONG KUSB_API KSTM_STARTED_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LONG XferContextIndex);
+
+//! Function definition for an optional user-defined callback; executed for each transfer context when the stream is stopped with \ref StmK_Stop.
+/*! \fn LONG KUSB_API KSTM_STOPPED_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LONG XferContextIndex)
+* \memberof KSTM_CALLBACK
+*/
+typedef LONG KUSB_API KSTM_STOPPED_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LONG XferContextIndex);
 
 //! Function definition for an optional user-defined callback; executed when a transfer competes.
 /*! \fn LONG KUSB_API KSTM_COMPLETE_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LONG ErrorCode)
@@ -1690,7 +1696,7 @@ typedef LONG KUSB_API KSTM_COMPLETE_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER
 /*!
 * \fixedstruct{64}
 *
-* These optional callback functions are executed from the streams internal thread at various stages of operetation.
+* These optional callback functions are executed from the streams internal thread at various stages of operation.
 *
 */
 typedef struct _KSTM_CALLBACK
@@ -1701,14 +1707,17 @@ typedef struct _KSTM_CALLBACK
 	//! Executed to submit a transfer.
 	KSTM_SUBMIT_CB* Submit;
 
-	//! Executed when the stream is started with \ref StmK_Start.
-	KSTM_INITIALIZE_CB* Initialize;
-
 	//! Executed when a transfer competes.
 	KSTM_COMPLETE_CB* Complete;
 
+	//! Executed for every transfer context when the stream is started with \ref StmK_Start.
+	KSTM_STARTED_CB* Started;
+
+	//! Executed for every transfer context when the stream is stopped with \ref StmK_Stop.
+	KSTM_STOPPED_CB* Stopped;
+
 	//! fixed structure padding.
-	UCHAR z_F_i_x_e_d[64 - sizeof(UINT_PTR) * 4];
+	UCHAR z_F_i_x_e_d[64 - sizeof(UINT_PTR) * 5];
 
 } KSTM_CALLBACK;
 //! Pointer to a \ref KSTM_CALLBACK structure.

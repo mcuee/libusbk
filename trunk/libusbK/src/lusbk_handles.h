@@ -367,6 +367,10 @@ typedef struct _KSTM_XFER_INTERNAL
 
 	KSTM_XFER_LINK_EL Link;
 
+	KSTM_XFER_LINK_EL MasterLink;
+
+	LONG Index;
+
 	struct _KSTM_HANDLE_INTERNAL* StreamHandle;
 
 	ULONG BufferSize;
@@ -598,6 +602,7 @@ typedef struct _KSTM_HANDLE_INTERNAL
 		PKSTM_XFER_LIST Idle;
 		PKSTM_XFER_LIST Finished;
 		PKSTM_XFER_LINK_EL Queued;
+		PKSTM_XFER_LINK_EL Master;
 
 	} List;
 
