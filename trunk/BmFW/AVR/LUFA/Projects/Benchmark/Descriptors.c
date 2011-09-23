@@ -113,7 +113,7 @@ Benchmark_USB_Descriptor_Configuration_t PROGMEM Benchmark_ConfigurationDescript
 		{
 			.Header                 = {.Size = sizeof(USB_Descriptor_Endpoint_t), .Type = DTYPE_Endpoint},
 
-			.EndpointAddress        = (ENDPOINT_DESCRIPTOR_DIR_OUT | USBGEN_EP_NUM_INTF0),
+			.EndpointAddress        = (ENDPOINT_DIR_OUT | USBGEN_EP_NUM_INTF0),
 			.Attributes             = USBGEN_EP_ATTRIBUTES_INTF0,
 			.EndpointSize           = USBGEN_EP_SIZE_INTF0_ALT0,
 			.PollingIntervalMS      = USBGEN_EP_INTERVAL_INTF0
@@ -123,7 +123,7 @@ Benchmark_USB_Descriptor_Configuration_t PROGMEM Benchmark_ConfigurationDescript
 		{
 			.Header                 = {.Size = sizeof(USB_Descriptor_Endpoint_t), .Type = DTYPE_Endpoint},
 
-			.EndpointAddress        = (ENDPOINT_DESCRIPTOR_DIR_IN | USBGEN_EP_NUM_INTF0),
+			.EndpointAddress        = (ENDPOINT_DIR_IN | USBGEN_EP_NUM_INTF0),
 			.Attributes             = USBGEN_EP_ATTRIBUTES_INTF0,
 			.EndpointSize           = USBGEN_EP_SIZE_INTF0_ALT0,
 			.PollingIntervalMS      = USBGEN_EP_INTERVAL_INTF0
@@ -150,7 +150,7 @@ Benchmark_USB_Descriptor_Configuration_t PROGMEM Benchmark_ConfigurationDescript
 		{
 			.Header                 = {.Size = sizeof(USB_Descriptor_Endpoint_t), .Type = DTYPE_Endpoint},
 
-			.EndpointAddress        = (ENDPOINT_DESCRIPTOR_DIR_OUT | USBGEN_EP_NUM_INTF0),
+			.EndpointAddress        = (ENDPOINT_DIR_OUT | USBGEN_EP_NUM_INTF0),
 			.Attributes             = USBGEN_EP_ATTRIBUTES_INTF0,
 			.EndpointSize           = USBGEN_EP_SIZE_INTF0_ALT1,
 			.PollingIntervalMS      = USBGEN_EP_INTERVAL_INTF0
@@ -160,7 +160,7 @@ Benchmark_USB_Descriptor_Configuration_t PROGMEM Benchmark_ConfigurationDescript
 		{
 			.Header                 = {.Size = sizeof(USB_Descriptor_Endpoint_t), .Type = DTYPE_Endpoint},
 
-			.EndpointAddress        = (ENDPOINT_DESCRIPTOR_DIR_IN | USBGEN_EP_NUM_INTF0),
+			.EndpointAddress        = (ENDPOINT_DIR_IN | USBGEN_EP_NUM_INTF0),
 			.Attributes             = USBGEN_EP_ATTRIBUTES_INTF0,
 			.EndpointSize           = USBGEN_EP_SIZE_INTF0_ALT1,
 			.PollingIntervalMS      = USBGEN_EP_INTERVAL_INTF0
