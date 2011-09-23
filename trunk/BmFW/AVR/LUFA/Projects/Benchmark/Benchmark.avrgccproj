@@ -13,6 +13,12 @@
     <AssemblyName>Benchmark</AssemblyName>
     <Name>Benchmark</Name>
     <RootNamespace>Benchmark</RootNamespace>
+    <OutputType>Executable</OutputType>
+    <Language>C</Language>
+    <UseGlobalToolchain>True</UseGlobalToolchain>
+    <GlobalToolchainPath />
+    <ToolchainDirPath />
+    <MakeDirPath />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <ToolchainSettings>
