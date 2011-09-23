@@ -321,12 +321,13 @@ typedef struct _XFER_AUTOISO_COLLECTION_CONTEXT
 	WDFREQUEST					MainRequest;
 	struct _REQUEST_CONTEXT*	MainRequestContext;
 	PMDL				OriginalTransferMDL;
+	PUCHAR				TransferBuffer;
+	ULONG				AdjustedReadOffset;
 	WDFCOLLECTION		SubRequestCollection;		// used for doing Isoch
 	WDFSPINLOCK			SubRequestCollectionLock; // used to sync access to collection at DISPATCH_LEVEL
 
 	PMDL              Mdl;
 	ULONG             TotalTransferred;			// cumulate xfer
-	ULONG_PTR         VirtualAddress;			// va for next segment of xfer.
 } XFER_AUTOISO_COLLECTION_CONTEXT, *PXFER_AUTOISO_COLLECTION_CONTEXT;
 WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(XFER_AUTOISO_COLLECTION_CONTEXT, GetAutoIsoCollectionContext)
 

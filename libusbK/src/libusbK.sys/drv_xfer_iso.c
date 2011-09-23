@@ -44,10 +44,18 @@ binary distributions.
 	mStatus = GetTransferMdl(mRequest,mRequestContext->ActualRequestType, &mAutoIsoCtx->OriginalTransferMDL);	\
 	if (!NT_SUCCESS(mStatus))																					\
 	{																											\
-		USBERR("Zero-length buffer. pipeID=%02Xh\n", mRequestContext->QueueContext->Info.EndpointAddress); 		\
+		USBERR("GetTransferMdl Failed. Status=%08Xh\n", mStatus);   											\
 		mErrorAction;;   																						\
 	}																											\
- 																												\
+	if (USB_ENDPOINT_DIRECTION_IN(mRequestContext->QueueContext->Info.EndpointAddress))							\
+	{																											\
+		mStatus = WdfRequestRetrieveOutputBuffer(mRequest,0, &mAutoIsoCtx->TransferBuffer,NULL);				\
+		if (!NT_SUCCESS(mStatus))																				\
+		{																										\
+			USBERR("WdfRequestRetrieveOutputBuffer Failed. Status=%08Xh\n", mStatus);   						\
+			mErrorAction;;   																					\
+		} 																										\
+	}																											\
 	WDF_OBJECT_ATTRIBUTES_INIT(&objAttributes);  																\
 	objAttributes.ParentObject = hCollection;																	\
 	mStatus = WdfSpinLockCreate(&objAttributes, &mAutoIsoCtx->SubRequestCollectionLock); 						\
@@ -123,7 +131,7 @@ binary distributions.
 					 NonPagedPool, 															\
 					 POOL_TAG, 																\
 					 mUrbSize, 																\
-					 &subUrbMemory,															\
+					 &mSubUrbMemory,														\
 					 (PVOID*) &mSubUrbBuffer); 												\
    																							\
 		if (!NT_SUCCESS(mStatus))  															\
@@ -168,14 +176,13 @@ binary distributions.
 	mSubUrbBuffer->UrbIsochronousTransfer.TransferBufferLength = mBufferStageSize;  															\
 	mSubUrbBuffer->UrbIsochronousTransfer.TransferBufferMDL = mSubMdl;  																		\
 																																				\
-	if (mSubUrbBuffer->UrbIsochronousTransfer.StartFrame)   																					\
-		mSubUrbBuffer->UrbIsochronousTransfer.TransferFlags |= USBD_START_ISO_TRANSFER_ASAP;													\
+	mSubUrbBuffer->UrbIsochronousTransfer.TransferFlags |= USBD_START_ISO_TRANSFER_ASAP;														\
 																																				\
 	mSubUrbBuffer->UrbIsochronousTransfer.NumberOfPackets = mNumberOfPackets;   																\
 	mSubUrbBuffer->UrbIsochronousTransfer.UrbLink = NULL;   																					\
 }while(0)
 
-#define mXfer_AutoIsoFormatAndAddSubRequest(mStatus, mSubRequest, mSubRequestContext, mSubRequestsList, mWdfPipeHandle, mSubUrbMemory, mSubMdl, mCompletionRoutine, mCompletionContext, mErrorAction) do { 	\
+#define mXfer_AutoIsoFormatAndAddSubRequest(mStatus, mSubRequestCollection, mSubRequest, mSubRequestContext, mSubRequestsList, mWdfPipeHandle, mSubUrbMemory, mSubMdl, mCompletionRoutine, mCompletionContext, mErrorAction) do { 	\
 		mStatus = WdfUsbTargetPipeFormatRequestForUrb(mWdfPipeHandle, mSubRequest, mSubUrbMemory, NULL);						\
 		if (!NT_SUCCESS(mStatus))   																							\
 		{   																													\
@@ -186,7 +193,7 @@ binary distributions.
 		}   																													\
 		WdfRequestSetCompletionRoutine(mSubRequest, mCompletionRoutine, mCompletionContext);									\
 																																\
-		mStatus = WdfCollectionAdd(hCollection, mSubRequest);   																\
+		mStatus = WdfCollectionAdd(mSubRequestCollection, mSubRequest);   																\
 		if (!NT_SUCCESS(mStatus))   																							\
 		{   																													\
 			USBERRN("WdfCollectionAdd failed in AutoIsoFormatAndAddSubRequest. Status=%08Xh", mStatus); 						\
@@ -208,6 +215,8 @@ typedef struct _SUB_REQUEST_CONTEXT
 	PURB        SubUrb;
 	PMDL        SubMdl;
 	LIST_ENTRY  ListEntry; // used in CancelRoutine
+	ULONG		StartOffset;
+
 } SUB_REQUEST_CONTEXT, *PSUB_REQUEST_CONTEXT;
 WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(SUB_REQUEST_CONTEXT, GetSubRequestContext)
 
@@ -272,6 +281,7 @@ VOID XferIsoFS (
 	ULONG					TotalLength;
 	PXFER_AUTOISO_COLLECTION_CONTEXT autoIsoCtx = NULL;
 	PQUEUE_CONTEXT			queueContext = NULL;
+	ULONG					absoluteDataOffset = 0;
 
 	cancelable = FALSE;
 
@@ -375,6 +385,9 @@ VOID XferIsoFS (
 
 		subReqContext = GetSubRequestContext(subRequest);
 		subReqContext->UserRequest = Request;
+
+		subReqContext->StartOffset = absoluteDataOffset;
+		absoluteDataOffset+=stageSize;
 
 		//
 		// Allocate memory for URB.
@@ -713,7 +726,6 @@ VOID XferIsoHS(
 	NTSTATUS                status;
 	PDEVICE_CONTEXT         deviceContext;
 	PREQUEST_CONTEXT        requestContext;
-	WDFCOLLECTION           hCollection = NULL;
 	WDF_OBJECT_ATTRIBUTES   attributes;
 	WDFREQUEST              subRequest;
 	PSUB_REQUEST_CONTEXT    subReqContext;
@@ -725,6 +737,7 @@ VOID XferIsoHS(
 	ULONG					TotalLength;
 	PXFER_AUTOISO_COLLECTION_CONTEXT autoIsoCtx = NULL;
 	PQUEUE_CONTEXT			queueContext = NULL;
+	ULONG					absoluteDataOffset = 0;
 
 	cancelable = FALSE;
 
@@ -816,6 +829,9 @@ VOID XferIsoHS(
 
 		mXfer_AutoIsoFormatSubUrb(usbdPipeHandle, requestContext, subUrb, subUrbSize, nPackets, stageSize, subMdl);
 
+		subReqContext->StartOffset = absoluteDataOffset;
+		absoluteDataOffset+=stageSize;
+
 		offset = 0;
 		for(j = 0; j < nPackets; j++)
 		{
@@ -841,7 +857,7 @@ VOID XferIsoHS(
 		}
 		ASSERT(stageSize == 0);
 
-		mXfer_AutoIsoFormatAndAddSubRequest(status, subRequest, subReqContext, subRequestsList, queueContext->PipeHandle, subUrbMemory, subMdl, XferIsoComplete, autoIsoCtx, goto Exit);
+		mXfer_AutoIsoFormatAndAddSubRequest(status, autoIsoCtx->SubRequestCollection, subRequest, subReqContext, subRequestsList, queueContext->PipeHandle, subUrbMemory, subMdl, XferIsoComplete, autoIsoCtx, goto Exit);
 	}
 
 	/*
@@ -872,7 +888,6 @@ VOID XferIsoHS(
 		thisEntry = RemoveHeadList(&subRequestsList);
 		subReqContext = CONTAINING_RECORD(thisEntry, SUB_REQUEST_CONTEXT, ListEntry);
 		subRequest = WdfObjectContextGetObject(subReqContext);
-
 		if (WdfRequestSend(subRequest, WdfUsbTargetPipeGetIoTarget(queueContext->PipeHandle), WDF_NO_SEND_OPTIONS) == FALSE)
 		{
 			status = WdfRequestGetStatus(subRequest);
@@ -946,6 +961,12 @@ VOID XferIsoCleanup(
 	ULONG                 numPendingRequests;
 
 	*CompleteRequest = TRUE;
+	if (!AutoIsoCtx->SubRequestCollectionLock)
+	{
+		USBERR("SubRequestCollectionLock=NULL");
+		return;
+	}
+
 	WdfSpinLockAcquire(AutoIsoCtx->SubRequestCollectionLock);
 
 	while(!IsListEmpty(SubRequestsList))
@@ -1011,6 +1032,20 @@ VOID XferIsoComplete(
 			USBDBGN("IsoPacket[%d].Length = %X IsoPacket[%d].Status = %08Xh",
 			        i, urb->UrbIsochronousTransfer.IsoPacket[i].Length,
 			        i, urb->UrbIsochronousTransfer.IsoPacket[i].Status);
+		}
+	}
+	else if (USB_ENDPOINT_DIRECTION_IN(autoIsoCtx->MainRequestContext->QueueContext->Info.EndpointAddress) && autoIsoCtx->TransferBuffer)
+	{
+		// Because we are not returning iso packet lengths, pack the data so it is contiguous.
+		for(i = 0; i < urb->UrbIsochronousTransfer.NumberOfPackets; i++)
+		{
+			 ULONG srcOffset = subReqContext->StartOffset+urb->UrbIsochronousTransfer.IsoPacket[i].Offset;
+			 ULONG srcLength = urb->UrbIsochronousTransfer.IsoPacket[i].Length;
+			 if (autoIsoCtx->AdjustedReadOffset != srcOffset && srcOffset+srcLength <= autoIsoCtx->MainRequestContext->Length)
+			 {
+				 RtlMoveMemory(&autoIsoCtx->TransferBuffer[autoIsoCtx->AdjustedReadOffset],&autoIsoCtx->TransferBuffer[srcOffset],srcLength);
+			 }
+			 autoIsoCtx->AdjustedReadOffset+=srcLength;
 		}
 	}
 
@@ -1376,9 +1411,7 @@ VOID XferAutoIsoEx(
 	urb->UrbIsochronousTransfer.TransferBufferLength	= requestContext->AutoIsoEx.RequestedLength;
 	urb->UrbIsochronousTransfer.NumberOfPackets			= requestContext->AutoIsoEx.NumPackets;
 
-	//urb->UrbIsochronousTransfer.StartFrame				= requestContext->IoControlRequest.AutoIsoEx.StartFrame;
-	if (urb->UrbIsochronousTransfer.StartFrame == 0)
-		urb->UrbIsochronousTransfer.TransferFlags |= USBD_START_ISO_TRANSFER_ASAP;
+	urb->UrbIsochronousTransfer.TransferFlags |= USBD_START_ISO_TRANSFER_ASAP;
 
 	if (USB_ENDPOINT_DIRECTION_IN(queueContext->Info.EndpointAddress))
 		urb->UrbIsochronousTransfer.TransferFlags |= USBD_TRANSFER_DIRECTION_IN;

@@ -304,8 +304,15 @@ static unsigned _stdcall Stm_ThreadProc(PKSTM_HANDLE_INTERNAL handle)
 		exitCode = stm->errorCode;
 		goto Done;
 	}
-	if (handle->UserCB->Initialize)
-		handle->UserCB->Initialize(handle->Info);
+
+	if (handle->UserCB->Started)
+	{
+		PKSTM_XFER_LINK_EL xferEL;
+		DL_FOREACH(handle->List.Master, xferEL)
+		{
+			handle->UserCB->Started(handle->Info,&xferEL->Xfer->Public, xferEL->Xfer->Index);
+		}
+	}
 
 	while(handle->Thread.State == KSTM_THREADSTATE_STARTED && exitCode == ERROR_SUCCESS)
 	{
@@ -376,6 +383,15 @@ Done:
 		{
 			if (stm->errorCode == ERROR_IO_INCOMPLETE) CancelIo(stm->handle->Info->DeviceHandle);
 			maxWaitMS = 10;
+		}
+	}
+
+	if (handle->UserCB->Stopped)
+	{
+		PKSTM_XFER_LINK_EL xferEL;
+		DL_FOREACH(handle->List.Master, xferEL)
+		{
+			handle->UserCB->Stopped(handle->Info,&xferEL->Xfer->Public, xferEL->Xfer->Index);
 		}
 	}
 
@@ -500,11 +516,15 @@ KUSB_EXP BOOL KUSB_API StmK_Init(
 		xfer->Buffer = Stm_Alloc(handle, handle->Info->MaxTransferSize);
 		ErrorMemory(!xfer->Buffer, Error);
 
+		xfer->MasterLink.Xfer	= xfer;
 		xfer->Link.Xfer			= xfer;
+		xfer->Index				= TransferIndex;
 		xfer->StreamHandle		= handle;
 		xfer->BufferSize		= handle->Info->MaxTransferSize;
 		xfer->Public.Buffer		= xfer->Buffer;
 		xfer->Public.BufferSize = xfer->BufferSize;
+
+		DL_APPEND(handle->List.Master, &xfer->MasterLink);
 
 		if (USB_ENDPOINT_DIRECTION_IN(handle->Info->PipeID))
 		{

@@ -12,8 +12,14 @@
 
 \par What is it?
 libusbK is a complete driver/library solution for vendor class usb device interfaces.
-The target audience is usb developers and usb device manufacturer seeking a driver
-solution for a new USB widget.
+If you are a usb developers or usb device manufacturer seeking a driver
+solution for a new USB widget then libusbK could be for you.
+\par
+libusbK encompasses a 100% WinUSB compatible api/funtion set.  All WinUSB power/pipe polices
+are fully supported by the libusbK driver.  In Addition, the libusbK driver has full
+support for isochronous endpoints and the user library, includes several other usb releated
+modules (see \ref usbk_usage) as well as many extensions to the \ref usbk driver api itself.
+
 \attention
 libusbK is not an end-user component.
 IE. If your googling for a usb driver because windows can't seem to find one, this is not the solution.
@@ -23,9 +29,21 @@ LibusbK is dual license under GPL and modified BSD.
 For redistribution purposes, libusbK can be licensed under either agreement.
 See the \b license folder which accompanies each libusbK package for license details.
 
+\par Bindings for other languages
+The main libusbK library is written in standard C, but official bindings for the libusbK
+standard C library are provided for the folllowing languages:
+-# C#
+-# VB.NET
+-# BOO (http://boo.codehaus.org/)
+\note See the \b bindings folder in the source package.
+
+
 <H1>libusbK USB Library and Driver Documentation</H1>
 - \subpage usbk_about
   <BR>Explanation of the libusbK project, the user mode library, and its \ref usbk_drivers.
+  <HR>
+- \subpage usbk_comparisons
+  <BR>libusbK.sys compared to other USB kernel drivers.
   <HR>
 - \subpage usbk_installing
   <BR>Methods for installing the libusbK binaries and drivers.
