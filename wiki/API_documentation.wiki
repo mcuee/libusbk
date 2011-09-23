@@ -1,6 +1,0 @@
-#labels Phase-Deploy
-#libusbk native API
-
-= Introduction =
-
-Please refer to the libusbK-help.chm help file for the details.
