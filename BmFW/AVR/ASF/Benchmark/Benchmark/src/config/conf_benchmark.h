@@ -75,15 +75,15 @@ typedef void (*Bm_RunTestDelegate) (void);
 #define  BM_EP_RX					(2 | USB_EP_DIR_OUT)
 
 //! Benchmark RX/TX endpoint type.							(User Assignable)
-#define BM_EP_TYPE					EP_TYPE_ISO
-//#define BM_EP_TYPE					EP_TYPE_BULK
+//#define BM_EP_TYPE					EP_TYPE_ISO
+#define BM_EP_TYPE					EP_TYPE_BULK
 //#define BM_EP_TYPE					EP_TYPE_INT
 
 //! Benchmark interface number.
 #define  BM_INTF_NUMBER				0
 
 //! Benchmark TX/RX endpoint packet size.					(User Assignable)
-#define BM_EP_MAX_PACKET_SIZE       64
+#define BM_EP_MAX_PACKET_SIZE       512
 
 /*!
 * Endpoint type-specific configuration options.				(User Assignable)
@@ -96,7 +96,7 @@ typedef void (*Bm_RunTestDelegate) (void);
 	#define BM_EP_INTERVAL		4
 #elif (BM_EP_TYPE==EP_TYPE_ISO)
 	#define BM_EP_ATTRIBUTES	BM_EP_TYPE|EP_ISO_SYNC_NS|EP_ISO_USAGE_DE
-	#define BM_EP_INTERVAL		4
+	#define BM_EP_INTERVAL		1
 #endif
 
 //! Number of benchmark endpoints.
