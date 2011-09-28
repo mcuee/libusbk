@@ -81,7 +81,8 @@ typedef struct _BM_XFER_EP
 {
 	BM_XFER_QUEUE_EL* Queued;
 	volatile bool Busy;
-	volatile uint8_t SofPeriod;
+	uint8_t SofPeriod;
+	uint8_t NeedsService;
 	
 	udd_callback_trans_t OnXferComplete;
 } BM_XFER_EP;
@@ -124,9 +125,12 @@ static void Bm_RunTest_Write(void);
 
 static void Bm_FillBuffer(uint8_t* pBuffer, uint16_t size);
 static void Bm_InitXferBuffers(BM_XFER_QUEUE_EL** Bank1_AddListRef, BM_XFER_QUEUE_EL** Bank2_AddListRef);
+static void Bm_InitWritePackets(BM_XFER_QUEUE_EL* QueueEL);
 
+#if defined(BM_MANAGE_SOF_PERIOD_RX) || defined(BM_MANAGE_SOF_PERIOD_TX)
 static void Bm_Sof_Handler_HS(void);
 static void Bm_Sof_Handler_FS(void);
+#endif
 
 static void Bm_FillBuffer(uint8_t* pBuffer, uint16_t size)
 {
@@ -137,6 +141,15 @@ static void Bm_FillBuffer(uint8_t* pBuffer, uint16_t size)
 	{
 		pBuffer[counter] = dataByte++;
 		if (dataByte == 0) dataByte++;
+	}
+}
+
+static void Bm_InitWritePackets(BM_XFER_QUEUE_EL* QueueEL)
+{
+	int i;
+	for(i=0; i < BM_MAX_TRANSFER_SIZE; i+=BM_EP_MAX_PACKET_SIZE)
+	{
+		mSetWritePacketID((&QueueEL->Buffer->Buffer[i]), BM_EP_MAX_PACKET_SIZE, Bm_FillCount, Bm_NextPacketKey);
 	}
 }
 
@@ -154,7 +167,7 @@ static void Bm_XferLoopCompleteTx(udd_ep_status_t status, iram_size_t nb_transfe
 		return;
 	}
 
-	bm.Tx.Queued->Buffer->Transferred=nb_transfered;
+	// moveEL->Queued->Buffer->Transferred=nb_transfered;
 	Bm_XferMove(bm.Tx.Queued, bm.Rx.Queued, moveEL);
 	
 	bm.Tx.Busy = false;
@@ -221,17 +234,27 @@ static void Bm_RunTest_Loop(void)
 {
 	if (!bm.Rx.Busy && bm.Rx.Queued)
 	{
-		#if (BM_EP_TYPE==EP_TYPE_ISO)
-		if (!bm.Rx.SofPeriod)
+		#if (BM_EP_TYPE==EP_TYPE_ISO) && defined(BM_MANAGE_SOF_PERIOD_RX)
+		if (bm.Rx.NeedsService)
+		{
+			bm.Rx.Busy = Bm_SubmitRead(BM_EP_RX, bm.Rx.Queued->Buffer, Bm_XferLoopCompleteRx);
+			bm.Rx.NeedsService=0;
+		}
+		#else
+			bm.Rx.Busy = Bm_SubmitRead(BM_EP_RX, bm.Rx.Queued->Buffer, Bm_XferLoopCompleteRx);
 		#endif
-		bm.Rx.Busy = Bm_SubmitRead(BM_EP_RX, bm.Rx.Queued->Buffer, Bm_XferLoopCompleteRx);
 	}
 	if (!bm.Tx.Busy &&  bm.Tx.Queued)
 	{
-		#if (BM_EP_TYPE==EP_TYPE_ISO)
-		if (!bm.Tx.SofPeriod)
+		#if (BM_EP_TYPE==EP_TYPE_ISO) && defined(BM_MANAGE_SOF_PERIOD_TX)
+		if (bm.Tx.NeedsService)
+		{
+			bm.Tx.Busy = Bm_SubmitWrite(BM_EP_TX, bm.Tx.Queued->Buffer, Bm_XferLoopCompleteTx);
+			bm.Tx.NeedsService=0;
+		}
+		#else
+			bm.Tx.Busy = Bm_SubmitWrite(BM_EP_TX, bm.Tx.Queued->Buffer, Bm_XferLoopCompleteTx);
 		#endif
-		bm.Tx.Busy = Bm_SubmitWrite(BM_EP_TX, bm.Tx.Queued->Buffer, Bm_XferLoopCompleteTx);
 	}
 }
 
@@ -239,43 +262,40 @@ static void Bm_RunTest_Read(void)
 {
 	if (!bm.Rx.Busy && bm.Rx.Queued)
 	{
-		#if (BM_EP_TYPE==EP_TYPE_ISO)
-		if (!bm.Rx.SofPeriod)
+		#if (BM_EP_TYPE==EP_TYPE_ISO) && defined(BM_MANAGE_SOF_PERIOD_RX)
+		if (bm.Rx.NeedsService)
+		{
+			bm.Rx.Busy = Bm_SubmitRead(BM_EP_RX, bm.Rx.Queued->Buffer, Bm_XferCompleteRx);
+			bm.Rx.NeedsService=0;
+		}
+		#else
+			bm.Rx.Busy = Bm_SubmitRead(BM_EP_RX, bm.Rx.Queued->Buffer, Bm_XferCompleteRx);
 		#endif
-		bm.Rx.Busy = Bm_SubmitRead(BM_EP_RX, bm.Rx.Queued->Buffer, Bm_XferCompleteRx);
-	}
-}
-
-void Bm_InitWritePackets(BM_XFER_QUEUE_EL* QueueEL);
-void Bm_InitWritePackets(BM_XFER_QUEUE_EL* QueueEL)
-{
-	int i;
-	for(i=0; i < BM_MAX_TRANSFER_SIZE; i+=BM_EP_MAX_PACKET_SIZE)
-	{
-		mSetWritePacketID((&QueueEL->Buffer->Buffer[i]), BM_EP_MAX_PACKET_SIZE, Bm_FillCount, Bm_NextPacketKey);
 	}
 }
 
 static void Bm_RunTest_Write(void)
 {
-
 	if (!bm.Tx.Busy && bm.Tx.Queued)
 	{
-		#if (BM_EP_TYPE==EP_TYPE_ISO)
-		if (!bm.Tx.SofPeriod) {
-		#endif
-		
-		Bm_InitWritePackets(bm.Tx.Queued);
-		bm.Tx.Busy = Bm_SubmitWrite(BM_EP_TX, bm.Tx.Queued->Buffer, Bm_XferCompleteTx);
-		
-		#if (BM_EP_TYPE==EP_TYPE_ISO)
+		#if (BM_EP_TYPE==EP_TYPE_ISO) && defined(BM_MANAGE_SOF_PERIOD_TX)
+		if (bm.Tx.NeedsService)
+		{
+			Bm_InitWritePackets(bm.Tx.Queued);
+			bm.Tx.Busy = Bm_SubmitWrite(BM_EP_TX, bm.Tx.Queued->Buffer, Bm_XferCompleteTx);
+			bm.Tx.NeedsService=0;
 		}
+		#else
+			Bm_InitWritePackets(bm.Tx.Queued);
+			bm.Tx.Busy = Bm_SubmitWrite(BM_EP_TX, bm.Tx.Queued->Buffer, Bm_XferCompleteTx);
 		#endif
 	}
 }
 
 void RunApplication(void)
 {
+	HAS_CRITICAL_SECTION();
+	
 	Bm_Init();
 
 	while(true)
@@ -294,14 +314,17 @@ void RunApplication(void)
 			}
 			else
 			{
+				ENTER_CRITICAL_SECTION();
+				
 				Bm_Init();
+				
+				LEAVE_CRITICAL_SECTION();
 				continue;
 			}
 		}
-		
-		#if (BM_EP_TYPE != EP_TYPE_ISO)
-			if (Bm_RunTest) Bm_RunTest();
-		#endif
+
+		if (Bm_RunTest) Bm_RunTest();
+	
 	}
 }
 
@@ -339,11 +362,15 @@ static void Bm_Init(void)
 	memset(&bm.Rx,0,sizeof(bm.Rx));
 	memset(&bm.Tx,0,sizeof(bm.Tx));
 	
-#if (BM_EP_TYPE==EP_TYPE_ISO)
-	Bm_SofEvent = udd_is_high_speed() ? Bm_Sof_Handler_HS : Bm_Sof_Handler_FS;
-	#ifdef BM_MANAGE_SOF_PERIOD
-		bm.Rx.SofPeriod = BM_EP_POLLCOUNT-1;
-		bm.Tx.SofPeriod = BM_EP_POLLCOUNT-1;
+#if defined(BM_MANAGE_SOF_PERIOD_RX) || defined(BM_MANAGE_SOF_PERIOD_TX)
+	#if (BM_EP_TYPE==EP_TYPE_ISO)
+		Bm_SofEvent = udd_is_high_speed() ? Bm_Sof_Handler_HS : Bm_Sof_Handler_FS;
+		#ifdef BM_MANAGE_SOF_PERIOD_RX
+			bm.Rx.SofPeriod = (BM_EP_POLLCOUNT)-1;
+		#endif
+		#ifdef BM_MANAGE_SOF_PERIOD_TX
+			bm.Tx.SofPeriod = ((BM_EP_POLLCOUNT)/2)-1;
+		#endif
 	#endif
 #endif
 	
@@ -373,8 +400,8 @@ static void Bm_Init(void)
 
 	Bm_PrevTestType = Bm_TestType;
 }
-#if (BM_EP_TYPE==EP_TYPE_ISO)
 
+#if defined(BM_MANAGE_SOF_PERIOD_RX) || defined(BM_MANAGE_SOF_PERIOD_TX)
 static void Bm_Sof_Handler_HS(void)
 {
 	Bm_Sof_Handler_FS();
@@ -382,14 +409,14 @@ static void Bm_Sof_Handler_HS(void)
 
 static void Bm_Sof_Handler_FS(void)
 {
-	if (!Bm_RunTest) return;
-	#ifdef BM_MANAGE_SOF_PERIOD
-	if ((++bm.Rx.SofPeriod) >= BM_EP_POLLCOUNT) bm.Rx.SofPeriod = 0;
-	if ((++bm.Tx.SofPeriod) >= BM_EP_POLLCOUNT) bm.Tx.SofPeriod = 0;
+	#ifdef BM_MANAGE_SOF_PERIOD_RX
+	if ((++bm.Rx.SofPeriod) >= BM_EP_POLLCOUNT) { bm.Rx.SofPeriod = 0; bm.Rx.NeedsService=1; }
 	#endif
-	Bm_RunTest();
-}
 
+	#ifdef BM_MANAGE_SOF_PERIOD_TX
+	if ((++bm.Tx.SofPeriod) >= BM_EP_POLLCOUNT) { bm.Tx.SofPeriod = 0; bm.Tx.NeedsService=1; }
+	#endif
+}
 #endif
 
 bool Bm_Vendor_Handler(void)
@@ -410,8 +437,10 @@ bool Bm_Vendor_Handler(void)
 			return false;
 
 		if (udd_g_ctrlreq.req.bRequest == PICFW_SET_TEST)
+		{
 			Bm_TestType = (uint8_t)udd_g_ctrlreq.req.wValue;
-
+			Bm_PrevTestType = 0xFF;	
+		}
 		testType = Bm_TestType;
 		udd_set_setup_payload(&testType, 1);
 		return true;
@@ -435,4 +464,3 @@ bool Bm_Vendor_Handler(void)
 
 	return false;
 }
-
