@@ -22,21 +22,25 @@ extern POLICY_DEFAULT DevicePolicyDefaults[MAX_POLICY];
 //
 
 #if 1
-VOID Policy_InitPipe(__inout PPIPE_CONTEXT pipeContext);
+VOID Policy_InitPipe(
+    __in PDEVICE_CONTEXT deviceContext,
+    __inout PPIPE_CONTEXT pipeContext);
 
 VOID Policy_SetAllPipesToDefault(__in PDEVICE_CONTEXT deviceContext);
 
-NTSTATUS Policy_SetPipe(__inout PDEVICE_CONTEXT devContext,
-                        __in UCHAR pipeID,
-                        __in ULONG policyType,
-                        __in PVOID value,
-                        __in ULONG valueLength);
+NTSTATUS Policy_SetPipe(
+    __inout PDEVICE_CONTEXT devContext,
+    __in UCHAR pipeID,
+    __in ULONG policyType,
+    __in PVOID value,
+    __in ULONG valueLength);
 
-NTSTATUS Policy_GetPipe(__in PDEVICE_CONTEXT devContext,
-                        __in UCHAR pipeID,
-                        __in ULONG policyType,
-                        __out PVOID value,
-                        __inout PULONG valueLength);
+NTSTATUS Policy_GetPipe(
+    __in PDEVICE_CONTEXT devContext,
+    __in UCHAR pipeID,
+    __in ULONG policyType,
+    __out PVOID value,
+    __inout PULONG valueLength);
 
 NTSTATUS Policy_InitPower(__in PDEVICE_CONTEXT deviceContext);
 

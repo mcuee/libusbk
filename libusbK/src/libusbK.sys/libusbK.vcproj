@@ -222,7 +222,7 @@
 					>
 				</File>
 				<File
-					RelativePath="..\..\includes\lusbk_usbio.h"
+					RelativePath="..\..\includes\lusbk_shared.h"
 					>
 				</File>
 				<File

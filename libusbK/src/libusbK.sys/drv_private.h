@@ -41,7 +41,7 @@ extern ULONG DebugLevel;
 #define GetListHeadEntry(ListHead)  ((ListHead)->Flink)
 
 // Max pipe/power/device policies.
-#define MAX_POLICY			(32)
+#define MAX_POLICY			(16)
 
 // These are pre-allocated to device context space.
 #define LIBUSB_MAX_INTERFACE_COUNT 32
@@ -171,13 +171,18 @@ typedef union _PIPE_POLICIES
 	volatile long values;
 	struct
 	{
+		unsigned int IsoStartLatency : 10;
+		unsigned int IsoAlwaysStartAsap: 1;
 		unsigned int AutoClearStall: 1;
 		unsigned int AllowPartialReads: 1;
 		unsigned int AutoFlush: 1;
 		unsigned int IgnoreShortPackets: 1;
 		unsigned int RawIO: 1;
+
+		unsigned int IsoNumFixedPackets: 11;
 		unsigned int ResetPipeOnResume: 1;
-		unsigned int ShortPacketTerminate: 4;
+		unsigned int ShortPacketTerminate: 1;
+		unsigned: 3;
 	};
 } PIPE_POLICIES;
 #pragma warning(pop)
@@ -210,6 +215,12 @@ typedef struct _PIPE_CONTEXT
 
 	// Set when policies have changes that require queue settings to change.
 	BOOLEAN IsQueueDirty;
+
+	// http://msdn.microsoft.com/en-us/library/windows/hardware/ff552359%28v=vs.85%29.aspx
+	// Settings.Parallel.NumberOfPresentedRequests
+	// Maximum number of transfers that can be asynchronously delivered at a
+	// time. Available in version 1.9 and later versions of KMDF.
+	ULONG SimulParallelRequests;
 
 } PIPE_CONTEXT, *PPIPE_CONTEXT;
 
@@ -281,6 +292,9 @@ typedef struct _QUEUE_CONTEXT
 	WDF_USB_PIPE_INFORMATION	Info;		// WDF pipe info.	[RO]
 
 	PPIPE_CONTEXT				PipeContext;
+
+	BOOLEAN						IsFreshPipeReset;
+	ULONG						NextFrameNumber;
 
 	// Set in EvtResume and CancelRoutine (AUTO_CLEAR_STALL)
 	BOOLEAN						ResetPipeForResume;
@@ -362,6 +376,7 @@ typedef struct _REQUEST_CONTEXT
 		} IsoEx;
 		struct
 		{
+			WDFMEMORY			UrbMemory;
 			PXFER_AUTOISO_COLLECTION_CONTEXT Context;
 		} AutoIso;
 		struct

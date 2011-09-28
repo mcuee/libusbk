@@ -32,7 +32,6 @@ VOID NONPAGABLE PipeQueue_OnIoControl(__in WDFQUEUE Queue,
 {
 	NTSTATUS status;
 	ULONG length = 0;
-	PDEVICE_CONTEXT deviceContext = GetDeviceContext(WdfIoQueueGetDevice(Queue));
 	PREQUEST_CONTEXT requestContext = GetRequestContext(Request);
 	PQUEUE_CONTEXT queueContext = NULL;
 
@@ -57,15 +56,12 @@ VOID NONPAGABLE PipeQueue_OnIoControl(__in WDFQUEUE Queue,
 		{
 		case WdfUsbPipeTypeIsochronous:
 
-			if (IsHighSpeedDevice(deviceContext))
+			if (USB_ENDPOINT_DIRECTION_IN(queueContext->Info.EndpointAddress))
 			{
-				XferIsoHS(Queue, Request);
+				XferIsoRead(Queue, Request);
+				return;
 			}
-			else
-			{
-				XferIsoFS(Queue, Request);
-			}
-
+			XferIsoWrite(Queue, Request);
 			return;
 
 		case WdfUsbPipeTypeBulk:
@@ -103,16 +99,18 @@ VOID NONPAGABLE PipeQueue_OnIoControl(__in WDFQUEUE Queue,
 		USBERRN("Invalid PipeType=%s\n", GetPipeTypeString(queueContext->Info.PipeType));
 		break;
 
-	case LIBUSBK_IOCTL_AUTOISOEX_READ:
-	case LIBUSBK_IOCTL_AUTOISOEX_WRITE:
-		if (queueContext->Info.PipeType == WdfUsbPipeTypeIsochronous)
-		{
-			XferAutoIsoEx(Queue, Request);
-			return;
-		}
-		status = STATUS_INVALID_PARAMETER;
-		USBERRN("Invalid PipeType=%s\n", GetPipeTypeString(queueContext->Info.PipeType));
-		break;
+		/*
+		case LIBUSBK_IOCTL_AUTOISOEX_READ:
+		case LIBUSBK_IOCTL_AUTOISOEX_WRITE:
+			if (queueContext->Info.PipeType == WdfUsbPipeTypeIsochronous)
+			{
+				XferAutoIsoEx(Queue, Request);
+				return;
+			}
+			status = STATUS_INVALID_PARAMETER;
+			USBERRN("Invalid PipeType=%s\n", GetPipeTypeString(queueContext->Info.PipeType));
+			break;
+		*/
 
 	case LIBUSB_IOCTL_SET_FEATURE:
 	case LIBUSB_IOCTL_CLEAR_FEATURE:
@@ -174,19 +172,15 @@ VOID NONPAGABLE PipeQueue_OnRead(__in WDFQUEUE Queue,
 	switch(queueContext->Info.PipeType)
 	{
 	case WdfUsbPipeTypeIsochronous:
-		if (queueContext->PipeContext->SharedAutoIsoExPacketMemory)
+		if (USB_ENDPOINT_DIRECTION_IN(queueContext->Info.EndpointAddress))
 		{
-			XferAutoIsoEx(Queue, Request);
+			XferIsoRead(Queue, Request);
 			return;
 		}
-		if(IsHighSpeedDevice(deviceContext))
-			XferIsoHS(Queue, Request);
-		else
-			XferIsoFS(Queue, Request);
-		return;
+		break;
+
 	case WdfUsbPipeTypeBulk:
 	case WdfUsbPipeTypeInterrupt:
-
 		if (!USB_ENDPOINT_DIRECTION_IN(queueContext->Info.EndpointAddress))
 		{
 			status = STATUS_INVALID_DEVICE_REQUEST;
@@ -243,16 +237,13 @@ VOID NONPAGABLE PipeQueue_OnWrite(__in WDFQUEUE Queue,
 	switch(queueContext->Info.PipeType)
 	{
 	case WdfUsbPipeTypeIsochronous:
-		if (queueContext->PipeContext->SharedAutoIsoExPacketMemory)
+		if (USB_ENDPOINT_DIRECTION_OUT(queueContext->Info.EndpointAddress))
 		{
-			XferAutoIsoEx(Queue, Request);
+			XferIsoWrite(Queue, Request);
 			return;
 		}
-		if(IsHighSpeedDevice(deviceContext))
-			XferIsoHS(Queue, Request);
-		else
-			XferIsoFS(Queue, Request);
-		return;
+		break;
+
 	case WdfUsbPipeTypeBulk:
 	case WdfUsbPipeTypeInterrupt:
 		if (USB_ENDPOINT_DIRECTION_IN(queueContext->Info.EndpointAddress))

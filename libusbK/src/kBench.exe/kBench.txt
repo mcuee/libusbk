@@ -5,6 +5,7 @@ USAGE: benchmark [list]
                  [verify|verifydetail] [composite]
                  [retry=] [timeout=] [refresh=] [priority=]
                  [mode=] [buffersize=] [buffercount=] [packetsize=]
+                 [log|logread|logwrite]
                  
 Commands:
          list    : Display a list of connected devices before starting. 
@@ -33,11 +34,12 @@ Switches:
                       transfer times out more than {retry} times, the test 
                       fails and the operation is aborted.
          mode       : Sync|Async (Default=Sync) 
-                      Sync uses the libusb-win32 sync transfer functions.
-                      Async uses the libusb-win32 asynchronous api.
-         buffersize : Transfer test size in bytes. (Default=4096)
-                      Increasing this value will generally yield higher
-                      transfer rates.
+         buffersize : Transfer test size in bytes for reads and writes.
+                      (Default=4096)
+         readsize   : Transfer test size in bytes for reading only.
+                      (Default=4096)
+         writesize  : Transfer test size in bytes for writing only.
+                      (Default=4096)
          buffercount: (Async mode only) Number of outstanding transfers on
                       an endpoint (Default=1, Max=10). Increasing this value
                       will generally yield higher transfer rates.
@@ -51,10 +53,16 @@ Switches:
                       (first read/write endpoint(s) in the interface)
          intf       : The interface id the read/write endpoints reside in.
          altf       : The alt interface id the read/write endpoints reside in.
-         packetsize : For isochronous use only. Sets the iso packet size.
-                      If not specified, the endpoints maximum packet size
-                      is used.         
-         composite  : Merge composite devices.         
+         log		: Enable read and write logging. Log files are saved to
+                      current folder as "read.log" and "write.log".
+                      
+ISO Specific Switches:
+         fixedisopackets : (libusbK only) Sets a fixed number of ISO packets
+                           for write transfers. Bytes are distributed evenly
+                           amongst all of the packets. If not specified, the
+                           driver automatically calculates packet lengths
+                           based the write size.
+        
 WARNING:
           This program should only be used with USB devices which implement
           one more more "Benchmark" interface(s).  Using this application

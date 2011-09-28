@@ -69,7 +69,16 @@ if (OutputBufferPtr)																										\
 		USBERRN("Invalid pipe context."); 															\
 		mErrorAction; 																				\
 	} 																								\
-  																									\
+   																									\
+	if (tempPipeCtx->IsQueueDirty)																	\
+	{																								\
+		mStatus = Pipe_RefreshQueue(mDeviceContext, tempPipeCtx);									\
+		if(!NT_SUCCESS(mStatus))  																	\
+		{ 																							\
+			USBERRN("Pipe_RefreshQueue failed. Status=%08Xh", mStatus);  							\
+			mErrorAction; 																			\
+		}																							\
+	}																								\
 	mRequestContext->QueueContext = GetQueueContext(tempPipeCtx->Queue);  							\
 	if (!mRequestContext->QueueContext)   															\
 	{ 																								\
@@ -581,6 +590,7 @@ VOID DefaultQueue_OnIoControl(__in WDFQUEUE Queue,
 			queueContext = GetQueueContext(pipeContext->Queue);
 			if (queueContext)
 			{
+				// This is the allow partial read over-run buffer.
 				queueContext->OverOfs.BufferLength = 0;
 				queueContext->OverOfs.BufferOffset = 0;
 			}

@@ -154,7 +154,7 @@ NTSTATUS Interface_InitContext(__in PDEVICE_CONTEXT deviceContext,
 		// set the default pipe polices
 		if (!pipeContext->Pipe)
 		{
-			Policy_InitPipe(pipeContext);
+			Policy_InitPipe(deviceContext, pipeContext);
 		}
 
 		// set the pipe context by index in the interface context

@@ -310,7 +310,7 @@ static unsigned _stdcall Stm_ThreadProc(PKSTM_HANDLE_INTERNAL handle)
 		PKSTM_XFER_LINK_EL xferEL;
 		DL_FOREACH(handle->List.Master, xferEL)
 		{
-			handle->UserCB->Started(handle->Info,&xferEL->Xfer->Public, xferEL->Xfer->Index);
+			handle->UserCB->Started(handle->Info, &xferEL->Xfer->Public, xferEL->Xfer->Index);
 		}
 	}
 
@@ -391,7 +391,7 @@ Done:
 		PKSTM_XFER_LINK_EL xferEL;
 		DL_FOREACH(handle->List.Master, xferEL)
 		{
-			handle->UserCB->Stopped(handle->Info,&xferEL->Xfer->Public, xferEL->Xfer->Index);
+			handle->UserCB->Stopped(handle->Info, &xferEL->Xfer->Public, xferEL->Xfer->Index);
 		}
 	}
 

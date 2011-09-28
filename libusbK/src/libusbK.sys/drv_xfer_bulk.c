@@ -189,7 +189,7 @@ VOID Xfer_ReadBulk (
 
 	if (!queueContext->Info.MaximumPacketSize)
 	{
-		status = STATUS_PIPE_BROKEN;
+		status = STATUS_INVALID_BUFFER_SIZE;
 		USBERRN("PipeID=%02Xh MaximumPacketSize=0", queueContext->Info.EndpointAddress);
 		goto Exit;
 	}
@@ -426,7 +426,7 @@ VOID Xfer_ReadBulkRaw (
 
 	if (!queueContext->Info.MaximumPacketSize)
 	{
-		status = STATUS_INVALID_DEVICE_REQUEST;
+		status = STATUS_INVALID_BUFFER_SIZE;
 		USBERRN("PipeID=%02Xh MaximumPacketSize=0", queueContext->Info.EndpointAddress);
 		goto Exit;
 	}
@@ -686,7 +686,7 @@ VOID Xfer_WriteBulkRaw (
 
 	if (!queueContext->Info.MaximumPacketSize && requestContext->Length)
 	{
-		status = STATUS_INVALID_DEVICE_REQUEST;
+		status = STATUS_INVALID_BUFFER_SIZE;
 		USBERRN("PipeID=%02Xh MaximumPacketSize=0", queueContext->Info.EndpointAddress);
 		goto Exit;
 	}

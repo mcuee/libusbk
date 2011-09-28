@@ -25,8 +25,6 @@ typedef enum _USBD_PIPE_TYPE
 
 #endif
 
-#define ISO_AUTO_PACKET_TEMPLATE		0x10
-
 #if !defined(__WINUSB_COMPAT_IO_H__) && !defined(__WUSBIO_H__)
 
 // pipe policy types ///////////////
@@ -39,6 +37,17 @@ typedef enum _USBD_PIPE_TYPE
 #define RAW_IO                  0x07
 #define MAXIMUM_TRANSFER_SIZE   0x08
 #define RESET_PIPE_ON_RESUME    0x09
+
+// libusbK ISO pipe policy types ///
+#define ISO_START_LATENCY		0x20
+#define ISO_ALWAYS_START_ASAP	0x21
+#define ISO_NUM_FIXED_PACKETS	0x22
+
+// http://msdn.microsoft.com/en-us/library/windows/hardware/ff552359%28v=vs.85%29.aspx
+// Settings.Parallel.NumberOfPresentedRequests
+// Maximum number of transfers that can be asynchronously delivered at a
+// time. Available in version 1.9 and later versions of KMDF.
+#define SIMUL_PARALLEL_REQUESTS	0x30
 
 // Power policy types //////////////
 #define AUTO_SUSPEND            0x81
@@ -166,7 +175,7 @@ typedef enum _KISO_FLAG
     *
     * For more information about resetting pipes, see \ref UsbK_ResetPipe.
     */
-    KISO_FLAG_NO_START_ASAP = 0x00000001,
+    KISO_FLAG_SET_START_FRAME = 0x00000001,
 } KISO_FLAG;
 
 //! Structure describing a user defined isochronous transfer.
@@ -233,7 +242,7 @@ typedef struct _KISO_CONTEXT
 	* This variable must be within a system-defined range of the current frame. The range is specified by the
 	* constant \ref USBD_ISO_START_FRAME_RANGE.
 	*
-	* If /ref KISO_FLAG_NO_START_ASAP was specified, this member contains the frame number that the transfer should begin on.
+	* If /ref KISO_FLAG_SET_START_FRAME was specified, this member contains the frame number that the transfer should begin on.
 	* When the request is returned by the host controller driver, this member is updated to reflect the frame number this transfer
 	* did begin on.
 	*
