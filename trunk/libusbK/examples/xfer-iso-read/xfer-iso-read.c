@@ -226,7 +226,7 @@ DWORD __cdecl main(int argc, char* argv[])
 			IsoK_Init(&bufferEL->IsoContext, ISO_PACKETS_PER_TRANSFER, 0);
 			IsoK_SetPackets(bufferEL->IsoContext, gPipeInfo.MaximumPacketSize);
 
-			//bufferEL->IsoContext->Flags = KISO_FLAG_NO_START_ASAP;
+			//bufferEL->IsoContext->Flags = KISO_FLAG_SET_START_FRAME;
 
 			bufferEL->IsoPackets = bufferEL->IsoContext->IsoPackets;
 			OvlK_Acquire(&bufferEL->OvlHandle, gXfers.OvlPool);
@@ -243,7 +243,7 @@ DWORD __cdecl main(int argc, char* argv[])
 	UsbK_ResetPipe(usbHandle, (UCHAR)gPipeInfo.PipeId);
 
 	/*
-	Set a start frame (not used) see KISO_FLAG_NO_START_ASAP.
+	Set a start frame (not used) see KISO_FLAG_SET_START_FRAME.
 	*/
 	UsbK_GetCurrentFrameNumber(usbHandle, &gXfers.FrameNumber);
 	gXfers.FrameNumber += ISO_PACKETS_PER_TRANSFER * 2;

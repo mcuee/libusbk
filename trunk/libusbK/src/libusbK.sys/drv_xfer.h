@@ -6,20 +6,25 @@
 
 #include "drv_private.h"
 
-#define mXfer_HandlePipeResetScenarios(mStatus,mQueueContext, mRequestContext) do {  																			\
-	/* handle pipe reset scenarios: ResetPipeOnResume, AutoClearStall */   																		\
-	if ((mQueueContext->ResetPipeForResume && mRequestContext->Policies.ResetPipeOnResume) ||   													\
-			(mQueueContext->ResetPipeForStall && mRequestContext->Policies.AutoClearStall)) 														\
+#define mXfer_HandlePipeResetScenarios(mStatus,mQueueContext, mRequestContext) do { 															\
+	/* handle pipe reset scenarios: ResetPipeOnResume, AutoClearStall */																		\
+	if ((mQueueContext->ResetPipeForResume && mRequestContext->Policies.ResetPipeOnResume) ||   												\
+			(mQueueContext->ResetPipeForStall && mRequestContext->Policies.AutoClearStall)) 													\
 	{   																																		\
 		mStatus = WdfUsbTargetPipeResetSynchronously(mQueueContext->PipeHandle, WDF_NO_HANDLE, NULL);   										\
 		if (!NT_SUCCESS(mStatus))   																											\
 		{   																																	\
 			USBERR(" PipeID=%02Xh WdfUsbTargetPipeResetSynchronously failed. Status=%08Xh\n", mQueueContext->Info.EndpointAddress, mStatus);	\
 		}   																																	\
-		mQueueContext->ResetPipeForResume = FALSE;  																							\
-		mQueueContext->ResetPipeForStall = FALSE;   																							\
+		else																																	\
+		{   																																	\
+			mQueueContext->IsFreshPipeReset=TRUE;																								\
+			mQueueContext->ResetPipeForResume = FALSE;  																						\
+			mQueueContext->ResetPipeForStall = FALSE;   																						\
+		}   																																	\
 	}   																																		\
 } while(0)
+
 
 #define mXfer_HandlePipeResetScenariosForComplete(mStatus, mQueueContext, mRequestContext) do {									\
 	if (!NT_SUCCESS(mStatus)) 																									\
@@ -73,19 +78,15 @@ VOID XferCtrl (
     __in size_t InputBufferLength,
     __in size_t OutputBufferLength);
 
-VOID XferIsoFS (
+VOID XferIsoRead(
     __in WDFQUEUE Queue,
     __in WDFREQUEST Request);
 
-VOID XferIsoHS(
+VOID XferIsoWrite(
     __in WDFQUEUE Queue,
     __in WDFREQUEST Request);
 
 VOID XferIsoEx(
-    __in WDFQUEUE Queue,
-    __in WDFREQUEST Request);
-
-VOID XferAutoIsoEx(
     __in WDFQUEUE Queue,
     __in WDFREQUEST Request);
 

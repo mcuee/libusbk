@@ -24,6 +24,10 @@ binary distributions.
 
 #include "libusbk.h"
 #include "lusbk_version.h"
+#include "lusbk_linked_list.h"
+
+// warning C4127: conditional expression is constant.
+#pragma warning(disable: 4127)
 
 #define COMPOSITE_MERGE_MODE 1
 
@@ -55,8 +59,20 @@ static LPCSTR DrvIdNames[8] = {"libusbK", "libusb0", "WinUSB", "libusb0 filter",
 static LPCSTR DevSpeedStrings[4] = {"Unknown", "Low/Full", "Unknown", "High"};
 #define GetDevSpeedString(DevSpeed)	(DevSpeedStrings[(DevSpeed) & 0x3])
 
+#define VerifyListLock(mTest) while(InterlockedExchange(&((mTest)->VerifyLock),1) != 0) Sleep(0)
+#define VerifyListUnlock(mTest) InterlockedExchange(&((mTest)->VerifyLock),0)
+
 KUSB_DRIVER_API K;
 
+typedef struct _BENCHMARK_BUFFER
+{
+	PUCHAR	Data;
+	LONG	DataLength;
+	LONG	SyncFailed;
+
+	struct _BENCHMARK_BUFFER* prev;
+	struct _BENCHMARK_BUFFER* next;
+} BENCHMARK_BUFFER, *PBENCHMARK_BUFFER;
 // Custom vendor requests that must be implemented in the benchmark firmware.
 // Test selection can be bypassed with the "notestselect" argument.
 //
@@ -99,11 +115,13 @@ typedef struct _BENCHMARK_TEST_PARAM
 	INT Refresh;		// Refresh interval (ms)
 	INT Timeout;		// Transfer timeout (ms)
 	INT Retry;			// Number for times to retry a timed out transfer before aborting
-	INT BufferSize;		// Number of bytes to transfer
+	INT AllocBufferSize;		// Number of bytes to transfer
+	INT ReadLength;
+	INT WriteLength;
 	INT BufferCount;	// Number of outstanding asynchronous transfers
 	BOOL NoTestSelect;	// If true, don't send control message to select the test type.
 	BOOL UseList;		// Show the user a device list and let them choose a benchmark device.
-	INT IsoPacketSize; // Isochronous packet size (defaults to the endpoints max packet size)
+	INT FixedIsoPackets; // Number of fixed packets to use for ISO writes. Ignored for read eps.
 	INT Priority;		// Priority to run this thread at.
 	BOOL Verify;		// Only for loop and read test. If true, verifies data integrity.
 	BOOL VerifyDetails;	// If true, prints detailed information for each invalid byte.
@@ -128,6 +146,18 @@ typedef struct _BENCHMARK_TEST_PARAM
 	BOOL ListDevicesOnly;
 	ULONG DeviceSpeed;
 
+	BOOL ReadLogEnabled;
+	FILE* ReadLogFile;
+
+	BOOL WriteLogEnabled;
+	FILE* WriteLogFile;
+
+	volatile long VerifyLock;
+	BENCHMARK_BUFFER* VerifyList;
+	BOOL IsLoopSynced;
+
+	UCHAR UseRawIO;
+
 } BENCHMARK_TEST_PARAM, *PBENCHMARK_TEST_PARAM;
 
 // The benchmark transfer context used for asynchronous transfers.  see TransferAsync().
@@ -148,7 +178,6 @@ typedef struct _BENCHMARK_TRANSFER_PARAM
 	HANDLE ThreadHandle;
 	DWORD ThreadID;
 	WINUSB_PIPE_INFORMATION Ep;
-	INT IsoPacketSize;
 	BOOL IsRunning;
 
 	LONGLONG TotalTransferred;
@@ -266,18 +295,38 @@ void SetTestDefaults(PBENCHMARK_TEST_PARAM test)
 {
 	memset(test, 0, sizeof(*test));
 
-	test->Ep			= 0x00;
-	test->Vid			= 0x04D8;
-	test->Pid			= 0xFA2E;
-	test->Refresh		= 1000;
-	test->Timeout		= 5000;
-	test->TestType		= TestTypeLoop;
-	test->BufferSize	= 4096;
-	test->BufferCount   = 1;
-	test->Priority		= THREAD_PRIORITY_NORMAL;
-	test->Intf = -1;
-	test->Altf = -1;
+	test->Ep				= 0x00;
+	test->Vid				= 0x04D8;
+	test->Pid				= 0xFA2E;
+	test->Refresh			= 1000;
+	test->Timeout			= 5000;
+	test->TestType			= TestTypeLoop;
+	test->AllocBufferSize	= 4096;
+	test->ReadLength		= test->AllocBufferSize;
+	test->WriteLength		= test->AllocBufferSize;
+	test->BufferCount		= 1;
+	test->Priority			= THREAD_PRIORITY_NORMAL;
+	test->Intf				= -1;
+	test->Altf				= -1;
+	test->UseRawIO			= 0xFF;
+}
 
+VOID AppendLoopBuffer(PBENCHMARK_TEST_PARAM Test, PUCHAR data, LONG dataLength)
+{
+	if (Test->Verify && Test->TestType == TestTypeLoop)
+	{
+		BENCHMARK_BUFFER* newVerifyBuf = malloc(sizeof(BENCHMARK_BUFFER) + dataLength);
+
+		memset(newVerifyBuf, 0, sizeof(BENCHMARK_BUFFER));
+
+		newVerifyBuf->Data = &(((PUCHAR)newVerifyBuf)[sizeof(BENCHMARK_BUFFER)]);
+		newVerifyBuf->DataLength = dataLength;
+		memcpy(newVerifyBuf->Data, data, dataLength);
+
+		VerifyListLock(Test);
+		DL_APPEND(Test->VerifyList, newVerifyBuf);
+		VerifyListUnlock(Test);
+	}
 }
 
 BOOL Bench_Open(__in PBENCHMARK_TEST_PARAM test)
@@ -511,6 +560,7 @@ INT VerifyData(PBENCHMARK_TRANSFER_PARAM transferParam, BYTE* data, INT dataLeng
 		// Index 0 is always 0.
 		// The key is always at index 1
 		verifyData[1] = keyC;
+
 		if (memcmp(&data[dataIndex], verifyData, verifyDataSize) != 0)
 		{
 			// Packet verification failed.
@@ -518,7 +568,7 @@ INT VerifyData(PBENCHMARK_TRANSFER_PARAM transferParam, BYTE* data, INT dataLeng
 			// Reset the key byte on the next packet.
 			seedKey = TRUE;
 
-			CONVDAT("data mismatch packet-index=%d data-index=%d\n", packetIndex, dataIndex);
+			CONVDAT("Packet=#%d Data=#%d\n", packetIndex, dataIndex);
 
 			if (transferParam->Test->VerifyDetails)
 			{
@@ -534,14 +584,12 @@ INT VerifyData(PBENCHMARK_TRANSFER_PARAM transferParam, BYTE* data, INT dataLeng
 
 				}
 			}
-
 		}
 
 		// Move to the next packet.
 		packetIndex++;
 		dataLeft -= verifyDataSize;
 		dataIndex += verifyDataSize;
-
 	}
 
 	return 0;
@@ -556,16 +604,17 @@ int TransferSync(PBENCHMARK_TRANSFER_PARAM transferParam)
 		success = K.ReadPipe(transferParam->Test->InterfaceHandle,
 		                     transferParam->Ep.PipeId,
 		                     transferParam->Buffer,
-		                     transferParam->Test->BufferSize,
+		                     transferParam->Test->ReadLength,
 		                     &transferred,
 		                     NULL);
 	}
 	else
 	{
+		AppendLoopBuffer(transferParam->Test, transferParam->Buffer, transferParam->Test->WriteLength);
 		success = K.WritePipe(transferParam->Test->InterfaceHandle,
 		                      transferParam->Ep.PipeId,
 		                      transferParam->Buffer,
-		                      transferParam->Test->BufferSize,
+		                      transferParam->Test->WriteLength,
 		                      &transferred,
 		                      NULL);
 	}
@@ -595,7 +644,7 @@ int TransferAsync(PBENCHMARK_TRANSFER_PARAM transferParam, PBENCHMARK_TRANSFER_H
 		{
 			handle->Overlapped.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
 			// Data buffer(s) are located at the end of the transfer param.
-			handle->Data = transferParam->Buffer + (transferParam->TransferHandleNextIndex * transferParam->Test->BufferSize);
+			handle->Data = transferParam->Buffer + (transferParam->TransferHandleNextIndex * transferParam->Test->AllocBufferSize);
 		}
 		else
 		{
@@ -605,10 +654,10 @@ int TransferAsync(PBENCHMARK_TRANSFER_PARAM transferParam, PBENCHMARK_TRANSFER_H
 			memset(&handle->Overlapped, 0, sizeof(handle->Overlapped));
 			handle->Overlapped.hEvent = h;
 		}
-		handle->DataMaxLength = transferParam->Test->BufferSize;
 
 		if (transferParam->Ep.PipeId & USB_ENDPOINT_DIRECTION_MASK)
 		{
+			handle->DataMaxLength = transferParam->Test->ReadLength;
 			success = K.ReadPipe(transferParam->Test->InterfaceHandle,
 			                     transferParam->Ep.PipeId,
 			                     handle->Data,
@@ -618,6 +667,8 @@ int TransferAsync(PBENCHMARK_TRANSFER_PARAM transferParam, PBENCHMARK_TRANSFER_H
 		}
 		else
 		{
+			AppendLoopBuffer(transferParam->Test, handle->Data, transferParam->Test->WriteLength);
+			handle->DataMaxLength = transferParam->Test->WriteLength;
 			success = K.WritePipe(transferParam->Test->InterfaceHandle,
 			                      transferParam->Ep.PipeId,
 			                      handle->Data,
@@ -704,12 +755,122 @@ Done:
 	return ret;
 }
 
+VOID VerifyLoopData(PBENCHMARK_TEST_PARAM Test, PUCHAR chData, int dataRemaining)
+{
+	LONG syncOffset		= 0;
+	PUCHAR dataBuffer	= chData;
+	int dataLength		= dataRemaining;
+
+	VerifyListLock(Test);
+
+	if (dataRemaining)
+	{
+		int verifyStageSize;
+		PBENCHMARK_BUFFER writeVerifyBuffer, tmpWriteVerifyBuffer;
+
+		DL_FOREACH_SAFE(Test->VerifyList, writeVerifyBuffer, tmpWriteVerifyBuffer)
+		{
+			if (!Test->IsLoopSynced)
+			{
+				verifyStageSize = min(writeVerifyBuffer->DataLength, dataRemaining);
+				while(verifyStageSize > 0)
+				{
+					Test->IsLoopSynced = memcmp(writeVerifyBuffer->Data, chData, verifyStageSize) == 0 ? TRUE : FALSE;
+					if (Test->IsLoopSynced) break;
+
+					syncOffset++;
+					dataRemaining--;
+					chData++;
+					verifyStageSize = min(writeVerifyBuffer->DataLength, dataRemaining);
+				}
+
+				if (!Test->IsLoopSynced)
+				{
+					chData = dataBuffer;
+					dataRemaining = dataLength;
+
+					if (writeVerifyBuffer->SyncFailed++ == 0)
+					{
+						writeVerifyBuffer = NULL;
+					}
+				}
+				else
+				{
+					CONMSG("Loop data synchronized. Offset=%u Byte=%02Xh.\n", syncOffset, chData[0]);
+				}
+			}
+
+			if (Test->IsLoopSynced)
+			{
+				verifyStageSize = min(writeVerifyBuffer->DataLength, dataRemaining);
+
+				if (memcmp(writeVerifyBuffer->Data, chData, verifyStageSize) == 0)
+				{
+					writeVerifyBuffer->DataLength -= verifyStageSize;
+					dataRemaining -= verifyStageSize;
+					writeVerifyBuffer->Data += verifyStageSize;
+					chData = &chData[verifyStageSize];
+				}
+				else
+				{
+					CONVDAT("DataLength=%u\n", writeVerifyBuffer->DataLength);
+					Test->IsLoopSynced = FALSE;
+
+					if (writeVerifyBuffer->SyncFailed++ == 0)
+					{
+						// Do not delete the verify buffer until it fails to verify once before.
+						writeVerifyBuffer = NULL;
+						dataRemaining = 0;
+					}
+				}
+			}
+
+			if (dataRemaining == 0)
+				break;
+		}
+
+		if (!Test->IsLoopSynced)
+		{
+			CONVDAT("Loop data not in sync.\n");
+		}
+
+		// If writeVerifyBuffer is not null at this point, all buffers before it are deleted.
+		// if writeVerifyBuffer.DataLength == 0, it is also deleted.
+		if (writeVerifyBuffer && Test->VerifyList)
+		{
+			PBENCHMARK_BUFFER writeVerifyBufferDel, tmpWriteVerifyBuffer;
+			DL_FOREACH_SAFE(Test->VerifyList, writeVerifyBufferDel, tmpWriteVerifyBuffer)
+			{
+				if (writeVerifyBuffer != writeVerifyBufferDel)
+				{
+					DL_DELETE(Test->VerifyList, writeVerifyBufferDel);
+					free(writeVerifyBufferDel);
+				}
+				else
+				{
+					if (writeVerifyBufferDel->DataLength <= 0)
+					{
+						DL_DELETE(Test->VerifyList, writeVerifyBufferDel);
+						free(writeVerifyBufferDel);
+					}
+					break;
+				}
+			}
+		}
+	}
+
+	VerifyListUnlock(Test);
+}
+
 DWORD TransferThreadProc(PBENCHMARK_TRANSFER_PARAM transferParam)
 {
 	int ret, i;
 	PBENCHMARK_TRANSFER_HANDLE handle;
 	PUCHAR data;
+
 	transferParam->IsRunning = TRUE;
+
+	K.ResetPipe(transferParam->Test->InterfaceHandle, transferParam->Ep.PipeId);
 
 	while (!transferParam->Test->IsCancelled)
 	{
@@ -731,6 +892,15 @@ DWORD TransferThreadProc(PBENCHMARK_TRANSFER_PARAM transferParam)
 			CONERR("invalid transfer mode %d\n", transferParam->Test->TransferMode);
 			goto Done;
 		}
+
+		if (transferParam->Test->Verify &&
+		        transferParam->Test->VerifyList &&
+		        transferParam->Test->TestType == TestTypeLoop &&
+		        USB_ENDPOINT_DIRECTION_IN(transferParam->Ep.PipeId) && ret > 0)
+		{
+			VerifyLoopData(transferParam->Test, data, ret);
+		}
+
 		if (ret < 0)
 		{
 			// The user pressed 'Q'.
@@ -770,40 +940,26 @@ DWORD TransferThreadProc(PBENCHMARK_TRANSFER_PARAM transferParam)
 		}
 		else
 		{
-			if (ret < transferParam->Test->BufferSize && !transferParam->Test->IsCancelled)
+			transferParam->RunningErrorCount = 0;
+			transferParam->RunningTimeoutCount = 0;
+			if (USB_ENDPOINT_DIRECTION_IN(transferParam->Ep.PipeId))
 			{
-				if (ret > 0)
+				if (transferParam->Test->ReadLogFile)
 				{
-					transferParam->ShortTransferCount++;
-					CONWRN("Short transfer on Ep%02Xh expected %d got %d.\n",
-					       transferParam->Ep.PipeId,
-					       transferParam->Test->BufferSize,
-					       ret);
+					fwrite(data, ret, 1, transferParam->Test->ReadLogFile);
 				}
-				else
+
+				if (transferParam->Test->Verify && transferParam->Test->TestType != TestTypeLoop)
 				{
-					CONWRN("Zero-length transfer on Ep%02Xh expected %d.\n",
-					       transferParam->Ep.PipeId,
-					       transferParam->Test->BufferSize);
-
-					transferParam->TotalErrorCount++;
-					transferParam->RunningErrorCount++;
-					if (transferParam->RunningErrorCount > transferParam->Test->Retry)
-						break;
-
-					K.ResetPipe(transferParam->Test->InterfaceHandle, transferParam->Ep.PipeId);
+					VerifyData(transferParam, data, ret);
 				}
 			}
 			else
 			{
-				transferParam->RunningErrorCount = 0;
-				transferParam->RunningTimeoutCount = 0;
-			}
-
-			if ((transferParam->Test->Verify) &&
-			        (transferParam->Ep.PipeId & USB_ENDPOINT_DIRECTION_MASK))
-			{
-				VerifyData(transferParam, data, ret);
+				if (transferParam->Test->WriteLogFile)
+				{
+					fwrite(data, ret, 1, transferParam->Test->WriteLogFile);
+				}
 			}
 		}
 
@@ -934,8 +1090,17 @@ int ParseBenchmarkArgs(PBENCHMARK_TEST_PARAM testParams, int argc, char** argv)
 			if (testParams->BufferCount > 1)
 				testParams->TransferMode = TRANSFER_MODE_ASYNC;
 		}
-		else if (GetParamIntValue(arg, "buffersize=", &testParams->BufferSize)) {}
-		else if (GetParamIntValue(arg, "size=", &testParams->BufferSize)) {}
+		else if (GetParamIntValue(arg, "buffersize=", &testParams->AllocBufferSize) ||
+		         GetParamIntValue(arg, "size=", &testParams->AllocBufferSize))
+		{
+			if (testParams->ReadLength == 4096)
+				testParams->ReadLength = testParams->AllocBufferSize;
+			if (testParams->WriteLength == 4096)
+				testParams->WriteLength = testParams->AllocBufferSize;
+
+		}
+		else if (GetParamIntValue(arg, "readsize=", &testParams->ReadLength)) {}
+		else if (GetParamIntValue(arg, "writesize=", &testParams->WriteLength)) {}
 		else if (GetParamIntValue(arg, "timeout=", &testParams->Timeout)) {}
 		else if (GetParamIntValue(arg, "intf=", &testParams->Intf)) {}
 		else if (GetParamIntValue(arg, "altf=", &testParams->Altf)) {}
@@ -944,7 +1109,7 @@ int ParseBenchmarkArgs(PBENCHMARK_TEST_PARAM testParams, int argc, char** argv)
 			testParams->Ep &= 0xf;
 		}
 		else if (GetParamIntValue(arg, "refresh=", &testParams->Refresh)) {}
-		else if (GetParamIntValue(arg, "isopacketsize=", &testParams->IsoPacketSize)) {}
+		else if (GetParamIntValue(arg, "fixedisopackets=", &testParams->FixedIsoPackets)) {}
 		else if ((value = GetParamStrValue(arg, "mode=")) != NULL)
 		{
 			if (GetParamStrValue(value, "sync"))
@@ -991,9 +1156,35 @@ int ParseBenchmarkArgs(PBENCHMARK_TEST_PARAM testParams, int argc, char** argv)
 				return -1;
 			}
 		}
+		else if ((value = GetParamStrValue(arg, "rawio=")) != NULL)
+		{
+			if (GetParamStrValue(value, "t") ||
+			        GetParamStrValue(value, "y") ||
+			        GetParamStrValue(value, "1"))
+			{
+				testParams->UseRawIO = 1;
+			}
+			else
+			{
+				testParams->UseRawIO = 0;
+			}
+		}
 		else if (!_stricmp(arg, "notestselect"))
 		{
 			testParams->NoTestSelect = TRUE;
+		}
+		else if (!_stricmp(arg, "logread"))
+		{
+			testParams->ReadLogEnabled = TRUE;
+		}
+		else if (!_stricmp(arg, "logwrite"))
+		{
+			testParams->WriteLogEnabled = TRUE;
+		}
+		else if (!_stricmp(arg, "log"))
+		{
+			testParams->ReadLogEnabled = TRUE;
+			testParams->WriteLogEnabled = TRUE;
 		}
 		else if (!_stricmp(arg, "read"))
 		{
@@ -1082,8 +1273,48 @@ PBENCHMARK_TRANSFER_PARAM CreateTransferParam(PBENCHMARK_TEST_PARAM test, int en
 {
 	PBENCHMARK_TRANSFER_PARAM transferParam;
 	int i;
-	int allocSize = sizeof(BENCHMARK_TRANSFER_PARAM) + (test->BufferSize * test->BufferCount);
+	int allocSize;
 
+	PWINUSB_PIPE_INFORMATION pipeInfo = NULL;
+
+	/// Get Pipe Information
+	for(i = 0; i < test->InterfaceDescriptor.bNumEndpoints; i++)
+	{
+		if (!(endpointID & USB_ENDPOINT_ADDRESS_MASK))
+		{
+			// Use first endpoint that matches the direction
+			if ((test->PipeInformation[i].PipeId & USB_ENDPOINT_DIRECTION_MASK) == endpointID)
+			{
+				pipeInfo =  &test->PipeInformation[i];
+				break;
+			}
+		}
+		else
+		{
+			if ((int)test->PipeInformation[i].PipeId == endpointID)
+			{
+				pipeInfo =  &test->PipeInformation[i];
+				break;
+			}
+		}
+	}
+
+	if (!pipeInfo)
+	{
+		CONERR("failed locating EP%02Xh!\n", endpointID);
+		FreeTransferParam(&transferParam);
+		goto Done;
+	}
+
+	if (!pipeInfo->MaximumPacketSize)
+	{
+		CONWRN("MaximumPacketSize=0 for EP%02Xh. check alternate settings.\n", pipeInfo->PipeId);
+	}
+
+	test->AllocBufferSize = max(test->AllocBufferSize, test->ReadLength);
+	test->AllocBufferSize = max(test->AllocBufferSize, test->WriteLength);
+
+	allocSize = sizeof(BENCHMARK_TRANSFER_PARAM) + (test->AllocBufferSize * test->BufferCount);
 	transferParam = (PBENCHMARK_TRANSFER_PARAM) malloc(allocSize);
 
 	if (transferParam)
@@ -1091,54 +1322,7 @@ PBENCHMARK_TRANSFER_PARAM CreateTransferParam(PBENCHMARK_TEST_PARAM test, int en
 		memset(transferParam, 0, allocSize);
 		transferParam->Test = test;
 
-		for(i = 0; i < test->InterfaceDescriptor.bNumEndpoints; i++)
-		{
-			if (!(endpointID & USB_ENDPOINT_ADDRESS_MASK))
-			{
-				// Use first endpoint that matches the direction
-				if ((test->PipeInformation[i].PipeId & USB_ENDPOINT_DIRECTION_MASK) == endpointID)
-				{
-					memcpy(&transferParam->Ep, &test->PipeInformation[i], sizeof(transferParam->Ep));
-					break;
-				}
-			}
-			else
-			{
-				if ((int)test->PipeInformation[i].PipeId == endpointID)
-				{
-					memcpy(&transferParam->Ep, &test->PipeInformation[i], sizeof(transferParam->Ep));
-					break;
-				}
-			}
-		}
-		if (!transferParam->Ep.PipeId)
-		{
-			CONERR("failed locating EP%02Xh!\n", endpointID);
-			FreeTransferParam(&transferParam);
-			goto Done;
-		}
-
-		if (!transferParam->Ep.MaximumPacketSize)
-		{
-			CONERR("MaximumPacketSize=0 for EP%02Xh. check alternate settings.\n", transferParam->Ep.PipeId);
-			FreeTransferParam(&transferParam);
-			goto Done;
-		}
-		if (transferParam->Test->BufferSize % transferParam->Ep.MaximumPacketSize)
-		{
-			CONERR("buffer size %d is not an interval of EP%02Xh maximum packet size of %d!\n",
-			       transferParam->Test->BufferSize,
-			       transferParam->Ep.PipeId,
-			       transferParam->Ep.MaximumPacketSize);
-
-			FreeTransferParam(&transferParam);
-			goto Done;
-		}
-
-		if (test->IsoPacketSize)
-			transferParam->IsoPacketSize = test->IsoPacketSize;
-		else
-			transferParam->IsoPacketSize = transferParam->Ep.MaximumPacketSize;
+		memcpy(&transferParam->Ep, pipeInfo, sizeof(transferParam->Ep));
 
 		if (ENDPOINT_TYPE(transferParam) == USB_ENDPOINT_TYPE_ISOCHRONOUS)
 			transferParam->Test->TransferMode = TRANSFER_MODE_ASYNC;
@@ -1163,9 +1347,7 @@ PBENCHMARK_TRANSFER_PARAM CreateTransferParam(PBENCHMARK_TEST_PARAM test, int en
 		// If verify mode is on, this is a loop test, and this is a write endpoint, fill
 		// the buffers with the same test data sent by a benchmark device when running
 		// a read only test.
-		if (transferParam->Test->Verify &&
-		        transferParam->Test->TestType == TestTypeLoop &&
-		        !(transferParam->Ep.PipeId & USB_ENDPOINT_DIRECTION_MASK))
+		if (transferParam->Test->TestType == TestTypeLoop && USB_ENDPOINT_DIRECTION_OUT(pipeInfo->PipeId))
 		{
 			// Data Format:
 			// [0][KeyByte] 2 3 4 5 ..to.. wMaxPacketSize (if data byte rolls it is incremented to 1)
@@ -1175,11 +1357,11 @@ PBENCHMARK_TRANSFER_PARAM CreateTransferParam(PBENCHMARK_TEST_PARAM test, int en
 			INT bufferIndex = 0;
 			WORD dataIndex;
 			INT packetIndex;
-			INT packetCount = ((transferParam->Test->BufferCount * transferParam->Test->BufferSize) / transferParam->Ep.MaximumPacketSize);
+			INT packetCount = ((transferParam->Test->BufferCount * test->ReadLength) / pipeInfo->MaximumPacketSize);
 			for(packetIndex = 0; packetIndex < packetCount; packetIndex++)
 			{
 				indexC = 2;
-				for (dataIndex = 0; dataIndex < transferParam->Ep.MaximumPacketSize; dataIndex++)
+				for (dataIndex = 0; dataIndex < pipeInfo->MaximumPacketSize; dataIndex++)
 				{
 					if (dataIndex == 0)			// Start
 						transferParam->Buffer[bufferIndex] = 0;
@@ -1326,7 +1508,8 @@ void ShowTestInfo(PBENCHMARK_TEST_PARAM test)
 	CONMSG("\tAlt Interface # : %02Xh\n", test->InterfaceDescriptor.bAlternateSetting);
 	CONMSG("\tNum Endpoints   : %u\n", test->InterfaceDescriptor.bNumEndpoints);
 	CONMSG("\tPriority        : %d\n", test->Priority);
-	CONMSG("\tBuffer Size     : %d\n", test->BufferSize);
+	CONMSG("\tRead Size       : %d\n", test->ReadLength);
+	CONMSG("\tWrite Size      : %d\n", test->WriteLength);
 	CONMSG("\tBuffer Count    : %d\n", test->BufferCount);
 	CONMSG("\tDisplay Refresh : %d (ms)\n", test->Refresh);
 	CONMSG("\tTransfer Timeout: %d (ms)\n", test->Timeout);
@@ -1568,6 +1751,14 @@ int __cdecl main(int argc, char** argv)
 	{
 		ReadTest = CreateTransferParam(&Test, Test.Ep | USB_ENDPOINT_DIRECTION_MASK);
 		if (!ReadTest) goto Done;
+		if (Test.UseRawIO != 0xFF)
+		{
+			if (!K.SetPipePolicy(Test.InterfaceHandle, ReadTest->Ep.PipeId, RAW_IO, 1, &Test.UseRawIO))
+			{
+				CONERR("SetPipePolicy:RAW_IO failed. ErrorCode=%08Xh\n", GetLastError());
+				goto Done;
+			}
+		}
 	}
 
 	// If writing to the device create the write transfer param. This will also create
@@ -1577,6 +1768,22 @@ int __cdecl main(int argc, char** argv)
 	{
 		WriteTest = CreateTransferParam(&Test, Test.Ep);
 		if (!WriteTest) goto Done;
+		if (Test.FixedIsoPackets)
+		{
+			if (!K.SetPipePolicy(Test.InterfaceHandle, WriteTest->Ep.PipeId, ISO_NUM_FIXED_PACKETS, 2, &Test.FixedIsoPackets))
+			{
+				CONERR("SetPipePolicy:ISO_NUM_FIXED_PACKETS failed. ErrorCode=%08Xh\n", GetLastError());
+				goto Done;
+			}
+		}
+		if (Test.UseRawIO != 0xFF)
+		{
+			if (!K.SetPipePolicy(Test.InterfaceHandle, WriteTest->Ep.PipeId, RAW_IO, 1, &Test.UseRawIO))
+			{
+				CONERR("SetPipePolicy:RAW_IO failed. ErrorCode=%08Xh\n", GetLastError());
+				goto Done;
+			}
+		}
 	}
 
 	if (Test.Verify)
@@ -1592,6 +1799,12 @@ int __cdecl main(int argc, char** argv)
 				goto Done;
 		}
 	}
+
+	if (Test.ReadLogEnabled)
+		fopen_s(&Test.ReadLogFile, "read.log", "wb");
+
+	if (Test.WriteLogEnabled)
+		fopen_s(&Test.WriteLogFile, "write.log", "wb");
 
 	// Get the device speed.
 	length = sizeof(Test.DeviceSpeed);
@@ -1744,9 +1957,30 @@ Done:
 	}
 	if (Test.VerifyBuffer)
 	{
+		PBENCHMARK_BUFFER verifyBuffer, verifyListTmp;
+
 		free(Test.VerifyBuffer);
 		Test.VerifyBuffer = NULL;
 
+		DL_FOREACH_SAFE(Test.VerifyList, verifyBuffer, verifyListTmp)
+		{
+			DL_DELETE(Test.VerifyList, verifyBuffer);
+			free(verifyBuffer);
+		}
+	}
+
+	if (Test.ReadLogFile)
+	{
+		fflush(Test.ReadLogFile);
+		fclose(Test.ReadLogFile);
+		Test.ReadLogFile = NULL;
+	}
+
+	if (Test.WriteLogFile)
+	{
+		fflush(Test.WriteLogFile);
+		fclose(Test.WriteLogFile);
+		Test.WriteLogFile = NULL;
 	}
 
 	LstK_Free(Test.DeviceList);

@@ -61,44 +61,12 @@ POLICY_DEFAULT PowerPolicyDefaults[MAX_POLICY] =
 	{0, 0, 0},	// unused
 	{0, 0, 0},	// unused
 	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
 };
 
 POLICY_DEFAULT DevicePolicyDefaults[MAX_POLICY] =
 {
 	{0, 0, 0},	// unused (internal use only)
 	{DEVICE_SPEED, FullSpeed, 1},
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
 	{0, 0, 0},	// unused
 	{0, 0, 0},	// unused
 	{0, 0, 0},	// unused
@@ -183,128 +151,26 @@ VOID Policy_SetAllPipesToDefault(__in PDEVICE_CONTEXT deviceContext)
 		for (pipeIndex = 0; pipeIndex < pipeCount; pipeIndex++)
 		{
 			pipeContext = deviceContext->InterfaceContext[interfaceIndex].PipeContextByIndex[pipeIndex];
-			Policy_InitPipe(pipeContext);
+			Policy_InitPipe(deviceContext, pipeContext);
 		}
 	}
 }
 
-VOID Policy_InitPipe(__inout PPIPE_CONTEXT pipeContext)
+VOID Policy_InitPipe(
+    __in PDEVICE_CONTEXT deviceContext,
+    __inout PPIPE_CONTEXT pipeContext)
 {
 	PIPE_POLICIES defaultPolicies;
 	defaultPolicies.values = 0;
 	defaultPolicies.AllowPartialReads = TRUE;
-
+	defaultPolicies.IsoStartLatency = IsHighSpeedDevice(deviceContext) ? 32 : 8;
+	//defaultPolicies.IsoAlwaysStartAsap=TRUE;
 	if (pipeContext)
 	{
+		defaultPolicies.IsoAlwaysStartAsap = USB_ENDPOINT_DIRECTION_IN(pipeContext->PipeInformation.EndpointAddress) ? TRUE : FALSE;
 		pipeContext->Policies.values = defaultPolicies.values;
 	}
 }
-
-#if 0
-
-NTSTATUS NONPAGABLE Policy_SetPipe(__inout PDEVICE_CONTEXT deviceContext,
-                                   __in UCHAR pipeID,
-                                   __in ULONG policyType,
-                                   __in PVOID value,
-                                   __in ULONG valueLength)
-{
-
-	PPIPE_CONTEXT pipeContext;
-	PPOLICY_DEFAULT defaultPolicy;
-	NTSTATUS status = STATUS_SUCCESS;
-
-	pipeContext = GetPipeContextByID(deviceContext, pipeID);
-	if (!pipeContext->IsValid)
-	{
-		USBERR("pipe %02Xh not found\n", pipeID);
-		return STATUS_INVALID_PARAMETER;
-	}
-
-	defaultPolicy = Policy_GetPipeDefault(policyType);
-	if (defaultPolicy == NULL || defaultPolicy->PolicyType != policyType)
-	{
-		USBERR("unknown pipe policy %d\n", policyType);
-		return STATUS_INVALID_PARAMETER;
-	}
-
-	if (policyType == ISO_AUTO_PACKET_TEMPLATE)
-	{
-		PQUEUE_CONTEXT queueContext = GetQueueContext(pipeContext->Queue);
-		PIPE_POLICIES_PACKED queuePipePolices;
-		ULONG polValue;
-
-		if (!queueContext || queueContext->Info.PipeType != WdfUsbPipeTypeIsochronous)
-		{
-			USBERR("Invalid PipeType=%s\n", GetPipeTypeString(queueContext->Info.PipeType));
-			return STATUS_INVALID_PARAMETER;
-		}
-
-		// Toggle the value for this policy so it is opposite of the current queue.  This will instruct
-		// Pipe_InitQueue that it must re-create the queue.
-		queuePipePolices._value = queueContext->Policy._value;
-		polValue = queuePipePolices.AutoIsoPacketsChanged ? 0 : 1;
-		Policy_SetValue(&GetPolicyValue(policyType, pipeContext->Policy), &polValue, defaultPolicy->ValueByteCount);
-
-		if (pipeContext->AutoIsoPacket.Memory) WdfObjectDelete(pipeContext->AutoIsoPacket.Memory);
-		if (valueLength)
-		{
-			WDF_OBJECT_ATTRIBUTES memAttributes;
-			WDF_OBJECT_ATTRIBUTES_INIT(&memAttributes);
-			memAttributes.ParentObject = deviceContext->WdfDevice;
-
-			if (valueLength % sizeof(KISO_PACKET))
-			{
-				USBERR("BufferLength must be an interval of KISO_PACKET\n", GetPipeTypeString(queueContext->Info.PipeType));
-				return STATUS_INVALID_PARAMETER;
-			}
-
-			status = WdfMemoryCreate(
-			             &memAttributes, NonPagedPool,
-			             POOL_TAG,
-			             valueLength,
-			             &pipeContext->AutoIsoPacket.Memory,
-			             &pipeContext->AutoIsoPacket.Buffer);
-
-			if (NT_SUCCESS(status))
-			{
-				status = WdfMemoryCopyFromBuffer(pipeContext->AutoIsoPacket.Memory, 0, value, valueLength);
-				if (NT_SUCCESS(status))
-				{
-					pipeContext->AutoIsoPacket.Length = valueLength;
-					return status;
-				}
-				else
-				{
-					WdfObjectDelete(pipeContext->AutoIsoPacket.Memory);
-					USBERRN("WdfMemoryCopyFromBuffer failed. Status=%08Xh", status);
-				}
-			}
-			else
-			{
-				WdfObjectDelete(pipeContext->AutoIsoPacket.Memory);
-				USBERRN("WdfMemoryCreate failed. Status=%08Xh", status);
-			}
-		}
-
-		pipeContext->AutoIsoPacket.Memory = NULL;
-		pipeContext->AutoIsoPacket.Buffer = NULL;
-		pipeContext->AutoIsoPacket.Length = 0;
-		return status;
-	}
-
-	if (valueLength < defaultPolicy->ValueByteCount)
-	{
-		USBERR("pipe %02Xh valueLength = 0\n", pipeID);
-		return STATUS_BUFFER_TOO_SMALL;
-	}
-
-	Policy_SetValue(&GetPolicyValue(policyType, pipeContext->Policy), value, defaultPolicy->ValueByteCount);
-
-	return STATUS_SUCCESS;
-}
-
-#endif
-
 
 NTSTATUS NONPAGABLE Policy_GetPipe(__in PDEVICE_CONTEXT deviceContext,
                                    __in UCHAR pipeID,
@@ -380,7 +246,26 @@ NTSTATUS NONPAGABLE Policy_GetPipe(__in PDEVICE_CONTEXT deviceContext,
 		if (value) ((PUCHAR)value)[0] = (UCHAR)pipePolicies.ResetPipeOnResume;
 		break;
 
-	case ISO_AUTO_PACKET_TEMPLATE:	// 0x10
+	case ISO_START_LATENCY:			// 0x20
+		mPipe_CheckValueLength(status, policyType, pipeID, 2, valueLength[0], valueLength, break);
+		if (value) ((PUSHORT)value)[0] = (USHORT)pipePolicies.IsoStartLatency;
+		break;
+
+	case ISO_ALWAYS_START_ASAP:		// 0x21
+		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength[0], valueLength, break);
+		if (value) ((PUCHAR)value)[0] = (UCHAR)pipePolicies.IsoAlwaysStartAsap;
+		break;
+	case ISO_NUM_FIXED_PACKETS:		// 0x22
+		mPipe_CheckValueLength(status, policyType, pipeID, 2, valueLength[0], valueLength, break);
+		if (value) ((PUSHORT)value)[0] = (USHORT)pipePolicies.IsoNumFixedPackets;
+		break;
+	case SIMUL_PARALLEL_REQUESTS:	// 0x30
+		mPipe_CheckValueLength(status, policyType, pipeID, sizeof(ULONG), valueLength[0], valueLength, break);
+		if (value) ((PULONG)value)[0] = pipeContext->SimulParallelRequests;
+		break;
+		/*
+		/*
+		case ISO_AUTO_PACKET_TEMPLATE:	// 0x10
 		if (pipeContext->SharedAutoIsoExPacketMemory)
 		{
 			size_t bufferSize;
@@ -394,6 +279,7 @@ NTSTATUS NONPAGABLE Policy_GetPipe(__in PDEVICE_CONTEXT deviceContext,
 			if (valueLength) valueLength[0] = 0;
 		}
 		break;
+		*/
 
 	default:
 		status = STATUS_INVALID_PARAMETER;
@@ -751,7 +637,7 @@ NTSTATUS Policy_SetPipe(
 	{
 	case SHORT_PACKET_TERMINATE:	// 0x01
 		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength, NULL, break);
-		pipePolicies.ShortPacketTerminate = ((PUCHAR)value)[0] & 0xF;
+		pipePolicies.ShortPacketTerminate = ((PUCHAR)value)[0] ? 1 : 0;
 		break;
 
 	case AUTO_CLEAR_STALL:			// 0x02
@@ -801,9 +687,62 @@ NTSTATUS Policy_SetPipe(
 		pipePolicies.ResetPipeOnResume = ((PUCHAR)value)[0] ? 1 : 0;
 		break;
 
-	case ISO_AUTO_PACKET_TEMPLATE:	// 0x10
+	case ISO_START_LATENCY:			// 0x20
+		mPipe_CheckValueLength(status, policyType, pipeID, 2, valueLength, NULL, break);
+		pipePolicies.IsoStartLatency = ((PUSHORT)value)[0];
+		break;
+
+	case ISO_ALWAYS_START_ASAP:		// 0x21
+		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength, NULL, break);
+		pipePolicies.IsoAlwaysStartAsap = ((PUCHAR)value)[0] ? 1 : 0;
+		break;
+
+	case ISO_NUM_FIXED_PACKETS:		// 0x22
+		mPipe_CheckValueLength(status, policyType, pipeID, 2, valueLength, NULL, break);
+		pipePolicies.IsoNumFixedPackets = ((PUSHORT)value)[0] & 0x7FF;
+		if (pipePolicies.IsoNumFixedPackets)
+		{
+			if (IsHighSpeedDevice(deviceContext))
+			{
+				if (pipePolicies.IsoNumFixedPackets % 8)
+				{
+					USBERRN("Number of fixed packets must be an interval of 8.");
+					status = STATUS_INVALID_PARAMETER;
+					break;
+				}
+				if (pipePolicies.IsoNumFixedPackets > 1024)
+				{
+					USBERRN("Number of fixed packets cannot be greater than 1024.");
+					status = STATUS_INVALID_PARAMETER;
+					break;
+				}
+			}
+			else
+			{
+				if (pipePolicies.IsoNumFixedPackets > 256)
+				{
+					USBERRN("Number of fixed packets cannot be greater than 256.");
+					status = STATUS_INVALID_PARAMETER;
+					break;
+				}
+			}
+		}
+		break;
+
+	case SIMUL_PARALLEL_REQUESTS:
+		mPipe_CheckValueLength(status, policyType, pipeID, 4, valueLength, NULL, break);
+		if (pipeContext->SimulParallelRequests != ((PULONG)value)[0])
+		{
+			pipeContext->SimulParallelRequests = ((PULONG)value)[0];
+			pipeContext->IsQueueDirty = TRUE;
+		}
+		break;
+		/*
+		case ISO_AUTO_PACKET_TEMPLATE:	// 0x10
 		status = Policy_ApplyIsoAutoPacketTemplate(deviceContext, pipeContext, value, valueLength);
 		break;
+		*/
+
 
 	default:
 		status = STATUS_INVALID_PARAMETER;
@@ -815,10 +754,7 @@ NTSTATUS Policy_SetPipe(
 		        pipeContext->PipeInformation.EndpointAddress, valueLength, policyType);
 
 		pipeContext->Policies.values = pipePolicies.values;
-		if (pipeContext->IsQueueDirty)
-		{
-			status = Pipe_RefreshQueue(deviceContext, pipeContext);
-		}
+
 	}
 	else
 	{

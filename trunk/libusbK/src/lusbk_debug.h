@@ -51,6 +51,7 @@ extern ULONG DebugLevel;
 #define USBDEVN(format,...) USBDEV(format USB_LN,__VA_ARGS__)
 
 #if (defined(DBG) || defined (_DEBUG))
+#define DEBUG_LOGGING_ENABLED
 
 #define USBLOG(MinDebugLevel,LogAppNameString,CategoryText,FunctionText,format,...) \
 	IFDBGLVL(MinDebugLevel) DebugOutputFunction("%s%s%s " format, CategoryText, LogAppNameString, FunctionText,__VA_ARGS__)
@@ -61,7 +62,6 @@ extern ULONG DebugLevel;
 #define USBDBG(format,...) USBLOG(3, LOG_APPNAME, "", "["__FUNCTION__"]",format,__VA_ARGS__)
 #define USBDEV(format,...) USBLOG(255, LOG_APPNAME, "", "["__FUNCTION__"]",format,__VA_ARGS__)
 
-#define USBE_SUCCESS(success,format,...) USBLOG(2,LOG_APPNAME,((success)?"[Success!]":"[Fail!]"),__FUNCTION__,format,__VA_ARGS__)
 #define USBE_OK(format,...) USBMSG("[Ok!] " format,__VA_ARGS__)
 #define USBE_PARAM(ParameterName) USBERRN("invalid parameter: %s",DEFINE_TO_STR(ParameterName))
 
@@ -76,7 +76,6 @@ extern ULONG DebugLevel;
 
 #define USBE_OK(format,...) USB_LOG_NOP()
 #define USBE_PARAM(ParameterName) USB_LOG_NOP()
-#define USBE_SUCCESS(success,format,...) USB_LOG_NOP()
 
 #endif // defined(DBG) || defined (_DEBUG)
 

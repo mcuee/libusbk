@@ -85,6 +85,14 @@ NTSTATUS Pipe_Reset(__in PDEVICE_CONTEXT deviceContext,
 		{
 			USBERR("WdfUsbTargetPipeResetSynchronously failed pipeID=%02Xh status=%Xh\n", pipeID, status);
 		}
+		else
+		{
+			if (pipeContext->Queue)
+			{
+				PQUEUE_CONTEXT queueContext = GetQueueContext(pipeContext->Queue);
+				queueContext->IsFreshPipeReset = TRUE;
+			}
+		}
 	}
 	else
 	{
@@ -256,6 +264,12 @@ NTSTATUS Pipe_InitQueue(
 
 			queueConfig.EvtIoDeviceControl = PipeQueue_OnIoControl;
 
+#if ((KMDF_MAJOR_VERSION==1 && KMDF_MINOR_VERSION >= 9) || (KMDF_MAJOR_VERSION > 1))
+			if (pipeContext->SimulParallelRequests)
+			{
+				queueConfig.Settings.Parallel.NumberOfPresentedRequests = pipeContext->SimulParallelRequests;
+			}
+#endif
 			if (USB_ENDPOINT_DIRECTION_IN(pipeContext->PipeInformation.EndpointAddress))
 			{
 				// Isochronous Read Pipe
@@ -279,6 +293,12 @@ NTSTATUS Pipe_InitQueue(
 				USBDBGN("Configuring parallel queue..");
 				queueDispatchType = WdfIoQueueDispatchParallel;
 				evtStop = Queue_OnReadBulkRawStop;
+#if ((KMDF_MAJOR_VERSION==1 && KMDF_MINOR_VERSION >= 9) || (KMDF_MAJOR_VERSION > 1))
+				if (pipeContext->SimulParallelRequests)
+				{
+					queueConfig.Settings.Parallel.NumberOfPresentedRequests = pipeContext->SimulParallelRequests;
+				}
+#endif
 			}
 			else
 			{
@@ -303,6 +323,12 @@ NTSTATUS Pipe_InitQueue(
 				USBDBGN("Configuring parallel queue..");
 				queueDispatchType = WdfIoQueueDispatchParallel;
 				evtStop = Queue_OnReadBulkRawStop;
+#if ((KMDF_MAJOR_VERSION==1 && KMDF_MINOR_VERSION >= 9) || (KMDF_MAJOR_VERSION > 1))
+				if (pipeContext->SimulParallelRequests)
+				{
+					queueConfig.Settings.Parallel.NumberOfPresentedRequests = pipeContext->SimulParallelRequests;
+				}
+#endif
 			}
 			else
 			{
@@ -342,6 +368,8 @@ NTSTATUS Pipe_InitQueue(
 
 		// Create the memory for partial read storage
 		queueContext = GetQueueContext(queue);
+
+		queueContext->IsFreshPipeReset = TRUE;
 
 		// SET queueContext->OverOfs
 		RtlZeroMemory(&queueContext->OverOfs, sizeof(queueContext->OverOfs));
@@ -544,7 +572,7 @@ PPIPE_CONTEXT Pipe_GetContextFromName(
 NTSTATUS Pipe_InitDefaultContext(__in PDEVICE_CONTEXT deviceContext)
 {
 	PPIPE_CONTEXT pipeContext = GetPipeContextByID(deviceContext, 0);
-	Policy_InitPipe(pipeContext);
+	Policy_InitPipe(deviceContext, pipeContext);
 
 	pipeContext->Pipe = WDF_NO_HANDLE;
 	pipeContext->Queue = WDF_NO_HANDLE;
