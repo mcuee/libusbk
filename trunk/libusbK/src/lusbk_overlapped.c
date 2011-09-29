@@ -220,7 +220,16 @@ KUSB_EXP BOOL KUSB_API OvlK_Wait(
 
 CancelIoRetry:
 	// wait the specified timeout interval
-	errorCode = WaitForSingleObject(overlapped->Overlapped.hEvent, TimeoutMS);
+	if (WaitFlags & KOVL_WAIT_FLAG_ALERTABLE)
+	{
+		// user apc aware.
+		errorCode = WaitForSingleObjectEx(overlapped->Overlapped.hEvent, TimeoutMS, TRUE);
+		if (errorCode == WAIT_IO_COMPLETION)
+			goto Done;
+	}
+	else
+		errorCode = WaitForSingleObject(overlapped->Overlapped.hEvent, TimeoutMS);
+
 
 	if (errorCode == WAIT_OBJECT_0)
 	{
@@ -288,6 +297,7 @@ CancelIoRetry:
 		USBERRN("Unknown OverlappedK failure. errorCode=%08Xh", errorCode);
 	}
 
+Done:
 	PoolHandle_Dec_OvlK(overlapped);
 	return LusbwError(errorCode);
 }

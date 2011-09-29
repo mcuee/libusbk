@@ -3,7 +3,7 @@
 // All rights reserved.
 //
 // C# libusbK Bindings
-// Auto-generated on: 09.22.2011
+// Auto-generated on: 09.28.2011
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -655,7 +655,7 @@ namespace libusbK
         NONE = 0,
 
         /// <Summary>Do not start the transfer immediately, instead use \ref KISO_CONTEXT::StartFrame.</Summary>
-        NO_START_ASAP = 0x00000001,
+        SET_START_FRAME = 0x00000001,
     }
 
     /// <Summary>Handle type enumeration.</Summary>
@@ -1015,6 +1015,11 @@ namespace libusbK
 
         /// <Summary>The pipe interval</Summary>
         public byte Interval;
+
+        public override string ToString()
+        {
+            return string.Format("PipeType: {0}\nPipeId: {1}\nMaximumPacketSize: {2}\nInterval: {3}\n", PipeType, PipeId, MaximumPacketSize, Interval);
+        }
     };
 
     /// <Summary>The \c WINUSB_SETUP_PACKET structure describes a USB setup packet.</Summary>
@@ -1284,6 +1289,11 @@ namespace libusbK
 
         /// <Summary>Index of string descriptor describing this interface</Summary>
         public byte iInterface;
+
+        public override string ToString()
+        {
+            return string.Format("BInterfaceNumber: {0}\nBAlternateSetting: {1}\nBNumEndpoints: {2}\nBInterfaceClass: {3}\nBInterfaceSubClass: {4}\nBInterfaceProtocol: {5}\n", bInterfaceNumber, bAlternateSetting, bNumEndpoints, bInterfaceClass, bInterfaceSubClass, bInterfaceProtocol);
+        }
     };
 
     /// <Summary>A structure representing the standard USB string descriptor.</Summary>
@@ -1558,13 +1568,17 @@ namespace libusbK
         [MarshalAs(UnmanagedType.FunctionPtr)]
         public KSTM_SUBMIT_CB Submit;
 
-        /// <Summary>Executed when the stream is started with \ref LstK_Start.</Summary>
-        [MarshalAs(UnmanagedType.FunctionPtr)]
-        public KSTM_INITIALIZE_CB Initialize;
-
         /// <Summary>Executed when a transfer competes.</Summary>
         [MarshalAs(UnmanagedType.FunctionPtr)]
         public KSTM_COMPLETE_CB Complete;
+
+        /// <Summary>Executed for every transfer context when the stream is started with \ref StmK_Start.</Summary>
+        [MarshalAs(UnmanagedType.FunctionPtr)]
+        public KSTM_STARTED_CB Started;
+
+        /// <Summary>Executed for every transfer context when the stream is stopped with \ref StmK_Stop.</Summary>
+        [MarshalAs(UnmanagedType.FunctionPtr)]
+        public KSTM_STOPPED_CB Stopped;
     };
     #endregion
 
@@ -1691,7 +1705,10 @@ namespace libusbK
     public delegate int KSTM_SUBMIT_CB(IntPtr StreamInfo, IntPtr XferContext, IntPtr Overlapped);
 
     [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet = CharSet.Ansi, SetLastError = true)]
-    public delegate int KSTM_INITIALIZE_CB(IntPtr StreamInfo);
+    public delegate int KSTM_STARTED_CB(IntPtr StreamInfo, IntPtr XferContext, int XferContextIndex);
+
+    [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet = CharSet.Ansi, SetLastError = true)]
+    public delegate int KSTM_STOPPED_CB(IntPtr StreamInfo, IntPtr XferContext, int XferContextIndex);
 
     [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet = CharSet.Ansi, SetLastError = true)]
     public delegate int KSTM_COMPLETE_CB(IntPtr StreamInfo, IntPtr XferContext, int ErrorCode);

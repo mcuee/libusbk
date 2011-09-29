@@ -3,7 +3,7 @@
 // All rights reserved.
 //
 // C# libusbK Bindings
-// Auto-generated on: 09.22.2011
+// Auto-generated on: 09.28.2011
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -795,7 +795,7 @@ public enum KISO_FLAG:
 	NONE = 0
 
 	
-	NO_START_ASAP = 1
+	SET_START_FRAME = 1
 
 
 public enum KLIB_HANDLE_TYPE:
@@ -1129,6 +1129,10 @@ public struct WINUSB_PIPE_INFORMATION:
 	
 	public Interval as byte
 
+	
+	public override def ToString() as string:
+		return string.Format('PipeType: {0}\nPipeId: {1}\nMaximumPacketSize: {2}\nInterval: {3}\n', PipeType, PipeId, MaximumPacketSize, Interval)
+
 
 [StructLayout(LayoutKind.Sequential, CharSet: CharSet.Ansi, Pack: 1)]
 public struct WINUSB_SETUP_PACKET:
@@ -1378,6 +1382,10 @@ public struct USB_INTERFACE_DESCRIPTOR:
 
 	
 	public iInterface as byte
+
+	
+	public override def ToString() as string:
+		return string.Format('BInterfaceNumber: {0}\nBAlternateSetting: {1}\nBNumEndpoints: {2}\nBInterfaceClass: {3}\nBInterfaceSubClass: {4}\nBInterfaceProtocol: {5}\n', bInterfaceNumber, bAlternateSetting, bNumEndpoints, bInterfaceClass, bInterfaceSubClass, bInterfaceProtocol)
 
 
 [StructLayout(LayoutKind.Sequential, CharSet: CharSet.Unicode, Pack: 1)]
@@ -1668,11 +1676,15 @@ public struct KSTM_CALLBACK:
 
 	
 	[MarshalAs(UnmanagedType.FunctionPtr)]
-	public Initialize as KSTM_INITIALIZE_CB
+	public Complete as KSTM_COMPLETE_CB
 
 	
 	[MarshalAs(UnmanagedType.FunctionPtr)]
-	public Complete as KSTM_COMPLETE_CB
+	public Started as KSTM_STARTED_CB
+
+	
+	[MarshalAs(UnmanagedType.FunctionPtr)]
+	public Stopped as KSTM_STOPPED_CB
 
 #endregion
 
@@ -1799,7 +1811,10 @@ public callable KSTM_ERROR_CB(StreamInfo as IntPtr, XferContext as IntPtr, Error
 public callable KSTM_SUBMIT_CB(StreamInfo as IntPtr, XferContext as IntPtr, Overlapped as IntPtr) as int
 
 [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
-public callable KSTM_INITIALIZE_CB(StreamInfo as IntPtr) as int
+public callable KSTM_STARTED_CB(StreamInfo as IntPtr, XferContext as IntPtr, XferContextIndex as int) as int
+
+[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+public callable KSTM_STOPPED_CB(StreamInfo as IntPtr, XferContext as IntPtr, XferContextIndex as int) as int
 
 [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
 public callable KSTM_COMPLETE_CB(StreamInfo as IntPtr, XferContext as IntPtr, ErrorCode as int) as int

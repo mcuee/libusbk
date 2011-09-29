@@ -54,6 +54,23 @@ binary distributions.
 #define KOVL_GET_PRIVATE_INFO(KOvl_Handle) ((((PKOVL_HANDLE_INTERNAL)(KOvl_Handle))->Private))
 #define IS_OVLK(mOverlapped) (ALLK_LIVE_HANDLE(((PKOVL_HANDLE_INTERNAL)mOverlapped),OvlK))
 
+#define ALLK_HANDLE_FOR_LOOP(HandlePosVar,AllKSection)	\
+	for (HandlePosVar=0; HandlePosVar < sizeof(AllK->AllKSection.Handles)/sizeof(AllK->AllKSection.Handles[0]); HandlePosVar++)
+
+#define POOLHANDLE_LIB_EXIT_CHECK(AllKSection)	do {												\
+	int pos;  																						\
+	for (pos=0; pos < sizeof(AllK.AllKSection.Handles)/sizeof(AllK.AllKSection.Handles[0]); pos++)	\
+	{ 																								\
+		if (AllK.AllKSection.Handles[pos].Base.Count.Ref != 0)  									\
+		{ 																							\
+			USBWRNN("Invalid %s handle reference count %d at index %d",   							\
+				DEFINE_TO_STR(AllKSection),   														\
+				AllK.AllKSection.Handles[pos].Base.Count.Ref,   									\
+				pos); 																				\
+		} 																							\
+	} 																								\
+}while(0)
+
 #define PUB_TO_PRIV(AllKSection,HandleType,K_Handle,K_Handle_Internal,ErrorAction)		\
 	if (!ALLK_VALID_HANDLE(K_Handle,AllKSection))										\
 	{																					\

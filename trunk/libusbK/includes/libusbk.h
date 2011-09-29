@@ -1571,6 +1571,9 @@ typedef enum _KOVL_WAIT_FLAG
     //! Always release the OverlappedK back to its pool.  If the operation timed-out, cancel it before releasing back to its pool.
     KOVL_WAIT_FLAG_RELEASE_ALWAYS				= 0x000F,
 
+    //! Uses alterable wait functions.  See http://msdn.microsoft.com/en-us/library/windows/desktop/ms687036%28v=vs.85%29.aspx
+    KOVL_WAIT_FLAG_ALERTABLE					= 0x0010,
+
 } KOVL_WAIT_FLAG;
 
 //! \c Overlapped pool config flags.
