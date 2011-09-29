@@ -37,37 +37,28 @@ THE POSSIBILITY OF SUCH DAMAGE.
 	#define BM_MANAGE_SOF_PERIOD_RX
 	#define BM_MANAGE_SOF_PERIOD_TX
 
-	#ifndef USB_DEVICE_HS_SUPPORT
-		// FS ISO Setup
+	#ifdef USB_DEVICE_HS_SUPPORT
+		// HS ISO Setup
 		#if (BM_EP_INTERVAL == 1)
-			#define BM_EP_POLLCOUNT			1
-			#define BM_EP_PACKET_MULTIPLIER	(1024/BM_EP_MAX_PACKET_SIZE)
-		#elif (BM_EP_INTERVAL > 1 && BM_EP_INTERVAL < 4)
-			#define BM_EP_POLLCOUNT			1
-			#define BM_EP_PACKET_MULTIPLIER	(2048/BM_EP_MAX_PACKET_SIZE)
-		#elif (BM_EP_INTERVAL > 3 && BM_EP_INTERVAL < 8)
-			#define BM_EP_POLLCOUNT			1
-			#define BM_EP_PACKET_MULTIPLIER	(4096/BM_EP_MAX_PACKET_SIZE)
-		#elif (BM_EP_INTERVAL > 7 && BM_EP_INTERVAL < 16)
-			#define BM_EP_POLLCOUNT			1
-			#define BM_EP_PACKET_MULTIPLIER	(8192/BM_EP_MAX_PACKET_SIZE)
+			#define BM_EP_POLLCOUNT			8
+			#define BM_EP_PACKET_MULTIPLIER	64
+		#elif (BM_EP_INTERVAL == 2)
+			#define BM_EP_POLLCOUNT			8
+			#define BM_EP_PACKET_MULTIPLIER	32
+		#elif (BM_EP_INTERVAL == 3)
+			#define BM_EP_POLLCOUNT			8
+			#define BM_EP_PACKET_MULTIPLIER	16
+		#elif (BM_EP_INTERVAL == 4)
+			#define BM_EP_POLLCOUNT			8
+			#define BM_EP_PACKET_MULTIPLIER	8
 		#else
 			#error "BM_EP_INTERVAL is out of range."
 		#endif
 	#else
-		// HS ISO Setup
+		// FS ISO Setup
 		#if (BM_EP_INTERVAL == 1)
 			#define BM_EP_POLLCOUNT			8
-			#define BM_EP_PACKET_MULTIPLIER	(8192/BM_EP_MAX_PACKET_SIZE)
-		#elif (BM_EP_INTERVAL == 2)
-			#define BM_EP_POLLCOUNT			8
-			#define BM_EP_PACKET_MULTIPLIER	(4096/BM_EP_MAX_PACKET_SIZE)
-		#elif (BM_EP_INTERVAL == 3)
-			#define BM_EP_POLLCOUNT			8
-			#define BM_EP_PACKET_MULTIPLIER	(2048/BM_EP_MAX_PACKET_SIZE)
-		#elif (BM_EP_INTERVAL == 4)
-			#define BM_EP_POLLCOUNT			8
-			#define BM_EP_PACKET_MULTIPLIER	(1024/BM_EP_MAX_PACKET_SIZE)
+			#define BM_EP_PACKET_MULTIPLIER	8
 		#else
 			#error "BM_EP_INTERVAL is out of range."
 		#endif
