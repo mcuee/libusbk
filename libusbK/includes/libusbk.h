@@ -3543,27 +3543,14 @@ extern "C" {
 	/*!
 	*
 	* \param[in] StreamHandle
-	* The stream to start.
+	* The stream to start. A stream handle is created with \ref StmK_Init.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*
 	* \par
-	* When a stream is started, the internal stream thread used for all I/O operations is created and started.
-	* Once started, read/write streams take the following courses of action:
-	* - Read Stream
-	*   -# The internal stream thread begings submitting read requests to the pipe. The stream API will always
-	*      try to keep \c MaxPendingIO requests submitted at all times.
-	*   -# When the pending I/O count reaches \c MaxPendingIO, it begins waiting on the oldest pending transfer
-	*      to complete.
-	*   -# When a transfer completes, the internal pending I/O count is decremented and the transfers is moved
-	*      into an internal finished list and remains here until it is retrieved by the user via \ref StmK_Read.
-	* - Write Stream
-	*   -# Initially, the internal stream thread is idled because the user has not supplied it with any write
-	*      request via \ref StmK_Write.
-	*   -# When write request are submitted transfers are move from the an internal idle list into a queued
-	*      where they await processing by the internal stream thread.
-	*   -# When a transfer completes, the internal pending I/O count is decremented and the transfers is moved
-	*      back into the idle list where it can be reused again by subsequent \ref StmK_Write requests.
+	* When a stream is started, an internal thread is created for managing pipe I/O operations. If a
+	* \ref KSTM_CALLBACK::Started callback function is assgined, it is executed \b for each transfer context.
+	* (\b MaxPendingTransfers) See \StmK_Init.
 	*
 	*/
 	KUSB_EXP BOOL KUSB_API StmK_Start(
@@ -3606,6 +3593,19 @@ extern "C" {
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*
+	* - Read Stream Operations:
+	*   -# The internal stream thread will always try and keep reads pending as specified by \b MaxPendingIO in
+	*      \ref StmK_Init.
+	*	-# As the stream submits transfers, it increments the \b PendingIO and \b PendingTransfer counts. As it
+	*	   completes transfers, it decrements the \b PendingIO count. As the user processes transfers with
+	*	   \ref StmK_Read, it decrements the \b PendingTransfer count and release control of the transfer context
+	*	   back to the stream where it is re-used.
+	*   -# When the pending I/O count reaches \c MaxPendingIO, the stream completes the oldest
+	*      \b PendingTransfer and moves it into a FIFO complete where it awaits user processing via the
+	*      \ref StmK_Read function.
+	*	-# If the stream has not exhausted its MaxPendingTransfers count, another read request is submitted
+	*	   immediately to satisfy \b MaxPendingIO.
+	*
 	*/
 	KUSB_EXP BOOL KUSB_API StmK_Read(
 	    _in KSTM_HANDLE StreamHandle,
@@ -3633,6 +3633,16 @@ extern "C" {
 	* On success, receives the actual number of bytes that were copied into the stream buffer.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
+	* - Write Stream Operations:
+	*   -# The internal stream thread will always try and exhaust all pending transfers submitted by the user
+	*      via \ref StmK_Write.
+	*	-# As the user submits transfers via \ref StmK_Write, the \b PendingTransfer count is inceremented and
+	*	   transfers are added to a queued FIFO list where they await processing by the internal stream thread.
+	*	-# While the queued FIFO list is not empty and \b PendingIO count is less than \b MaxPendingIO, The
+	*	   \b PendingIO count increments and the request is sent to the device.
+	*   -# When a transfer completes, the internal pending I/O count is decremented and the transfers is moved
+	*      back into the idle list where it can be reused again by subsequent \ref StmK_Write requests.
 	*
 	*/
 	KUSB_EXP BOOL KUSB_API StmK_Write(

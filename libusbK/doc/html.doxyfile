@@ -209,7 +209,9 @@ ALIASES                = "readonly=<B>[</B><SPAN class=\"paramname\">ReadOnly</S
                          ENDWINERROR=</TD></TR> \
                          ENDWINERRORTABLE=</TABLE> \
                          "mailinglist=<A href=\"https://lists.sourceforge.net/lists/listinfo/libusb-win32-devel\" target=\"_blank\">https://lists.sourceforge.net/lists/listinfo/libusb-win32-devel</A>" \
-                         "wdk=<A href=\"http://msdn.microsoft.com/en-us/windows/hardware/gg487463.aspx\" target=\"_blank\">Windows Driver Kit</A>"
+                         "wdk=<A href=\"http://msdn.microsoft.com/en-us/windows/hardware/gg487463.aspx\" target=\"_blank\">Windows Driver Kit</A>" \
+                         "disadvantages=<span class=\"bad\">disadvantages</span>" \
+                         "advantages=<span class=\"good\">advantages</span>"
 
 # Set the OPTIMIZE_OUTPUT_FOR_C tag to YES if your project consists of C 
 # sources only. Doxygen will then generate output that is more tailored for C. 

@@ -200,6 +200,42 @@ suspend, this registry value only pertains to system suspend.
 		<td>Off</td>
 	</tr>
 
+	<tr>
+		<td>0x30</td>
+		<td>SIMUL_PARALLEL_REQUESTS</td>
+		<td>
+			Maximum number of transfers that can be asynchronously delivered at a time.
+            Available in version 1.9 and later versions of KMDF. Requires \b RAW_IO.
+            http://msdn.microsoft.com/en-us/library/windows/hardware/ff552359%28v=vs.85%29.aspx.
+        </td>
+		<td>Bulk (IN)<br/>Bulk (OUT)<br/>Interrupt (IN)<br/>Interrupt (OUT)<br/>ISO (IN)<br/>ISO (OUT)</td>
+		<td>Unlimited</td>
+	</tr>
+
+	<tr>
+		<td>0x20</td>
+		<td>ISO_START_LATENCY</td>
+		<td>TODO:</td>
+		<td>ISO (IN)<br/>ISO (OUT)</td>
+		<td>8 for full speed, 32 for high speed</td>
+	</tr>
+
+	<tr>
+		<td>0x21</td>
+		<td>ISO_ALWAYS_START_ASAP</td>
+		<td>TODO:</td>
+		<td>ISO (IN)<br/>ISO (OUT)</td>
+		<td>On for OUT endpoints, Off for IN endpoints</td>
+	</tr>
+
+	<tr>
+		<td>0x22</td>
+		<td>ISO_NUM_FIXED_PACKETS</td>
+		<td>TODO:</td>
+		<td>ISO (OUT)</td>
+		<td>0 (disabled)</td>
+	</tr>
+
 </table>
 
 * \endhtmlonly
@@ -410,6 +446,50 @@ suspend, this registry value only pertains to system suspend.
         <td>
             On resume from suspend, libusbK resets the endpoint before it allows the caller
             to send new requests to the endpoint.
+        </td>
+    </tr>
+    <tr>
+        <td>
+            SIMUL_PARALLEL_REQUESTS
+        </td>
+        <td>
+			TODO:
+        </td>
+        <td>
+			TODO:
+        </td>
+    </tr>
+    <tr>
+        <td>
+            ISO_START_LATENCY
+        </td>
+        <td>
+            TODO:
+        </td>
+        <td>
+            TODO:
+        </td>
+    </tr>
+    <tr>
+        <td>
+            ISO_ALWAYS_START_ASAP
+        </td>
+        <td>
+            TODO:
+        </td>
+        <td>
+            TODO:
+        </td>
+    </tr>
+    <tr>
+        <td>
+            ISO_NUM_FIXED_PACKETS
+        </td>
+        <td>
+            TODO:
+        </td>
+        <td>
+            TODO:
         </td>
     </tr>
 </table>

@@ -260,6 +260,14 @@ span.keywordflow {
 	color: #e08000
 }
 
+span.bad {
+	color: #800000
+}
+
+span.good {
+	color: #0c8000
+}
+
 span.comment {
 	color: #800000
 }

@@ -57,7 +57,20 @@ standard C library are provided for the folllowing languages:
 - \subpage usbk_mailing_list
   <BR>All libusbK related questions and issues.
   <HR>
+
+
+<H3>Other Features</H3>
+- \subpage usbk_power_management
+   <BR>
+   Use power management to make a USB widget "green". Developers can suspend/resume
+   manually or at a specfied amount of inactivity.  Devices always awake automatically when
+   IO is requested. 
+- \subpage usbk_pipe_management
+   <BR>
+   Use pipe polices to customize pipe transfers and operations.
+
 */
+
 
 /*! \addtogroup libk USB General
 * \brief General function/typdef/defines.

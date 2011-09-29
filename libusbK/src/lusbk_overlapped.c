@@ -40,23 +40,25 @@ static void KUSB_API Cleanup_OvlPoolK(PKOVL_POOL_HANDLE_INTERNAL handle)
 
 	while(AL_PopHead_Ovl(handle->MasterList, &ovlItem) == ERROR_SUCCESS)
 	{
-		if (ovlItem->IsAcquired)
+		ovlItem->Pool = NULL;
+		while(ALLK_INUSE_HANDLE(ovlItem))
 		{
-			ULONG dummy;
-			OvlK_WaitAndRelease(ovlItem, 0, &dummy);
+			PoolHandle_Dec_OvlK(ovlItem);
 		}
-		PoolHandle_Dec_OvlK(ovlItem);
 	}
 
 	AL_Destroy_Ovl(&handle->MasterList, AllK.Heap);
 	AL_Destroy_Ovl(&handle->List, AllK.Heap);
 
+	handle->MasterList = NULL;
+	handle->List = NULL;
 }
 
 static void KUSB_API Cleanup_OvlK(PKOVL_HANDLE_INTERNAL handle)
 {
 	PoolHandle_Dead_OvlK(handle);
 	SafeCloseEvent(handle->Overlapped.hEvent);
+	handle->Pool = NULL;
 }
 
 static void o_Reuse(PKOVL_HANDLE_INTERNAL overlapped)
@@ -124,7 +126,7 @@ KUSB_EXP BOOL KUSB_API OvlK_Release(
 	Pub_To_Priv_OvlK(OverlappedK, overlapped, return FALSE);
 	ErrorParamAction(!PoolHandle_Inc_OvlK(overlapped), "OverlappedK", return FALSE);
 
-	success = (InterlockedExchange(&overlapped->IsAcquired, 0) != 0);
+	success = overlapped->Pool ? (InterlockedExchange(&overlapped->IsAcquired, 0) != 0) : FALSE;
 	ErrorSet(!success, Done, ERROR_ACCESS_DENIED, "OverlappedK is not acquired.");
 
 	AL_PushTail_Ovl(overlapped->Pool->List, overlapped);
@@ -212,6 +214,7 @@ KUSB_EXP BOOL KUSB_API OvlK_Wait(
 
 	Pub_To_Priv_OvlK(OverlappedK, overlapped, return FALSE);
 	ErrorParamAction(!TransferredLength, "TransferredLength", return FALSE);
+	ErrorParamAction(!overlapped->Pool, "OverlappedK.PoolHandle", return FALSE);
 
 	ErrorParamAction(!PoolHandle_Inc_OvlK(overlapped), "OverlappedK", return FALSE);
 
