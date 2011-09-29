@@ -29,8 +29,7 @@ binary distributions.
 #define ALLK_DBG_PRINT_SECTION(AllKSection)	\
 	USBLOG_PRINTLN("  %u %s Handles: HandleSize %u PoolSize %u (bytes)",(sizeof(AllK->AllKSection.Handles)/sizeof(AllK->AllKSection.Handles[0])),DEFINE_TO_STR(AllKSection),sizeof(AllK->AllKSection.Handles[0]), sizeof(AllK->AllKSection))
 
-#define ALLK_HANDLE_FOR_LOOP(HandlePosVar,AllKSection)	\
-	for (HandlePosVar=0; HandlePosVar < sizeof(AllK->AllKSection.Handles)/sizeof(AllK->AllKSection.Handles[0]); HandlePosVar++)
+
 
 #define ALLK_HANDLES_INIT(AllKSection) do {										\
 	memset(AllK->AllKSection.Handles, 0, sizeof(AllK->AllKSection.Handles));	\
@@ -183,10 +182,15 @@ void CheckLibInit()
 				PoolHandle->Base.Evt.Cleanup(PoolHandle);								\
 				PoolHandle->Base.Evt.Cleanup=NULL;										\
 			}																			\
-			mSpin_Release(&PoolHandle->Base.Count.Use);								\
+			mSpin_Release(&PoolHandle->Base.Count.Use);									\
 			return FALSE;																\
 		}																				\
-		return (lockCnt > 0);															\
+		else if (lockCnt < 0)															\
+		{																				\
+			USBWRNN("LockCnt=%d",lockCnt);												\
+			return FALSE;																\
+		}																				\
+		return TRUE;																	\
 	}
 
 /*

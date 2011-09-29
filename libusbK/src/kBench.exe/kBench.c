@@ -796,7 +796,9 @@ VOID VerifyLoopData(PBENCHMARK_TEST_PARAM Test, PUCHAR chData, int dataRemaining
 				}
 				else
 				{
-					CONMSG("Loop data synchronized. Offset=%u Byte=%02Xh.\n", syncOffset, chData[0]);
+					float reliability = ((float)verifyStageSize / (float)dataLength) * 100.0F;
+					CONMSG("Loop data synchronized. Offset=%u Byte=%02Xh Reliability=%.1f%%.\n",
+					       syncOffset, chData[0], reliability);
 				}
 			}
 
@@ -1421,29 +1423,38 @@ void GetCurrentBytesSec(PBENCHMARK_TRANSFER_PARAM transferParam, DOUBLE* bps)
 
 void ShowRunningStatus(PBENCHMARK_TRANSFER_PARAM transferParam)
 {
-	BENCHMARK_TRANSFER_PARAM temp;
+	static BENCHMARK_TRANSFER_PARAM gRunningStatusTransferParam;
 	DOUBLE bpsOverall;
 	DOUBLE bpsLastTransfer;
 
 	// LOCK the display critical section
 	EnterCriticalSection(&DisplayCriticalSection);
 
-	memcpy(&temp, transferParam, sizeof(BENCHMARK_TRANSFER_PARAM));
+	memcpy(&gRunningStatusTransferParam, transferParam, sizeof(BENCHMARK_TRANSFER_PARAM));
 
 	// UNLOCK the display critical section
 	LeaveCriticalSection(&DisplayCriticalSection);
 
-	if ((!temp.StartTick) || (temp.StartTick >= temp.LastTick))
+	if ((!gRunningStatusTransferParam.StartTick) || (gRunningStatusTransferParam.StartTick >= gRunningStatusTransferParam.LastTick))
 	{
 		CONMSG("Synchronizing %d..\n", abs(transferParam->Packets));
 	}
 	else
 	{
-		GetAverageBytesSec(&temp, &bpsOverall);
-		GetCurrentBytesSec(&temp, &bpsLastTransfer);
+		GetAverageBytesSec(&gRunningStatusTransferParam, &bpsOverall);
+		GetCurrentBytesSec(&gRunningStatusTransferParam, &bpsLastTransfer);
 		transferParam->LastStartTick = 0;
-		CONMSG("Avg. Bytes/s: %.2f Transfers: %d Bytes/s: %.2f\n",
-		       bpsOverall, temp.Packets, bpsLastTransfer);
+
+		if (transferParam->LastTransferred == 0)
+		{
+			CONMSG("Avg. Bytes/s: %.2f Transfers: %d 0 Zero-length-transfer(s)\n",
+			       bpsOverall, gRunningStatusTransferParam.Packets);
+		}
+		else
+		{
+			CONMSG("Avg. Bytes/s: %.2f Transfers: %d Bytes/s: %.2f\n",
+			       bpsOverall, gRunningStatusTransferParam.Packets, bpsLastTransfer);
+		}
 	}
 
 }

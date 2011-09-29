@@ -17,8 +17,12 @@ binary distributions.
 ********************************************************************!*/
 
 #include "lusbk_private.h"
+#include "lusbk_handles.h"
 
 #if defined(DYNAMIC_DLL)
+
+// warning C4127: conditional expression is constant.
+#pragma warning(disable: 4127)
 
 /* DLL main entry point */
 BOOL WINAPI DllMain(HANDLE module, DWORD reason, LPVOID reserved)
@@ -31,6 +35,16 @@ BOOL WINAPI DllMain(HANDLE module, DWORD reason, LPVOID reserved)
 	case DLL_PROCESS_ATTACH:
 		break;
 	case DLL_PROCESS_DETACH:
+#ifdef DEBUG_LOGGING_ENABLED
+		POOLHANDLE_LIB_EXIT_CHECK(HotK);
+		POOLHANDLE_LIB_EXIT_CHECK(LstK);
+		POOLHANDLE_LIB_EXIT_CHECK(LstInfoK);
+		POOLHANDLE_LIB_EXIT_CHECK(UsbK);
+		POOLHANDLE_LIB_EXIT_CHECK(DevK);
+		POOLHANDLE_LIB_EXIT_CHECK(OvlK);
+		POOLHANDLE_LIB_EXIT_CHECK(OvlPoolK);
+		POOLHANDLE_LIB_EXIT_CHECK(StmK);
+#endif
 		break;
 	case DLL_THREAD_ATTACH:
 		break;

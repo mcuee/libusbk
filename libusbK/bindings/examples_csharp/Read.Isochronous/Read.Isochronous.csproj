@@ -46,9 +46,10 @@
     <Compile Include="..\HiPerfTimer.cs">
       <Link>HiPerfTimer.cs</Link>
     </Compile>
-    <Compile Include="..\libusbKTest\libusbKFinal.cs">
-      <Link>libusbKFinal.cs</Link>
+    <Compile Include="..\libusbKTest\libusbK.cs">
+      <Link>libusbK.cs</Link>
     </Compile>
+    <Compile Include="BenchmarkTestDevice.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
