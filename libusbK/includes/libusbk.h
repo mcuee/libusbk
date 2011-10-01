@@ -3553,7 +3553,7 @@ extern "C" {
 	* \par
 	* When a stream is started, an internal thread is created for managing pipe I/O operations. If a
 	* \ref KSTM_CALLBACK::Started callback function is assgined, it is executed \b for each transfer context.
-	* (\b MaxPendingTransfers) See \StmK_Init.
+	* (\b MaxPendingTransfers) See \ref StmK_Init.
 	*
 	*/
 	KUSB_EXP BOOL KUSB_API StmK_Start(
