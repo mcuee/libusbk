@@ -185,6 +185,7 @@ Source: "@K_LIBUSB0_DEP_DIR@\bin\amd64\install-filter-win.exe"; DestDir: {app}; 
 Source: "@K_PKG@\@K_LIBUSBK_NAME@-help.chm"; DestDir: {app}; Components: devpackage\chmhelp;
 Source: "@K_PKG@\includes\*"; DestDir: {app}\includes; Components: devpackage\examples;
 Source: "@K_PKG@\examples\*"; Flags: recursesubdirs; DestDir: {app}\examples; Components: devpackage\examples;
+Source: "@K_PKG@\bindings\*"; Flags: recursesubdirs; DestDir: {app}\bindings; Components: devpackage\examples;
 Source: "@K_PKG_BIN@\dll\@K_LIBUSBK_NAME@*";  Flags: recursesubdirs; DestDir: {app}\bin\dll; Components: devpackage\examples;
 Source: "@K_PKG_BIN@\lib\@K_LIBUSBK_NAME@*";  Flags: recursesubdirs; DestDir: {app}\bin\lib; Components: devpackage\examples;
 Source: "@K_PKG@\license\*"; Flags: recursesubdirs; DestDir: {app}\license;

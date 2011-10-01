@@ -17,6 +17,9 @@
 # Example projects and solutions
 \..\examples\*; \examples\;
 #
+##
+# bindings
+\..\bindings\*; \bindings\;
 #
 ##
 # Licenses
