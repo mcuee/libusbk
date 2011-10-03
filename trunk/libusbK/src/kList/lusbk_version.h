@@ -1,4 +1,4 @@
-/* "kBench.exe" version header. ++ auto-generated
+/* "kList.exe" version header. ++ auto-generated
 */
 #ifndef VERSION
 
@@ -17,8 +17,8 @@
 #define VERSION_MINOR 0
 #define VERSION_MICRO 4
 #define VERSION_NANO 0
-#define VERSION_DATE 09/29/2011
-#define RC_FILENAME_STR "kBench.exe"
+#define VERSION_DATE 10/03/2011
+#define RC_FILENAME_STR "kList.exe"
 
 #define RC_VERSION VERSION_MAJOR,VERSION_MINOR,VERSION_MICRO,VERSION_NANO
 #define VERSION VERSION_MAJOR.VERSION_MINOR.VERSION_MICRO.VERSION_NANO

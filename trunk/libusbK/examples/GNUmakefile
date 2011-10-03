@@ -53,6 +53,7 @@ all: xfer-async-loop
 all: power-policy-suspend
 all: pipe-polcy-other
 all: xfer-iso-read
+all: xfer-control
 
 # make the hot-plug-monitor example for the specified "arch" (default is x86)
 #
@@ -124,6 +125,11 @@ pipe-polcy-other:
 .PHONY: xfer-iso-read
 xfer-iso-read:
 	$(MAKE) --no-print-directory --directory=./xfer-iso-read $(subst w -- ,,$(MAKEFLAGS)) all
+# make the xfer-control example for the specified "arch" (default is x86)
+#
+.PHONY: xfer-control
+xfer-control:
+	$(MAKE) --no-print-directory --directory=./xfer-control $(subst w -- ,,$(MAKEFLAGS)) all
 
 # make all examples for x86 and amd64 archs. ("arch" argument not used)
 #
@@ -150,4 +156,5 @@ clean:
 	$(MAKE) --directory=./power-policy-suspend $(MAKEFLAGS) clean
 	$(MAKE) --directory=./pipe-polcy-other $(MAKEFLAGS) clean
 	$(MAKE) --directory=./xfer-iso-read $(MAKEFLAGS) clean
+	$(MAKE) --directory=./xfer-control $(MAKEFLAGS) clean
 	$(RM) ./_ReSharper*

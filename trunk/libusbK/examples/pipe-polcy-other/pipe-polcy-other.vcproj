@@ -67,7 +67,6 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib libusbK.lib"
-				Version="3.0.0.0"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="..\..\bin\Debug\libusbK.lib\Win32;..\lib\x86;..\..\bin\lib\x86"
 				IgnoreAllDefaultLibraries="true"
@@ -146,7 +145,6 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib libusbK.lib"
-				Version="3.0.0.0"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="..\..\bin\Debug\libusbK.lib\x64;..\lib\amd64;..\..\bin\lib\amd64"
 				IgnoreAllDefaultLibraries="true"
@@ -225,7 +223,6 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib libusbK.lib"
-				Version="3.0.0.0"
 				AdditionalLibraryDirectories="..\..\bin\Release\libusbK.lib\Win32;..\lib\x86;..\..\bin\lib\x86"
 				IgnoreAllDefaultLibraries="true"
 				SubSystem="1"
@@ -303,7 +300,6 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib libusbK.lib"
-				Version="3.0.0.0"
 				AdditionalLibraryDirectories="..\..\bin\Release\libusbK.lib\x64;..\lib\amd64;..\..\bin\lib\amd64"
 				IgnoreAllDefaultLibraries="true"
 				SubSystem="1"
