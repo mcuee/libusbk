@@ -2,7 +2,7 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9.00"
-	Name="kList.exe"
+	Name="kList"
 	ProjectGUID="{046C67B6-9D81-473F-8FD4-D67C9EB18B99}"
 	RootNamespace="kList"
 	Keyword="Win32Proj"
