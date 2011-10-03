@@ -36,9 +36,6 @@
 				Name="VCXMLDataGeneratorTool"
 			/>
 			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
 				Name="VCMIDLTool"
 			/>
 			<Tool
@@ -68,7 +65,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib libusbK.lib"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="..\..\bin\Debug\libusbK.lib\Win32;..\lib\x86;..\..\bin\lib\x86"
+				AdditionalLibraryDirectories="..\..\bin\lib\Win32\Debug;..\lib\x86;..\..\bin\lib\x86"
 				IgnoreAllDefaultLibraries="true"
 				GenerateDebugInformation="true"
 				SubSystem="1"
@@ -113,9 +110,6 @@
 				Name="VCXMLDataGeneratorTool"
 			/>
 			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
 				Name="VCMIDLTool"
 				TargetEnvironment="3"
 			/>
@@ -146,7 +140,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib libusbK.lib"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="..\..\bin\Debug\libusbK.lib\x64;..\lib\amd64;..\..\bin\lib\amd64"
+				AdditionalLibraryDirectories="..\..\bin\lib\x64\Debug;..\lib\amd64;..\..\bin\lib\amd64"
 				IgnoreAllDefaultLibraries="true"
 				GenerateDebugInformation="true"
 				SubSystem="1"
@@ -191,9 +185,6 @@
 				Name="VCXMLDataGeneratorTool"
 			/>
 			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
 				Name="VCMIDLTool"
 			/>
 			<Tool
@@ -223,7 +214,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib libusbK.lib"
-				AdditionalLibraryDirectories="..\..\bin\Release\libusbK.lib\Win32;..\lib\x86;..\..\bin\lib\x86"
+				AdditionalLibraryDirectories="..\..\bin\lib\Win32\Release;..\lib\x86;..\..\bin\lib\x86"
 				IgnoreAllDefaultLibraries="true"
 				SubSystem="1"
 				TargetMachine="1"
@@ -267,9 +258,6 @@
 				Name="VCXMLDataGeneratorTool"
 			/>
 			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
 				Name="VCMIDLTool"
 				TargetEnvironment="3"
 			/>
@@ -300,7 +288,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib libusbK.lib"
-				AdditionalLibraryDirectories="..\..\bin\Release\libusbK.lib\x64;..\lib\amd64;..\..\bin\lib\amd64"
+				AdditionalLibraryDirectories="..\..\bin\lib\x64\Release;..\lib\amd64;..\..\bin\lib\amd64"
 				IgnoreAllDefaultLibraries="true"
 				SubSystem="1"
 				TargetMachine="17"
