@@ -9,6 +9,7 @@ DIRS= \
      show-device \
      xfer-async \
      xfer-async-loop \
+     xfer-control \
      xfer-iso \
      xfer-iso-read \
      xfer-stream \

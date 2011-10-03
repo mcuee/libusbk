@@ -21,7 +21,7 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="$(SolutionDir)\bin\chk\libusbK_sys\i386"
+			OutputDirectory="$(SolutionDir)bin\sys\i386"
 			IntermediateDirectory="$(ProjectDir)objchk_wxp_x86\i386"
 			ConfigurationType="0"
 			>
@@ -41,7 +41,7 @@
 		</Configuration>
 		<Configuration
 			Name="Debug|x64"
-			OutputDirectory="$(SolutionDir)\bin\chk\libusbK_sys\amd64"
+			OutputDirectory="$(SolutionDir)bin\sys\amd64"
 			IntermediateDirectory="$(ProjectDir)objchk_win7_amd64\amd64"
 			ConfigurationType="0"
 			>
@@ -61,7 +61,7 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="$(SolutionDir)\bin\fre\libusbK_sys\i386"
+			OutputDirectory="$(SolutionDir)bin\sys\i386"
 			IntermediateDirectory="$(ProjectDir)objfre_wxp_x86\i386"
 			ConfigurationType="0"
 			>
@@ -81,7 +81,7 @@
 		</Configuration>
 		<Configuration
 			Name="Release|x64"
-			OutputDirectory="$(SolutionDir)\bin\fre\libusbK_sys\amd64"
+			OutputDirectory="$(SolutionDir)bin\sys\amd64"
 			IntermediateDirectory="$(ProjectDir)objfre_win7_amd64\amd64"
 			ConfigurationType="0"
 			>
@@ -90,7 +90,7 @@
 				BuildCommandLine="$(SolutionDir)make.cmd build nogetc BUILD_QUIET=0 fre x64 WDK_SOURCES_LIST=libusbK.sys;"
 				ReBuildCommandLine="$(SolutionDir)make.cmd build nogetc BUILD_QUIET=0 fre x64 WDK_SOURCES_LIST=libusbK.sys;"
 				CleanCommandLine="$(SolutionDir)make.cmd clean nogetc BUILD_QUIET=0 fre x64 WDK_SOURCES_LIST=libusbK.sys;"
-				Output="$(TargetFileName)"
+				Output="libusbK.sys"
 				PreprocessorDefinitions="WIN32;NDEBUG"
 				IncludeSearchPath="..;Z:\WinDDK\7600.16385.1\inc\api;Z:\WinDDK\7600.16385.1\inc\ddk;Z:\WinDDK\7600.16385.1\inc\crt;Z:\WinDDK\7600.16385.1\inc\wdf\kmdf\1.9"
 				ForcedIncludes=""
