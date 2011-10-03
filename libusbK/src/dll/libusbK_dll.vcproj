@@ -139,7 +139,6 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib advapi32.lib $(NOINHERIT)"
-				OutputFile="$(OutDir)\$(ProjectName)"
 				IgnoreAllDefaultLibraries="true"
 				ModuleDefinitionFile="libusbK.def"
 				AddModuleNamesToAssembly=""
@@ -216,7 +215,6 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib advapi32.lib $(NOINHERIT)"
-				OutputFile="$(OutDir)\$(ProjectName)"
 				IgnoreAllDefaultLibraries="true"
 				ModuleDefinitionFile="libusbK.def"
 				AddModuleNamesToAssembly=""
@@ -293,7 +291,6 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib advapi32.lib $(NOINHERIT)"
-				OutputFile="$(OutDir)\$(ProjectName)"
 				IgnoreAllDefaultLibraries="true"
 				ModuleDefinitionFile="libusbK.def"
 				AddModuleNamesToAssembly=""
