@@ -68,7 +68,6 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib advapi32.lib setupapi.lib $(NOINHERIT)"
-				OutputFile="$(OutDir)\$(ProjectName)"
 				LinkIncremental="2"
 				IgnoreAllDefaultLibraries="true"
 				IgnoreDefaultLibraryNames=""
@@ -149,7 +148,6 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib advapi32.lib setupapi.lib $(NOINHERIT)"
-				OutputFile="$(OutDir)\$(ProjectName)"
 				LinkIncremental="2"
 				IgnoreAllDefaultLibraries="true"
 				IgnoreDefaultLibraryNames=""
@@ -230,7 +228,6 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib advapi32.lib setupapi.lib $(NOINHERIT)"
-				OutputFile="$(OutDir)\$(ProjectName)"
 				LinkIncremental="1"
 				IgnoreAllDefaultLibraries="true"
 				IgnoreDefaultLibraryNames="libcmt"
@@ -313,7 +310,6 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib advapi32.lib setupapi.lib $(NOINHERIT)"
-				OutputFile="$(OutDir)\$(ProjectName)"
 				LinkIncremental="1"
 				IgnoreAllDefaultLibraries="true"
 				IgnoreDefaultLibraryNames=""
