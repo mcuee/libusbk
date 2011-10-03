@@ -2,7 +2,7 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9.00"
-	Name="kBench.exe"
+	Name="kBench"
 	ProjectGUID="{046C67B6-9D81-473F-B738-D67C9EB18B99}"
 	RootNamespace="kBench"
 	Keyword="Win32Proj"
