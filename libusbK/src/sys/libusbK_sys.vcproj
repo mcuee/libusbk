@@ -2,7 +2,7 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9.00"
-	Name="libusbK.sys"
+	Name="libusbK"
 	ProjectGUID="{6F681E4D-0C70-4D7E-A55F-74913E78138E}"
 	RootNamespace="libusbK"
 	Keyword="MakeFileProj"

@@ -2,7 +2,7 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9.00"
-	Name="libusbK.lib"
+	Name="libusbK"
 	ProjectGUID="{F2114C97-2F90-44B2-86AF-E5AE662458BF}"
 	RootNamespace="libusbK"
 	TargetFrameworkVersion="196613"
@@ -20,8 +20,8 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="$(SolutionDir)bin\$(ConfigurationName)\$(ProjectName)\$(PlatformName)"
-			IntermediateDirectory="$(SolutionDir)bin\$(ConfigurationName)\$(ProjectName)\$(PlatformName)"
+			OutputDirectory="$(SolutionDir)bin\lib\$(PlatformName)\$(ConfigurationName)"
+			IntermediateDirectory="$(SolutionDir)bin\lib\$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="4"
 			CharacterSet="2"
 			>
@@ -64,7 +64,6 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="$(OutDir)\$(ProjectName)"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -84,8 +83,8 @@
 		</Configuration>
 		<Configuration
 			Name="Debug|x64"
-			OutputDirectory="$(SolutionDir)bin\$(ConfigurationName)\$(ProjectName)\$(PlatformName)"
-			IntermediateDirectory="$(SolutionDir)bin\$(ConfigurationName)\$(ProjectName)\$(PlatformName)"
+			OutputDirectory="$(SolutionDir)bin\lib\$(PlatformName)\$(ConfigurationName)"
+			IntermediateDirectory="$(SolutionDir)bin\lib\$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="4"
 			CharacterSet="2"
 			>
@@ -129,7 +128,6 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="$(OutDir)\$(ProjectName)"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -149,8 +147,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="$(SolutionDir)bin\$(ConfigurationName)\$(ProjectName)\$(PlatformName)"
-			IntermediateDirectory="$(SolutionDir)bin\$(ConfigurationName)\$(ProjectName)\$(PlatformName)"
+			OutputDirectory="$(SolutionDir)bin\lib\$(PlatformName)\$(ConfigurationName)"
+			IntermediateDirectory="$(SolutionDir)bin\lib\$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="4"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
@@ -195,7 +193,6 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="$(OutDir)\$(ProjectName)"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -215,8 +212,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release|x64"
-			OutputDirectory="$(SolutionDir)bin\$(ConfigurationName)\$(ProjectName)\$(PlatformName)"
-			IntermediateDirectory="$(SolutionDir)bin\$(ConfigurationName)\$(ProjectName)\$(PlatformName)"
+			OutputDirectory="$(SolutionDir)bin\lib\$(PlatformName)\$(ConfigurationName)"
+			IntermediateDirectory="$(SolutionDir)bin\lib\$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="4"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
@@ -262,7 +259,6 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="$(OutDir)\$(ProjectName)"
 			/>
 			<Tool
 				Name="VCALinkTool"
