@@ -14,8 +14,11 @@ SET CreateTempFileList=
 REM :: REQUIRED dependency - DOSCMD  
 IF NOT DEFINED DCMD (
 	SET MAKE_CMD_PATH=%~dp0
+	PUSHD %CD%
+	CD /D "!MAKE_CMD_PATH!"
 	FOR /F "usebackq eol=; tokens=* delims=" %%D IN (`dir /A-D /B /S "doscmd.exe" "!MAKE_CMD_PATH!\doscmd.exe"`) DO IF NOT DEFINED DCMD SET DCMD=%%~D
 	IF NOT DEFINED DCMD CALL :FindFileInPath DCMD doscmd.exe
+	POPD
 	IF DEFINED DCMD (
 		REM - doscmd needs added to the path to work properly as a command in a for loop; this change is temporary
 		CALL :PathSplit "!DCMD!"
@@ -32,7 +35,6 @@ IF NOT DEFINED DCMD (
 
 REM :: START OF PRE/INIT SECTION ---------------------------------------
 IF "%~1" NEQ "!WOUND_GUID!" (
-
 	REM - first set the default 
 	SET G_MAKE_CFG_FILE=!CD!\make.cfg
 	IF NOT EXIST "!G_MAKE_CFG_FILE!" SET G_MAKE_CFG_FILE=%~dp0\make.cfg
@@ -548,7 +550,8 @@ GOTO :EOF
 		CALL :Print E "BUILD" "Failed creating base output dir@s." " !G_BUILD_OUTPUT_BASE_DIR!"
 		GOTO :EOF
 	)	
-	DEL /Q "build!BUILD_ALT_DIR!.err" "build!BUILD_ALT_DIR!.wrn" 2>NUL>NUL
+	IF EXIST "build!BUILD_ALT_DIR!.err" DEL /Q "build!BUILD_ALT_DIR!.err"
+	IF EXIST "build!BUILD_ALT_DIR!.wrn" DEL /Q "build!BUILD_ALT_DIR!.wrn"
 	
 	REM - TODO: OUTPUT_FILE_LIST is not used yet but it's the start of a crucial part
 	REM - for auto generating parts of the installer script.
@@ -721,7 +724,7 @@ REM - [USES] G_WDK_BUILD_OPTIONS, BUILD_ALT_DIR
 	FOR /F "usebackq eol=; tokens=* delims=" %%A IN (`!DCMD! -rp d "!__SRCS_DIR!\\" d "!G_BUILD_OUTPUT_BASE_ABS_DIR!"`) DO IF "%%~A" NEQ "" SET G_TARGET_OUTPUT_REL_DIR=%%A
 
 	REM - copy the name.ext.sources file to sources
-	DEL /Q "%~dp1\sources" 2>NUL>NUL
+	IF EXIST "%~dp1\sources" DEL /Q "%~dp1\sources"
 	!DCMD! -ff "%~dp1\sources" "# ++ @s - @s\n" "AUTO-GENERATED" "%~nx1"
 	!DCMD! -ff "%~dp1\sources" "@s@s\n@s@s\n" "TARGET_OUTPUT_FILENAME_EXT=" "!G_TARGET_OUTPUT_FILENAME_EXT!" "TARGET_OUTPUT_BASE_DIR=" "!G_TARGET_OUTPUT_REL_DIR!"
 	CALL :Tokenizer "%~1" "%~dp1\sources" "G_TARGET_OUTPUT"
@@ -998,7 +1001,7 @@ REM    After make.cmd has been wound, it can call SetError to report status
 REM    back to the parent make.cmd if a critical action fails.
 :SafeCMD
 	SET E_RET_FILE=!TEMP!\E_RET_FILE_!RANDOM!.mrk
-	DEL /Q "!E_RET_FILE!" 2>NUL>NUL
+	IF EXIST "!E_RET_FILE!" DEL /Q "!E_RET_FILE!"
 	ECHO 0 >!E_RET_FILE!
 	CALL CMD /C %* E_RET_FILE="!E_RET_FILE!"
 	FOR /F "eol=; tokens=1 delims= " %%I IN (!E_RET_FILE!) DO (
@@ -1007,7 +1010,7 @@ REM    back to the parent make.cmd if a critical action fails.
 	)
 	
 	:SafeCMD_Done
-	DEL /Q "!E_RET_FILE!" >NUL
+	IF EXIST "!E_RET_FILE!" DEL /Q "!E_RET_FILE!"
 
 GOTO :EOF
 
@@ -1206,12 +1209,14 @@ GOTO :EOF
 
 REM :: Destroys all temp files that where created with 'CreateTempFile' for the current instance of make.cmd.
 :DestroyAllTempFiles
-	IF NOT DEFINED CreateTempFileList GOTO :EOF
+	IF NOT DEFINED CreateTempFileList GOTO DestroyAllTempFilesDone
+	IF NOT EXIST !CreateTempFileList! GOTO DestroyAllTempFilesDone
 	FOR /F "eol=; tokens=* delims=" %%T IN (!CreateTempFileList!) DO (
 		CALL :Print D "TMPFILE" "[@d] Destroying TMP file @s.." "!MAKE_RUN_COUNT!" "%%~nxT"
-		DEL /Q "%%~T" 2>NUL>NUL
+		IF EXIST "%%~T" DEL /Q "%%~T"
 	)
-	DEL /Q !CreateTempFileList! 2>NUL>NUL
+	IF EXIST !CreateTempFileList! DEL /Q !CreateTempFileList!
+:DestroyAllTempFilesDone
 	SET CreateTempFileList=
 GOTO :EOF
 
