@@ -33,6 +33,8 @@ typedef enum _BM_COMMAND
 {
     BM_COMMAND_SET_TEST = 0x0E,
     BM_COMMAND_GET_TEST = 0x0F,
+    BM_COMMAND_SET_VBUF = 0x10,
+    BM_COMMAND_GET_VBUF = 0x11,
 } BM_COMMAND;
 
 //! Tests supported by the official benchmark firmware.
