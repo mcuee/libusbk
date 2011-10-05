@@ -637,3 +637,26 @@ Transfer #2 completed with 4096 bytes.
 Transferred 12288 bytes in 3 transfers. errorCode=00000000h
 \endverbatim
 */
+
+//!Sends various vendor specific control requests synchronously.
+/*!
+* \example xfer-control.c
+*
+* \par xfer-control example:
+* -# Finds a device by vid/pid (use vid=hhhh, pid=hhhhh and the command line).
+* -# Initializes a new UsbK (usb device) handle.
+* -# Sends a control request for the device descriptor.
+* -# Sends a vendor-specific HostToDevice request to set the benchmark vendor buffer.
+* -# Sends a vendor-specific DeviceToHost request to get the benchmark vendor buffer.
+* -# Compares and reports before and after results of the benchmark vendor buffer.
+* -# Frees the UsbK (usb device) handle.
+* -# Frees the LstK (device list) handle created in step #1.
+*
+* \par Console Output
+* \verbatim
+Looking for device vid/pid 04D8/FA2E..
+Using 04D8:FA2E (LUSBW1): Benchmark Device - Microchip Technology, Inc.
+Device opened successfully!
+vendorBuffer: ABC=ABC
+\endverbatim
+*/

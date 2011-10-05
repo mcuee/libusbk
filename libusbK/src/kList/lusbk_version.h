@@ -16,7 +16,7 @@
 #define VERSION_MAJOR 3
 #define VERSION_MINOR 0
 #define VERSION_MICRO 4
-#define VERSION_NANO 1
+#define VERSION_NANO 2
 #define VERSION_DATE 10/04/2011
 #define RC_FILENAME_STR "kList.exe"
 
