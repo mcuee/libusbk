@@ -2,8 +2,12 @@
 // Microsoft Visual C++ generated include file.
 // Used by InfWizard.rc
 //
+#define VERSION_MINOR                   0
+#define VERSION_MICRO                   0
 #define IDS_INFWIZARD                   1
+#define VERSION_NANO                    1
 #define IDS_HEADERTITLE                 2
+#define VERSION_MAJOR                   2
 #define IDS_HEADERSUBTITLE              3
 #define IDS_PAGE_SELECT_DEVICE_TITLE    4
 #define IDS_PAGE_SELECT_DEVICE_SUBTITLE 5
@@ -120,6 +124,10 @@
 #define IDC_GRP_ADDITIONAL_TASKS        3016
 #define IDC_BTN_EXPLORE_PACKAGE_FOLDER  3017
 #define IDC_BTN_EXPLORE_BASE_FOLDER     3018
+#define IDC_LBL_EXPLORE_PACKAGE_FOLDER  3019
+#define IDC_LBL_EXPLORE_BASE_FOLDER     3020
+#define IDC_SYSLINK1                    3021
+#define IDC_LINK_SELECT_DRIVER          3021
 
 // Next default values for new objects
 //
@@ -127,7 +135,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        2036
 #define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         3018
+#define _APS_NEXT_CONTROL_VALUE         3022
 #define _APS_NEXT_SYMED_VALUE           4000
 #endif
 #endif

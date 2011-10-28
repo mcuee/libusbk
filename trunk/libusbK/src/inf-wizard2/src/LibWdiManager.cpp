@@ -8,8 +8,8 @@ static char THIS_FILE[] = __FILE__;
 #endif
 
 CLibWdiManager::CLibWdiManager(void)
-	:m_pSession(NULL)
-	,m_pDeviceInfoMaster(NULL)
+	: m_pSession(NULL)
+	, m_pDeviceInfoMaster(NULL)
 {
 }
 
@@ -32,18 +32,18 @@ VOID CLibWdiManager::TryDestroyList(void)
 BOOL CLibWdiManager::CreateList(BOOL listAll, BOOL listHubs)
 {
 	wdi_options_create_list optCreateList;
-	memset(&optCreateList,0,sizeof(optCreateList));
+	memset(&optCreateList, 0, sizeof(optCreateList));
 	optCreateList.list_all			= listAll;
 	optCreateList.list_hubs			= listHubs;
 	optCreateList.trim_whitespaces	= TRUE;
 
 	TryDestroyList();
 
-	CLibWdiDynamicAPI::CreateList(&m_pDeviceInfoMaster,&optCreateList);
+	CLibWdiDynamicAPI::CreateList(&m_pDeviceInfoMaster, &optCreateList);
 	if (!m_pDeviceInfoMaster) return FALSE;
 
 
-	for(PWDI_DEVICE_INFO current=m_pDeviceInfoMaster; current!=NULL; current=current->next)
+	for(PWDI_DEVICE_INFO current = m_pDeviceInfoMaster; current != NULL; current = current->next)
 	{
 		DeviceItemArray.Add(current);
 	}
@@ -62,11 +62,11 @@ BOOL CLibWdiManager::SaveSession(CWnd* parent)
 	    _T("Inf Wizard Session (*.InfSession)|*.InfSession||"),
 	    parent);
 
-	if (dlg.DoModal()==IDOK)
+	if (dlg.DoModal() == IDOK)
 	{
 		if (SaveSession(dlg.m_ofn.lpstrFile))
 		{
-			
+
 			m_SessionFile = dlg.m_ofn.lpstrFile;
 			return TRUE;
 		}
@@ -84,7 +84,7 @@ BOOL CLibWdiManager::OpenSession(CWnd* parent)
 	    _T("Inf Wizard Session (*.InfSession)|*.InfSession||"),
 	    parent);
 
-	if (dlg.DoModal()==IDOK)
+	if (dlg.DoModal() == IDOK)
 	{
 		if (OpenSession(dlg.m_ofn.lpstrFile))
 		{
@@ -102,7 +102,7 @@ BOOL CLibWdiManager::SaveSession(LPCTSTR fileName)
 	if (!file.Open(fileName, CFile::modeCreate | CFile::modeWrite, NULL))
 		return FALSE;
 
-	CArchive sessionArchive(&file,CArchive::store);
+	CArchive sessionArchive(&file, CArchive::store);
 
 	sessionArchive.WriteObject(Session());
 	sessionArchive.Close();
@@ -118,7 +118,7 @@ BOOL CLibWdiManager::OpenSession(LPCTSTR fileName)
 	if (!file.Open(fileName, CFile::modeRead, NULL))
 		return FALSE;
 
-	CArchive sessionArchive(&file,CArchive::load);
+	CArchive sessionArchive(&file, CArchive::load);
 
 	CLibWdiSession* newSession = (CLibWdiSession*)sessionArchive.ReadObject(RUNTIME_CLASS(CLibWdiSession));
 	if (!newSession || !newSession->IsKindOf(RUNTIME_CLASS(CLibWdiSession))) return FALSE;
@@ -129,4 +129,27 @@ BOOL CLibWdiManager::OpenSession(LPCTSTR fileName)
 	file.Close();
 
 	return TRUE;
+}
+
+BOOL CLibWdiManager::LoadDll(CWnd* parent)
+{
+
+	CFileDialog dlg(
+	    TRUE,
+	    _T("dll"),
+	    m_LibWdiDllPath.GetBufferSetLength(4096),
+	    OFN_FILEMUSTEXIST,
+	    _T("libwdi.dll|libwdi.dll|All dlls (*.dll)|*.dll||"),
+	    parent);
+
+	if (dlg.DoModal() == IDOK)
+	{
+		CString sLidWdiDll = dlg.m_ofn.lpstrFile;
+		if (CLibWdiDynamicAPI::LoadDll(sLidWdiDll))
+		{
+			m_LibWdiDllPath = sLidWdiDll;
+			return TRUE;
+		}
+	}
+	return FALSE;
 }

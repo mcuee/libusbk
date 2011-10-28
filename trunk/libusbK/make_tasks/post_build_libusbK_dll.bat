@@ -13,6 +13,10 @@ IF /I "!G_DIST!" NEQ "finalize" (
 	goto Done
 )
 
+REM - Debug or Release depending on build mode
+SET K_DBGorREL=Release
+IF DEFINED G_CHK SET K_DBGorREL=Debug
+
 IF EXIST "!K_LIBUSB10_DEP_DIR!" (
 	PUSHD !CD!
 	CD /D "!K_LIBUSB10_DEP_DIR!\msvc"
@@ -111,26 +115,27 @@ GOTO :EOF
 	
 	REM - Build libwdiK and inf-wizardK.
 	IF EXIST "!K_LIBWDI_DIR!\libwdi\embedded.h" DEL /Q "!K_LIBWDI_DIR!\libwdi\embedded.h"
-	IF EXIST "!K_LIBWDI_DIR!\Win32\Release\lib\libwdi.lib" DEL "!K_LIBWDI_DIR!\Win32\Release\lib\libwdi.lib"
+	IF EXIST "!K_LIBWDI_DIR!\Win32\!K_DBGorREL!\lib\libwdi.lib" DEL "!K_LIBWDI_DIR!\Win32\!K_DBGorREL!\lib\libwdi.lib"
 	SET CL=/DLIBUSBK_DIR=\"!K_PKG_BIN:\=/!\" /DLIBUSB0_DIR=\"!K_LIBUSB0_DEP_DIR:\=/!\" /DDDK_DIR=\"!G_WDK_DIR:\=/!\"
-	!G_DEVENV_EXE! "!K_LIBWDI_DIR!\libwdi_2008.sln" /build "Release|Win32" /project "libwdi (static)"
+	!G_DEVENV_EXE! "!K_LIBWDI_DIR!\libwdi_2008.sln" /build "!K_DBGorREL!|Win32" /project "libwdi (static)"
 	IF "!ERRORLEVEL!" NEQ "0" (
 		ECHO [BUILD ERROR] - libwdi_2008
 		goto SetError
 	)
 	SET CL=
-	COPY /Y "!K_LIBWDI_DIR!\Win32\Release\lib\libwdi.lib" ".\src\inf-wizard2\lib\libwdi.lib"
-	!G_DEVENV_EXE! "!K_LIBWDI_DIR!\libwdi_2008.sln" /clean "Release|Win32" /project "libwdi (static)"
+	COPY /Y "!K_LIBWDI_DIR!\Win32\!K_DBGorREL!\lib\libwdi.lib" ".\src\inf-wizard2\lib\libwdi.lib"
 
 	COPY /Y "!K_LIBWDI_DIR!\libwdi\libwdi.h" ".\src\inf-wizard2\src\libwdi.h"
-	!G_DEVENV_EXE! ".\src\inf-wizard2\InfWizard.sln" /build "Release|Win32" /project "InfWizard"
+	!G_DEVENV_EXE! ".\src\inf-wizard2\InfWizard.sln" /build "!K_DBGorREL!|Win32" /project "InfWizard"
 	IF "!ERRORLEVEL!" NEQ "0" (
 		ECHO [BUILD ERROR] - InfWizard
 		goto SetError
 	)
 	SET CL=
-	COPY /Y ".\src\inf-wizard2\Release\InfWizard.exe" "!K_PKG!\libusbK-inf-wizard.exe"
-	!G_DEVENV_EXE! ".\src\inf-wizard2\InfWizard.sln" /clean "Release|Win32" /project "InfWizard"
+	COPY /Y ".\src\inf-wizard2\!K_DBGorREL!\InfWizard.exe" "!K_PKG!\libusbK-inf-wizard.exe"
+
+	REM !G_DEVENV_EXE! "!K_LIBWDI_DIR!\libwdi_2008.sln" /clean "!K_DBGorREL!|Win32" /project "libwdi (static)"
+	!G_DEVENV_EXE! ".\src\inf-wizard2\InfWizard.sln" /clean "!K_DBGorREL!|Win32" /project "InfWizard"
 
 	REM PUSHD !CD!
 	REM CD /D "!K_LIBWDI_DIR!"

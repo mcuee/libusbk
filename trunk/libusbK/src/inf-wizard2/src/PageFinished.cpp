@@ -28,8 +28,7 @@ extern InfWizardApp* g_App;
 // CPageFinished property page
 
 IMPLEMENT_DYNCREATE(CPageFinished, CResizablePageEx)
-
-CPageFinished::CPageFinished() : CResizablePageEx(CPageFinished::IDD)
+CPageFinished::CPageFinished() : CResizablePageEx(CPageFinished::IDD, IDS_INFWIZARD)
 {
 	//{{AFX_DATA_INIT(CPageFinished)
 	// NOTE: the ClassWizard will add member initialization here
@@ -77,28 +76,35 @@ BOOL CPageFinished::OnInitDialog()
 {
 	CResizablePageEx::OnInitDialog();
 
-	AddAnchor(IDC_LBL_FINISHED_CAPTION, TOP_LEFT,TOP_RIGHT);
+	AddAnchor(IDC_LBL_FINISHED_CAPTION, TOP_LEFT, TOP_RIGHT);
+	AddAnchor(IDC_BIGBOLDTITLE, TOP_LEFT, TOP_RIGHT);
 	AddAnchor(IDC_PIC_FINISHED_TEXT, TOP_LEFT);
-	AddAnchor(IDC_LBL_FINISHED_TEXT, TOP_LEFT,TOP_RIGHT);
-	AddAnchor(IDC_GRP_ADDITIONAL_TASKS, TOP_LEFT,BOTTOM_RIGHT);
+	AddAnchor(IDC_LBL_FINISHED_TEXT, TOP_LEFT, TOP_RIGHT);
+	AddAnchor(IDC_GRP_ADDITIONAL_TASKS, TOP_LEFT, TOP_RIGHT);
 
 	AddAnchor(IDC_BTN_EXPLORE_PACKAGE_FOLDER, TOP_LEFT);
 	AddAnchor(IDC_BTN_EXPLORE_BASE_FOLDER, TOP_LEFT);
+	AddAnchor(IDC_LBL_EXPLORE_PACKAGE_FOLDER, TOP_LEFT, TOP_RIGHT);
+	AddAnchor(IDC_LBL_EXPLORE_BASE_FOLDER, TOP_LEFT, TOP_RIGHT);
 
 	AddAnchor(IDC_LINK_OPEN_SESSION, BOTTOM_LEFT);
 	AddAnchor(IDC_LINK_SAVE_SESSION, BOTTOM_LEFT);
 
-	LOGFONT lf;
-	GetDlgItem(IDC_LBL_FINISHED_CAPTION)->GetFont()->GetLogFont(&lf);
-	lf.lfWeight = FW_BOLD;
-	m_fontBig.CreateFontIndirect(&lf);
-	lf.lfHeight *= 2;
-	m_fontTitle.CreateFontIndirect(&lf);
+	LOGFONT lfTitle, lfBig;
+	GetDlgItem(IDC_LBL_FINISHED_CAPTION)->GetFont()->GetLogFont(&lfTitle);
+	GetDlgItem(IDC_LBL_FINISHED_CAPTION)->GetFont()->GetLogFont(&lfBig);
 
-	GetDlgItem(IDC_LBL_FINISHED_CAPTION)->SetFont(&m_fontTitle);
-	//GetDlgItem(IDC_LBL_FINISHED_TEXT)->SetFont(&m_fontBig);
+	lfTitle.lfWeight = FW_BOLD;
+	lfTitle.lfHeight *= 2;
+	m_FontTitle.CreateFontIndirect(&lfTitle);
 
-	HICON hImgInfo = (HICON)LoadImage(AfxGetApp()->m_hInstance,MAKEINTRESOURCE(IDI_ICON_EXPLORER),IMAGE_ICON,16,16,LR_SHARED);
+	lfBig.lfWeight = FW_BOLD;
+	m_FontBig.CreateFontIndirect(&lfBig);
+
+	GetDlgItem(IDC_BIGBOLDTITLE)->SetFont(&m_FontTitle);
+	GetDlgItem(IDC_LBL_FINISHED_CAPTION)->SetFont(&m_FontBig);
+
+	HICON hImgInfo = (HICON)LoadImage(AfxGetApp()->m_hInstance, MAKEINTRESOURCE(IDI_ICON_EXPLORER), IMAGE_ICON, 16, 16, LR_SHARED);
 	((CButton*)GetDlgItem(IDC_BTN_EXPLORE_PACKAGE_FOLDER))->SetIcon(hImgInfo);
 	((CButton*)GetDlgItem(IDC_BTN_EXPLORE_BASE_FOLDER))->SetIcon(hImgInfo);
 
@@ -143,19 +149,19 @@ void CPageFinished::OnBnClickedBtnExplorePackageFolder()
 	CString packagePath = g_App->Wdi.Session()->GetPackageBaseDir();
 	CString packageName = g_App->Wdi.Session()->GetPackageName();
 
-	PathAppend(packagePath.GetBufferSetLength(4096),packageName.GetBuffer(0));
+	PathAppend(packagePath.GetBufferSetLength(4096), packageName.GetBuffer(0));
 	packagePath.ReleaseBuffer();
 
 	if (!PathIsDirectory(packagePath.GetBuffer(4096)))
 		packagePath =  g_App->Wdi.Session()->GetPackageBaseDir();
 
-	ShellExecute(NULL,_T("explore"),packagePath.GetBuffer(4096),NULL,NULL,SW_SHOW);
+	ShellExecute(NULL, _T("explore"), packagePath.GetBuffer(4096), NULL, NULL, SW_SHOW);
 }
 
 void CPageFinished::OnBnClickedBtnExploreBaseFolder()
 {
 	CString packagePath = g_App->Wdi.Session()->GetPackageBaseDir();
-	ShellExecute(NULL,_T("explore"),packagePath.GetBuffer(0),NULL,NULL,SW_SHOW);
+	ShellExecute(NULL, _T("explore"), packagePath.GetBuffer(0), NULL, NULL, SW_SHOW);
 }
 
 BOOL CPageFinished::PreTranslateMessage(MSG* pMsg)
@@ -164,7 +170,7 @@ BOOL CPageFinished::PreTranslateMessage(MSG* pMsg)
 	return CResizablePageEx::PreTranslateMessage(pMsg);
 }
 
-BOOL CPageFinished::OnToolTipNotify(UINT id, NMHDR* pNMHDR,LRESULT* pResult)
+BOOL CPageFinished::OnToolTipNotify(UINT id, NMHDR* pNMHDR, LRESULT* pResult)
 {
-	return CInfWizardDisplay::HandleToolTipNotify(id,pNMHDR,pResult);
+	return CInfWizardDisplay::HandleToolTipNotify(id, pNMHDR, pResult);
 }

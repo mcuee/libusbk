@@ -69,7 +69,7 @@ void CResizableSplitterWnd::OnGetMinMaxInfo(MINMAXINFO FAR* lpMMI)
 	{
 		ASSERT(m_nCols > 0 && m_nRows > 0);
 
-		CSize sizeMin(0,0), sizeMax(0,0);
+		CSize sizeMin(0, 0), sizeMax(0, 0);
 		for (int col = 0; col < m_nCols; ++col)
 		{
 			// calc min and max width for each column
@@ -118,12 +118,12 @@ void CResizableSplitterWnd::OnGetMinMaxInfo(MINMAXINFO FAR* lpMMI)
 		}
 		// adjust total size: add the client border and
 		// we counted one splitter more than necessary
-		sizeMax.cx += 2*m_cxBorder - m_cxSplitterGap;
-		sizeMax.cy += 2*m_cyBorder - m_cySplitterGap;
-		sizeMin.cx += 2*m_cxBorder - m_cxSplitterGap;
-		sizeMin.cy += 2*m_cyBorder - m_cySplitterGap;
+		sizeMax.cx += 2 * m_cxBorder - m_cxSplitterGap;
+		sizeMax.cy += 2 * m_cyBorder - m_cySplitterGap;
+		sizeMin.cx += 2 * m_cxBorder - m_cxSplitterGap;
+		sizeMin.cy += 2 * m_cyBorder - m_cySplitterGap;
 		// add non-client size
-		CRect rectExtra(0,0,0,0);
+		CRect rectExtra(0, 0, 0, 0);
 		::AdjustWindowRectEx(&rectExtra, GetStyle(), !(GetStyle() & WS_CHILD) &&
 		                     ::IsMenu(GetMenu()->GetSafeHmenu()), GetExStyle());
 		sizeMax += rectExtra.Size();

@@ -37,7 +37,7 @@ END_MESSAGE_MAP()
 //! Constructor
 //------------------------------------------------------------------------
 CGridListCtrlGroups::CGridListCtrlGroups()
-	:m_GroupHeight(-1)
+	: m_GroupHeight(-1)
 {}
 
 //------------------------------------------------------------------------
@@ -161,7 +161,7 @@ BOOL CGridListCtrlGroups::HasGroupState(int nGroupId, DWORD dwState)
 	if ( GetGroupInfo(nGroupId, (PLVGROUP)&lg) == -1)
 		return FALSE;
 
-	return lg.state==dwState;
+	return lg.state == dwState;
 }
 
 //------------------------------------------------------------------------
@@ -189,7 +189,7 @@ BOOL CGridListCtrlGroups::SetGroupState(int nGroupId, DWORD dwState)
 		lg.state |= LVGS_COLLAPSIBLE;
 #endif
 
-	if (SetGroupInfo(nGroupId, (PLVGROUP)&lg)==-1)
+	if (SetGroupInfo(nGroupId, (PLVGROUP)&lg) == -1)
 		return FALSE;
 
 	return TRUE;
@@ -206,7 +206,7 @@ int CGridListCtrlGroups::GroupHitTest(const CPoint& point)
 	if (!IsGroupViewEnabled())
 		return -1;
 
-	if (HitTest(point)!=-1)
+	if (HitTest(point) != -1)
 		return -1;
 
 	if (IsGroupStateEnabled())
@@ -218,7 +218,7 @@ int CGridListCtrlGroups::GroupHitTest(const CPoint& point)
 		LVHITTESTINFO lvhitinfo = {0};
 		lvhitinfo.pt = point;
 		ListView_HitTestEx(m_hWnd, &lvhitinfo);
-		if ((lvhitinfo.flags & LVHT_EX_GROUP)==0)
+		if ((lvhitinfo.flags & LVHT_EX_GROUP) == 0)
 			return -1;
 
 		LVGROUP lg = {0};
@@ -259,7 +259,7 @@ int CGridListCtrlGroups::GroupHitTest(const CPoint& point)
 
 			VERIFY( SNDMSG((m_hWnd), LVM_GETGROUPINFOBYINDEX, (WPARAM)(i), (LPARAM)(&lg)) );
 
-			CRect rect(0,LVGGR_HEADER,0,0);
+			CRect rect(0, LVGGR_HEADER, 0, 0);
 			VERIFY( SNDMSG((m_hWnd), LVM_GETGROUPRECT, (WPARAM)(lg.iGroupId), (LPARAM)(RECT*)(&rect)) );
 
 			if (rect.PtInRect(point))
@@ -270,7 +270,7 @@ int CGridListCtrlGroups::GroupHitTest(const CPoint& point)
 	}
 
 	// We require that each group contains atleast one item
-	if (GetItemCount()==0)
+	if (GetItemCount() == 0)
 		return -1;
 
 	// This logic doesn't support collapsible groups
@@ -280,18 +280,18 @@ int CGridListCtrlGroups::GroupHitTest(const CPoint& point)
 	for(CPoint pt = point ; pt.y < gridRect.bottom ; pt.y += 2)
 	{
 		nFirstRow = HitTest(pt);
-		if (nFirstRow!=-1)
+		if (nFirstRow != -1)
 			break;
 	}
 
-	if (nFirstRow==-1)
+	if (nFirstRow == -1)
 		return -1;
 
 	int nGroupId = GetRowGroupId(nFirstRow);
 
 	// Extra validation that the above row belongs to a different group
-	int nAboveRow = GetNextItem(nFirstRow,LVNI_ABOVE);
-	if (nAboveRow!=-1 && nGroupId==GetRowGroupId(nAboveRow))
+	int nAboveRow = GetNextItem(nFirstRow, LVNI_ABOVE);
+	if (nAboveRow != -1 && nGroupId == GetRowGroupId(nAboveRow))
 		return -1;
 
 	return nGroupId;
@@ -308,7 +308,7 @@ void CGridListCtrlGroups::CheckEntireGroup(int nGroupId, BOOL bChecked)
 	if (!(GetExtendedStyle() & LVS_EX_CHECKBOXES))
 		return;
 
-	for (int nRow=0; nRow<GetItemCount(); ++nRow)
+	for (int nRow = 0; nRow < GetItemCount(); ++nRow)
 	{
 		if (GetRowGroupId(nRow) == nGroupId)
 		{
@@ -324,7 +324,7 @@ void CGridListCtrlGroups::CheckEntireGroup(int nGroupId, BOOL bChecked)
 //------------------------------------------------------------------------
 void CGridListCtrlGroups::DeleteEntireGroup(int nGroupId)
 {
-	for (int nRow=0; nRow<GetItemCount(); ++nRow)
+	for (int nRow = 0; nRow < GetItemCount(); ++nRow)
 	{
 		if (GetRowGroupId(nRow) == nGroupId)
 		{
@@ -355,15 +355,15 @@ BOOL CGridListCtrlGroups::GroupByColumn(int nCol)
 
 	if (IsGroupViewEnabled())
 	{
-		CSimpleMap<CString,CSimpleArray<int> > groups;
+		CSimpleMap<CString, CSimpleArray<int> > groups;
 
 		// Loop through all rows and find possible groups
-		for(int nRow=0; nRow<GetItemCount(); ++nRow)
+		for(int nRow = 0; nRow < GetItemCount(); ++nRow)
 		{
 			CString cellText = GetItemText(nRow, nCol);
 
 			int nGroupId = groups.FindKey(cellText);
-			if (nGroupId==-1)
+			if (nGroupId == -1)
 			{
 				CSimpleArray<int> rows;
 				groups.Add(cellText, rows);
@@ -408,14 +408,14 @@ void CGridListCtrlGroups::CollapseAllGroups()
 		return;
 
 	// Loop through all rows and find possible groups
-	for(int nRow=0; nRow<GetItemCount(); ++nRow)
+	for(int nRow = 0; nRow < GetItemCount(); ++nRow)
 	{
 		int nGroupId = GetRowGroupId(nRow);
-		if (nGroupId!=-1)
+		if (nGroupId != -1)
 		{
-			if (!HasGroupState(nGroupId,LVGS_COLLAPSED))
+			if (!HasGroupState(nGroupId, LVGS_COLLAPSED))
 			{
-				SetGroupState(nGroupId,LVGS_COLLAPSED);
+				SetGroupState(nGroupId, LVGS_COLLAPSED);
 			}
 		}
 	}
@@ -430,14 +430,14 @@ void CGridListCtrlGroups::ExpandAllGroups()
 		return;
 
 	// Loop through all rows and find possible groups
-	for(int nRow=0; nRow<GetItemCount(); ++nRow)
+	for(int nRow = 0; nRow < GetItemCount(); ++nRow)
 	{
 		int nGroupId = GetRowGroupId(nRow);
-		if (nGroupId!=-1)
+		if (nGroupId != -1)
 		{
-			if (HasGroupState(nGroupId,LVGS_COLLAPSED))
+			if (HasGroupState(nGroupId, LVGS_COLLAPSED))
 			{
-				SetGroupState(nGroupId,LVGS_NORMAL);
+				SetGroupState(nGroupId, LVGS_NORMAL);
 			}
 		}
 	}
@@ -463,13 +463,13 @@ BOOL CGridListCtrlGroups::OnDropSelf(COleDataObject* pDataObject, DROPEFFECT dro
 	if (GetStyle() & LVS_OWNERDATA)
 		return false;
 
-	int nGroupId = nRow!=-1 ? GetRowGroupId(nRow) : GroupHitTest(point);
-	if (nGroupId==-1)
+	int nGroupId = nRow != -1 ? GetRowGroupId(nRow) : GroupHitTest(point);
+	if (nGroupId == -1)
 		return FALSE;
 
 	if (MoveSelectedRows(nGroupId))
 	{
-		if (nRow!=-1)
+		if (nRow != -1)
 		{
 			EnsureVisible(nRow, FALSE);
 			SetFocusRow(nRow);
@@ -489,14 +489,14 @@ BOOL CGridListCtrlGroups::MoveSelectedRows(int nDropGroupId)
 	if (GetStyle() & LVS_OWNERDATA)
 		return false;
 
-	if (nDropGroupId==-1)
+	if (nDropGroupId == -1)
 		return false;
 
 	POSITION pos = GetFirstSelectedItemPosition();
-	if (pos==NULL)
+	if (pos == NULL)
 		return false;
 
-	while(pos!=NULL)
+	while(pos != NULL)
 	{
 		int nRow = GetNextSelectedItem(pos);
 		int nGroupId = GetRowGroupId(nRow);
@@ -518,15 +518,15 @@ void CGridListCtrlGroups::OnContextMenu(CWnd* pWnd, CPoint point)
 {
 	if ( IsGroupViewEnabled() )
 	{
-		if (pWnd!=GetHeaderCtrl())
+		if (pWnd != GetHeaderCtrl())
 		{
-			if (point.x!=-1 && point.y!=-1)
+			if (point.x != -1 && point.y != -1)
 			{
 				CPoint pt = point;
 				ScreenToClient(&pt);
 
 				int nGroupId = GroupHitTest(pt);
-				if (nGroupId!=-1)
+				if (nGroupId != -1)
 				{
 					OnContextMenuGroup(pWnd, point, nGroupId);
 					return;
@@ -581,7 +581,7 @@ void CGridListCtrlGroups::OnContextMenuHeader(CWnd* pWnd, CPoint point, int nCol
 	CMenu menu;
 	VERIFY( menu.CreatePopupMenu() );
 
-	if (nCol!=-1)
+	if (nCol != -1)
 	{
 		// Retrieve column-title
 		const CString& columnTitle = GetColumnHeading(nCol);
@@ -606,7 +606,7 @@ void CGridListCtrlGroups::OnContextMenuHeader(CWnd* pWnd, CPoint point, int nCol
 	}
 	else
 	{
-		if (menu.GetMenuItemCount()>0)
+		if (menu.GetMenuItemCount() > 0)
 			menu.AppendMenu(MF_SEPARATOR, 0, _T(""));
 
 		InternalColumnPicker(menu, 6);
@@ -618,7 +618,7 @@ void CGridListCtrlGroups::OnContextMenuHeader(CWnd* pWnd, CPoint point, int nCol
 	CString title_resetdefault;
 	if (HasColumnDefaultState(title_resetdefault))
 	{
-		if (profiles.GetSize()==0)
+		if (profiles.GetSize() == 0)
 			menu.AppendMenu(MF_SEPARATOR, 0, _T(""));
 		menu.AppendMenu(MF_STRING, 5, title_resetdefault);
 	}
@@ -644,10 +644,10 @@ void CGridListCtrlGroups::OnContextMenuHeader(CWnd* pWnd, CPoint point, int nCol
 		// If placed in the bottom and disables group mode, then suddenly there is a strange offset
 		//	- Quick fix scroll to top, and then fix scroll bars afterwards
 		int pos = GetScrollPos(SB_VERT);
-		EnsureVisible(0,FALSE);
+		EnsureVisible(0, FALSE);
 		RemoveAllGroups();
 		EnableGroupView(FALSE);
-		Scroll(CSize(0,pos));
+		Scroll(CSize(0, pos));
 	}
 	break;
 	case 5:
@@ -655,14 +655,14 @@ void CGridListCtrlGroups::OnContextMenuHeader(CWnd* pWnd, CPoint point, int nCol
 		break;
 	default:
 	{
-		int nCol = nResult-6;
+		int nCol = nResult - 6;
 		if (nCol < GetColumnCount())
 		{
 			ShowColumn(nCol, !IsColumnVisible(nCol));
 		}
 		else
 		{
-			int nProfile = nResult-GetColumnCount()-7;
+			int nProfile = nResult - GetColumnCount() - 7;
 			SwichColumnProfile(profiles[nProfile]);
 		}
 	}
@@ -690,7 +690,7 @@ void CGridListCtrlGroups::OnContextMenuGroup(CWnd* pWnd, CPoint point, int nGrou
 #ifndef LVGS_COLLAPSIBLE
 	if (IsGroupStateEnabled())
 	{
-		if (HasGroupState(nGroupId,LVGS_COLLAPSED))
+		if (HasGroupState(nGroupId, LVGS_COLLAPSED))
 		{
 			CString menuText = CString(_T("Expand group: ")) + groupHeader;
 			menu.InsertMenu(0, uFlags, 1, menuText);
@@ -792,7 +792,7 @@ BOOL CGridListCtrlGroups::SetGroupFooter(int nGroupId, const CString& strFooter,
 	lg.cchFooter = bstrFooter.Length();
 #endif
 
-	if (SetGroupInfo(nGroupId, (PLVGROUP)&lg)==-1)
+	if (SetGroupInfo(nGroupId, (PLVGROUP)&lg) == -1)
 		return FALSE;
 
 	return TRUE;
@@ -826,7 +826,7 @@ BOOL CGridListCtrlGroups::SetGroupTask(int nGroupId, const CString& strTask)
 	lg.cchTask = bstrTask.Length();
 #endif
 
-	if (SetGroupInfo(nGroupId, (PLVGROUP)&lg)==-1)
+	if (SetGroupInfo(nGroupId, (PLVGROUP)&lg) == -1)
 		return FALSE;
 
 	return TRUE;
@@ -860,7 +860,7 @@ BOOL CGridListCtrlGroups::SetGroupSubtitle(int nGroupId, const CString& strSubti
 	lg.cchSubtitle = bstrSubtitle.Length();
 #endif
 
-	if (SetGroupInfo(nGroupId, (PLVGROUP)&lg)==-1)
+	if (SetGroupInfo(nGroupId, (PLVGROUP)&lg) == -1)
 		return FALSE;
 
 	return TRUE;
@@ -924,7 +924,7 @@ BOOL CGridListCtrlGroups::SetGroupTitleImage(int nGroupId, int nImage, const CSt
 	}
 #endif
 
-	if (SetGroupInfo(nGroupId, (PLVGROUP)&lg)==-1)
+	if (SetGroupInfo(nGroupId, (PLVGROUP)&lg) == -1)
 		return FALSE;
 
 	return TRUE;
@@ -951,12 +951,12 @@ BOOL CGridListCtrlGroups::OnGetEmptyMarkup(NMHDR* pNMHDR, LRESULT* pResult)
 	pEmptyMarkup->dwFlags = EMF_CENTERED;
 
 #ifdef UNICODE
-	lstrcpyn(pEmptyMarkup->szMarkup, (LPCTSTR)m_EmptyMarkupText, sizeof(pEmptyMarkup->szMarkup)/sizeof(WCHAR));
+	lstrcpyn(pEmptyMarkup->szMarkup, (LPCTSTR)m_EmptyMarkupText, sizeof(pEmptyMarkup->szMarkup) / sizeof(WCHAR));
 #else
 #if __STDC_WANT_SECURE_LIB__
-	mbstowcs_s(NULL, pEmptyMarkup->szMarkup, static_cast<LPCTSTR>(m_EmptyMarkupText), sizeof(pEmptyMarkup->szMarkup)/sizeof(WCHAR));
+	mbstowcs_s(NULL, pEmptyMarkup->szMarkup, static_cast<LPCTSTR>(m_EmptyMarkupText), sizeof(pEmptyMarkup->szMarkup) / sizeof(WCHAR));
 #else
-	mbstowcs(pEmptyMarkup->szMarkup, static_cast<LPCTSTR>(m_EmptyMarkupText), sizeof(pEmptyMarkup->szMarkup)/sizeof(WCHAR));
+	mbstowcs(pEmptyMarkup->szMarkup, static_cast<LPCTSTR>(m_EmptyMarkupText), sizeof(pEmptyMarkup->szMarkup) / sizeof(WCHAR));
 #endif
 #endif
 	*pResult = TRUE;
@@ -998,7 +998,7 @@ void CGridListCtrlGroups::OnLButtonDblClk(UINT nFlags, CPoint point)
 		return;
 
 	int nGroupId = GroupHitTest(point);
-	if (nGroupId!=-1)
+	if (nGroupId != -1)
 	{
 		if (HasGroupState(nGroupId, LVGS_COLLAPSED))
 			SetGroupState(nGroupId, LVGS_NORMAL);
@@ -1035,7 +1035,7 @@ BOOL CGridListCtrlGroups::OnGetDispInfo(NMHDR* pNMHDR, LRESULT* pResult)
 	int nRow = pNMW->item.iItem;
 	int nCol = pNMW->item.iSubItem;
 
-	if (nRow< 0 || nRow >= GetItemCount())
+	if (nRow < 0 || nRow >= GetItemCount())
 		return FALSE;	// requesting invalid item
 
 	if (nCol < 0 || nCol >= GetHeaderCtrl()->GetItemCount())
@@ -1058,22 +1058,22 @@ namespace
 struct PARAMSORT
 {
 	PARAMSORT(HWND hWnd, int nCol, BOOL bAscending, CGridColumnTrait* pTrait)
-		:m_hWnd(hWnd)
-		,m_pTrait(pTrait)
-		,m_ColumnIndex(nCol)
-		,m_Ascending(bAscending)
+		: m_hWnd(hWnd)
+		, m_pTrait(pTrait)
+		, m_ColumnIndex(nCol)
+		, m_Ascending(bAscending)
 	{}
 
 	HWND m_hWnd;
 	int  m_ColumnIndex;
 	BOOL m_Ascending;
 	CGridColumnTrait* m_pTrait;
-	CSimpleMap<int,CString> m_GroupNames;
+	CSimpleMap<int, CString> m_GroupNames;
 
 	const CString& LookupGroupName(int nGroupId)
 	{
 		int groupIdx = m_GroupNames.FindKey(nGroupId);
-		if (groupIdx==-1)
+		if (groupIdx == -1)
 		{
 			static const CString emptyStr;
 			return emptyStr;
@@ -1118,10 +1118,10 @@ BOOL CGridListCtrlGroups::SortColumn(int nCol, BOOL bAscending)
 
 		// Cannot use GetGroupInfo during sort
 		PARAMSORT paramsort(m_hWnd, nCol, bAscending, GetColumnTrait(nCol));
-		for(int nRow=0 ; nRow < GetItemCount() ; ++nRow)
+		for(int nRow = 0 ; nRow < GetItemCount() ; ++nRow)
 		{
 			int nGroupId = GetRowGroupId(nRow);
-			if (nGroupId!=-1 && paramsort.m_GroupNames.FindKey(nGroupId)==-1)
+			if (nGroupId != -1 && paramsort.m_GroupNames.FindKey(nGroupId) == -1)
 				paramsort.m_GroupNames.Add(nGroupId, GetGroupHeader(nGroupId));
 		}
 

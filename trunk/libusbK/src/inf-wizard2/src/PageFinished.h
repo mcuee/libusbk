@@ -26,8 +26,8 @@ class CPageFinished : public CResizablePageEx
 {
 	DECLARE_DYNCREATE(CPageFinished)
 
-	CFont m_fontTitle;
-	CFont m_fontBig;
+	CFont m_FontTitle;
+	CFont m_FontBig;
 
 	// Construction
 public:

@@ -17,7 +17,7 @@ static char THIS_FILE[] = __FILE__;
 
 extern InfWizardApp* g_App;
 
-SERVICE_NAME_MAP g_ServiceMap[]=
+SERVICE_NAME_MAP g_ServiceMap[] =
 {
 	{_T("bthusb"), SERVICE_DISPLAY_DANGER},
 	{_T("usbscan"), SERVICE_DISPLAY_DANGER},
@@ -57,7 +57,7 @@ libusb-win32 Driver						libusb0, SERVICE_DISPLAY_OK
 
 CGridDevListCtrl::CGridDevListCtrl(void)
 {
-	CreateGridFont(TRUE,TRUE);
+	CreateGridFont(TRUE, TRUE);
 }
 
 CGridDevListCtrl::~CGridDevListCtrl(void)
@@ -72,11 +72,11 @@ DWORD CGridDevListCtrl::GetServiceDisplay(CString serviceName)
 	if (serviceName.IsEmpty() || serviceName == _T("(none)"))
 		return SERVICE_DISPLAY_NODRIVER;
 
-	int serviceCount = sizeof(g_ServiceMap)/sizeof(g_ServiceMap[0]);
+	int serviceCount = sizeof(g_ServiceMap) / sizeof(g_ServiceMap[0]);
 
-	for (int serviceIndex=0; serviceIndex < serviceCount; serviceIndex++)
+	for (int serviceIndex = 0; serviceIndex < serviceCount; serviceIndex++)
 	{
-		if (serviceName==g_ServiceMap[serviceIndex].ServiceName)
+		if (serviceName == g_ServiceMap[serviceIndex].ServiceName)
 			return g_ServiceMap[serviceIndex].DisplayType;
 	}
 
@@ -97,25 +97,25 @@ BOOL CGridDevListCtrl::GetDriverTip(CString serviceName, CString& serviceTip)
 BOOL CGridDevListCtrl::OnDisplayCellTooltip(int nRow, int nCol, CString& strResult)
 {
 	CString cellText;
-	CString slDeviceID, slHardwareID,sDeviceID, sHardwareID;
+	CString slDeviceID, slHardwareID, sDeviceID, sHardwareID;
 
-	if (nRow!=-1 && nCol!=-1)
+	if (nRow != -1 && nCol != -1)
 	{
 		switch (nCol)
 		{
 		case DEVLST_COLID_VID:
-			strResult = this->GetItemText(nRow,0);
+			strResult = this->GetItemText(nRow, 0);
 			return TRUE;
 		case DEVLST_COLID_PID:
-			PWDI_DEVICE_INFO pDevInfo =(PWDI_DEVICE_INFO) this->GetItemData(nRow);
-			ASSERT(pDevInfo!=NULL);
+			PWDI_DEVICE_INFO pDevInfo = (PWDI_DEVICE_INFO) this->GetItemData(nRow);
+			ASSERT(pDevInfo != NULL);
 
 			slDeviceID.LoadString(IDS_DEVICE_ID);
 			slHardwareID.LoadString(IDS_HARDWARE_ID);
-			sDeviceID=pDevInfo->device_id;
-			sHardwareID=pDevInfo->hardware_id;
+			sDeviceID = pDevInfo->device_id;
+			sHardwareID = pDevInfo->hardware_id;
 
-			strResult.Format(_T("%s (%s)"), sDeviceID,sHardwareID);
+			strResult.Format(_T("%s (%s)"), sDeviceID, sHardwareID);
 
 			return TRUE;
 		}
@@ -128,10 +128,10 @@ BOOL CGridDevListCtrl::OnDisplayCellTooltip(int nRow, int nCol, CString& strResu
 
 BOOL CGridDevListCtrl::OnDisplayCellColor(int nRow, int nCol, COLORREF& textColor, COLORREF& backColor)
 {
-	if (nRow >=0 && nCol == DEVLST_COLID_DRIVER)
+	if (nRow >= 0 && nCol == DEVLST_COLID_DRIVER)
 	{
-		CString cellText=this->GetItemText(nRow,nCol);
-		DWORD dwDispayType=GetServiceDisplay(cellText);
+		CString cellText = this->GetItemText(nRow, nCol);
+		DWORD dwDispayType = GetServiceDisplay(cellText);
 		switch(dwDispayType)
 		{
 		case SERVICE_DISPLAY_DANGER:
@@ -161,29 +161,29 @@ BOOL CGridDevListCtrl::OnDisplayCellFont(int nRow, int nCol, LOGFONT& font)
 		font = m_LogFontGrid;
 		return true;
 	}
-	return CGridListCtrlEx::OnDisplayCellFont(nRow,nCol,font);
+	return CGridListCtrlEx::OnDisplayCellFont(nRow, nCol, font);
 }
 
 BOOL CGridDevListCtrl::UpdateDevList(BOOL newDevicesOnly)
 {
 	if (newDevicesOnly)
-		g_App->Wdi.CreateList(FALSE,FALSE);
+		g_App->Wdi.CreateList(FALSE, FALSE);
 	else
-		g_App->Wdi.CreateList(TRUE,TRUE);
+		g_App->Wdi.CreateList(TRUE, TRUE);
 
 	DeleteAllItems();
 
 	// Insert data into list-control by copying from datamodel
-	for (int iRow=0; iRow < g_App->Wdi.DeviceItemArray.GetCount(); iRow++)
+	for (int iRow = 0; iRow < g_App->Wdi.DeviceItemArray.GetCount(); iRow++)
 	{
 		PWDI_DEVICE_INFO devInfo = g_App->Wdi.DeviceItemArray.GetAt(iRow);
 		CString sDesc(devInfo->desc);
 		CString sDriver(devInfo->driver);
 		CString sVendorName(g_App->Wdi.GetVendorName(devInfo->vid));
-		CString sVid,sPid;
+		CString sVid, sPid;
 
-		sVid.Format(_T("0x%04x"),devInfo->vid);
-		sPid.Format(_T("0x%04x"),devInfo->pid);
+		sVid.Format(_T("0x%04x"), devInfo->vid);
+		sPid.Format(_T("0x%04x"), devInfo->pid);
 
 		InsertItem(iRow, sVendorName);
 		SetItemData(iRow, (DWORD_PTR)devInfo);
@@ -241,32 +241,32 @@ BOOL CGridDevListCtrl::InitDevList(void)
 
 	gridColText = new CGridColumnTraitText;
 	sColTitle.LoadString(IDS_VENDOR_ID);
-	colWidth=100;
+	colWidth = 100;
 	colIndex++;
-	gridColText->SetMetaFlag(GCSF_FIXED,true);
+	gridColText->SetMetaFlag(GCSF_FIXED, true);
 	InsertColumnTrait(colIndex, sColTitle, LVCFMT_LEFT, colWidth, colIndex, gridColText);
 
 	gridColText = new CGridColumnTraitText;
 
 	sColTitle.LoadString(IDS_PRODUCT_ID);
-	colWidth=100;
+	colWidth = 100;
 	colIndex++;
-	gridColText->SetMetaFlag(GCSF_FIXED,true);
+	gridColText->SetMetaFlag(GCSF_FIXED, true);
 	InsertColumnTrait(colIndex, sColTitle, LVCFMT_LEFT, colWidth, colIndex, gridColText);
 
 	gridColText = new CGridColumnTraitText;
 
 	sColTitle.LoadString(IDS_DESCRIPTION);
 	colIndex++;
-	gridColText->SetMetaFlag(GCSF_FIXED,false);
+	gridColText->SetMetaFlag(GCSF_FIXED, false);
 	InsertColumnTrait(colIndex, sColTitle, LVCFMT_LEFT, colWidth, colIndex, gridColText);
 
 	gridColText = new CGridColumnTraitText;
 
 	sColTitle.LoadString(IDS_INSTALLED_DRIVER);
-	colWidth=150;
+	colWidth = 150;
 	colIndex++;
-	gridColText->SetMetaFlag(GCSF_FIXED,true);
+	gridColText->SetMetaFlag(GCSF_FIXED, true);
 	InsertColumnTrait(colIndex, sColTitle, LVCFMT_LEFT, colWidth, colIndex, gridColText);
 
 	CViewConfigSectionWinApp* pColumnProfile = new CViewConfigSectionWinApp(_T("Device List"));

@@ -36,11 +36,11 @@ static char THIS_FILE[] = __FILE__;
 #define GUID_FORMAT_STRING _T("%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X")
 
 CLibWdiSession::CLibWdiSession(void)
-	:driver_type(WDI_NB_DRIVERS)
-	,vid(0)
-	,pid(0)
-	,is_composite(FALSE)
-	,mi(0)
+	: driver_type(WDI_NB_DRIVERS)
+	, vid(0)
+	, pid(0)
+	, is_composite(FALSE)
+	, mi(0)
 {
 }
 
@@ -53,13 +53,13 @@ DWORD CLibWdiSession::IsValid(void)
 	GUID guidCheck;
 
 	if (vid <= 0 || vid > 0xFFFF)
-		return DEVCFG_FIELD_VID|WDI_SESSION_INVALID_MASK;
+		return DEVCFG_FIELD_VID | WDI_SESSION_INVALID_MASK;
 
 	if (pid <= 0 || pid > 0xFFFF)
-		return DEVCFG_FIELD_PID|WDI_SESSION_INVALID_MASK;
+		return DEVCFG_FIELD_PID | WDI_SESSION_INVALID_MASK;
 
-	if (!StringToGuid(&guidCheck,this->m_InterfaceGuid))
-		return DEVCFG_FIELD_GUID|WDI_SESSION_INVALID_MASK;
+	if (!StringToGuid(&guidCheck, this->m_InterfaceGuid))
+		return DEVCFG_FIELD_GUID | WDI_SESSION_INVALID_MASK;
 
 	return ERROR_SUCCESS;
 }
@@ -67,12 +67,12 @@ DWORD CLibWdiSession::IsValid(void)
 /** (Optional) Pointer to the next element in the chained list. NULL if unused */
 void CLibWdiSession::Destroy(PWDI_DEVICE_INFO deviceInfo)
 {
-	WDI_FREE_STRING(deviceInfo,desc);
-	WDI_FREE_STRING(deviceInfo,driver);
-	WDI_FREE_STRING(deviceInfo,device_id);
-	WDI_FREE_STRING(deviceInfo,hardware_id);
-	WDI_FREE_STRING(deviceInfo,compatible_id);
-	WDI_FREE_STRING(deviceInfo,upper_filter);
+	WDI_FREE_STRING(deviceInfo, desc);
+	WDI_FREE_STRING(deviceInfo, driver);
+	WDI_FREE_STRING(deviceInfo, device_id);
+	WDI_FREE_STRING(deviceInfo, hardware_id);
+	WDI_FREE_STRING(deviceInfo, compatible_id);
+	WDI_FREE_STRING(deviceInfo, upper_filter);
 }
 void CLibWdiSession::CopyFrom(PWDI_DEVICE_INFO deviceInfo)
 {
@@ -82,36 +82,36 @@ void CLibWdiSession::CopyFrom(PWDI_DEVICE_INFO deviceInfo)
 	mi = deviceInfo->mi;
 	driver_version = deviceInfo->driver_version;
 
-	WDI_COPY_STRING(deviceInfo,desc);
-	WDI_COPY_STRING(deviceInfo,driver);
-	WDI_COPY_STRING(deviceInfo,device_id);
-	WDI_COPY_STRING(deviceInfo,hardware_id);
-	WDI_COPY_STRING(deviceInfo,compatible_id);
-	WDI_COPY_STRING(deviceInfo,upper_filter);
+	WDI_COPY_STRING(deviceInfo, desc);
+	WDI_COPY_STRING(deviceInfo, driver);
+	WDI_COPY_STRING(deviceInfo, device_id);
+	WDI_COPY_STRING(deviceInfo, hardware_id);
+	WDI_COPY_STRING(deviceInfo, compatible_id);
+	WDI_COPY_STRING(deviceInfo, upper_filter);
 
 }
 void CLibWdiSession::CopyTo(PWDI_DEVICE_INFO deviceInfo)
 {
-	memset(deviceInfo,0,sizeof(*deviceInfo));
-	deviceInfo->vid=vid;
-	deviceInfo->pid=pid;
-	deviceInfo->is_composite=is_composite;
-	deviceInfo->mi=mi;
-	deviceInfo->driver_version=driver_version;
+	memset(deviceInfo, 0, sizeof(*deviceInfo));
+	deviceInfo->vid = vid;
+	deviceInfo->pid = pid;
+	deviceInfo->is_composite = is_composite;
+	deviceInfo->mi = mi;
+	deviceInfo->driver_version = driver_version;
 
-	WDI_ALLOC_STRING(deviceInfo,desc);
-	WDI_ALLOC_STRING(deviceInfo,driver);
-	WDI_ALLOC_STRING(deviceInfo,device_id);
-	WDI_ALLOC_STRING(deviceInfo,hardware_id);
-	WDI_ALLOC_STRING(deviceInfo,compatible_id);
-	WDI_ALLOC_STRING(deviceInfo,upper_filter);
+	WDI_ALLOC_STRING(deviceInfo, desc);
+	WDI_ALLOC_STRING(deviceInfo, driver);
+	WDI_ALLOC_STRING(deviceInfo, device_id);
+	WDI_ALLOC_STRING(deviceInfo, hardware_id);
+	WDI_ALLOC_STRING(deviceInfo, compatible_id);
+	WDI_ALLOC_STRING(deviceInfo, upper_filter);
 
 }
 
 void CLibWdiSession::RefreshSession(void)
 {
-	wcstombs(chVendorName,m_VendorName,sizeof(chVendorName));
-	wcstombs(chDeviceGuid,m_InterfaceGuid,sizeof(chDeviceGuid));
+	wcstombs(chVendorName, m_VendorName, sizeof(chVendorName));
+	wcstombs(chDeviceGuid, m_InterfaceGuid, sizeof(chDeviceGuid));
 }
 
 void CLibWdiSession::Serialize(CArchive& archive)
@@ -185,31 +185,31 @@ BOOL CLibWdiSession::GuidToString(GUID* Guid, CString& GuidString)
 	                  Guid->Data4[0], Guid->Data4[1], Guid->Data4[2], Guid->Data4[3],
 	                  Guid->Data4[4], Guid->Data4[5], Guid->Data4[6], Guid->Data4[7]);
 
-	GuidString.Insert(0,(TCHAR)'{');
-	GuidString+=(TCHAR)'}';
+	GuidString.Insert(0, (TCHAR)'{');
+	GuidString += (TCHAR)'}';
 
 	return (TRUE);
 }
 CString CLibWdiSession::GetRandomGuid(void)
 {
 	GUID guid;
-	BYTE* pbGuid=(BYTE*)&guid;
+	BYTE* pbGuid = (BYTE*)&guid;
 
 	srand((DWORD)time(NULL));
-	for (int i=0; i < sizeof(GUID); i++)
-		pbGuid[i]=(BYTE)rand();
+	for (int i = 0; i < sizeof(GUID); i++)
+		pbGuid[i] = (BYTE)rand();
 
 	CString guidString;
-	GuidToString(&guid,guidString);
+	GuidToString(&guid, guidString);
 
 	return guidString;
 }
 
 CString CLibWdiSession::GetGuid(void)
 {
-	if (m_InterfaceGuid.GetLength()==0)
+	if (m_InterfaceGuid.GetLength() == 0)
 	{
-		m_InterfaceGuid=GetRandomGuid();
+		m_InterfaceGuid = GetRandomGuid();
 	}
 	return m_InterfaceGuid;
 }
@@ -217,11 +217,11 @@ CString CLibWdiSession::GetGuid(void)
 BOOL CLibWdiSession::SetGuid(CString& newGuid)
 {
 	GUID guid;
-	m_InterfaceGuid=newGuid;
-	if (!StringToGuid(&guid,newGuid))
+	m_InterfaceGuid = newGuid;
+	if (!StringToGuid(&guid, newGuid))
 		return FALSE;
 
-	return GuidToString(&guid,m_InterfaceGuid);
+	return GuidToString(&guid, m_InterfaceGuid);
 }
 
 CString CLibWdiSession::GetPackageBaseDir(void)
@@ -229,8 +229,8 @@ CString CLibWdiSession::GetPackageBaseDir(void)
 	if (m_PackageBaseDir.IsEmpty())
 	{
 		CString txtPath;
-		SHGetSpecialFolderPath(NULL,txtPath.GetBufferSetLength(4096), CSIDL_MYDOCUMENTS, TRUE);
-		PathAppend(txtPath.GetBuffer(4096),_T("DriverPackages"));
+		SHGetSpecialFolderPath(NULL, txtPath.GetBufferSetLength(4096), CSIDL_MYDOCUMENTS, TRUE);
+		PathAppend(txtPath.GetBuffer(4096), _T("DriverPackages"));
 		txtPath.ReleaseBuffer();
 		m_PackageBaseDir = txtPath;
 	}
@@ -257,7 +257,7 @@ CString CLibWdiSession::GetPackageName(void)
 CString CLibWdiSession::SetPackageName(CString name)
 {
 	int chPos;
-	for (chPos=1; chPos <= 255; chPos++)
+	for (chPos = 1; chPos <= 255; chPos++)
 	{
 		if (chPos >= 'A' && chPos <= 'Z')
 			continue;
@@ -268,32 +268,32 @@ CString CLibWdiSession::SetPackageName(CString name)
 		if (chPos == '-' || chPos == '_'  || chPos == '+')
 			continue;
 
-		name.Replace((TCHAR)chPos,(TCHAR)'_');
+		name.Replace((TCHAR)chPos, (TCHAR)'_');
 	}
 
-	while (name.Replace(_T("__"),_T("_")));
+	while (name.Replace(_T("__"), _T("_")));
 	name.Trim(_T("_"));
 
-	m_PackageName=name;
+	m_PackageName = name;
 
 	return name;
 }
 
 BOOL CLibWdiSession::ShowSavePackageDialog(CWnd* parent, CString baseDir, CString name)
 {
-	CString txtPath=baseDir;
+	CString txtPath = baseDir;
 	LPTSTR szPath = txtPath.GetBufferSetLength(4096);
 
 	if (!PathIsDirectory(szPath))
-		SHCreateDirectoryEx(parent->GetSafeHwnd(),szPath,NULL);
+		SHCreateDirectoryEx(parent->GetSafeHwnd(), szPath, NULL);
 
-	PathAppend(szPath,name);
+	PathAppend(szPath, name);
 	txtPath.ReleaseBuffer();
 
 
-	CFileDialog dlg(FALSE,NULL,txtPath.GetBuffer(4096),0,_T("Folder|*.[Folder]|"),parent);
+	CFileDialog dlg(FALSE, NULL, txtPath.GetBuffer(4096), 0, _T("Folder|*.[Folder]|"), parent);
 
-	if (dlg.DoModal()==IDOK)
+	if (dlg.DoModal() == IDOK)
 	{
 
 		m_PackageName		= dlg.m_ofn.lpstrFileTitle;
@@ -307,4 +307,4 @@ BOOL CLibWdiSession::ShowSavePackageDialog(CWnd* parent, CString baseDir, CStrin
 	return FALSE;
 }
 
-IMPLEMENT_SERIAL(CLibWdiSession,CObject,1)
+IMPLEMENT_SERIAL(CLibWdiSession, CObject, 1)

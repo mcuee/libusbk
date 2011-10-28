@@ -133,7 +133,7 @@ static UINT _propButtons[] =
 	IDOK, IDCANCEL, ID_APPLY_NOW, IDHELP,
 	ID_WIZBACK, ID_WIZNEXT, ID_WIZFINISH
 };
-const int _propButtonsCount = sizeof(_propButtons)/sizeof(UINT);
+const int _propButtonsCount = sizeof(_propButtons) / sizeof(UINT);
 
 // horizontal line in wizard mode
 #define ID_WIZLINE	ID_WIZFINISH+1
@@ -289,7 +289,7 @@ BOOL CResizableSheet::CalcSizeExtra(HWND /*hWndChild*/, CSize sizeChild, CSize& 
 		return FALSE;
 
 	// get margin caused by tabcontrol
-	CRect rectTabMargins(0,0,0,0);
+	CRect rectTabMargins(0, 0, 0, 0);
 
 	// get tab position after resizing and calc page rect
 	CRect rectPage, rectSheet;
@@ -379,7 +379,7 @@ int CResizableSheet::GetMinWidth()
 	int border = GetSystemMetrics(SM_CXSIZEFRAME);
 
 	// compute total width
-	return max + min + 2*border;
+	return max + min + 2 * border;
 }
 
 

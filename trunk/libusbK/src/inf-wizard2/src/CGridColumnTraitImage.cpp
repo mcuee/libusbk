@@ -16,8 +16,8 @@
 //! CGridColumnTraitImage - Constructor
 //------------------------------------------------------------------------
 CGridColumnTraitImage::CGridColumnTraitImage()
-	:m_SortImageIndex(false)
-	,m_ToggleSelection(false)
+	: m_SortImageIndex(false)
+	, m_ToggleSelection(false)
 {
 }
 
@@ -28,8 +28,8 @@ CGridColumnTraitImage::CGridColumnTraitImage()
 //! @param nImageCount The number of images to switch between in the imagelist
 //------------------------------------------------------------------------
 CGridColumnTraitImage::CGridColumnTraitImage(int nImageIndex, int nImageCount)
-	:m_SortImageIndex(false)
-	,m_ToggleSelection(false)
+	: m_SortImageIndex(false)
+	, m_ToggleSelection(false)
 {
 	for(int i = nImageIndex; i < nImageIndex + nImageCount; ++i)
 		AddImageIndex(i);
@@ -75,7 +75,7 @@ void CGridColumnTraitImage::AddImageIndex(int nImageIdx)
 //------------------------------------------------------------------------
 void CGridColumnTraitImage::AddImageIndex(int nImageIdx, const CString& strImageText, BOOL bEditable)
 {
-	m_ImageIndexes.Add(nImageIdx, ImageCell(strImageText,bEditable));
+	m_ImageIndexes.Add(nImageIdx, ImageCell(strImageText, bEditable));
 }
 
 //------------------------------------------------------------------------
@@ -88,10 +88,10 @@ void CGridColumnTraitImage::AddImageIndex(int nImageIdx, const CString& strImage
 void CGridColumnTraitImage::SetImageText(int nImageIdx, const CString& strImageText, BOOL bEditable)
 {
 	int nIndex = m_ImageIndexes.FindKey(nImageIdx);
-	if (nIndex==-1)
+	if (nIndex == -1)
 		AddImageIndex(nImageIdx, strImageText, bEditable);
 	else
-		m_ImageIndexes.GetValueAt(nIndex) = ImageCell(strImageText,bEditable);
+		m_ImageIndexes.GetValueAt(nIndex) = ImageCell(strImageText, bEditable);
 }
 
 //------------------------------------------------------------------------
@@ -120,11 +120,11 @@ int CGridColumnTraitImage::AppendStateImages(CGridListCtrlEx& owner, CImageList&
 	if (!owner.GetImageList(LVSIL_SMALL))
 		owner.SetImageList(&imagelist, LVSIL_SMALL);
 
-	VERIFY( owner.GetImageList(LVSIL_SMALL)==&imagelist );
+	VERIFY( owner.GetImageList(LVSIL_SMALL) == &imagelist );
 
 	BOOL createdStateImages = false;
 	CImageList* pStateList = owner.GetImageList(LVSIL_STATE);
-	if (pStateList==NULL)
+	if (pStateList == NULL)
 	{
 		if (!(owner.GetExtendedStyle() & LVS_EX_CHECKBOXES))
 		{
@@ -134,8 +134,8 @@ int CGridColumnTraitImage::AppendStateImages(CGridListCtrlEx& owner, CImageList&
 		}
 	}
 	int imageCount = -1;
-	ASSERT(pStateList!=NULL);
-	if (pStateList!=NULL)
+	ASSERT(pStateList != NULL);
+	if (pStateList != NULL)
 	{
 		imageCount = imagelist.GetImageCount();
 		HICON uncheckedIcon = pStateList->ExtractIcon(0);
@@ -185,16 +185,16 @@ BOOL CGridColumnTraitImage::IsCellReadOnly(CGridListCtrlEx& owner, int nRow, int
 		return true;
 
 	// Check if current cell image blocks for starting cell editor
-	if (m_ImageIndexes.GetSize()!=0)
+	if (m_ImageIndexes.GetSize() != 0)
 	{
 		int nCurImageIdx = -1;
-		for(int i=0; i < m_ImageIndexes.GetSize(); ++i)
+		for(int i = 0; i < m_ImageIndexes.GetSize(); ++i)
 		{
 			if (!m_ImageIndexes.GetValueAt(i).m_Editable)
 			{
-				if (nCurImageIdx==-1)
+				if (nCurImageIdx == -1)
 				{
-					if (pt!=CPoint(-1,-1))
+					if (pt != CPoint(-1, -1))
 					{
 						CRect rect;
 						VERIFY( owner.GetCellRect(nRow, nCol, LVIR_LABEL, rect) );
@@ -203,10 +203,10 @@ BOOL CGridColumnTraitImage::IsCellReadOnly(CGridListCtrlEx& owner, int nRow, int
 					}
 
 					nCurImageIdx = owner.GetCellImage(nRow, nCol);
-					if (nCurImageIdx==-1)
+					if (nCurImageIdx == -1)
 						break;
 				}
-				if (nCurImageIdx==m_ImageIndexes.GetKeyAt(i))
+				if (nCurImageIdx == m_ImageIndexes.GetKeyAt(i))
 					return true;
 			}
 		}
@@ -228,12 +228,12 @@ BOOL CGridColumnTraitImage::IsCellReadOnly(CGridListCtrlEx& owner, int nRow, int
 int CGridColumnTraitImage::OnClickEditStart(CGridListCtrlEx& owner, int nRow, int nCol, CPoint pt, BOOL bDblClick)
 {
 	// Begin edit if the cell has focus already
-	BOOL startEdit = nRow!=-1 && nCol!=-1 && owner.GetFocusRow()==nRow && owner.GetFocusCell()==nCol && !bDblClick;
+	BOOL startEdit = nRow != -1 && nCol != -1 && owner.GetFocusRow() == nRow && owner.GetFocusCell() == nCol && !bDblClick;
 
 	// Check if the cell can be edited without having focus first
 	if (m_ToggleSelection)
 	{
-		if (nCol==0 && owner.GetExtendedStyle() & LVS_EX_CHECKBOXES)
+		if (nCol == 0 && owner.GetExtendedStyle() & LVS_EX_CHECKBOXES)
 		{
 			CRect iconRect;
 			if (!owner.GetCellRect(nRow, nCol, LVIR_ICON, iconRect) || !iconRect.PtInRect(pt))
@@ -244,7 +244,7 @@ int CGridColumnTraitImage::OnClickEditStart(CGridListCtrlEx& owner, int nRow, in
 			}
 		}
 
-		if (m_ImageIndexes.GetSize()==0)
+		if (m_ImageIndexes.GetSize() == 0)
 			return startEdit ? 1 : 0;	// No images to flip between
 
 		CRect iconRect;
@@ -267,27 +267,27 @@ int CGridColumnTraitImage::OnClickEditStart(CGridListCtrlEx& owner, int nRow, in
 //------------------------------------------------------------------------
 int CGridColumnTraitImage::FlipImageIndex(CGridListCtrlEx& owner, int nRow, int nCol)
 {
-	if (m_ImageIndexes.GetSize()==0)
+	if (m_ImageIndexes.GetSize() == 0)
 		return -1;
 
 	int nImageIdx = owner.GetCellImage(nRow, nCol);
 	int nOldImagePos = -1;
-	for(int i=0; i < m_ImageIndexes.GetSize(); ++i)
+	for(int i = 0; i < m_ImageIndexes.GetSize(); ++i)
 	{
-		if (m_ImageIndexes.GetKeyAt(i)==nImageIdx)
+		if (m_ImageIndexes.GetKeyAt(i) == nImageIdx)
 		{
 			nOldImagePos = i;
 			break;
 		}
 	}
-	if (nOldImagePos==-1)
+	if (nOldImagePos == -1)
 		return -1;
 
 	int nNewImageIdx = -1;
-	if (nOldImagePos+1 == m_ImageIndexes.GetSize())
+	if (nOldImagePos + 1 == m_ImageIndexes.GetSize())
 		nNewImageIdx = m_ImageIndexes.GetKeyAt(0);
 	else
-		nNewImageIdx = m_ImageIndexes.GetKeyAt(nOldImagePos+1);
+		nNewImageIdx = m_ImageIndexes.GetKeyAt(nOldImagePos + 1);
 
 	return nNewImageIdx;
 }
@@ -304,7 +304,7 @@ int CGridColumnTraitImage::FlipImageIndex(CGridListCtrlEx& owner, int nRow, int 
 CWnd* CGridColumnTraitImage::OnEditBegin(CGridListCtrlEx& owner, int nRow, int nCol, CPoint pt)
 {
 	// Check if the user used a shortcut key to edit the label
-	if (pt==CPoint(-1,-1))
+	if (pt == CPoint(-1, -1))
 		return OnEditBegin(owner, nRow, nCol);
 
 	// Check if mouse click was inside the label-part of the cell
@@ -321,11 +321,11 @@ CWnd* CGridColumnTraitImage::OnEditBegin(CGridListCtrlEx& owner, int nRow, int n
 			return NULL;
 
 		CString strOldImageText, strNewImageText;
-		for(int i=0; i < m_ImageIndexes.GetSize(); ++i)
+		for(int i = 0; i < m_ImageIndexes.GetSize(); ++i)
 		{
-			if (m_ImageIndexes.GetKeyAt(i)==nOldImageIdx)
+			if (m_ImageIndexes.GetKeyAt(i) == nOldImageIdx)
 				strOldImageText = m_ImageIndexes.GetValueAt(i).m_CellText;
-			if (m_ImageIndexes.GetKeyAt(i)==nNewImageIdx)
+			if (m_ImageIndexes.GetKeyAt(i) == nNewImageIdx)
 				strNewImageText = m_ImageIndexes.GetValueAt(i).m_CellText;
 		}
 
@@ -340,7 +340,7 @@ CWnd* CGridColumnTraitImage::OnEditBegin(CGridListCtrlEx& owner, int nRow, int n
 		dispinfo.item.mask = LVIF_IMAGE;
 		dispinfo.item.iImage = nNewImageIdx;
 
-		if (strNewImageText!=strOldImageText)
+		if (strNewImageText != strOldImageText)
 		{
 			dispinfo.item.mask |= LVIF_TEXT;
 			dispinfo.item.pszText = strNewImageText.GetBuffer(0);
@@ -356,14 +356,14 @@ CWnd* CGridColumnTraitImage::OnEditBegin(CGridListCtrlEx& owner, int nRow, int n
 			if (owner.IsRowSelected(nRow))
 			{
 				POSITION pos = owner.GetFirstSelectedItemPosition();
-				while(pos!=NULL)
+				while(pos != NULL)
 				{
 					int nSelectedRow = owner.GetNextSelectedItem(pos);
-					if (nSelectedRow==nRow)
+					if (nSelectedRow == nRow)
 						continue;	// Don't flip the clicked row
 
 					int nOldImageIdx = owner.GetCellImage(nSelectedRow, nCol);
-					if (nOldImageIdx==nNewImageIdx)
+					if (nOldImageIdx == nNewImageIdx)
 						continue;	// Already flipped
 
 					// Send Notification to parent of ListView ctrl
@@ -377,7 +377,7 @@ CWnd* CGridColumnTraitImage::OnEditBegin(CGridListCtrlEx& owner, int nRow, int n
 					dispinfo.item.mask = LVIF_IMAGE;
 					dispinfo.item.iImage = nNewImageIdx;
 
-					if (strNewImageText!=strOldImageText)
+					if (strNewImageText != strOldImageText)
 					{
 						dispinfo.item.mask |= LVIF_TEXT;
 						dispinfo.item.pszText = strNewImageText.GetBuffer(0);
@@ -389,7 +389,7 @@ CWnd* CGridColumnTraitImage::OnEditBegin(CGridListCtrlEx& owner, int nRow, int n
 			}
 		}
 	}
-	else if (nCol==0 && m_ToggleSelection && owner.GetExtendedStyle() & LVS_EX_CHECKBOXES)
+	else if (nCol == 0 && m_ToggleSelection && owner.GetExtendedStyle() & LVS_EX_CHECKBOXES)
 	{
 		// Check if we should toggle the label-column checkboxes for all the selected rows
 		CRect labelRect;
@@ -405,21 +405,21 @@ CWnd* CGridColumnTraitImage::OnEditBegin(CGridListCtrlEx& owner, int nRow, int n
 					bChecked = owner.GetCheck(nRow);	// The clicked row have already been changed by the click-event. We flip the other rows
 
 				POSITION pos = owner.GetFirstSelectedItemPosition();
-				while(pos!=NULL)
+				while(pos != NULL)
 				{
 					int nSelectedRow = owner.GetNextSelectedItem(pos);
-					if (nSelectedRow==nRow)
+					if (nSelectedRow == nRow)
 						continue;	// Don't flip the clicked row
 
 					if (owner.GetStyle() & LVS_OWNERDATA)
 					{
 						BOOL bSelChecked = owner.OnOwnerDataDisplayCheckbox(nSelectedRow) ? TRUE : FALSE;
-						if (bChecked==bSelChecked)
+						if (bChecked == bSelChecked)
 							continue;	// Already flipped
 					}
 					else
 					{
-						if (owner.GetCheck(nSelectedRow)==bChecked)
+						if (owner.GetCheck(nSelectedRow) == bChecked)
 							continue;	// Already flipped
 					}
 

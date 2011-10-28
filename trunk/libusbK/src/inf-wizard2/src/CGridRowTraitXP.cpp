@@ -58,7 +58,7 @@ void CGridRowTraitXP::OnCustomDraw(CGridListCtrlEx& owner, NMLVCUSTOMDRAW* pLVCD
 		// Fix CListCtrl selection drawing bug with white margin between icon and text
 		int nCol = pLVCD->iSubItem;
 
-		if (CRect(pLVCD->nmcd.rc)==CRect(0,0,0,0))
+		if (CRect(pLVCD->nmcd.rc) == CRect(0, 0, 0, 0))
 			break;
 
 		int nImage = owner.GetCellImage(nRow, nCol);
@@ -66,11 +66,11 @@ void CGridRowTraitXP::OnCustomDraw(CGridListCtrlEx& owner, NMLVCUSTOMDRAW* pLVCD
 			break;
 
 		CImageList* pImageList = owner.GetImageList(LVSIL_SMALL);
-		if (pImageList==NULL)
+		if (pImageList == NULL)
 			break;
 
 		COLORREF backColor = COLORREF(-1);
-		if (owner.GetExtendedStyle() & LVS_EX_TRACKSELECT && owner.GetHotItem()==nRow)
+		if (owner.GetExtendedStyle() & LVS_EX_TRACKSELECT && owner.GetHotItem() == nRow)
 		{
 #if(WINVER >= 0x0500)
 			backColor = ::GetSysColor(COLOR_HOTLIGHT);
@@ -86,17 +86,17 @@ void CGridRowTraitXP::OnCustomDraw(CGridListCtrlEx& owner, NMLVCUSTOMDRAW* pLVCD
 			if (!(owner.GetExtendedStyle() & LVS_EX_FULLROWSELECT))
 				break;	// No drawing of selection color without full-row-select
 
-			if (m_InvertCellSelection && owner.GetFocusRow()==nRow && owner.GetFocusCell()==nCol)
+			if (m_InvertCellSelection && owner.GetFocusRow() == nRow && owner.GetFocusCell() == nCol)
 			{
 				// No drawing of selection color for focus cell
-				if (pLVCD->clrTextBk > RGB(255,255,255))
+				if (pLVCD->clrTextBk > RGB(255, 255, 255))
 					break;
 
 				backColor = pLVCD->clrTextBk;
 			}
 			else
 			{
-				if (owner.GetFocus()!=&owner && !owner.IsCellEditorOpen())
+				if (owner.GetFocus() != &owner && !owner.IsCellEditorOpen())
 				{
 					// Selection color is different when not having focus
 					if (owner.GetStyle() & LVS_SHOWSELALWAYS)
@@ -113,7 +113,7 @@ void CGridRowTraitXP::OnCustomDraw(CGridListCtrlEx& owner, NMLVCUSTOMDRAW* pLVCD
 		else
 		{
 			// Redraw with the given background color
-			if (pLVCD->clrTextBk > RGB(255,255,255))
+			if (pLVCD->clrTextBk > RGB(255, 255, 255))
 				break;	// If a color is more than white, then it is invalid
 
 			backColor = pLVCD->clrTextBk;
@@ -125,10 +125,10 @@ void CGridRowTraitXP::OnCustomDraw(CGridListCtrlEx& owner, NMLVCUSTOMDRAW* pLVCD
 		VERIFY( owner.GetCellRect(nRow, nCol, LVIR_ICON, rcIcon) );
 		VERIFY( owner.GetCellRect(nRow, nCol, LVIR_BOUNDS, rcCell) );
 		// When the label column is placed first it has a left-margin
-		if (nCol==0 && nCol==owner.GetFirstVisibleColumn())
+		if (nCol == 0 && nCol == owner.GetFirstVisibleColumn())
 		{
 			int cxborder = ::GetSystemMetrics(SM_CXBORDER);
-			rcCell.left += cxborder*2;
+			rcCell.left += cxborder * 2;
 		}
 
 		// Remove white margin between cell-image and cell-text
@@ -144,10 +144,10 @@ void CGridRowTraitXP::OnCustomDraw(CGridListCtrlEx& owner, NMLVCUSTOMDRAW* pLVCD
 		                    ILD_NORMAL );
 		pImageList->SetBkColor(oldBkColor);
 
-		if (nCol==0 && owner.GetExtendedStyle() & LVS_EX_CHECKBOXES)
+		if (nCol == 0 && owner.GetExtendedStyle() & LVS_EX_CHECKBOXES)
 		{
 			CImageList* pImageList = owner.GetImageList(LVSIL_STATE);
-			if (pImageList==NULL)
+			if (pImageList == NULL)
 				break;
 
 			int checkState = owner.GetCheck(nRow);

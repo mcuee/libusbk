@@ -16,12 +16,12 @@
 //! CGridColumnTraitText - Constructor
 //------------------------------------------------------------------------
 CGridColumnTraitText::CGridColumnTraitText()
-	:m_pOldFont(NULL)
-	,m_TextColor(COLORREF(-1))
-	,m_BackColor(COLORREF(-1))
-	,m_SortFormatNumber(false)
-	,m_OldTextColor(COLORREF(-1))
-	,m_OldBackColor(COLORREF(-1))
+	: m_pOldFont(NULL)
+	, m_TextColor(COLORREF(-1))
+	, m_BackColor(COLORREF(-1))
+	, m_SortFormatNumber(false)
+	, m_OldTextColor(COLORREF(-1))
+	, m_OldBackColor(COLORREF(-1))
 {}
 
 //------------------------------------------------------------------------
@@ -40,7 +40,7 @@ void CGridColumnTraitText::Accept(CGridColumnTraitVisitor& visitor)
 //------------------------------------------------------------------------
 BOOL CGridColumnTraitText::UpdateTextColor(COLORREF& textColor)
 {
-	if (m_TextColor!=COLORREF(-1))
+	if (m_TextColor != COLORREF(-1))
 	{
 		textColor = m_TextColor;
 		return true;
@@ -56,7 +56,7 @@ BOOL CGridColumnTraitText::UpdateTextColor(COLORREF& textColor)
 //------------------------------------------------------------------------
 BOOL CGridColumnTraitText::UpdateBackColor(COLORREF& backColor)
 {
-	if (m_BackColor!=COLORREF(-1))
+	if (m_BackColor != COLORREF(-1))
 	{
 		backColor = m_BackColor;
 		return true;
@@ -112,7 +112,7 @@ void CGridColumnTraitText::OnCustomDraw(CGridListCtrlEx& owner, NMLVCUSTOMDRAW* 
 	// After painting a cell
 	case CDDS_ITEMPOSTPAINT | CDDS_SUBITEM:
 	{
-		if (m_pOldFont!=NULL)
+		if (m_pOldFont != NULL)
 		{
 			// Restore the original font
 			CDC* pDC = CDC::FromHandle(pLVCD->nmcd.hdc);
@@ -177,11 +177,11 @@ int CGridColumnTraitText::GetCellFontHeight(CGridListCtrlEx& owner)
 {
 	const CString testText = _T("yjpÍÁ");
 
-	CRect rcRequired = CRect(0,0,0,0);
+	CRect rcRequired = CRect(0, 0, 0, 0);
 
 	CClientDC dc(&owner);
 	dc.SelectObject(owner.GetCellFont());
-	dc.DrawText(testText, &rcRequired, DT_CALCRECT|DT_SINGLELINE);
+	dc.DrawText(testText, &rcRequired, DT_CALCRECT | DT_SINGLELINE);
 
 	return rcRequired.Height();
 }
@@ -207,13 +207,13 @@ CRect CGridColumnTraitText::GetCellEditRect(CGridListCtrlEx& owner, int nRow, in
 	if (owner.GetExtendedStyle() & LVS_EX_SUBITEMIMAGES)
 	{
 		// Add margin to cell image
-		if (owner.GetImageList(LVSIL_SMALL)!=NULL && owner.GetCellImage(nRow,nCol)!=I_IMAGECALLBACK)
+		if (owner.GetImageList(LVSIL_SMALL) != NULL && owner.GetCellImage(nRow, nCol) != I_IMAGECALLBACK)
 			rectCell.left += ::GetSystemMetrics(SM_CXBORDER);
 	}
 
 	// Check if there is enough room for normal margin
 	int requiredHeight = GetCellFontHeight(owner);
-	requiredHeight += 2*::GetSystemMetrics(SM_CXEDGE);
+	requiredHeight += 2 *::GetSystemMetrics(SM_CXEDGE);
 	if (requiredHeight > rectCell.Height())
 		rectCell.bottom = rectCell.top + requiredHeight;
 

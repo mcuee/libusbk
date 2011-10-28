@@ -16,9 +16,9 @@
 //! CGridColumnTraitDateTime - Constructor
 //------------------------------------------------------------------------
 CGridColumnTraitDateTime::CGridColumnTraitDateTime()
-	:m_ParseDateTimeFlags(0)
-	,m_ParseDateTimeLCID(LOCALE_USER_DEFAULT)
-	,m_DateTimeCtrlStyle(0)
+	: m_ParseDateTimeFlags(0)
+	, m_ParseDateTimeLCID(LOCALE_USER_DEFAULT)
+	, m_DateTimeCtrlStyle(0)
 {}
 
 //------------------------------------------------------------------------
@@ -126,7 +126,7 @@ CWnd* CGridColumnTraitDateTime::OnEditBegin(CGridListCtrlEx& owner, int nRow, in
 	CString cellText = owner.GetItemText(nRow, nCol);
 
 	COleDateTime dt;
-	if(dt.ParseDateTime(cellText, m_ParseDateTimeFlags, m_ParseDateTimeLCID)==FALSE)
+	if(dt.ParseDateTime(cellText, m_ParseDateTimeFlags, m_ParseDateTimeLCID) == FALSE)
 		dt.SetDateTime(1970, 1, 1, 0, 0, 0);
 
 	// Get position of the cell to edit
@@ -134,14 +134,14 @@ CWnd* CGridColumnTraitDateTime::OnEditBegin(CGridListCtrlEx& owner, int nRow, in
 
 	// Create control to edit the cell
 	CDateTimeCtrl* pDateTimeCtrl = CreateDateTimeCtrl(owner, nRow, nCol, rectCell);
-	VERIFY(pDateTimeCtrl!=NULL);
+	VERIFY(pDateTimeCtrl != NULL);
 
 	pDateTimeCtrl->SetTime(dt);
 
 	// Check with the original string
 	CString timeText;
 	pDateTimeCtrl->GetWindowText(timeText);
-	if (cellText!=timeText)
+	if (cellText != timeText)
 	{
 		dt.SetDateTime(1970, 1, 1, 0, 0, 0);
 		pDateTimeCtrl->SetTime(dt);
@@ -161,11 +161,11 @@ CWnd* CGridColumnTraitDateTime::OnEditBegin(CGridListCtrlEx& owner, int nRow, in
 int CGridColumnTraitDateTime::OnSortRows(LPCTSTR pszLeftValue, LPCTSTR pszRightValue, BOOL bAscending)
 {
 	COleDateTime leftDate;
-	if(leftDate.ParseDateTime(pszLeftValue, m_ParseDateTimeFlags, m_ParseDateTimeLCID)==FALSE)
+	if(leftDate.ParseDateTime(pszLeftValue, m_ParseDateTimeFlags, m_ParseDateTimeLCID) == FALSE)
 		leftDate.SetDateTime(1970, 1, 1, 0, 0, 0);
 
 	COleDateTime rightDate;
-	if(rightDate.ParseDateTime(pszRightValue, m_ParseDateTimeFlags, m_ParseDateTimeLCID)==FALSE)
+	if(rightDate.ParseDateTime(pszRightValue, m_ParseDateTimeFlags, m_ParseDateTimeLCID) == FALSE)
 		rightDate.SetDateTime(1970, 1, 1, 0, 0, 0);
 
 	if (bAscending)
@@ -193,10 +193,10 @@ END_MESSAGE_MAP()
 //! @param nCol The index of the column
 //------------------------------------------------------------------------
 CGridEditorDateTimeCtrl::CGridEditorDateTimeCtrl(int nRow, int nCol)
-	:m_Row(nRow)
-	,m_Col(nCol)
-	,m_Completed(false)
-	,m_Modified(false)
+	: m_Row(nRow)
+	, m_Col(nCol)
+	, m_Completed(false)
+	, m_Modified(false)
 {}
 
 //------------------------------------------------------------------------
@@ -244,7 +244,7 @@ void CGridEditorDateTimeCtrl::EndEdit(BOOL bSuccess)
 void CGridEditorDateTimeCtrl::OnKillFocus(CWnd* pNewWnd)
 {
 	CDateTimeCtrl::OnKillFocus(pNewWnd);
-	if (GetMonthCalCtrl()==NULL)
+	if (GetMonthCalCtrl() == NULL)
 		EndEdit(true);
 }
 
