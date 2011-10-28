@@ -21,6 +21,7 @@ public:
 
 	static void AddTipString(WORD nID);
 	static CString* GetTipString(WORD nID);
+	static BOOL CreateWizardFont(CFont& font, LOGFONT& logFont, BOOL bSmall = TRUE, BOOL bBold = TRUE);
 
 	static void AddCallbackTool(CToolTipCtrl* tipCtrl, CWnd* parent,  WORD nDlgID, LPARAM nStringID);
 	static BOOL HandleToolTipNotify(UINT id, NMHDR* pNMHDR, LRESULT* pResult);

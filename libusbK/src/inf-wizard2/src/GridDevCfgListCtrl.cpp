@@ -148,8 +148,6 @@ BOOL CGridDevCfgListCtrl::OnDisplayCellColor(int nRow, int nCol, COLORREF& textC
 		case DEVCFG_COLID_IMAGE:
 			goto Done;
 		case DEVCFG_COLID_FIELD:
-			//backColor=(COLORREF)RGB(230,242,255);
-			//textColor=(COLORREF)RGB(255,255,255);
 			backColor = (COLORREF)GetSysColor(COLOR_3DLIGHT);
 			switch(nRow)
 			{
@@ -157,9 +155,6 @@ BOOL CGridDevCfgListCtrl::OnDisplayCellColor(int nRow, int nCol, COLORREF& textC
 			case DEVCFG_FIELD_PID:
 				textColor = CInfWizardDisplay::ColorError;
 				break;
-			case DEVCFG_FIELD_MFG:
-			case DEVCFG_FIELD_DESC:
-				return TRUE;
 			default:
 				textColor = (COLORREF)GetSysColor(COLOR_3DDKSHADOW);
 
