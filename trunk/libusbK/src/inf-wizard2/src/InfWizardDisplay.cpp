@@ -40,12 +40,21 @@ CInfWizardDisplay::~CInfWizardDisplay(void)
 	m_FontGrid.DeleteObject();
 }
 
-void CInfWizardDisplay::CreateGridFont(BOOL bSmall, BOOL bBold)
+BOOL CInfWizardDisplay::CreateWizardFont(CFont& font, LOGFONT& logFont, BOOL bSmall, BOOL bBold)
 {
 	int fontSize	= bSmall ? 12 : 13;
 	int fontWeight	= bBold ? FW_HEAVY : FW_NORMAL;
-	m_FontGrid.CreateFont(12, 0, 0, 0, FW_HEAVY, FALSE, FALSE, FALSE, 0, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH, DEF_FONTNAME);
-	m_FontGrid.GetLogFont(&m_LogFontGrid);
+
+	BOOL success = font.CreateFont(fontSize, 0, 0, 0, fontWeight, FALSE, FALSE, FALSE, 0, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH, DEF_FONTNAME);
+	if (success)
+		success = (BOOL)font.GetLogFont(&logFont);
+
+	return success;
+}
+
+void CInfWizardDisplay::CreateGridFont(BOOL bSmall, BOOL bBold)
+{
+	CreateWizardFont(m_FontGrid, m_LogFontGrid, bSmall, bBold);
 }
 
 void CInfWizardDisplay::AddTipString(WORD nID)
