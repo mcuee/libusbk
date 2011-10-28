@@ -17,7 +17,7 @@ extern InfWizardApp* g_App;
 
 CGridDrvListCtrl::CGridDrvListCtrl(void)
 {
-	CreateGridFont(TRUE,TRUE);
+	CreateGridFont(TRUE, TRUE);
 }
 
 CGridDrvListCtrl::~CGridDrvListCtrl(void)
@@ -39,16 +39,16 @@ BOOL CGridDrvListCtrl::AddColumnTraits(void)
 	CGridColumnTraitImage*	colDriverImage_Usb1 = new CGridColumnTraitImage;
 
 
-	colDriverText->SetMetaFlag(GCSF_FIXED,true);
-	colDriverImage_Usb0->SetMetaFlag(GCSF_FIXED,true);
-	colDriverImage_UsbK->SetMetaFlag(GCSF_FIXED,true);
-	colDriverImage_Usb1->SetMetaFlag(GCSF_FIXED,true);
+	colDriverText->SetMetaFlag(GCSF_FIXED, true);
+	colDriverImage_Usb0->SetMetaFlag(GCSF_FIXED, true);
+	colDriverImage_UsbK->SetMetaFlag(GCSF_FIXED, true);
+	colDriverImage_Usb1->SetMetaFlag(GCSF_FIXED, true);
 
 	int colWidth;
 
 	CRect rectGrid;
 	GetClientRect(&rectGrid);
-	colWidth=rectGrid.Width()+25;
+	colWidth = rectGrid.Width() + 25;
 
 	colIndex++;
 	InsertColumnTrait(colIndex, _T("Kernel Driver Package(s)"), LVCFMT_LEFT, colWidth, colIndex, colDriverText);
@@ -73,7 +73,7 @@ BOOL CGridDrvListCtrl::AddRow(int driverType, LPCTSTR displayName, BOOL hasUsb0S
 	CString sSupportedDrivers;
 	VS_FIXEDFILEINFO fileInfo;
 	CLibWdiDynamicAPI& API = g_App->Wdi;
-	int nItem=GetItemCount();
+	int nItem = GetItemCount();
 
 	if (!API.IsApiLoaded())
 		return FALSE;
@@ -82,25 +82,25 @@ BOOL CGridDrvListCtrl::AddRow(int driverType, LPCTSTR displayName, BOOL hasUsb0S
 	{
 		sSupportedDrivers.Format(_T("%s v%d.%d.%d.%d\n"),
 		                         displayName,
-		                         (int)fileInfo.dwFileVersionMS>>16,
-		                         (int)fileInfo.dwFileVersionMS&0xFFFF,
-		                         (int)fileInfo.dwFileVersionLS>>16,
-		                         (int)fileInfo.dwFileVersionLS&0xFFFF);
+		                         (int)fileInfo.dwFileVersionMS >> 16,
+		                         (int)fileInfo.dwFileVersionMS & 0xFFFF,
+		                         (int)fileInfo.dwFileVersionLS >> 16,
+		                         (int)fileInfo.dwFileVersionLS & 0xFFFF);
 
 		// Row
-		InsertItem(nItem,_T(""),0);
-		SetItemData(nItem,(DWORD_PTR)driverType);
+		InsertItem(nItem, _T(""), 0);
+		SetItemData(nItem, (DWORD_PTR)driverType);
 
 		// Col:DisplayText
-		int colIndex=1;
-		SetItemText(nItem,colIndex++,sSupportedDrivers);
+		int colIndex = 1;
+		SetItemText(nItem, colIndex++, sSupportedDrivers);
 
 		// Col:Usb0
-		SetCellImage(nItem,colIndex++,hasUsb0Support?0:1);
+		SetCellImage(nItem, colIndex++, hasUsb0Support ? 0 : 1);
 		// Col:UsbK
-		SetCellImage(nItem,colIndex++,hasUsbKSupport?0:1);
+		SetCellImage(nItem, colIndex++, hasUsbKSupport ? 0 : 1);
 		// Col:Usb1
-		SetCellImage(nItem,colIndex++,hasUsb1Support?0:1);
+		SetCellImage(nItem, colIndex++, hasUsb1Support ? 0 : 1);
 
 	}
 
@@ -127,35 +127,43 @@ BOOL CGridDrvListCtrl::InitDriverList(CImageList& driverListImages)
 	SetDefaultRowTrait(pRowTrait);
 
 	AddColumnTraits();
-	AddRow(WDI_WINUSB, _T("WinUsb"),FALSE,TRUE,TRUE);
-	AddRow(WDI_LIBUSBK,_T("libusbK"),TRUE,TRUE,FALSE);
-	AddRow(WDI_LIBUSB0,_T("libusb0"),TRUE,TRUE,FALSE);
 
 	CViewConfigSectionWinApp* pColumnProfile = new CViewConfigSectionWinApp(_T("Driver List"));
 	pColumnProfile->AddProfile(_T("Default"));
 	SetupColumnConfig(pColumnProfile);
 
+	UpdateDriverList();
+
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
+BOOL CGridDrvListCtrl::UpdateDriverList(void)
+{
+	DeleteAllItems();
 
+	AddRow(WDI_WINUSB, _T("WinUsb"), FALSE, TRUE, TRUE);
+	AddRow(WDI_LIBUSBK, _T("libusbK"), TRUE, TRUE, FALSE);
+	AddRow(WDI_LIBUSB0, _T("libusb0"), TRUE, TRUE, FALSE);
+
+	return TRUE;  // return TRUE  unless you set the focus to a control
+}
 BOOL CGridDrvListCtrl::OnDisplayCellTooltip(int nRow, int nCol, CString& strResult)
 {
-	if (nRow==-1 && nCol!=-1)
+	if (nRow == -1 && nCol != -1)
 	{
 		switch(nCol)
 		{
 		case 2:
-			strResult="Support by libusb0.dll";
+			strResult = "Support by libusb0.dll";
 			return TRUE;
 		case 3:
-			strResult="Support by libusbK.dll";
+			strResult = "Support by libusbK.dll";
 			return TRUE;
 		case 4:
-			strResult="Support by libusb-1.0.dll";
+			strResult = "Support by libusb-1.0.dll";
 			return TRUE;
 		}
 	}
-	if (nRow!=-1 && nCol!=-1)
+	if (nRow != -1 && nCol != -1)
 	{
 		int driverType = this->GetItemData(nRow);
 
@@ -198,11 +206,11 @@ BOOL CGridDrvListCtrl::OnDisplayCellFont(int nRow, int nCol, LOGFONT& font)
 {
 	if (nRow >= 0)
 	{
-		if (nCol==1)
+		if (nCol == 1)
 		{
 			font = m_LogFontGrid;
 			return true;
 		}
 	}
-	return CGridListCtrlEx::OnDisplayCellFont(nRow,nCol,font);
+	return CGridListCtrlEx::OnDisplayCellFont(nRow, nCol, font);
 }

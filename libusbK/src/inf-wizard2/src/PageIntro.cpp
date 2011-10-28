@@ -32,7 +32,7 @@ extern InfWizardApp* g_App;
 
 IMPLEMENT_DYNCREATE(CPageIntro, CResizablePageEx)
 
-CPageIntro::CPageIntro() : CResizablePageEx(CPageIntro::IDD, IDS_INFWIZARD,0,0)
+CPageIntro::CPageIntro() : CResizablePageEx(CPageIntro::IDD, IDS_INFWIZARD, 0, 0)
 {
 	//{{AFX_DATA_INIT(CPageIntro)
 	// NOTE: the ClassWizard will add member initialization here
@@ -54,6 +54,7 @@ void CPageIntro::DoDataExchange(CDataExchange* pDX)
 	// NOTE: the ClassWizard will add DDX and DDV calls here
 	//}}AFX_DATA_MAP
 	DDX_Control(pDX, IDC_DRIVER_LIST, m_DriverList);
+	DDX_Control(pDX, IDC_LINK_SELECT_DRIVER, m_LnkSelectDriver);
 }
 
 
@@ -65,6 +66,7 @@ BEGIN_MESSAGE_MAP(CPageIntro, CResizablePageEx)
 	ON_NOTIFY(LVN_ITEMCHANGED, IDC_DRIVER_LIST, &CPageIntro::OnLvnItemchangedDriverList)
 	ON_NOTIFY(NM_CLICK, IDC_LINK_OPEN_SESSION, &CPageIntro::OnNMClickLinkOpenSession)
 	ON_NOTIFY(NM_CLICK, IDC_LINK_SAVE_SESSION, &CPageIntro::OnNMClickLinkSaveSession)
+	ON_NOTIFY(NM_CLICK, IDC_LINK_SELECT_DRIVER, &CPageIntro::OnNMClickLinkSelectDriver)
 END_MESSAGE_MAP()
 
 /////////////////////////////////////////////////////////////////////////////
@@ -91,7 +93,7 @@ BOOL CPageIntro::OnInitDialog()
 
 	AddAnchor(IDC_BIGBOLDTITLE, TOP_LEFT);
 	AddAnchor(IDC_INTRO_TEXT1, TOP_LEFT, TOP_RIGHT);
-	AddAnchor(IDC_INTRO_TEXT2, TOP_LEFT, TOP_RIGHT);
+	AddAnchor(IDC_LINK_SELECT_DRIVER, TOP_LEFT, TOP_RIGHT);
 	AddAnchor(IDC_DRIVER_LIST, TOP_LEFT, BOTTOM_RIGHT);
 
 	AddAnchor(IDC_LINK_OPEN_SESSION, BOTTOM_LEFT);
@@ -128,12 +130,12 @@ void CPageIntro::OnSize(UINT nType, int cx, int cy)
 {
 	if (m_DriverList.m_hWnd)
 	{
-		CResizablePageEx::OnSize(nType,cx,cy);
+		CResizablePageEx::OnSize(nType, cx, cy);
 		m_DriverList.ResizeColumns();
 
 		return;
 	}
-	CResizablePageEx::OnSize(nType,cx,cy);
+	CResizablePageEx::OnSize(nType, cx, cy);
 }
 
 void CPageIntro::OnLvnItemchangedDriverList(NMHDR* pNMHDR, LRESULT* pResult)
@@ -154,6 +156,27 @@ void CPageIntro::OnLvnItemchangedDriverList(NMHDR* pNMHDR, LRESULT* pResult)
 	}
 }
 
+BOOL CPageIntro::SelectSessionDriverType(void)
+{
+	CPropertySheet* pSheet = (CPropertySheet*)GetParent();
+
+	int nItems = m_DriverList.GetItemCount();
+	for (int iItem = 0; iItem < nItems; iItem++)
+	{
+		int driverType = (int)m_DriverList.GetItemData(iItem);
+		if (driverType == g_App->Wdi.Session()->GetDriverType())
+		{
+			m_DriverList.SelectRow(iItem, TRUE);
+			pSheet->SetWizardButtons(PSWIZB_NEXT);
+			return TRUE;
+		}
+		m_DriverList.SelectRow(iItem, FALSE);
+	}
+
+	pSheet->SetWizardButtons(0);
+	return FALSE;
+}
+
 void CPageIntro::OnNMClickLinkOpenSession(NMHDR* pNMHDR, LRESULT* pResult)
 {
 	// TODO: Add your control notification handler code here
@@ -162,21 +185,10 @@ void CPageIntro::OnNMClickLinkOpenSession(NMHDR* pNMHDR, LRESULT* pResult)
 
 	if (g_App->Wdi.OpenSession(GetParent()))
 	{
-		int nItems = m_DriverList.GetItemCount();
-		for (int iItem = 0; iItem < nItems; iItem++)
+		if (SelectSessionDriverType())
 		{
-			int driverType = (int)m_DriverList.GetItemData(iItem);
-			if (driverType==g_App->Wdi.Session()->GetDriverType())
-			{
-				m_DriverList.SelectRow(iItem,TRUE);
-				pSheet->SetWizardButtons(PSWIZB_NEXT);
-				pSheet->SetActivePage(3);
-				return;
-			}
-			m_DriverList.SelectRow(iItem,FALSE);
+			pSheet->SetActivePage(3);
 		}
-
-		pSheet->SetWizardButtons(0);
 	}
 }
 
@@ -193,7 +205,26 @@ BOOL CPageIntro::PreTranslateMessage(MSG* pMsg)
 	return CResizablePageEx::PreTranslateMessage(pMsg);
 }
 
-BOOL CPageIntro::OnToolTipNotify(UINT id, NMHDR* pNMHDR,LRESULT* pResult)
+BOOL CPageIntro::OnToolTipNotify(UINT id, NMHDR* pNMHDR, LRESULT* pResult)
 {
-	return CInfWizardDisplay::HandleToolTipNotify(id,pNMHDR,pResult);
+	return CInfWizardDisplay::HandleToolTipNotify(id, pNMHDR, pResult);
+}
+void CPageIntro::OnNMClickLinkSelectDriver(NMHDR* pNMHDR, LRESULT* pResult)
+{
+	// TODO: Add your control notification handler code here
+	PNMLINK pnmLink = (PNMLINK) pNMHDR;
+	switch(pnmLink->item.iLink)
+	{
+	case 0:
+		if (g_App->Wdi.LoadDll(this))
+		{
+			m_DriverList.UpdateDriverList();
+			SelectSessionDriverType();
+		}
+		break;
+	case 1:
+		MessageBox(_T("Package repositories are not yet available."), _T("InfWizard v2.0"), MB_OK | MB_ICONINFORMATION);
+		break;
+	}
+	*pResult = 0;
 }

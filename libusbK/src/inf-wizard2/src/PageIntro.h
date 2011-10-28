@@ -38,6 +38,7 @@ public:
 	CPageIntro();
 	~CPageIntro();
 
+	BOOL SelectSessionDriverType(void);
 	// Dialog Data
 	//{{AFX_DATA(CPageIntro)
 	enum { IDD = IDD_PAGE_INTRO };
@@ -78,6 +79,9 @@ public:
 private:
 	CToolTipCtrl m_ToolTip;
 
+public:
+	afx_msg void OnNMClickLinkSelectDriver(NMHDR* pNMHDR, LRESULT* pResult);
+	CLinkCtrl m_LnkSelectDriver;
 };
 
 //{{AFX_INSERT_LOCATION}}

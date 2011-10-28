@@ -76,7 +76,7 @@ BOOL CPageConfigDevice::OnSetActive()
 	m_DevCfgList.DeleteAllItems();
 	m_DevCfgList.Load(g_App->Wdi.Session());
 
-	if (g_App->Wdi.Session()->IsValid()==ERROR_SUCCESS)
+	if (g_App->Wdi.Session()->IsValid() == ERROR_SUCCESS)
 		pSheet->SetWizardButtons(PSWIZB_BACK | PSWIZB_NEXT);
 	else
 		pSheet->SetWizardButtons(PSWIZB_BACK);
@@ -99,12 +99,12 @@ void CPageConfigDevice::OnSize(UINT nType, int cx, int cy)
 {
 	if (m_DevCfgList.m_hWnd)
 	{
-		CResizablePageEx::OnSize(nType,cx,cy);
+		CResizablePageEx::OnSize(nType, cx, cy);
 		m_DevCfgList.ResizeColumns();
 
 		return;
 	}
-	CResizablePageEx::OnSize(nType,cx,cy);
+	CResizablePageEx::OnSize(nType, cx, cy);
 
 }
 
@@ -115,9 +115,9 @@ void CPageConfigDevice::OnNMDblclkDevList(NMHDR* pNMHDR, LRESULT* pResult)
 	if (pNMItemActivate->iItem >= 0 && pNMItemActivate->iSubItem == DEVCFG_COLID_FIELD)
 	{
 		m_DevCfgList.SetFocusCell(DEVCFG_COLID_VALUE);
-		m_DevCfgList.EditCell(pNMItemActivate->iItem,DEVCFG_COLID_VALUE);
+		m_DevCfgList.EditCell(pNMItemActivate->iItem, DEVCFG_COLID_VALUE);
 	}
-	TRACE2("iItem:%d iSubItem:%d\n",pNMItemActivate->iItem, pNMItemActivate->iSubItem);
+	TRACE2("iItem:%d iSubItem:%d\n", pNMItemActivate->iItem, pNMItemActivate->iSubItem);
 	// TODO: Add your control notification handler code here
 	*pResult = 0;
 }
@@ -129,9 +129,9 @@ void CPageConfigDevice::OnNMClickDevList(NMHDR* pNMHDR, LRESULT* pResult)
 	if (pNMItemActivate->iItem >= 0 && pNMItemActivate->iSubItem == DEVCFG_COLID_VALUE)
 	{
 		m_DevCfgList.SetFocusCell(DEVCFG_COLID_VALUE);
-		m_DevCfgList.EditCell(pNMItemActivate->iItem,DEVCFG_COLID_VALUE);
+		m_DevCfgList.EditCell(pNMItemActivate->iItem, DEVCFG_COLID_VALUE);
 	}
-	TRACE2("iItem:%d iSubItem:%d\n",pNMItemActivate->iItem, pNMItemActivate->iSubItem);
+	TRACE2("iItem:%d iSubItem:%d\n", pNMItemActivate->iItem, pNMItemActivate->iSubItem);
 	// TODO: Add your control notification handler code here
 	*pResult = 0;
 }
@@ -139,7 +139,7 @@ void CPageConfigDevice::OnNMClickDevList(NMHDR* pNMHDR, LRESULT* pResult)
 void CPageConfigDevice::OnLvnKeydownDevList(NMHDR* pNMHDR, LRESULT* pResult)
 {
 	LPNMLVKEYDOWN pLVKeyDow = reinterpret_cast<LPNMLVKEYDOWN>(pNMHDR);
-	TRACE2("[OnLvnKeydownDevList] flags:%d wVKey:%d\n",pLVKeyDow->flags,pLVKeyDow->wVKey);
+	TRACE2("[OnLvnKeydownDevList] flags:%d wVKey:%d\n", pLVKeyDow->flags, pLVKeyDow->wVKey);
 
 	if (pLVKeyDow->wVKey == VK_SPACE)
 	{
@@ -147,7 +147,7 @@ void CPageConfigDevice::OnLvnKeydownDevList(NMHDR* pNMHDR, LRESULT* pResult)
 		if (rowId >= 0)
 		{
 			m_DevCfgList.SetFocusCell(DEVCFG_COLID_VALUE);
-			m_DevCfgList.EditCell(rowId,DEVCFG_COLID_VALUE);
+			m_DevCfgList.EditCell(rowId, DEVCFG_COLID_VALUE);
 			*pResult = 1;
 			return;
 		}
@@ -179,30 +179,30 @@ void CPageConfigDevice::OnLvnEndlabeleditDevList(NMHDR* pNMHDR, LRESULT* pResult
 
 		fieldIntValue.MakeLower();
 
-		if (fieldIntValue.Find(_T("0x"),0) != 0)
-			fieldIntValue.Insert(0,_T("0x"));
+		if (fieldIntValue.Find(_T("0x"), 0) != 0)
+			fieldIntValue.Insert(0, _T("0x"));
 
 		fieldIntValue.TrimRight((TCHAR)'H');
-		DWORD dwValue = _tcstoul(fieldIntValue,NULL,NULL);
+		DWORD dwValue = _tcstoul(fieldIntValue, NULL, NULL);
 
 
 		switch(pDispInfo->item.iItem)
 		{
 		case DEVCFG_FIELD_VID:
-			g_App->Wdi.Session()->vid=(WORD)dwValue;
+			g_App->Wdi.Session()->vid = (WORD)dwValue;
 			break;
 
 		case DEVCFG_FIELD_PID:
-			g_App->Wdi.Session()->pid=(WORD)dwValue;
+			g_App->Wdi.Session()->pid = (WORD)dwValue;
 			break;
 
 		case DEVCFG_FIELD_MI:
 			if (fieldValue.GetLength() == 0)
-				g_App->Wdi.Session()->is_composite=FALSE;
+				g_App->Wdi.Session()->is_composite = FALSE;
 			else
-				g_App->Wdi.Session()->is_composite=TRUE;
+				g_App->Wdi.Session()->is_composite = TRUE;
 
-			g_App->Wdi.Session()->mi=(UCHAR)dwValue;
+			g_App->Wdi.Session()->mi = (UCHAR)dwValue;
 			break;
 
 		case DEVCFG_FIELD_DESC:
@@ -226,7 +226,7 @@ void CPageConfigDevice::OnLvnEndlabeleditDevList(NMHDR* pNMHDR, LRESULT* pResult
 			ASSERT(FALSE);
 		}
 	}
-	if (g_App->Wdi.Session()->IsValid()==ERROR_SUCCESS)
+	if (g_App->Wdi.Session()->IsValid() == ERROR_SUCCESS)
 	{
 		pSheet->SetWizardButtons(PSWIZB_BACK | PSWIZB_NEXT);
 		return;

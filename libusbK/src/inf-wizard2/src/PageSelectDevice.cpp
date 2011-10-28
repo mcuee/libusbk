@@ -61,7 +61,7 @@ void CPageSelectDevice::DoDataExchange(CDataExchange* pDX)
 BEGIN_MESSAGE_MAP(CPageSelectDevice, CResizablePageEx)
 	//{{AFX_MSG_MAP(CPageSelectDevice)
 	ON_WM_SIZE()
-	ON_MESSAGE(WM_DEVICECHANGE,OnWmDeviceChange)
+	ON_MESSAGE(WM_DEVICECHANGE, OnWmDeviceChange)
 	//}}AFX_MSG_MAP
 	ON_NOTIFY_EX(TTN_NEEDTEXT, 0, &CPageSelectDevice::OnToolTipNotify)
 	ON_NOTIFY(LVN_ITEMCHANGED, IDC_DEV_LIST, &CPageSelectDevice::OnLvnItemchangedDevList)
@@ -135,21 +135,21 @@ void CPageSelectDevice::OnSize(UINT nType, int cx, int cy)
 	{
 		m_DevList.SetRedraw(FALSE);
 
-		CResizablePageEx::OnSize(nType,cx,cy);
+		CResizablePageEx::OnSize(nType, cx, cy);
 		m_DevList.ResizeColumns();
 
 		m_DevList.SetRedraw(TRUE);
 
 		CRect rectList;
 		m_DevList.GetWindowRect(&rectList);
-		m_DevList.SendMessage(WM_SIZE,(WPARAM)0,(LPARAM)MAKELONG(rectList.Width(),rectList.Height()));
+		m_DevList.SendMessage(WM_SIZE, (WPARAM)0, (LPARAM)MAKELONG(rectList.Width(), rectList.Height()));
 
 		m_DevList.ResizeColumns();
 
 
 		return;
 	}
-	CResizablePageEx::OnSize(nType,cx,cy);
+	CResizablePageEx::OnSize(nType, cx, cy);
 }
 
 void CPageSelectDevice::OnLvnItemchangedDevList(NMHDR* pNMHDR, LRESULT* pResult)
@@ -161,7 +161,7 @@ void CPageSelectDevice::OnLvnItemchangedDevList(NMHDR* pNMHDR, LRESULT* pResult)
 		if (pNMListView->iItem >= 0)
 		{
 			g_App->Wdi.Session()->CopyFrom((PWDI_DEVICE_INFO)m_DevList.GetItemData(pNMListView->iItem));
-			g_App->Wdi.Session()->m_VendorName = m_DevList.GetItemText(pNMListView->iItem,0);
+			g_App->Wdi.Session()->m_VendorName = m_DevList.GetItemText(pNMListView->iItem, 0);
 			g_App->Wdi.Session()->SetPackageName(g_App->Wdi.Session()->desc);
 		}
 	}
@@ -175,9 +175,9 @@ void CPageSelectDevice::OnBnClickedShowAllDevices()
 	int iAll = this->m_BtnShowAll.GetCheck();
 	int iNew = this->m_BtnShowNew.GetCheck();
 
-	TRACE2("[Show] All:%d New:%d\n",iAll,iNew);
+	TRACE2("[Show] All:%d New:%d\n", iAll, iNew);
 
-	if (this->m_BtnShowNew.GetCheck()!=BST_CHECKED)
+	if (this->m_BtnShowNew.GetCheck() != BST_CHECKED)
 	{
 		m_DevList.UpdateDevList(FALSE);
 		return;
@@ -204,7 +204,7 @@ BOOL CPageSelectDevice::PreTranslateMessage(MSG* pMsg)
 	return CResizablePageEx::PreTranslateMessage(pMsg);
 }
 
-BOOL CPageSelectDevice::OnToolTipNotify(UINT id, NMHDR* pNMHDR,LRESULT* pResult)
+BOOL CPageSelectDevice::OnToolTipNotify(UINT id, NMHDR* pNMHDR, LRESULT* pResult)
 {
-	return CInfWizardDisplay::HandleToolTipNotify(id,pNMHDR,pResult);
+	return CInfWizardDisplay::HandleToolTipNotify(id, pNMHDR, pResult);
 }

@@ -35,12 +35,12 @@ BOOL CDeviceNotifier::RegisterNotifier(void)
 	ASSERT(m_pMainWnd);
 
 	DEV_BROADCAST_DEVICEINTERFACE dbv;
-	memset(&dbv,0,sizeof(dbv));
-	dbv.dbcc_size=sizeof(DEV_BROADCAST_DEVICEINTERFACE);
+	memset(&dbv, 0, sizeof(dbv));
+	dbv.dbcc_size = sizeof(DEV_BROADCAST_DEVICEINTERFACE);
 
 	dbv.dbcc_devicetype = DBT_DEVTYP_DEVICEINTERFACE;
 
-	m_NotifyHandle = RegisterDeviceNotification(m_pMainWnd->GetSafeHwnd(), &dbv, DEVICE_NOTIFY_WINDOW_HANDLE|DEVICE_NOTIFY_ALL_INTERFACE_CLASSES);
+	m_NotifyHandle = RegisterDeviceNotification(m_pMainWnd->GetSafeHwnd(), &dbv, DEVICE_NOTIFY_WINDOW_HANDLE | DEVICE_NOTIFY_ALL_INTERFACE_CLASSES);
 	if (!m_NotifyHandle || m_NotifyHandle == INVALID_HANDLE_VALUE)
 		return FALSE;
 
@@ -53,7 +53,7 @@ void CDeviceNotifier::OnWmDeviceChange(WPARAM wParam, LPARAM lParam)
 	ASSERT(m_pMainWnd);
 
 	InterlockedExchange(&m_IsDirty, TRUE);
-	m_NotifyTimer = m_pMainWnd->SetTimer(DEVICE_NOTIFIER_TIMER_ID,100,&CDeviceNotifier::OnDeviceNotifyTimerElapsed);
+	m_NotifyTimer = m_pMainWnd->SetTimer(DEVICE_NOTIFIER_TIMER_ID, 100, &CDeviceNotifier::OnDeviceNotifyTimerElapsed);
 }
 
 void CDeviceNotifier::UnRegisterNotifier(void)
@@ -61,18 +61,18 @@ void CDeviceNotifier::UnRegisterNotifier(void)
 	if (m_NotifyHandle)
 	{
 		UnregisterDeviceNotification(m_NotifyHandle);
-		m_NotifyHandle=NULL;
+		m_NotifyHandle = NULL;
 	}
 }
 
 void CDeviceNotifier::OnDeviceNotifyTimerElapsed(HWND hWnd, UINT nMsg, UINT nIDEvent, DWORD dwTime)
 {
-	KillTimer(hWnd,nIDEvent);
-	m_NotifyTimer=NULL;
-	CWnd* pWndCb=(CWnd*)m_pRegisteredWnd;
+	KillTimer(hWnd, nIDEvent);
+	m_NotifyTimer = NULL;
+	CWnd* pWndCb = (CWnd*)m_pRegisteredWnd;
 	if (pWndCb)
 	{
-		pWndCb->PostMessage(WM_DEVICECHANGE,0,0);
-		m_IsDirty=FALSE;
+		pWndCb->PostMessage(WM_DEVICECHANGE, 0, 0);
+		m_IsDirty = FALSE;
 	}
 }

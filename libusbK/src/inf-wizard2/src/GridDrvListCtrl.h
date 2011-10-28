@@ -12,6 +12,7 @@ public:
 	virtual BOOL OnDisplayCellTooltip(int nRow, int nCol, CString& strResult);
 
 	BOOL InitDriverList(CImageList& driverListImages);
+	BOOL UpdateDriverList(void);
 	BOOL TryAppendDriverString(int driverType, LPCTSTR displayName, CString* sSupportedDrivers);
 private:
 	BOOL AddColumnTraits(void);

@@ -63,7 +63,7 @@ BOOL InfWizardApp::InitInstance()
 	InitCtrls.dwSize = sizeof(InitCtrls);
 	// Set this to include all the common control classes you want to use
 	// in your application.
-	InitCtrls.dwICC = ICC_WIN95_CLASSES|ICC_STANDARD_CLASSES|ICC_LINK_CLASS;
+	InitCtrls.dwICC = ICC_WIN95_CLASSES | ICC_STANDARD_CLASSES | ICC_LINK_CLASS;
 	::AfxInitCommonControlsEx(&InitCtrls);
 
 	::AfxInitRichEdit2();

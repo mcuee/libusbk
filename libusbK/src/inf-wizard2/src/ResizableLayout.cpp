@@ -26,7 +26,7 @@
 
 #ifdef _DEBUG
 #undef THIS_FILE
-static char THIS_FILE[]=__FILE__;
+static char THIS_FILE[] = __FILE__;
 #define new DEBUG_NEW
 #endif
 
@@ -202,7 +202,7 @@ void CResizableLayout::ArrangeLayout() const
 		CalcNewChildPosition(layout, rectParent, rectChild, uFlags);
 
 		// only if size or position changed
-		if ((uFlags & (SWP_NOMOVE|SWP_NOSIZE)) != (SWP_NOMOVE|SWP_NOSIZE))
+		if ((uFlags & (SWP_NOMOVE | SWP_NOSIZE)) != (SWP_NOMOVE | SWP_NOSIZE))
 		{
 			hdwp = ::DeferWindowPos(hdwp, layout.hWnd, NULL, rectChild.left,
 			                        rectChild.top, rectChild.Width(), rectChild.Height(), uFlags);
@@ -225,7 +225,7 @@ void CResizableLayout::ArrangeLayout() const
 		CalcNewChildPosition(layout, rectParent, rectChild, uFlags);
 
 		// only if size or position changed
-		if ((uFlags & (SWP_NOMOVE|SWP_NOSIZE)) != (SWP_NOMOVE|SWP_NOSIZE))
+		if ((uFlags & (SWP_NOMOVE | SWP_NOSIZE)) != (SWP_NOMOVE | SWP_NOSIZE))
 		{
 			hdwp = ::DeferWindowPos(hdwp, layout.hWnd, NULL, rectChild.left,
 			                        rectChild.top, rectChild.Width(), rectChild.Height(), uFlags);
@@ -258,7 +258,7 @@ void CResizableLayout::ClipChildWindow(const LAYOUTINFO& layout,
 
 	// use window region if any
 	CRgn rgn;
-	rgn.CreateRectRgn(0,0,0,0);
+	rgn.CreateRectRgn(0, 0, 0, 0);
 	switch (::GetWindowRgn(layout.hWnd, rgn))
 	{
 	case COMPLEXREGION:
@@ -800,7 +800,7 @@ void CResizableLayout::MakeResizable(LPCREATESTRUCT lpCreateStruct)
 		::AdjustWindowRectEx(&rect, pWnd->GetStyle(),
 		                     ::IsMenu(pWnd->GetMenu()->GetSafeHmenu()), pWnd->GetExStyle());
 		pWnd->SetWindowPos(NULL, 0, 0, rect.Width(), rect.Height(),
-		                   SWP_NOSENDCHANGING|SWP_NOMOVE|SWP_NOZORDER|SWP_NOACTIVATE|SWP_NOREPOSITION);
+		                   SWP_NOSENDCHANGING | SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOREPOSITION);
 		// update dimensions
 		lpCreateStruct->cx = rect.Width();
 		lpCreateStruct->cy = rect.Height();
@@ -870,7 +870,7 @@ void CResizableLayout::HandleNcCalcSize(BOOL bAfterDefault, LPNCCALCSIZE_PARAMS 
 		{
 			CWnd* pWnd = GetResizableWnd();
 			DWORD dwStyle = pWnd->GetStyle();
-			if ((dwStyle & (WS_CAPTION|WS_MAXIMIZE)) == WS_CAPTION)
+			if ((dwStyle & (WS_CAPTION | WS_MAXIMIZE)) == WS_CAPTION)
 			{
 				m_bNoRecursion = TRUE;
 				pWnd->SetWindowRgn(NULL, FALSE);

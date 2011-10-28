@@ -13,7 +13,7 @@
 //! @param strViewName Name to identify and persist the configuration
 //------------------------------------------------------------------------
 CViewConfigSection::CViewConfigSection(const CString& strViewName)
-	:m_ViewName(strViewName)
+	: m_ViewName(strViewName)
 {
 }
 
@@ -75,9 +75,9 @@ void CViewConfigSection::RemoveCurrentConfig()
 BOOL CViewConfigSection::GetBoolSetting(const CString& strName, BOOL bDefval) const
 {
 	const CString& strValue = GetSetting(strName, ConvertBoolSetting(bDefval));
-	if (strValue==_T("TRUE"))
+	if (strValue == _T("TRUE"))
 		return true;
-	else if (strValue==_T("FALSE"))
+	else if (strValue == _T("FALSE"))
 		return false;
 	else
 		return bDefval;
@@ -204,7 +204,7 @@ void CViewConfigSection::SplitArraySetting(const CString& strArray, CSimpleArray
 	while(cur_pos < length)
 	{
 		cur_pos = strArray.Find(strDelimiter, prev_pos);
-		if (cur_pos==-1)
+		if (cur_pos == -1)
 		{
 			CString value = strArray.Mid(prev_pos, length - prev_pos);
 			values.Add(value);
@@ -333,9 +333,9 @@ LOGFONT CViewConfigSection::GetLogFontSetting(const CString& strName) const
 		return font;
 
 #if __STDC_WANT_SECURE_LIB__
-	_tcscpy_s(font.lfFaceName, sizeof(font.lfFaceName)/sizeof(TCHAR), strArray[0]);
+	_tcscpy_s(font.lfFaceName, sizeof(font.lfFaceName) / sizeof(TCHAR), strArray[0]);
 #else
-	_tcsncpy(font.lfFaceName, strArray[0], sizeof(font.lfFaceName)/sizeof(TCHAR));
+	_tcsncpy(font.lfFaceName, strArray[0], sizeof(font.lfFaceName) / sizeof(TCHAR));
 #endif
 	font.lfHeight = _ttoi(strArray[1]);
 	font.lfWidth = _ttoi(strArray[2]);
@@ -362,7 +362,7 @@ CString CViewConfigSection::ConvertLogFontSetting(const LOGFONT& font) const
 {
 	CSimpleArray<CString> strArray;
 
-	CString strValue(font.lfFaceName, sizeof(font.lfFaceName)/sizeof(TCHAR));
+	CString strValue(font.lfFaceName, sizeof(font.lfFaceName) / sizeof(TCHAR));
 	strArray.Add(strValue);
 	strValue.Format(_T("%d"), font.lfHeight);
 	strArray.Add(strValue);
@@ -417,7 +417,7 @@ CRect CViewConfigSection::GetRectSetting(const CString& strName, const CRect& re
 	if (strArray.GetSize() != 4)
 		return rectDefval;
 
-	CRect rect(0,0,0,0);
+	CRect rect(0, 0, 0, 0);
 	rect.left = _ttoi(strArray[0]);
 	rect.top = _ttoi(strArray[1]);
 	rect.right = _ttoi(strArray[2]);
@@ -476,7 +476,7 @@ COLORREF CViewConfigSection::GetColorSetting(const CString& strName, const COLOR
 	int g = _ttoi(strArray[1]);
 	int b = _ttoi(strArray[2]);
 
-	return RGB(r,g,b);
+	return RGB(r, g, b);
 }
 
 //------------------------------------------------------------------------
@@ -516,7 +516,7 @@ void CViewConfigSection::SetColorSetting(const CString& strName, COLORREF color)
 //! @param strViewName Name to identify and persist the configuration
 //------------------------------------------------------------------------
 CViewConfigSectionDefault::CViewConfigSectionLocal::CViewConfigSectionLocal(const CString& strViewName)
-	:CViewConfigSection(strViewName)
+	: CViewConfigSection(strViewName)
 {}
 
 //------------------------------------------------------------------------
@@ -524,7 +524,7 @@ CViewConfigSectionDefault::CViewConfigSectionLocal::CViewConfigSectionLocal(cons
 //! copy of m_LocalSettings.
 //------------------------------------------------------------------------
 CViewConfigSectionDefault::CViewConfigSectionLocal::CViewConfigSectionLocal(const CViewConfigSectionDefault::CViewConfigSectionLocal& other)
-	:CViewConfigSection(other)
+	: CViewConfigSection(other)
 {
 	*this = other;
 }
@@ -535,7 +535,7 @@ CViewConfigSectionDefault::CViewConfigSectionLocal::CViewConfigSectionLocal(cons
 //------------------------------------------------------------------------
 CViewConfigSectionDefault::CViewConfigSectionLocal& CViewConfigSectionDefault::CViewConfigSectionLocal::operator=(const CViewConfigSectionDefault::CViewConfigSectionLocal& other)
 {
-	if (this==&other)
+	if (this == &other)
 		return *this;
 
 	static_cast<CViewConfigSection&>(*this) = other;
@@ -557,7 +557,7 @@ CViewConfigSectionDefault::CViewConfigSectionLocal& CViewConfigSectionDefault::C
 CString CViewConfigSectionDefault::CViewConfigSectionLocal::ReadSetting(const CString& strSection, const CString& strSetting, const CString& strDefval) const
 {
 	for(int i = 0; i < m_LocalSettings.GetSize(); ++i)
-		if (m_LocalSettings.GetKeyAt(i)==strSetting)
+		if (m_LocalSettings.GetKeyAt(i) == strSetting)
 			return m_LocalSettings.GetValueAt(i);
 
 	return strDefval;
@@ -612,8 +612,8 @@ void CViewConfigSectionDefault::CViewConfigSectionLocal::CopySettings(CViewConfi
 //! @param strViewName Name to identify and persist the configuration
 //------------------------------------------------------------------------
 CViewConfigSectionDefault::CViewConfigSectionDefault(const CString& strViewName)
-	:CViewConfigSection(strViewName)
-	,m_DefaultConfig(strViewName)
+	: CViewConfigSection(strViewName)
+	, m_DefaultConfig(strViewName)
 {}
 
 //------------------------------------------------------------------------
@@ -665,7 +665,7 @@ void CViewConfigSectionDefault::ResetConfigDefault()
 //! @param strViewName Name to identify and persist the configuration
 //------------------------------------------------------------------------
 CViewConfigSectionProfiles::CViewConfigSectionProfiles(const CString& strViewName)
-	:CViewConfigSectionDefault(strViewName)
+	: CViewConfigSectionDefault(strViewName)
 {
 	m_CurrentSection = strViewName;
 }
@@ -683,10 +683,10 @@ void CViewConfigSectionProfiles::SplitSectionName(const CString& strSection, CSt
 	if (pos_profile > 0)
 	{
 		strViewName = strSection.Mid(0, pos_profile);
-		if (strViewName!=m_ViewName)
+		if (strViewName != m_ViewName)
 			strViewName = m_ViewName;
 		else
-			strProfile = strSection.Mid(pos_profile+2);
+			strProfile = strSection.Mid(pos_profile + 2);
 	}
 	else
 	{
@@ -716,14 +716,14 @@ CString CViewConfigSectionProfiles::JoinSectionName(const CString& strViewName, 
 //------------------------------------------------------------------------
 const CString& CViewConfigSectionProfiles::GetSectionName() const
 {
-	if (m_CurrentSection==m_ViewName)
+	if (m_CurrentSection == m_ViewName)
 	{
 		CString strProfile = ReadSetting(m_ViewName, _T("ActiveProfile"), _T(""));
 		if (strProfile.IsEmpty())
 		{
 			CSimpleArray<CString> profiles;
 			GetProfiles(profiles);
-			if (profiles.GetSize()>0)
+			if (profiles.GetSize() > 0)
 				strProfile = profiles[0];
 		}
 		m_CurrentSection = JoinSectionName(m_ViewName, strProfile);
@@ -763,7 +763,7 @@ void CViewConfigSectionProfiles::SetActiveProfile(const CString& strProfile)
 {
 	// Make the new strProfile the active ones
 	WriteSetting(m_ViewName, _T("ActiveProfile"), strProfile);
-	m_CurrentSection = JoinSectionName(m_ViewName,strProfile);
+	m_CurrentSection = JoinSectionName(m_ViewName, strProfile);
 	if (strProfile.IsEmpty())
 		return;
 
@@ -780,8 +780,8 @@ void CViewConfigSectionProfiles::AddProfile(const CString& strProfile)
 	// Add the strProfile to the list if not already there
 	CSimpleArray<CString> profiles;
 	GetProfiles(profiles);
-	for(int i=0; i < profiles.GetSize(); ++i)
-		if (profiles[i]==strProfile)
+	for(int i = 0; i < profiles.GetSize(); ++i)
+		if (profiles[i] == strProfile)
 			return;
 
 	CString noconst(strProfile);
@@ -801,13 +801,13 @@ void CViewConfigSectionProfiles::DeleteProfile(const CString& strProfile)
 		return;
 
 	// Remove any settings
-	RemoveSection(JoinSectionName(m_ViewName,strProfile));
+	RemoveSection(JoinSectionName(m_ViewName, strProfile));
 
 	// Remove the strProfile from the list
 	CSimpleArray<CString> profiles;
 	GetProfiles(profiles);
-	for(int i=0; i < profiles.GetSize(); ++i)
-		if (profiles[i]==strProfile)
+	for(int i = 0; i < profiles.GetSize(); ++i)
+		if (profiles[i] == strProfile)
 			profiles.RemoveAt(i);
 	WriteSetting(m_ViewName, _T("CurrentProfiles"), ConvertArraySetting(profiles, _T(", ")));
 }
@@ -817,7 +817,7 @@ void CViewConfigSectionProfiles::DeleteProfile(const CString& strProfile)
 //------------------------------------------------------------------------
 void CViewConfigSectionProfiles::RemoveCurrentConfig()
 {
-	if (GetSectionName()==m_ViewName)
+	if (GetSectionName() == m_ViewName)
 	{
 		// Backup strProfile-settings and reset the other settings
 		const CString& strProfiles = ReadSetting(m_ViewName, _T("CurrentProfiles"), _T(""));
@@ -838,7 +838,7 @@ void CViewConfigSectionProfiles::RemoveCurrentConfig()
 //! @param strViewName Name to identify and persist the configuration
 //------------------------------------------------------------------------
 CViewConfigSectionWinApp::CViewConfigSectionWinApp(const CString& strViewName)
-	:CViewConfigSectionProfiles(strViewName)
+	: CViewConfigSectionProfiles(strViewName)
 {
 }
 

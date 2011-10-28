@@ -46,7 +46,7 @@ InfWizardDlg::InfWizardDlg()
 
 	// use the right flag for InfWizardApp style
 	//	m_psh.dwFlags |= bOldStyle ? PSH_IE4WIZARD97|PSH_STRETCHWATERMARK : PSH_IE5WIZARD97;
-	m_psh.dwFlags |= PSH_IE5WIZARD97|PSH_NOCONTEXTHELP;
+	m_psh.dwFlags |= PSH_IE5WIZARD97 | PSH_NOCONTEXTHELP;
 	m_psh.dwFlags &= ~(PSH_HASHELP);
 }
 
@@ -80,7 +80,7 @@ BOOL InfWizardDlg::OnInitDialog()
 
 	CString sTitle;
 	sTitle.LoadString(IDS_INFWIZARD);
-	this->SetTitle(sTitle,0);
+	this->SetTitle(sTitle, 0);
 
 	CDeviceNotifier::RegisterNotifier();
 	return TRUE;  // return TRUE unless you set the focus to a control
@@ -97,8 +97,8 @@ LRESULT InfWizardDlg::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	if (uMsg == WM_DEVICECHANGE)
 	{
-		OnWmDeviceChange(wParam,lParam);
+		OnWmDeviceChange(wParam, lParam);
 		return TRUE;
 	}
-	return CResizableSheetEx::WindowProc(uMsg, wParam,lParam);
+	return CResizableSheetEx::WindowProc(uMsg, wParam, lParam);
 }

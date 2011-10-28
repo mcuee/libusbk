@@ -16,8 +16,8 @@
 //! CGridColumnTraitEdit - Constructor
 //------------------------------------------------------------------------
 CGridColumnTraitEdit::CGridColumnTraitEdit()
-	:m_EditStyle(ES_AUTOHSCROLL | ES_NOHIDESEL)
-	,m_EditLimitText(UINT_MAX)
+	: m_EditStyle(ES_AUTOHSCROLL | ES_NOHIDESEL)
+	, m_EditLimitText(UINT_MAX)
 {
 }
 
@@ -95,12 +95,12 @@ CEdit* CGridColumnTraitEdit::CreateEdit(CGridListCtrlEx& owner, int nRow, int nC
 	pEdit->SetFont(owner.GetCellFont());
 
 	// First item (Label) doesn't have a margin (Subitems does)
-	if (nCol==0)
+	if (nCol == 0)
 		pEdit->SetMargins(0, 0);
 	else
 		pEdit->SetMargins(4, 0);
 
-	if (m_EditLimitText!=UINT_MAX)
+	if (m_EditLimitText != UINT_MAX)
 		pEdit->SetLimitText(m_EditLimitText);
 
 	return pEdit;
@@ -121,7 +121,7 @@ CWnd* CGridColumnTraitEdit::OnEditBegin(CGridListCtrlEx& owner, int nRow, int nC
 
 	// Create edit control to edit the cell
 	CEdit* pEdit = CreateEdit(owner, nRow, nCol, rectCell);
-	VERIFY(pEdit!=NULL);
+	VERIFY(pEdit != NULL);
 
 	pEdit->SetWindowText(owner.GetItemText(nRow, nCol));
 	pEdit->SetSel(0, -1, 0);
@@ -145,10 +145,10 @@ END_MESSAGE_MAP()
 //! CGridEditorText - Constructor
 //------------------------------------------------------------------------
 CGridEditorText::CGridEditorText(int nRow, int nCol)
-	:m_Row(nRow)
-	,m_Col(nCol)
-	,m_Completed(false)
-	,m_Modified(false)
+	: m_Row(nRow)
+	, m_Col(nCol)
+	, m_Completed(false)
+	, m_Modified(false)
 {}
 
 //------------------------------------------------------------------------
@@ -211,16 +211,16 @@ void CGridEditorText::OnNcDestroy()
 
 void CGridEditorText::OnNcCalcSize(BOOL bCalcValidRects, NCCALCSIZE_PARAMS* lpncsp)
 {
-	CEdit::OnNcCalcSize(bCalcValidRects,lpncsp);
+	CEdit::OnNcCalcSize(bCalcValidRects, lpncsp);
 
 	CRect editRect(lpncsp->rgrc[0]);
 	CRect editRectOrig(lpncsp->rgrc[0]);
 	CClientDC dc(this);
 
-	dc.DrawText(_T("KHz"), &editRect, DT_VCENTER|DT_SINGLELINE|DT_CALCRECT);
+	dc.DrawText(_T("KHz"), &editRect, DT_VCENTER | DT_SINGLELINE | DT_CALCRECT);
 	int iAddCY = ((editRectOrig.Height() - editRect.Height()) / 2);
 	editRectOrig.top	+= iAddCY + 2;
-	editRectOrig.DeflateRect(2,2);
+	editRectOrig.DeflateRect(2, 2);
 
 	lpncsp->rgrc[0] = editRectOrig;
 

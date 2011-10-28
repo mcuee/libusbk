@@ -22,6 +22,8 @@ public:
 	BOOL SaveSession(CWnd* parent);
 	BOOL OpenSession(CWnd* parent);
 
+	BOOL LoadDll(CWnd* parent);
+
 public:
 	inline CLibWdiSession*	Session()
 	{
@@ -35,5 +37,6 @@ private:
 	BOOL m_IsApiLoaded;
 	PWDI_DEVICE_INFO m_pDeviceInfoMaster;
 	CLibWdiSession*	m_pSession;
+	CString m_LibWdiDllPath;
 
 };

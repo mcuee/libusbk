@@ -83,16 +83,16 @@ BOOL CPageInstall::OnSetActive()
 		m_TxtSaveBaseFolder.SetWindowText(g_App->Wdi.Session()->GetPackageBaseDir());
 
 	m_TxtSaveName.SetWindowText(g_App->Wdi.Session()->GetPackageName());
-	m_TxtStatus.SetSel(0,0);
+	m_TxtStatus.SetSel(0, 0);
 
 	return CResizablePageEx::OnSetActive();
 }
 
 LRESULT CPageInstall::OnWizardNext()
 {
-	BOOL bSave=((CButton*)GetDlgItem(IDC_BTN_SAVE_PACKAGE))->GetCheck()==BST_CHECKED;
-	BOOL bInstallOnly=((CButton*)GetDlgItem(IDC_BTN_INSTALL_PACKAGE))->GetCheck()==BST_CHECKED;
-	BOOL bSaveInstall=((CButton*)GetDlgItem(IDC_BTN_SAVE_AND_INSTALL_PACKAGE))->GetCheck()==BST_CHECKED;
+	BOOL bSave = ((CButton*)GetDlgItem(IDC_BTN_SAVE_PACKAGE))->GetCheck() == BST_CHECKED;
+	BOOL bInstallOnly = ((CButton*)GetDlgItem(IDC_BTN_INSTALL_PACKAGE))->GetCheck() == BST_CHECKED;
+	BOOL bSaveInstall = ((CButton*)GetDlgItem(IDC_BTN_SAVE_AND_INSTALL_PACKAGE))->GetCheck() == BST_CHECKED;
 	CString fmtRtf;
 	CStringA infPathA;
 	CStringA infNameA;
@@ -105,9 +105,9 @@ LRESULT CPageInstall::OnWizardNext()
 	CLibWdiDynamicAPI& API = g_App->Wdi;
 
 	m_TxtStatus.SetWindowText(_T(""));
-	m_TxtStatus.SetSel(0,-1);
-	SetStatusFont(TRUE,RGB(60,133,201),_T("Tahoma"),TwipsPerPixelY()*9);
-	SetStatusFormat(PFA_LEFT,TRUE);
+	m_TxtStatus.SetSel(0, -1);
+	SetStatusFont(TRUE, RGB(60, 133, 201), _T("Tahoma"), TwipsPerPixelY() * 9);
+	SetStatusFormat(PFA_LEFT, TRUE);
 
 	fmtRtf.Format(_T("%s..\n"), CInfWizardDisplay::GetTipString(IDS_STATUS_START_PACKAGER)->GetBuffer(0));
 	this->AppendStatus(fmtRtf);
@@ -117,14 +117,14 @@ LRESULT CPageInstall::OnWizardNext()
 	g_App->Wdi.Session()->RefreshSession();
 
 	wdi_options_prepare_driver prepareOptions;
-	memset(&prepareOptions,0,sizeof(prepareOptions));
+	memset(&prepareOptions, 0, sizeof(prepareOptions));
 	prepareOptions.driver_type = g_App->Wdi.Session()->GetDriverType();
 	if (g_App->Wdi.Session()->m_VendorName.GetLength() > 0)
 		prepareOptions.vendor_name = g_App->Wdi.Session()->chVendorName;
 	prepareOptions.device_guid = g_App->Wdi.Session()->chDeviceGuid;
 
 	wdi_options_install_driver installOptions;
-	memset(&installOptions,0,sizeof(installOptions));
+	memset(&installOptions, 0, sizeof(installOptions));
 	installOptions.hWnd = GetSafeHwnd();
 
 
@@ -136,16 +136,16 @@ LRESULT CPageInstall::OnWizardNext()
 	{
 		// Using a temp directory.
 		CString tempPath;
-		GetTempPath(256,tempPath.GetBufferSetLength(4096));
+		GetTempPath(256, tempPath.GetBufferSetLength(4096));
 		tempPath.ReleaseBuffer();
 
-		PathAppend(tempPath.GetBufferSetLength(4096),_T("InfWizard_Driver"));
+		PathAppend(tempPath.GetBufferSetLength(4096), _T("InfWizard_Driver"));
 		tempPath.ReleaseBuffer();
 		infPath = tempPath;
-		CreateDirectory(tempPath,NULL);
+		CreateDirectory(tempPath, NULL);
 
 		CString infFullPath;
-		GetTempFileName(tempPath,_T("Drv"),0,infFullPath.GetBufferSetLength(4096));
+		GetTempFileName(tempPath, _T("Drv"), 0, infFullPath.GetBufferSetLength(4096));
 		infFullPath.ReleaseBuffer();
 		infName = PathFindFileName(infFullPath);
 		PathRemoveExtension(infName.GetBuffer(0));
@@ -153,44 +153,44 @@ LRESULT CPageInstall::OnWizardNext()
 	}
 	else
 	{
-		PathAppend(infPath.GetBufferSetLength(4096),infName);
+		PathAppend(infPath.GetBufferSetLength(4096), infName);
 		infPath.ReleaseBuffer();
 	}
 	if (!PathIsDirectory(infPath))
 	{
-		if (SHCreateDirectoryEx(this->GetSafeHwnd(),infPath,NULL)!=ERROR_SUCCESS)
+		if (SHCreateDirectoryEx(this->GetSafeHwnd(), infPath, NULL) != ERROR_SUCCESS)
 		{
 			errorCode = -ERROR_BAD_PATHNAME;
 			CString* pTxtInvalidPath = CInfWizardDisplay::GetTipString(IDS_STATUS_INVALID_PATH);
-			WriteStatusError(pTxtInvalidPath->GetBuffer(0),infPath);
+			WriteStatusError(pTxtInvalidPath->GetBuffer(0), infPath);
 			goto Done;
 		}
 	}
 
 
 	CString* pTxtPackageFolder = CInfWizardDisplay::GetTipString(IDS_PACKAGE_DIR);
-	fmtRtf.Format(_T("%s %s..\n"),pTxtPackageFolder->GetBuffer(0), infPath);
+	fmtRtf.Format(_T("%s %s..\n"), pTxtPackageFolder->GetBuffer(0), infPath);
 	this->AppendStatus(fmtRtf);
 
 	CString* pTxtPackageName = CInfWizardDisplay::GetTipString(IDS_PACKAGE_NAME);
-	fmtRtf.Format(_T("%s %s..\n"),pTxtPackageName->GetBuffer(0), infName);
+	fmtRtf.Format(_T("%s %s..\n"), pTxtPackageName->GetBuffer(0), infName);
 	this->AppendStatus(fmtRtf);
 
-	infName+=_T(".inf");
-	infPathA=infPath;
-	infNameA=infName;
+	infName += _T(".inf");
+	infPathA = infPath;
+	infNameA = infName;
 
 	fmtRtf.Format(_T("%s..\n"), CInfWizardDisplay::GetTipString(IDS_STATUS_PREPARE_DRIVER)->GetBuffer(0));
 	this->AppendStatus(fmtRtf);
 
-	errorCode = g_App->Wdi.PrepareDriver(&deviceInfo,infPathA.GetBuffer(0),infNameA.GetBuffer(0),&prepareOptions);
-	if (errorCode!=ERROR_SUCCESS)
+	errorCode = g_App->Wdi.PrepareDriver(&deviceInfo, infPathA.GetBuffer(0), infNameA.GetBuffer(0), &prepareOptions);
+	if (errorCode != ERROR_SUCCESS)
 	{
 		CString* pTxtErrorPrepareDriver = CInfWizardDisplay::GetTipString(IDS_ERROR_PREPARE_DRIVER);
 		CString wdiError;
 		LPCSTR chWdiError = g_App->Wdi.StrError(errorCode);
-		wdiError=chWdiError;
-		WriteStatusError(pTxtErrorPrepareDriver->GetBuffer(0),wdiError);
+		wdiError = chWdiError;
+		WriteStatusError(pTxtErrorPrepareDriver->GetBuffer(0), wdiError);
 		goto Done;
 	}
 
@@ -199,20 +199,20 @@ LRESULT CPageInstall::OnWizardNext()
 		fmtRtf.Format(_T("%s..\n"), CInfWizardDisplay::GetTipString(IDS_STATUS_INSTALL_DRIVER)->GetBuffer(0));
 		this->AppendStatus(fmtRtf);
 
-		errorCode = g_App->Wdi.InstallDriver(&deviceInfo,infPathA.GetBuffer(0),infNameA.GetBuffer(0),&installOptions);
-		if (errorCode!=ERROR_SUCCESS)
+		errorCode = g_App->Wdi.InstallDriver(&deviceInfo, infPathA.GetBuffer(0), infNameA.GetBuffer(0), &installOptions);
+		if (errorCode != ERROR_SUCCESS)
 		{
 			CString* pTxtErrorInstallDriver = CInfWizardDisplay::GetTipString(IDS_ERROR_INSTALL_DRIVER);
 			CString wdiError;
 			LPCSTR chWdiError = g_App->Wdi.StrError(errorCode);
-			wdiError=chWdiError;
-			WriteStatusError(pTxtErrorInstallDriver->GetBuffer(0),wdiError);
+			wdiError = chWdiError;
+			WriteStatusError(pTxtErrorInstallDriver->GetBuffer(0), wdiError);
 			goto Done;
 		}
 	}
 
 Done:
-	SetStatusFormat(PFA_LEFT,FALSE);
+	SetStatusFormat(PFA_LEFT, FALSE);
 	g_App->Wdi.Session()->Destroy(&deviceInfo);
 	if (errorCode == ERROR_SUCCESS)
 	{
@@ -238,8 +238,8 @@ Done:
 			((CButton*)GetDlgItem(IDC_BTN_SAVE_AND_INSTALL_PACKAGE))->SetCheck(BST_UNCHECKED);
 
 		CString* pTxtPackageSuccess = CInfWizardDisplay::GetTipString(IDS_STATUS_PACKAGE_SUCCESS);
-		fmtRtf.Format(_T("%s\n"),pTxtPackageSuccess->GetBuffer(0));
-		SetStatusFont(TRUE,CInfWizardDisplay::ColorSuccess,NULL,TwipsPerPixelY()*11);
+		fmtRtf.Format(_T("%s\n"), pTxtPackageSuccess->GetBuffer(0));
+		SetStatusFont(TRUE, CInfWizardDisplay::ColorSuccess, NULL, TwipsPerPixelY() * 11);
 		this->AppendStatus(fmtRtf);
 
 		return CResizablePageEx::OnWizardNext();
@@ -252,27 +252,27 @@ BOOL CPageInstall::OnInitDialog()
 {
 	CResizablePageEx::OnInitDialog();
 
-	HICON hImgSaveLocation = (HICON)LoadImageW(g_App->m_hInstance,MAKEINTRESOURCE(IDI_ICON_OPEN_FOLDER),IMAGE_ICON,16,16,LR_SHARED);
+	HICON hImgSaveLocation = (HICON)LoadImageW(g_App->m_hInstance, MAKEINTRESOURCE(IDI_ICON_OPEN_FOLDER), IMAGE_ICON, 16, 16, LR_SHARED);
 	m_BtnSaveLocation.SetIcon(hImgSaveLocation);
 
 	AddAnchor(IDC_BTN_SAVE_PACKAGE, TOP_LEFT);
 	AddAnchor(IDC_BTN_INSTALL_PACKAGE, TOP_LEFT);
 	AddAnchor(IDC_BTN_SAVE_AND_INSTALL_PACKAGE, TOP_LEFT);
 
-	AddAnchor(IDC_GRP_SAVE_INFORMATION, TOP_LEFT,TOP_RIGHT);
+	AddAnchor(IDC_GRP_SAVE_INFORMATION, TOP_LEFT, TOP_RIGHT);
 
-	AddAnchor(IDC_LBL_SAVE_BASE_FOLDER, TOP_LEFT,TOP_LEFT);
-	AddAnchor(IDC_TXT_SAVE_BASE_FOLDER, TOP_LEFT,TOP_RIGHT);
+	AddAnchor(IDC_LBL_SAVE_BASE_FOLDER, TOP_LEFT, TOP_LEFT);
+	AddAnchor(IDC_TXT_SAVE_BASE_FOLDER, TOP_LEFT, TOP_RIGHT);
 	AddAnchor(IDC_BTN_SAVE_BASE_FOLDER, TOP_RIGHT);
 
-	AddAnchor(IDC_LBL_SAVE_NAME, TOP_LEFT,TOP_LEFT);
-	AddAnchor(IDC_TXT_SAVE_NAME, TOP_LEFT,TOP_RIGHT);
+	AddAnchor(IDC_LBL_SAVE_NAME, TOP_LEFT, TOP_LEFT);
+	AddAnchor(IDC_TXT_SAVE_NAME, TOP_LEFT, TOP_RIGHT);
 
 	AddAnchor(IDC_GRP_STATUS, TOP_LEFT, BOTTOM_RIGHT);
 	AddAnchor(IDC_TXT_STATUS, TOP_LEFT, BOTTOM_RIGHT);
 
 	COLORREF clrStatusBack = GetSysColor(COLOR_BTNFACE);
-	m_TxtStatus.SetBackgroundColor(FALSE,clrStatusBack);
+	m_TxtStatus.SetBackgroundColor(FALSE, clrStatusBack);
 
 	if (g_App->Wdi.Session()->m_PackageBaseDir.IsEmpty())
 	{
@@ -304,7 +304,7 @@ BOOL CPageInstall::OnInitDialog()
 
 void CPageInstall::OnSize(UINT nType, int cx, int cy)
 {
-	CResizablePageEx::OnSize(nType,cx,cy);
+	CResizablePageEx::OnSize(nType, cx, cy);
 }
 
 void CPageInstall::SetStatusFont(BOOL isBold, COLORREF textColor, LPCTSTR pszFontName, LONG fontSize)
@@ -312,7 +312,7 @@ void CPageInstall::SetStatusFont(BOOL isBold, COLORREF textColor, LPCTSTR pszFon
 	DWORD dwMask = 0;
 	CHARFORMAT charFmt;
 
-	memset(&charFmt,0,sizeof(charFmt));
+	memset(&charFmt, 0, sizeof(charFmt));
 	charFmt.cbSize = sizeof(CHARFORMAT);
 
 	charFmt.dwMask |= CFM_BOLD;
@@ -326,12 +326,12 @@ void CPageInstall::SetStatusFont(BOOL isBold, COLORREF textColor, LPCTSTR pszFon
 	if (pszFontName)
 	{
 		charFmt.dwMask |= CFM_FACE;
-		_tcscpy_s(charFmt.szFaceName,32,pszFontName);
+		_tcscpy_s(charFmt.szFaceName, 32, pszFontName);
 	}
 	if (fontSize > 0)
 	{
 		charFmt.dwMask |= CFM_SIZE;
-		charFmt.yHeight=fontSize;
+		charFmt.yHeight = fontSize;
 	}
 
 	m_TxtStatus.SetSelectionCharFormat(charFmt);
@@ -339,7 +339,7 @@ void CPageInstall::SetStatusFont(BOOL isBold, COLORREF textColor, LPCTSTR pszFon
 
 void CPageInstall::AppendStatus(CString statusText)
 {
-	m_TxtStatus.ReplaceSel(statusText,FALSE);
+	m_TxtStatus.ReplaceSel(statusText, FALSE);
 }
 
 int CPageInstall::TwipsPerPixelY()
@@ -352,57 +352,57 @@ void CPageInstall::WriteStatusError(LPCTSTR szCaption, LPCTSTR szText)
 {
 	CString fmtRtf;
 
-	SetStatusFont(TRUE,CInfWizardDisplay::ColorError,NULL,TwipsPerPixelY()*10);
+	SetStatusFont(TRUE, CInfWizardDisplay::ColorError, NULL, TwipsPerPixelY() * 10);
 
-	fmtRtf.Format(_T("%s:\n"),szCaption);
+	fmtRtf.Format(_T("%s:\n"), szCaption);
 	AppendStatus(fmtRtf);
 
-	SetStatusFont(TRUE,RGB(0,0,0),NULL,TwipsPerPixelY()*10);
-	fmtRtf.Format(_T("%s\n"),szText);
+	SetStatusFont(TRUE, RGB(0, 0, 0), NULL, TwipsPerPixelY() * 10);
+	fmtRtf.Format(_T("%s\n"), szText);
 	AppendStatus(fmtRtf);
 }
 
 void CPageInstall::WritePackageStatus()
 {
-	BOOL bSave=((CButton*)GetDlgItem(IDC_BTN_SAVE_PACKAGE))->GetCheck()==BST_CHECKED;
-	BOOL bInstallOnly=((CButton*)GetDlgItem(IDC_BTN_INSTALL_PACKAGE))->GetCheck()==BST_CHECKED;
-	BOOL bSaveInstall=((CButton*)GetDlgItem(IDC_BTN_SAVE_AND_INSTALL_PACKAGE))->GetCheck()==BST_CHECKED;
+	BOOL bSave = ((CButton*)GetDlgItem(IDC_BTN_SAVE_PACKAGE))->GetCheck() == BST_CHECKED;
+	BOOL bInstallOnly = ((CButton*)GetDlgItem(IDC_BTN_INSTALL_PACKAGE))->GetCheck() == BST_CHECKED;
+	BOOL bSaveInstall = ((CButton*)GetDlgItem(IDC_BTN_SAVE_AND_INSTALL_PACKAGE))->GetCheck() == BST_CHECKED;
 
 	CString* headerText;
 	if (bSave)
-		headerText=CInfWizardDisplay::GetTipString(IDS_TXT_PACKAGE_SAVE_HEADER);
+		headerText = CInfWizardDisplay::GetTipString(IDS_TXT_PACKAGE_SAVE_HEADER);
 	else if (bInstallOnly)
-		headerText=CInfWizardDisplay::GetTipString(IDS_TXT_PACKAGE_INSTALL_HEADER);
+		headerText = CInfWizardDisplay::GetTipString(IDS_TXT_PACKAGE_INSTALL_HEADER);
 	else if (bSaveInstall)
-		headerText=CInfWizardDisplay::GetTipString(IDS_TXT_PACKAGE_SAVE_AND_INSTALL_HEADER);
+		headerText = CInfWizardDisplay::GetTipString(IDS_TXT_PACKAGE_SAVE_AND_INSTALL_HEADER);
 	else
 		return;
 
 	//m_TxtStatus.SetSel(0,-1);
 	m_TxtStatus.SetWindowText(_T(""));
 
-	SetStatus(PFA_CENTER,*headerText,_T("Tahoma"),TwipsPerPixelY()*16, TRUE, CInfWizardDisplay::ColorGood);
-	SetStatusFormat(PFA_CENTER,FALSE);
+	SetStatus(PFA_CENTER, *headerText, _T("Tahoma"), TwipsPerPixelY() * 16, TRUE, CInfWizardDisplay::ColorGood);
+	SetStatusFormat(PFA_CENTER, FALSE);
 
 }
 
 void CPageInstall::SetStatusFormat(DWORD pfaAlignment, BOOL bulletMode)
 {
 	PARAFORMAT rtfParaFmt;
-	memset(&rtfParaFmt,0,sizeof(rtfParaFmt));
+	memset(&rtfParaFmt, 0, sizeof(rtfParaFmt));
 	rtfParaFmt.cbSize = sizeof(rtfParaFmt);
 
-	rtfParaFmt.dwMask		= PFM_ALIGNMENT|PFM_NUMBERING;
+	rtfParaFmt.dwMask		= PFM_ALIGNMENT | PFM_NUMBERING;
 	rtfParaFmt.wAlignment	= (WORD)pfaAlignment;
-	rtfParaFmt.wNumbering	= bulletMode ? PFN_BULLET:0;
+	rtfParaFmt.wNumbering	= bulletMode ? PFN_BULLET : 0;
 
 	m_TxtStatus.SetParaFormat(rtfParaFmt);
 }
 
 void CPageInstall::SetStatus(DWORD pfaAlignment, CString statusText, LPCTSTR fontName, LONG fontSize, BOOL fontBold, COLORREF textColor)
 {
-	SetStatusFont(fontBold,textColor,fontName,fontSize);
-	m_TxtStatus.ReplaceSel(statusText,FALSE);
+	SetStatusFont(fontBold, textColor, fontName, fontSize);
+	m_TxtStatus.ReplaceSel(statusText, FALSE);
 	if (pfaAlignment)
 	{
 		PARAFORMAT rtfParaFmt;
@@ -434,19 +434,19 @@ void CPageInstall::EnableWindowGroup(WORD nID, BOOL bEnabled)
 void CPageInstall::OnBnClickedBtnSavePackage()
 {
 	WritePackageStatus();
-	EnableWindowGroup(IDC_GRP_SAVE_INFORMATION,TRUE);
+	EnableWindowGroup(IDC_GRP_SAVE_INFORMATION, TRUE);
 }
 
 void CPageInstall::OnBnClickedBtnInstallPackage()
 {
 	WritePackageStatus();
-	EnableWindowGroup(IDC_GRP_SAVE_INFORMATION,FALSE);
+	EnableWindowGroup(IDC_GRP_SAVE_INFORMATION, FALSE);
 }
 
 void CPageInstall::OnBnClickedBtnSaveAndInstallPackage()
 {
 	WritePackageStatus();
-	EnableWindowGroup(IDC_GRP_SAVE_INFORMATION,TRUE);
+	EnableWindowGroup(IDC_GRP_SAVE_INFORMATION, TRUE);
 }
 
 BOOL CPageInstall::PreTranslateMessage(MSG* pMsg)
@@ -455,9 +455,9 @@ BOOL CPageInstall::PreTranslateMessage(MSG* pMsg)
 	return CResizablePageEx::PreTranslateMessage(pMsg);
 }
 
-BOOL CPageInstall::OnToolTipNotify(UINT id, NMHDR* pNMHDR,LRESULT* pResult)
+BOOL CPageInstall::OnToolTipNotify(UINT id, NMHDR* pNMHDR, LRESULT* pResult)
 {
-	return CInfWizardDisplay::HandleToolTipNotify(id,pNMHDR,pResult);
+	return CInfWizardDisplay::HandleToolTipNotify(id, pNMHDR, pResult);
 }
 
 void CPageInstall::OnBnClickedBtnSaveBaseFolder()
@@ -467,7 +467,7 @@ void CPageInstall::OnBnClickedBtnSaveBaseFolder()
 	m_TxtSaveBaseFolder.GetWindowText(baseDir);
 	m_TxtSaveName.GetWindowText(name);
 
-	if (g_App->Wdi.Session()->ShowSavePackageDialog(this->GetParent(),baseDir,name))
+	if (g_App->Wdi.Session()->ShowSavePackageDialog(this->GetParent(), baseDir, name))
 	{
 		m_TxtSaveBaseFolder.SetWindowText(g_App->Wdi.Session()->GetPackageBaseDir());
 		m_TxtSaveName.SetWindowText(g_App->Wdi.Session()->GetPackageName());

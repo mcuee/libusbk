@@ -20,8 +20,8 @@ extern InfWizardApp* g_App;
 
 CGridDevCfgListCtrl::CGridDevCfgListCtrl(void)
 {
-	m_bUseVisualStyles=FALSE;
-	CreateGridFont(TRUE,TRUE);
+	m_bUseVisualStyles = FALSE;
+	CreateGridFont(TRUE, TRUE);
 }
 
 CGridDevCfgListCtrl::~CGridDevCfgListCtrl(void)
@@ -42,9 +42,9 @@ BOOL CGridDevCfgListCtrl::AddColumnTraits(void)
 	CGridColumnTraitText*	colLabelText = new CGridColumnTraitText;
 	CGridColumnTraitEdit*	colValueText = new CGridColumnTraitEdit;
 
-	colImage->SetMetaFlag(GCSF_FIXED,true);
-	colLabelText->SetMetaFlag(GCSF_FIXED,true);
-	colValueText->SetMetaFlag(GCSF_FIXED,false);
+	colImage->SetMetaFlag(GCSF_FIXED, true);
+	colLabelText->SetMetaFlag(GCSF_FIXED, true);
+	colValueText->SetMetaFlag(GCSF_FIXED, false);
 
 	for (colIndex; colIndex < DEVCFG_COLID_MAX; colIndex++)
 	{
@@ -70,25 +70,25 @@ BOOL CGridDevCfgListCtrl::AddColumnTraits(void)
 BOOL CGridDevCfgListCtrl::AddRow(int rowId, BOOL isMandatory, CString fieldName, CString fieldValue)
 {
 	// Row
-	InsertItem(rowId,_T(""),0);
-	SetItemData(rowId,rowId);
+	InsertItem(rowId, _T(""), 0);
+	SetItemData(rowId, rowId);
 
-	if (fieldName.GetAt(fieldName.GetLength()-1)!=(TCHAR)'#')
+	if (fieldName.GetAt(fieldName.GetLength() - 1) != (TCHAR)'#')
 		fieldName.AppendChar((TCHAR)':');
 
-	for (int colIndex=1; colIndex < DEVCFG_COLID_MAX; colIndex++)
+	for (int colIndex = 1; colIndex < DEVCFG_COLID_MAX; colIndex++)
 	{
 		switch(colIndex)
 		{
 		case DEVCFG_COLID_IMAGE:
-			SetItemText(rowId,colIndex,fieldName);
-			SetCellImage(rowId,colIndex,isMandatory);
+			SetItemText(rowId, colIndex, fieldName);
+			SetCellImage(rowId, colIndex, isMandatory);
 			break;
 		case DEVCFG_COLID_FIELD:
-			SetItemText(rowId,colIndex,fieldName);
+			SetItemText(rowId, colIndex, fieldName);
 			break;
 		case DEVCFG_COLID_VALUE:
-			SetItemText(rowId,colIndex,fieldValue);
+			SetItemText(rowId, colIndex, fieldValue);
 			break;
 		default:
 			ASSERT(FALSE);
@@ -105,10 +105,10 @@ BOOL CGridDevCfgListCtrl::InitDevCfgList(CImageList& devCfgListImages)
 	m_BmpBarMandatory.LoadBitmap(IDB_BAR_ORANGE);
 	m_BmpBarOptional.LoadBitmap(IDB_BAR_BLUE);
 
-	devCfgListImages.Create(BAR_IMAGE_WIDTH,25,ILC_COLOR24, 1, 0);
+	devCfgListImages.Create(BAR_IMAGE_WIDTH, 25, ILC_COLOR24, 1, 0);
 
-	devCfgListImages.Add(&m_BmpBarOptional,(COLORREF)RGB(255,0,255));
-	devCfgListImages.Add(&m_BmpBarMandatory,(COLORREF)RGB(255,0,255));
+	devCfgListImages.Add(&m_BmpBarOptional, (COLORREF)RGB(255, 0, 255));
+	devCfgListImages.Add(&m_BmpBarMandatory, (COLORREF)RGB(255, 0, 255));
 
 	SetImageList(&devCfgListImages, LVSIL_SMALL);
 
@@ -136,7 +136,7 @@ BOOL CGridDevCfgListCtrl::OnDisplayCellFont(int nRow, int nCol, LOGFONT& font)
 		font = m_LogFontGrid;
 		return true;
 	}
-	return CGridListCtrlEx::OnDisplayCellFont(nRow,nCol,font);
+	return CGridListCtrlEx::OnDisplayCellFont(nRow, nCol, font);
 }
 
 BOOL CGridDevCfgListCtrl::OnDisplayCellColor(int nRow, int nCol, COLORREF& textColor, COLORREF& backColor)
@@ -166,7 +166,7 @@ BOOL CGridDevCfgListCtrl::OnDisplayCellColor(int nRow, int nCol, COLORREF& textC
 			}
 			break;
 		case DEVCFG_COLID_VALUE:
-			backColor=(COLORREF)RGB(255,255,255);
+			backColor = (COLORREF)RGB(255, 255, 255);
 			break;
 		default:
 			ASSERT(FALSE);
@@ -175,14 +175,14 @@ BOOL CGridDevCfgListCtrl::OnDisplayCellColor(int nRow, int nCol, COLORREF& textC
 	}
 
 Done:
-	return CGridListCtrlEx::OnDisplayCellColor(nRow,nCol,textColor,backColor);
+	return CGridListCtrlEx::OnDisplayCellColor(nRow, nCol, textColor, backColor);
 }
 
 BOOL CGridDevCfgListCtrl::OnDisplayCellTooltip(int nRow, int nCol, CString& strResult)
 {
-	if (nRow!=-1 && nCol!=-1)
+	if (nRow != -1 && nCol != -1)
 	{
-		if (nCol==DEVCFG_COLID_FIELD)
+		if (nCol == DEVCFG_COLID_FIELD)
 		{
 			switch(nRow)
 			{
@@ -226,9 +226,9 @@ BOOL CGridDevCfgListCtrl::Load(CLibWdiSession* wdi)
 {
 
 	m_WdiSession = wdi;
-	CString fieldName,fieldValue;
+	CString fieldName, fieldValue;
 
-	for (int iRow=0; iRow < DEVCFG_FIELD_MAX; iRow++)
+	for (int iRow = 0; iRow < DEVCFG_FIELD_MAX; iRow++)
 	{
 		BOOL isMandatory = FALSE;
 
@@ -236,12 +236,12 @@ BOOL CGridDevCfgListCtrl::Load(CLibWdiSession* wdi)
 		{
 		case DEVCFG_FIELD_VID:
 			fieldName.LoadString(IDS_VENDOR_ID);
-			fieldValue.Format(_T("0x%04X"),wdi->vid);
+			fieldValue.Format(_T("0x%04X"), wdi->vid);
 			isMandatory = TRUE;
 			break;
 		case DEVCFG_FIELD_PID:
 			fieldName.LoadString(IDS_PRODUCT_ID);
-			fieldValue.Format(_T("0x%04X"),wdi->pid);
+			fieldValue.Format(_T("0x%04X"), wdi->pid);
 			isMandatory = TRUE;
 			break;
 		case DEVCFG_FIELD_MFG:
@@ -255,7 +255,7 @@ BOOL CGridDevCfgListCtrl::Load(CLibWdiSession* wdi)
 		case DEVCFG_FIELD_MI:
 			fieldName.LoadString(IDS_MI);
 			if (wdi->is_composite)
-				fieldValue.Format(_T("0x%02X"),wdi->mi);
+				fieldValue.Format(_T("0x%02X"), wdi->mi);
 			else
 				fieldValue.Empty();
 			break;
@@ -279,6 +279,6 @@ BOOL CGridDevCfgListCtrl::Load(CLibWdiSession* wdi)
 
 BOOL CGridDevCfgListCtrl::OnEditComplete(int nRow, int nCol, CWnd* pEditor, LV_DISPINFO* pLVDI)
 {
-	return  CGridListCtrlEx::OnEditComplete(nRow,nCol,pEditor,pLVDI);
+	return  CGridListCtrlEx::OnEditComplete(nRow, nCol, pEditor, pLVDI);
 }
 

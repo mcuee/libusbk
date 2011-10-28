@@ -16,13 +16,13 @@
 //! CGridRowTraitText - Constructor
 //------------------------------------------------------------------------
 CGridRowTraitText::CGridRowTraitText()
-	:m_pOldFont(NULL)
-	,m_FontAllocated(false)
-	,m_TextColor((COLORREF)-1)
-	,m_BackColor((COLORREF)-1)
-	,m_AltTextColor((COLORREF)-1)
-	,m_AltBackColor((COLORREF)-1)
-	,m_InvertCellSelection(true)
+	: m_pOldFont(NULL)
+	, m_FontAllocated(false)
+	, m_TextColor((COLORREF) - 1)
+	, m_BackColor((COLORREF) - 1)
+	, m_AltTextColor((COLORREF) - 1)
+	, m_AltBackColor((COLORREF) - 1)
+	, m_InvertCellSelection(true)
 {}
 
 //------------------------------------------------------------------------
@@ -66,13 +66,13 @@ void CGridRowTraitText::Accept(CGridRowTraitVisitor& visitor)
 //------------------------------------------------------------------------
 BOOL CGridRowTraitText::UpdateTextColor(int nRow, COLORREF& textColor)
 {
-	if (m_AltTextColor!=COLORREF(-1) && nRow % 2)
+	if (m_AltTextColor != COLORREF(-1) && nRow % 2)
 	{
 		textColor = m_AltTextColor;
 		return true;
 	}
 
-	if (m_TextColor!=COLORREF(-1))
+	if (m_TextColor != COLORREF(-1))
 	{
 		textColor = m_TextColor;
 		return true;
@@ -90,13 +90,13 @@ BOOL CGridRowTraitText::UpdateTextColor(int nRow, COLORREF& textColor)
 //------------------------------------------------------------------------
 BOOL CGridRowTraitText::UpdateBackColor(int nRow, COLORREF& backColor)
 {
-	if (m_AltBackColor!=COLORREF(-1) && nRow % 2)
+	if (m_AltBackColor != COLORREF(-1) && nRow % 2)
 	{
 		backColor = m_AltBackColor;
 		return true;
 	}
 
-	if (m_BackColor!=COLORREF(-1))
+	if (m_BackColor != COLORREF(-1))
 	{
 		backColor = m_BackColor;
 		return true;
@@ -129,7 +129,7 @@ void CGridRowTraitText::OnCustomDraw(CGridListCtrlEx& owner, NMLVCUSTOMDRAW* pLV
 			int nCol = pLVCD->iSubItem;
 			if (pLVCD->nmcd.uItemState & CDIS_SELECTED)
 			{
-				if (owner.GetFocusCell()==nCol && owner.GetFocusRow()==nRow)
+				if (owner.GetFocusCell() == nCol && owner.GetFocusRow() == nRow)
 				{
 					if (owner.GetExtendedStyle() & LVS_EX_FULLROWSELECT)
 						pLVCD->nmcd.uItemState &= ~CDIS_SELECTED;
@@ -139,7 +139,7 @@ void CGridRowTraitText::OnCustomDraw(CGridListCtrlEx& owner, NMLVCUSTOMDRAW* pLV
 
 		// Bug in Vista causes the cell color from previous cell to be used in the next
 		// even if having reverted the cell coloring in subitem-post-paint
-		if (pLVCD->clrText <= RGB(255,255,255) || pLVCD->clrTextBk <= RGB(255,255,255))
+		if (pLVCD->clrText <= RGB(255, 255, 255) || pLVCD->clrTextBk <= RGB(255, 255, 255))
 		{
 			pLVCD->clrText = 4278190080;
 			pLVCD->clrTextBk = 4278190080;
@@ -182,7 +182,7 @@ void CGridRowTraitText::OnCustomDraw(CGridListCtrlEx& owner, NMLVCUSTOMDRAW* pLV
 		}
 		else
 		{
-			if (owner.GetFont()!=owner.GetCellFont())
+			if (owner.GetFont() != owner.GetCellFont())
 			{
 				// Using special cell font because of SetMargin()
 				CDC* pDC = CDC::FromHandle(pLVCD->nmcd.hdc);
@@ -197,7 +197,7 @@ void CGridRowTraitText::OnCustomDraw(CGridListCtrlEx& owner, NMLVCUSTOMDRAW* pLV
 			// If drawing focus row, then remove focus state and request to draw it later
 			//	- Row paint request can come twice, with and without focus flag
 			//	- Only respond to the one with focus flag, else DrawFocusRect XOR will cause solid or blank focus-rectangle
-			if (owner.GetFocusRow()==nRow)
+			if (owner.GetFocusRow() == nRow)
 			{
 				if (owner.GetFocusCell() >= 0)
 				{
@@ -220,7 +220,7 @@ void CGridRowTraitText::OnCustomDraw(CGridListCtrlEx& owner, NMLVCUSTOMDRAW* pLV
 	// After painting a row
 	case CDDS_ITEMPOSTPAINT:
 	{
-		if (m_pOldFont!=NULL)
+		if (m_pOldFont != NULL)
 		{
 			// Restore the original font
 			CDC* pDC = CDC::FromHandle(pLVCD->nmcd.hdc);
@@ -232,10 +232,10 @@ void CGridRowTraitText::OnCustomDraw(CGridListCtrlEx& owner, NMLVCUSTOMDRAW* pLV
 			}
 		}
 
-		if (CRect(pLVCD->nmcd.rc)==CRect(0,0,0,0))
+		if (CRect(pLVCD->nmcd.rc) == CRect(0, 0, 0, 0))
 			break;
 
-		if (owner.GetFocusRow()!=nRow)
+		if (owner.GetFocusRow() != nRow)
 			break;
 
 		// Perform the drawing of the focus rectangle
@@ -250,13 +250,13 @@ void CGridRowTraitText::OnCustomDraw(CGridListCtrlEx& owner, NMLVCUSTOMDRAW* pLV
 			int cxborder = ::GetSystemMetrics(SM_CXBORDER);
 
 			// When the label column is placed first it has a left-margin
-			if (owner.GetFocusCell()==0 && owner.GetFocusCell()==owner.GetFirstVisibleColumn())
+			if (owner.GetFocusCell() == 0 && owner.GetFocusCell() == owner.GetFirstVisibleColumn())
 			{
-				rcHighlight.left += cxborder*2;
+				rcHighlight.left += cxborder * 2;
 			}
 			else
 				// Prevent focus rectangle to overlap with cell-image (Only room for this when not first column)
-				if (owner.GetFirstVisibleColumn()!=owner.GetFocusCell())
+				if (owner.GetFirstVisibleColumn() != owner.GetFocusCell())
 				{
 					rcHighlight.left -= cxborder;
 				}
