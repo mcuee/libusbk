@@ -158,7 +158,7 @@ LRESULT CPageInstall::OnWizardNext()
 	}
 	if (!PathIsDirectory(infPath))
 	{
-		if (!CreateDirectory(infPath,NULL))
+		if (SHCreateDirectoryEx(this->GetSafeHwnd(),infPath,NULL)!=ERROR_SUCCESS)
 		{
 			errorCode = -ERROR_BAD_PATHNAME;
 			CString* pTxtInvalidPath = CInfWizardDisplay::GetTipString(IDS_STATUS_INVALID_PATH);

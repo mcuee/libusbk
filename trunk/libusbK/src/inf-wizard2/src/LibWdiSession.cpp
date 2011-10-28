@@ -284,8 +284,12 @@ BOOL CLibWdiSession::ShowSavePackageDialog(CWnd* parent, CString baseDir, CStrin
 	CString txtPath=baseDir;
 	LPTSTR szPath = txtPath.GetBufferSetLength(4096);
 
+	if (!PathIsDirectory(szPath))
+		SHCreateDirectoryEx(parent->GetSafeHwnd(),szPath,NULL);
+
 	PathAppend(szPath,name);
 	txtPath.ReleaseBuffer();
+
 
 	CFileDialog dlg(FALSE,NULL,txtPath.GetBuffer(4096),0,_T("Folder|*.[Folder]|"),parent);
 
