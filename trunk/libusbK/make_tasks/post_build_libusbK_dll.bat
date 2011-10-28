@@ -110,20 +110,42 @@ GOTO :EOF
 	CALL ".\src\libwdi\copy-to-libwdi.cmd" "!K_LIBWDI_DIR!"
 	
 	REM - Build libwdiK and inf-wizardK.
-	PUSHD !CD!
-	CD /D "!K_LIBWDI_DIR!"
-	SET C_DEFINES=/DLIBUSBK_DIR=\"!K_PKG_BIN:\=/!\" /DLIBUSB0_DIR=\"!K_LIBUSB0_DEP_DIR:\=/!\" /DINFWIZARD_LIBUSBK=1
-	SET RC_DEFINES=!C_DEFINES!
-	CALL ddk_build inf_wizard_only
-	SET C_DEFINES=
-	SET RC_DEFINES=
-	POPD
+	IF EXIST "!K_LIBWDI_DIR!\libwdi\embedded.h" DEL /Q "!K_LIBWDI_DIR!\libwdi\embedded.h"
+	IF EXIST "!K_LIBWDI_DIR!\Win32\Release\lib\libwdi.lib" DEL "!K_LIBWDI_DIR!\Win32\Release\lib\libwdi.lib"
+	SET CL=/DLIBUSBK_DIR=\"!K_PKG_BIN:\=/!\" /DLIBUSB0_DIR=\"!K_LIBUSB0_DEP_DIR:\=/!\" /DDDK_DIR=\"!G_WDK_DIR:\=/!\"
+	!G_DEVENV_EXE! "!K_LIBWDI_DIR!\libwdi_2008.sln" /build "Release|Win32" /project "libwdi (static)"
+	IF "!ERRORLEVEL!" NEQ "0" (
+		ECHO [BUILD ERROR] - libwdi_2008
+		goto SetError
+	)
+	SET CL=
+	COPY /Y "!K_LIBWDI_DIR!\Win32\Release\lib\libwdi.lib" ".\src\inf-wizard2\lib\libwdi.lib"
+	!G_DEVENV_EXE! "!K_LIBWDI_DIR!\libwdi_2008.sln" /clean "Release|Win32" /project "libwdi (static)"
 
-	IF NOT EXIST "!K_LIBWDI_DIR!\examples\inf-wizard.exe" (
-		ECHO ERROR - "!K_LIBWDI_DIR!\examples\inf-wizard.exe" not found.
+	COPY /Y "!K_LIBWDI_DIR!\libwdi\libwdi.h" ".\src\inf-wizard2\src\libwdi.h"
+	!G_DEVENV_EXE! ".\src\inf-wizard2\InfWizard.sln" /build "Release|Win32" /project "InfWizard"
+	IF "!ERRORLEVEL!" NEQ "0" (
+		ECHO [BUILD ERROR] - InfWizard
+		goto SetError
+	)
+	SET CL=
+	COPY /Y ".\src\inf-wizard2\Release\InfWizard.exe" "!K_PKG!\libusbK-inf-wizard.exe"
+	!G_DEVENV_EXE! ".\src\inf-wizard2\InfWizard.sln" /clean "Release|Win32" /project "InfWizard"
+
+	REM PUSHD !CD!
+	REM CD /D "!K_LIBWDI_DIR!"
+	REM SET C_DEFINES=/DLIBUSBK_DIR=\"!K_PKG_BIN:\=/!\" /DLIBUSB0_DIR=\"!K_LIBUSB0_DEP_DIR:\=/!\" /DINFWIZARD_LIBUSBK=1
+	REM SET RC_DEFINES=!C_DEFINES!
+	REM CALL ddk_build inf_wizard_only
+	REM SET C_DEFINES=
+	REM SET RC_DEFINES=
+	REM POPD
+	REM COPY /Y "!K_LIBWDI_DIR!\examples\inf-wizard.exe" "!K_PKG!\libusbK-inf-wizard.exe"
+
+	IF NOT EXIST "!K_PKG!\libusbK-inf-wizard.exe" (
+		ECHO ERROR - "!K_PKG!\libusbK-inf-wizard.exe" not found.
 		GOTO :EOF
 	)
-	COPY /Y "!K_LIBWDI_DIR!\examples\inf-wizard.exe" "!K_PKG!\libusbK-inf-wizard.exe"
 	
 	PUSHD !CD!
 	CD .\doc
@@ -208,3 +230,13 @@ GOTO :EOF
 	IF "%~1" NEQ ""	GOTO MakeGccLibs
 GOTO :EOF
 
+REM :: Called when a build error or other unrecoverable error occurs; notifies the parent make.cmd there was problems.
+:SetError
+	ENDLOCAL
+	SET BUILD_ERRORLEVEL=1
+	IF DEFINED E_SND_FILE (
+		IF EXIST "!E_SND_FILE!" (
+			ECHO 1 >!E_SND_FILE!
+		)
+	)
+GOTO :EOF

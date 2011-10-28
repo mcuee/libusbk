@@ -1,0 +1,391 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "#define _AFX_NO_SPLITTER_RESOURCES\r\n"
+    "#define _AFX_NO_OLE_RESOURCES\r\n"
+    "#define _AFX_NO_TRACKER_RESOURCES\r\n"
+    "#define _AFX_NO_PROPERTY_RESOURCES\r\n"
+    "\r\n"
+    "#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)\r\n"
+    "#ifdef _WIN32\r\n"
+    "LANGUAGE 9, 1\r\n"
+    "#pragma code_page(1252)\r\n"
+    "#endif //_WIN32\r\n"
+    "#include ""res\\Wizard97.rc2""  // non-Microsoft Visual C++ edited resources\r\n"
+    "#include ""afxres.rc""         // Standard components\r\n"
+    "#endif\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDR_MAINFRAME           ICON                    "res\\InfWizard.ico"
+IDI_ICON_OK             ICON                    "res\\Icons.16x16.OK.ico"
+IDI_ICON_EXCLAMATION    ICON                    "res\\Exclamation.ico"
+IDI_ICON_OPEN_FOLDER    ICON                    "res\\Icons.16x16.OpenFileIcon.ico"
+IDI_ICON_EXPLORER       ICON                    "res\\Explorer.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_PAGE_INTRO DIALOGEX 0, 0, 337, 146
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "Sample Wizard"
+FONT 8, "Tahoma", 400, 0, 0x0
+BEGIN
+    LTEXT           "USB Inf Creator/Installer Wizard",IDC_BIGBOLDTITLE,121,7,198,19
+    LTEXT           "To begin, Select the windows kernel driver that your USB applications will target:",IDC_INTRO_TEXT2,132,57,198,21
+    CONTROL         "",IDC_DRIVER_LIST,"SysListView32",LVS_REPORT | LVS_ALIGNLEFT | WS_BORDER | WS_TABSTOP,132,82,198,39
+    CONTROL         "InfWizard creates reusable USB installation packages customized for a specific to usb device.",IDC_INTRO_TEXT1,
+                    "SysLink",WS_TABSTOP,132,29,198,21
+    CONTROL         "<a>Open Session</a>",IDC_LINK_OPEN_SESSION,"SysLink",WS_TABSTOP,132,125,59,14
+    CONTROL         "<a>Save Session</a>",IDC_LINK_SAVE_SESSION,"SysLink",WS_TABSTOP,203,125,59,14
+END
+
+IDD_PAGE_SELECT_DEVICE DIALOGEX 0, 0, 293, 140
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "Sample Wizard"
+FONT 8, "Tahoma", 400, 0, 0x0
+BEGIN
+    CONTROL         "",IDC_DEV_LIST,"SysListView32",LVS_REPORT | LVS_SINGLESEL | LVS_ALIGNLEFT | WS_BORDER | WS_TABSTOP,7,27,279,106
+    CONTROL         "Show &New Devices",IDC_SHOW_NEW_DEVICES,"Button",BS_AUTORADIOBUTTON | BS_NOTIFY | WS_GROUP,7,7,76,13
+    CONTROL         "Show All Devices",IDC_SHOW_ALL_DEVICES,"Button",BS_AUTORADIOBUTTON | BS_NOTIFY,100,7,69,13
+END
+
+IDD_PAGE_CONFIG_DEVICE DIALOGEX 0, 0, 291, 132
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "Sample Wizard"
+FONT 8, "Tahoma", 400, 0, 0x0
+BEGIN
+    CONTROL         "",IDC_DEV_LIST,"SysListView32",LVS_REPORT | LVS_SINGLESEL | LVS_EDITLABELS | LVS_ALIGNLEFT | LVS_NOSCROLL | LVS_NOCOLUMNHEADER | LVS_NOSORTHEADER | WS_BORDER | WS_TABSTOP,7,7,277,118,WS_EX_TRANSPARENT
+END
+
+IDD_PAGE_INSTALL DIALOGEX 0, 0, 291, 132
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "Sample Wizard"
+FONT 8, "Tahoma", 400, 0, 0x0
+BEGIN
+    CONTROL         "Save Package",IDC_BTN_SAVE_PACKAGE,"Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,11,7,61,10
+    CONTROL         "Install Package",IDC_BTN_INSTALL_PACKAGE,"Button",BS_AUTORADIOBUTTON | WS_TABSTOP,101,7,64,10
+    CONTROL         "Save && Install Package",IDC_BTN_SAVE_AND_INSTALL_PACKAGE,
+                    "Button",BS_AUTORADIOBUTTON | WS_TABSTOP,194,7,89,10
+    GROUPBOX        "Package Save Information:",IDC_GRP_SAVE_INFORMATION,7,24,277,48,WS_GROUP
+    RTEXT           "Base Folder:",IDC_LBL_SAVE_BASE_FOLDER,11,36,52,14,SS_CENTERIMAGE | NOT WS_GROUP
+    EDITTEXT        IDC_TXT_SAVE_BASE_FOLDER,63,36,159,14,ES_AUTOHSCROLL | NOT WS_BORDER,WS_EX_CLIENTEDGE
+    PUSHBUTTON      "Select..",IDC_BTN_SAVE_BASE_FOLDER,226,36,54,14
+    RTEXT           "Name:",IDC_LBL_SAVE_NAME,11,52,52,15,SS_CENTERIMAGE | NOT WS_GROUP
+    EDITTEXT        IDC_TXT_SAVE_NAME,63,52,217,15,ES_AUTOHSCROLL | NOT WS_BORDER,WS_EX_CLIENTEDGE
+    GROUPBOX        "Package Status:",IDC_GRP_STATUS,7,72,277,53,WS_GROUP
+    CONTROL         "",IDC_TXT_STATUS,"RichEdit20W",0x8c4,11,84,269,36,WS_EX_STATICEDGE
+END
+
+IDD_PAGE_FINISHED DIALOGEX 0, 0, 329, 153
+STYLE DS_SETFONT | WS_CHILD | WS_DISABLED | WS_CAPTION
+CAPTION "Sample Wizard"
+FONT 8, "Tahoma", 0, 0, 0x0
+BEGIN
+    LTEXT           "You have completed InfWizard!",IDC_LBL_FINISHED_CAPTION,121,7,201,35
+    LTEXT           "Click Back to review package create/install status.",IDC_LBL_FINISHED_TEXT,153,47,169,20,SS_CENTERIMAGE
+    CONTROL         2035,IDC_PIC_FINISHED_TEXT,"Static",SS_BITMAP,121,47,23,20
+    GROUPBOX        "Additional Tasks:",IDC_GRP_ADDITIONAL_TASKS,121,79,201,47
+    CONTROL         "<a>Open Session</a>",IDC_LINK_OPEN_SESSION,"SysLink",WS_TABSTOP,121,132,89,14
+    CONTROL         "<a>Save Session</a>",IDC_LINK_SAVE_SESSION,"SysLink",WS_TABSTOP,216,132,62,14
+    PUSHBUTTON      "  Explore Package Folder..",IDC_BTN_EXPLORE_PACKAGE_FOLDER,127,91,118,14,BS_LEFT
+    PUSHBUTTON      "  Explore Base Folder..",IDC_BTN_EXPLORE_BASE_FOLDER,127,107,118,14,BS_LEFT
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 1,0,0,1
+ PRODUCTVERSION 1,0,0,1
+ FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS 0x4L
+ FILETYPE 0x1L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "FileDescription", "Wizard97 MFC Application"
+            VALUE "FileVersion", "1, 0, 0, 1"
+            VALUE "InternalName", "Wizard97"
+            VALUE "LegalCopyright", "Copyright (C) 1998"
+            VALUE "OriginalFilename", "Wizard97.EXE"
+            VALUE "ProductName", "Wizard97 Application"
+            VALUE "ProductVersion", "1, 0, 0, 1"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO 
+BEGIN
+    IDD_PAGE_INTRO, DIALOG
+    BEGIN
+        LEFTMARGIN, 121
+        RIGHTMARGIN, 330
+        VERTGUIDE, 132
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 139
+    END
+
+    IDD_PAGE_SELECT_DEVICE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 286
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 133
+        HORZGUIDE, 20
+        HORZGUIDE, 27
+    END
+
+    IDD_PAGE_CONFIG_DEVICE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 284
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 125
+    END
+
+    IDD_PAGE_INSTALL, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 284
+        VERTGUIDE, 11
+        VERTGUIDE, 63
+        VERTGUIDE, 222
+        VERTGUIDE, 226
+        VERTGUIDE, 280
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 125
+        HORZGUIDE, 24
+        HORZGUIDE, 36
+        HORZGUIDE, 50
+        HORZGUIDE, 72
+        HORZGUIDE, 84
+        HORZGUIDE, 120
+    END
+
+    IDD_PAGE_FINISHED, DIALOG
+    BEGIN
+        LEFTMARGIN, 121
+        RIGHTMARGIN, 322
+        VERTGUIDE, 127
+        VERTGUIDE, 153
+        VERTGUIDE, 318
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 146
+        HORZGUIDE, 42
+        HORZGUIDE, 47
+        HORZGUIDE, 67
+        HORZGUIDE, 79
+        HORZGUIDE, 91
+        HORZGUIDE, 107
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+IDB_BANNER              BITMAP                  "res\\Baner16.bmp"
+IDB_WATERMARK           BITMAP                  "res\\Water16.bmp"
+IDB_BAR_BLUE            BITMAP                  "res\\Bar.Blue.bmp"
+IDB_BAR_GREEN           BITMAP                  "res\\Bar.Green.bmp"
+IDB_BAR_ORANGE          BITMAP                  "res\\Bar.Orange.bmp"
+IDB_BMP_INFORMATION     BITMAP                  "res\\information.bmp"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE 
+BEGIN
+    IDS_ABOUTBOX            "&About InfWizard..."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_PAGE_INTRO_TITLE    "Welcome to InfWizard v2.0"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_INFWIZARD           "InfWizard v2.0"
+    IDS_HEADERTITLE         "Header Title"
+    IDS_HEADERSUBTITLE      "Header Sub Title"
+    IDS_PAGE_SELECT_DEVICE_TITLE "Device Selection"
+    IDS_PAGE_SELECT_DEVICE_SUBTITLE 
+                            "Connected your USB device and select it from the list or skip this step and enter the parameters manually on the following page."
+    IDS_VENDOR_ID           "Vendor ID"
+    IDS_PRODUCT_ID          "Product ID"
+    IDS_DESCRIPTION         "Description"
+    IDS_INSTALLED_DRIVER    "Installed Driver"
+    IDS_DLL_USB0_NOT_SUPPORTED 
+                            "The libusb-win32 user library does not support this driver."
+    IDS_DLL_USB0_SUPPORTED  "The libusb-win32 user library supports this driver."
+    IDS_DLL_USB1_NOT_SUPPORTED 
+                            "The libusb-1.0 user library does not support this driver."
+    IDS_DLL_USB1_SUPPORTED  "The libusb-1.0 user library supports this driver."
+    IDS_DLL_USBK_SUPPORTED  "The libusbK user library supports this driver."
+    IDS_PAGE_CONFIG_DEVICE_TITLE "Device Configuration"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_PAGE_CONFIG_DEVICE_SUBTITLE 
+                            "Configure the installation package as needed. Red fields must be valid before continuing."
+    IDS_MI                  "Interface #"
+    IDS_GUID                "Interface Guid"
+    IDS_DEVICE_ID           "Device ID"
+    IDS_HARDWARE_ID         "Hardware ID"
+    IDS_PAGE_INSTALL_TITLE  "Install/Save Package"
+    IDS_PAGE_INSTALL_SUBTITLE 
+                            "The driver package is ready to be created. Choose whether to install this package now, save this package, or install and save this package."
+    IDS_MANUFACTURER        "Manufacturer"
+    IDS_TIP_SAVE_BASE_FOLDER 
+                            "Base location for this package.\n[package name is appended as a sub-folder]"
+    IDS_TIP_PACKAGE_NAME    "Name and sub-folder for this package."
+    IDS_TXT_PACKAGE_SAVE_HEADER "[Click Next to save this package]"
+    IDS_TXT_PACKAGE_INSTALL_HEADER "[Click Next to install this package]"
+    IDS_TXT_PACKAGE_SAVE_AND_INSTALL_HEADER 
+                            "[Click Next to save and install this package]"
+    IDS_STATUS_START_PACKAGER "Starting libwdi packager"
+    IDS_STATUS_INVALID_PATH "An invalid folder name was specified"
+    IDS_STATUS_PREPARE_DRIVER "Creating and preparing driver package "
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_ERROR_PREPARE_DRIVER "Failed preparing driver package "
+    IDS_STATUS_INSTALL_DRIVER "Installing driver. Please wait"
+    IDS_ERROR_INSTALL_DRIVER "Failed installing driver"
+    IDS_STATUS_PACKAGE_SUCCESS "Operation completed successfully."
+    IDS_PACKAGE_DIR         "Package folder is"
+    IDS_PACKAGE_NAME        "Package name is"
+    IDS_TIP_OPEN_SESSION    "Load package information from a previously saved session file."
+    IDS_TIP_SAVE_SESSION    "Save the current wizard state to a InfWizard session file."
+    IDS_TIP_SHOW_NEW_DEVICES 
+                            "Show only devices that do not have an installed driver. "
+    IDS_TIP_SHOW_ALL_DEVICES "Show all devices and hubs."
+    IDS_TIP_VENDOR_ID       "16-bit hexadecimal value representing the vendor id (VID) assigned by usb.org."
+    IDS_TIP_PRODUCT_ID      "16-bit hexadecimal value representing the product id (PID) assigned by usb.org."
+    IDS_TIP_MANUFACTURER    "Description or name string describing the vendor."
+    IDS_TIP_DEVICE_DESCRIPTION 
+                            "Description or name string describing the device."
+    IDS_TIP_INTERFACE_NUMBER 
+                            "Interface number (MI_) of a multiple interface composite device."
+    IDS_TIP_INTERFACE_GUID  "Unique 128bit GUID applications can use to quickly find and open this device."
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_TIP_SAVE_PACKAGE    "Create this package in the location specified below."
+    IDS_TIP_INSTALL_PACKAGE "Create this package in a temporary directory and install."
+    IDS_TIP_SAVE_AND_INSTALL_PACKAGE 
+                            "Create this package in the location specified below and install."
+    IDS_TIP_EXPLORE_PACKAGE_FOLDER 
+                            "Open the full package location in windows explorer."
+    IDS_TIP_EXPLORE_BASE_FOLDER 
+                            "Open the base package location in windows explorer."
+END
+
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+#define _AFX_NO_SPLITTER_RESOURCES
+#define _AFX_NO_OLE_RESOURCES
+#define _AFX_NO_TRACKER_RESOURCES
+#define _AFX_NO_PROPERTY_RESOURCES
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE 9, 1
+#pragma code_page(1252)
+#endif //_WIN32
+#include "res\Wizard97.rc2"  // non-Microsoft Visual C++ edited resources
+#include "afxres.rc"         // Standard components
+#endif
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

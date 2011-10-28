@@ -5,21 +5,21 @@
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
-# 
+#
 #     * Redistributions of source code must retain the above copyright
 #       notice, this list of conditions and the following disclaimer.
-# 	  
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS 
-# IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED 
-# TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A 
-# PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL TRAVIS LEE ROBINSON 
-# BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
-# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF 
-# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
-# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN 
-# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
-# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF 
-# THE POSSIBILITY OF SUCH DAMAGE. 
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+# IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+# TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+# PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL TRAVIS LEE ROBINSON
+# BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+# THE POSSIBILITY OF SUCH DAMAGE.
 #
 */
 #include "examples.h"
@@ -37,12 +37,12 @@ DWORD __cdecl main(int argc, char* argv[])
 	DWORD errorCode	= ERROR_SUCCESS;
 	BOOL success;
 	USB_DEVICE_DESCRIPTOR deviceDescriptor;
-	UCHAR vendorBuffer[8+1];
+	UCHAR vendorBuffer[8 + 1];
 	KUSB_SETUP_PACKET setupPacket;
 
 	/*!
-	Find the test device. Uses "vid=hhhh pid=hhhh" arguments supplied on the 
-	command line. (default is: vid=04D8 pid=FA2E) 
+	Find the test device. Uses "vid=hhhh pid=hhhh" arguments supplied on the
+	command line. (default is: vid=04D8 pid=FA2E)
 	*/
 	if (!Examples_GetTestDevice(&deviceList, &deviceInfo, argc, argv))
 		return GetLastError();
@@ -75,7 +75,7 @@ DWORD __cdecl main(int argc, char* argv[])
 	setupPacket.BmRequest.Dir		= BMREQUEST_DIR_DEVICE_TO_HOST;
 	setupPacket.BmRequest.Type		= BMREQUEST_TYPE_STANDARD;
 	setupPacket.BmRequest.Recipient = BMREQUEST_RECIPIENT_DEVICE;
-	setupPacket.Value				= USB_DESCRIPTOR_MAKE_TYPE_AND_INDEX(USB_DESCRIPTOR_TYPE_DEVICE,0);
+	setupPacket.Value				= USB_DESCRIPTOR_MAKE_TYPE_AND_INDEX(USB_DESCRIPTOR_TYPE_DEVICE, 0);
 	setupPacket.Request				= USB_REQUEST_GET_DESCRIPTOR;
 	setupPacket.Length				= sizeof(deviceDescriptor);
 	success = UsbK_ControlTransfer(usbHandle, *((WINUSB_SETUP_PACKET*)&setupPacket), (PUCHAR)&deviceDescriptor, sizeof(deviceDescriptor), NULL, NULL);
@@ -90,10 +90,10 @@ DWORD __cdecl main(int argc, char* argv[])
 	/*
 	Initialize the 8 byte benchmark vendor buffer
 	*/
-	memset(vendorBuffer,0,sizeof(vendorBuffer));
-	vendorBuffer[0]='A';
-	vendorBuffer[1]='B';
-	vendorBuffer[2]='C';
+	memset(vendorBuffer, 0, sizeof(vendorBuffer));
+	vendorBuffer[0] = 'A';
+	vendorBuffer[1] = 'B';
+	vendorBuffer[2] = 'C';
 
 	/*
 	Use a vendor control transfer to set the benchmark vendor buffer. (HostToDevice)
@@ -102,8 +102,8 @@ DWORD __cdecl main(int argc, char* argv[])
 	setupPacket.BmRequest.Type		= BMREQUEST_TYPE_VENDOR;
 	setupPacket.BmRequest.Recipient = BMREQUEST_RECIPIENT_DEVICE;
 	setupPacket.Request				= BM_COMMAND_SET_VBUF;
-	setupPacket.Length				= sizeof(vendorBuffer)-1;
-	success = UsbK_ControlTransfer(usbHandle, *((WINUSB_SETUP_PACKET*)&setupPacket), vendorBuffer, sizeof(vendorBuffer)-1, NULL, NULL);
+	setupPacket.Length				= sizeof(vendorBuffer) - 1;
+	success = UsbK_ControlTransfer(usbHandle, *((WINUSB_SETUP_PACKET*)&setupPacket), vendorBuffer, sizeof(vendorBuffer) - 1, NULL, NULL);
 	if (!success)
 	{
 		errorCode = GetLastError();
@@ -115,8 +115,8 @@ DWORD __cdecl main(int argc, char* argv[])
 	/*
 	Print the value assigned to the benchmark vendor buffer.
 	*/
-	printf("vendorBuffer: %s=",vendorBuffer);
-	memset(vendorBuffer,0,sizeof(vendorBuffer));
+	printf("vendorBuffer: %s=", vendorBuffer);
+	memset(vendorBuffer, 0, sizeof(vendorBuffer));
 
 	/*
 	Use a vendor control transfer to get the benchmark vendor buffer. (DeviceToHost)
@@ -128,8 +128,8 @@ DWORD __cdecl main(int argc, char* argv[])
 	setupPacket.BmRequest.Type		= BMREQUEST_TYPE_VENDOR;
 	setupPacket.BmRequest.Recipient = BMREQUEST_RECIPIENT_DEVICE;
 	setupPacket.Request				= BM_COMMAND_GET_VBUF;
-	setupPacket.Length				= sizeof(vendorBuffer)-1;
-	success = UsbK_ControlTransfer(usbHandle, *((WINUSB_SETUP_PACKET*)&setupPacket), vendorBuffer, sizeof(vendorBuffer)-1, NULL, NULL);
+	setupPacket.Length				= sizeof(vendorBuffer) - 1;
+	success = UsbK_ControlTransfer(usbHandle, *((WINUSB_SETUP_PACKET*)&setupPacket), vendorBuffer, sizeof(vendorBuffer) - 1, NULL, NULL);
 	if (!success)
 	{
 		errorCode = GetLastError();
@@ -141,7 +141,7 @@ DWORD __cdecl main(int argc, char* argv[])
 	/*
 	Print the value stored in the benchmark vendor buffer.
 	*/
-	printf("%s\n",vendorBuffer);
+	printf("%s\n", vendorBuffer);
 
 
 Done:
@@ -150,7 +150,7 @@ Done:
 	*/
 	if (usbHandle) Usb.Free(usbHandle);
 	/*!
-	Free the device list. If deviceList is invalid (NULL), has no effect. 
+	Free the device list. If deviceList is invalid (NULL), has no effect.
 	*/
 	LstK_Free(deviceList);
 

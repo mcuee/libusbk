@@ -1,0 +1,17 @@
+STEP #1
+Download libwdi here:
+http://sourceforge.net/projects/libwdi/files/releases/
+
+STEP #2
+Open project properties for libwdi (static)
+Change [Configuration Properties]->[General]->[Use of MFC] to "Use MFC in a Static Library"
+
+STEP #3
+Locate header file 'config.h' and update DDK_DIR, LIBUSB0_DIR, and LIBUSBK_DIR to reflect
+the location of the driver binary files.  To exclude a driver, remove the define entirely.
+
+STEP #4
+Build the libwdi (static) project and copy 'libwdi.lib' to this folder.
+
+STEP #5
+Open the InfWizard.sln with a non-express edition of Visual Studios and build normally.
