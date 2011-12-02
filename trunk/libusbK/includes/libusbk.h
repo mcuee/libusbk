@@ -1603,6 +1603,16 @@ typedef enum _KSTM_FLAG
     KSTM_FLAG_NONE		= 0L,
 } KSTM_FLAG;
 
+//! Stream config flags.
+/*!
+* \attention Currently not used.
+*/
+typedef enum _KSTM_COMPLETE_RESULT
+{
+    KSTM_COMPLETE_RESULT_VALID		= 0L,
+    KSTM_COMPLETE_RESULT_INVALID,
+} KSTM_COMPLETE_RESULT;
+
 //! Stream transfer context structure.
 /*!
 * This structure is passed into the stream callback functions.
@@ -1689,11 +1699,30 @@ typedef LONG KUSB_API KSTM_STARTED_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_
 */
 typedef LONG KUSB_API KSTM_STOPPED_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LONG XferContextIndex);
 
-//! Function definition for an optional user-defined callback; executed when a transfer competes.
+//! Function definition for an optional user-defined callback; executed when a valid transfer completes.
 /*! \fn LONG KUSB_API KSTM_COMPLETE_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LONG ErrorCode)
 * \memberof KSTM_CALLBACK
 */
 typedef LONG KUSB_API KSTM_COMPLETE_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LONG ErrorCode);
+
+//! Function definition for an optional user-defined callback; executed immediately after a transfer completes.
+/*! \fn KSTM_COMPLETE_RESULT KUSB_API KSTM_BEFORE_COMPLETE_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _ref PLONG ErrorCode)
+* \memberof KSTM_CALLBACK
+*
+* This callback function allows the user to accept or reject the transfer:
+* - IN (Read, DeviceToHost) endpoints.
+*   - KSTM_COMPLETE_RESULT_VALID
+*     Continue normal processing; add the transfer to the internal complete list and make it available to \ref StmK_Read.
+*   - KSTM_COMPLETE_RESULT_INVALID
+*     Ignore this transfer.
+* - OUT (Write, HostToDevice) endpoints.
+*   - KSTM_COMPLETE_RESULT_VALID
+*     Continue normal processing; add the transfer to the internal complete list and make it available subsequent \ref StmK_Write requests.
+*   - KSTM_COMPLETE_RESULT_INVALID
+*     Return this transfer to the internal queued list for automatic resubmission to the device.
+*
+*/
+typedef KSTM_COMPLETE_RESULT KUSB_API KSTM_BEFORE_COMPLETE_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in PLONG ErrorCode);
 
 //! Stream callback structure.
 /*!
@@ -1710,7 +1739,7 @@ typedef struct _KSTM_CALLBACK
 	//! Executed to submit a transfer.
 	KSTM_SUBMIT_CB* Submit;
 
-	//! Executed when a transfer competes.
+	//! Executed when a valid transfer completes.
 	KSTM_COMPLETE_CB* Complete;
 
 	//! Executed for every transfer context when the stream is started with \ref StmK_Start.
@@ -1719,8 +1748,11 @@ typedef struct _KSTM_CALLBACK
 	//! Executed for every transfer context when the stream is stopped with \ref StmK_Stop.
 	KSTM_STOPPED_CB* Stopped;
 
+	//! Executed immediately after a transfer completes.
+	KSTM_BEFORE_COMPLETE_CB* BeforeComplete;
+
 	//! fixed structure padding.
-	UCHAR z_F_i_x_e_d[64 - sizeof(UINT_PTR) * 5];
+	UCHAR z_F_i_x_e_d[64 - sizeof(UINT_PTR) * 6];
 
 } KSTM_CALLBACK;
 //! Pointer to a \ref KSTM_CALLBACK structure.
