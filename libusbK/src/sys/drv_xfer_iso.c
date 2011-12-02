@@ -73,7 +73,7 @@ const USHORT Frames_Per_bInterval_FullSpeed[32] =
 	for (mPos = 0; mPos < (mNumberOfPackets); mPos++)																\
 	{																												\
 		mIsoPacketArray[mPos].Length = (USHORT)(mUrb)->UrbIsochronousTransfer.IsoPacket[mPos].Length;				\
-		mIsoPacketArray[mPos].Status = (USHORT)((mUrb)->UrbIsochronousTransfer.IsoPacket[mPos].Status & 0xFFFF);	\
+		mIsoPacketArray[mPos].Status = (USHORT)(((mUrb)->UrbIsochronousTransfer.IsoPacket[mPos].Status & 0xFFFF)|((mUrb)->UrbIsochronousTransfer.IsoPacket[mPos].Status >> 15));	\
 	}																												\
 }while(0)
 

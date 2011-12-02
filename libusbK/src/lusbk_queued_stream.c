@@ -186,6 +186,7 @@ static BOOL Stm_Thread_ProcessPending(PKSTM_THREAD_INTERNAL stm, DWORD timeoutOv
 {
 	DWORD timeout;
 	DWORD waitResult;
+	KSTM_COMPLETE_RESULT completeResult;
 
 	if (!stm->pendingList)
 	{
@@ -247,16 +248,30 @@ static BOOL Stm_Thread_ProcessPending(PKSTM_THREAD_INTERNAL stm, DWORD timeoutOv
 	}
 	DL_APPEND(stm->ovlList, stm->ovlNext);
 
-	stm->errorCode = AL_PushTail_XferLink(stm->handle->List.Finished, stm->xferNext);
+	completeResult = KSTM_COMPLETE_RESULT_VALID;
 
-	DecLock(stm->handle->PendingIO);
+	if (stm->handle->UserCB->BeforeComplete)
+	{
+		completeResult = stm->handle->UserCB->BeforeComplete(stm->handle->Info, &stm->xferNext->Xfer->Public, (PLONG)&stm->errorCode);
+	}
 
-	if (USB_ENDPOINT_DIRECTION_IN(stm->handle->Info->PipeID))
-		IncLock(stm->handle->PendingTransfers);
+	if (completeResult == KSTM_COMPLETE_RESULT_INVALID)
+	{
+		DL_APPEND(stm->handle->List.Queued, stm->xferNext);
+	}
 	else
-		DecLock(stm->handle->PendingTransfers);
+	{
+		AL_PushTail_XferLink(stm->handle->List.Finished, stm->xferNext);
+		DecLock(stm->handle->PendingIO);
 
-	if (stm->handle->UserCB->Complete)
+		if (USB_ENDPOINT_DIRECTION_IN(stm->handle->Info->PipeID))
+			IncLock(stm->handle->PendingTransfers);
+		else
+			DecLock(stm->handle->PendingTransfers);
+	}
+
+
+	if (stm->handle->UserCB->Complete && completeResult == KSTM_COMPLETE_RESULT_VALID)
 	{
 		LONG ec;
 		ec = stm->handle->UserCB->Complete(stm->handle->Info, &stm->xferNext->Xfer->Public, stm->errorCode);
