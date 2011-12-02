@@ -16,6 +16,7 @@ IF /I "!G_DIST!" NEQ "finalize" (
 REM - Debug or Release depending on build mode
 SET K_DBGorREL=Release
 IF DEFINED G_CHK SET K_DBGorREL=Debug
+ECHO !K_DBGorREL! Build
 
 IF EXIST "!K_LIBUSB10_DEP_DIR!" (
 	PUSHD !CD!
@@ -152,6 +153,7 @@ GOTO :EOF
 		GOTO :EOF
 	)
 	
+	CALL :SignFile "!K_PKG!\libusbK-inf-wizard.exe"
 	PUSHD !CD!
 	CD .\doc
 	CALL make_dist_docs.cmd
@@ -233,6 +235,36 @@ GOTO :EOF
 	SHIFT /1
 	SHIFT /1
 	IF "%~1" NEQ ""	GOTO MakeGccLibs
+GOTO :EOF
+
+REM :: Signs a binary using the cert options defined in make.cfg or passed as arguments.
+REM - %1 = Full path of file to sign.
+REM [USES] G_WDK_DIR, G_SIGN_CERT_FILE, G_SIGN_CERT_NAME, G_SIGN_CERT_OPTIONS
+:SignFile
+	CALL :FindFileInPath SIGN_EXE SignTool.exe
+	IF NOT EXIST "!SIGN_EXE!" SET SIGN_EXE=!G_WDK_DIR!\bin\x86\SignTool.exe
+	IF NOT EXIST "!SIGN_EXE!" FOR /F "usebackq eol=; tokens=* delims=" %%A IN (`dir /S /A-D /B "!G_WDK_DIR!\SignTool.exe"`) DO IF NOT EXIST "!SIGN_EXE!" SET SIGN_EXE=%%~A
+	IF EXIST "!SIGN_EXE!" (
+		PUSHD !CD!
+		CD /D %~dp1
+		!SIGN_EXE! !G_SIGN_CERT_ARGS! %~nx1
+		IF DEFINED G_SIGN_CERT_VERIFY_ARGS !SIGN_EXE! !G_SIGN_CERT_VERIFY_ARGS! %~nx1
+		POPD
+	)
+	SET SIGN_EXE=
+GOTO :EOF
+
+REM :: Finds a file in the PATH env var
+REM - %1 = Env pointer set to the full pathname of the file that was found.
+REM - %2 = Filename to look for
+REM [SETS] DIR_%1 to the full directory the file was found in.
+:FindFileInPath
+	IF "%~1" EQU "" GOTO :EOF
+	SET %1=%~f$PATH:2
+	SET DIR_%1=%~dp$PATH:2
+	SHIFT /1
+	SHIFT /1
+	GOTO FindFileInPath
 GOTO :EOF
 
 REM :: Called when a build error or other unrecoverable error occurs; notifies the parent make.cmd there was problems.
