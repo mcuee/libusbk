@@ -220,7 +220,7 @@ KUSB_EXP BOOL KUSB_API OvlK_Wait(
 
 CancelIoRetry:
 	// wait the specified timeout interval
-	if (WaitFlags & KOVL_WAIT_FLAG_ALERTABLE)
+	if (WaitFlags & KOVL_WAIT_FLAG_ALERTABLE && !userCancelled)
 	{
 		// user apc aware.
 		errorCode = WaitForSingleObjectEx(overlapped->Overlapped.hEvent, TimeoutMS, TRUE);
@@ -240,7 +240,10 @@ CancelIoRetry:
 	else if (errorCode == WAIT_TIMEOUT)
 	{
 		success = FALSE;
-		errorCode = ERROR_IO_INCOMPLETE;
+		if (userCancelled)
+			errorCode = ERROR_CANCELLED;
+		else
+			errorCode = ERROR_IO_INCOMPLETE;
 	}
 	else
 	{
@@ -268,8 +271,9 @@ CancelIoRetry:
 			if (success)
 			{
 				WaitFlags ^= KOVL_WAIT_FLAG_CANCEL_ON_TIMEOUT;
-				TimeoutMS = INFINITE;
+				TimeoutMS = 0;
 				userCancelled = TRUE;
+				Sleep(0);
 				goto CancelIoRetry;
 			}
 
