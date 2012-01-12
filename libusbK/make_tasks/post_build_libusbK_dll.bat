@@ -117,12 +117,21 @@ GOTO :EOF
 	REM - Build libwdiK and inf-wizardK.
 	IF EXIST "!K_LIBWDI_DIR!\libwdi\embedded.h" DEL /Q "!K_LIBWDI_DIR!\libwdi\embedded.h"
 	IF EXIST "!K_LIBWDI_DIR!\Win32\!K_DBGorREL!\lib\libwdi.lib" DEL "!K_LIBWDI_DIR!\Win32\!K_DBGorREL!\lib\libwdi.lib"
+	IF "!ERRORLEVEL!" NEQ "0" (
+		ECHO.
+		ECHO [BUILD WARNING] - InfWizard - Unable to delete old libwdi.lib.
+		ECHO.
+	)
+	
 	SET CL=/DLIBUSBK_DIR=\"!K_PKG_BIN:\=/!\" /DLIBUSB0_DIR=\"!K_LIBUSB0_DEP_DIR:\=/!\" /DDDK_DIR=\"!G_WDK_DIR:\=/!\"
 	!G_DEVENV_EXE! "!K_LIBWDI_DIR!\libwdi_2008.sln" /build "!K_DBGorREL!|Win32" /project "libwdi (static)"
 	IF "!ERRORLEVEL!" NEQ "0" (
 		ECHO [BUILD ERROR] - libwdi_2008
 		goto SetError
 	)
+	
+	pause
+	
 	SET CL=
 	COPY /Y "!K_LIBWDI_DIR!\Win32\!K_DBGorREL!\lib\libwdi.lib" ".\src\inf-wizard2\lib\libwdi.lib"
 
