@@ -65,7 +65,7 @@ if (OutputBufferPtr)																										\
 	PPIPE_CONTEXT tempPipeCtx = GetPipeContextByID(mDeviceContext, mPipeID);  						\
 	if (!tempPipeCtx || !tempPipeCtx->IsValid || !tempPipeCtx->Queue) 								\
 	{ 																								\
-		mStatus = STATUS_INVALID_PARAMETER;   														\
+		mStatus = STATUS_NOT_FOUND;   																\
 		USBERRN("Invalid pipe context."); 															\
 		mErrorAction; 																				\
 	} 																								\
@@ -83,7 +83,7 @@ if (OutputBufferPtr)																										\
 	if (!mRequestContext->QueueContext)   															\
 	{ 																								\
 		mStatus = STATUS_INVALID_PARAMETER;   														\
-		USBERRN("Invalid pipe context."); 															\
+		USBERRN("Invalid queue context."); 															\
 		mErrorAction; 																				\
 	} 																								\
   																									\
@@ -173,58 +173,58 @@ VOID DefaultQueue_OnIoControl(__in WDFQUEUE Queue,
 	case LIBUSB_IOCTL_INTERRUPT_OR_BULK_READ:
 		mRequest_InitAndForwardToQueue(status, WdfRequestTypeRead,
 		                               WdfRequestTypeDeviceControl, IoControlCode, OutputBufferLength, Request, deviceContext, requestContext,
-		                               ((UCHAR)libusbRequest->endpoint.endpoint), break);
+		                               ((UCHAR)libusbRequest->endpoint.endpoint), goto Error);
 		return;
 
 	case LIBUSBK_IOCTL_ISOEX_READ:
 		mRequest_InitAndForwardToQueue(status, WdfRequestTypeRead,
 		                               WdfRequestTypeDeviceControl, IoControlCode, OutputBufferLength, Request, deviceContext, requestContext,
-		                               libusbRequest->IsoEx.PipeID, break);
+		                               libusbRequest->IsoEx.PipeID, goto Error);
 		return;
 
 	case LIBUSBK_IOCTL_AUTOISOEX_READ:
 		mRequest_InitAndForwardToQueue(status, WdfRequestTypeRead,
 		                               WdfRequestTypeDeviceControl, IoControlCode, OutputBufferLength, Request, deviceContext, requestContext,
-		                               libusbRequest->AutoIsoEx.PipeID, break);
+		                               libusbRequest->AutoIsoEx.PipeID, goto Error);
 		return;
 
 	case LIBUSB_IOCTL_ISOCHRONOUS_WRITE:
 	case LIBUSB_IOCTL_INTERRUPT_OR_BULK_WRITE:
 		mRequest_InitAndForwardToQueue(status, WdfRequestTypeWrite,
 		                               WdfRequestTypeDeviceControl, IoControlCode, OutputBufferLength, Request, deviceContext, requestContext,
-		                               ((UCHAR)libusbRequest->endpoint.endpoint), break);
+		                               ((UCHAR)libusbRequest->endpoint.endpoint), goto Error);
 		return;
 
 	case LIBUSBK_IOCTL_ISOEX_WRITE:
 		mRequest_InitAndForwardToQueue(status, WdfRequestTypeWrite,
 		                               WdfRequestTypeDeviceControl, IoControlCode, OutputBufferLength, Request, deviceContext, requestContext,
-		                               libusbRequest->IsoEx.PipeID, break);
+		                               libusbRequest->IsoEx.PipeID, goto Error);
 		return;
 
 	case LIBUSBK_IOCTL_AUTOISOEX_WRITE:
 		mRequest_InitAndForwardToQueue(status, WdfRequestTypeWrite,
 		                               WdfRequestTypeDeviceControl, IoControlCode, OutputBufferLength, Request, deviceContext, requestContext,
-		                               libusbRequest->AutoIsoEx.PipeID, break);
+		                               libusbRequest->AutoIsoEx.PipeID, goto Error);
 		return;
 
 	case LIBUSB_IOCTL_CONTROL_WRITE:
 		mRequest_InitAndForwardToQueue(status, WdfRequestTypeWrite,
 		                               WdfRequestTypeDeviceControl, IoControlCode, OutputBufferLength, Request, deviceContext, requestContext,
-		                               0, break);
+		                               0, goto Error);
 
 		return;
 
 	case LIBUSB_IOCTL_CONTROL_READ:
 		mRequest_InitAndForwardToQueue(status, WdfRequestTypeRead,
 		                               WdfRequestTypeDeviceControl, IoControlCode, OutputBufferLength, Request, deviceContext, requestContext,
-		                               0, break);
+		                               0, goto Error);
 		return;
 
 	case LIBUSB_IOCTL_GET_DESCRIPTOR:
 		FormatDescriptorRequestAsControlTransfer(requestContext, libusbRequest, FALSE);
 		mRequest_InitAndForwardToQueue(status, WdfRequestTypeRead,
 		                               WdfRequestTypeDeviceControl, IoControlCode, OutputBufferLength, Request, deviceContext, requestContext,
-		                               0, break);
+		                               0, goto Error);
 		return;
 
 	case LIBUSB_IOCTL_VENDOR_READ:
@@ -232,7 +232,7 @@ VOID DefaultQueue_OnIoControl(__in WDFQUEUE Queue,
 		FormatVendorRequestAsControlTransfer(requestContext, libusbRequest, FALSE);
 		mRequest_InitAndForwardToQueue(status, WdfRequestTypeRead,
 		                               WdfRequestTypeDeviceControl, IoControlCode, OutputBufferLength, Request, deviceContext, requestContext,
-		                               0, break);
+		                               0, goto Error);
 		return;
 	case LIBUSB_IOCTL_SET_DESCRIPTOR:
 		requestContext->RequestType = WdfRequestTypeWrite;
@@ -246,7 +246,7 @@ VOID DefaultQueue_OnIoControl(__in WDFQUEUE Queue,
 		FormatDescriptorRequestAsControlTransfer(requestContext, libusbRequest, TRUE);
 		mRequest_InitAndForwardToQueue(status, WdfRequestTypeWrite,
 		                               WdfRequestTypeDeviceControl, IoControlCode, InputBufferLength, Request, deviceContext, requestContext,
-		                               0, break);
+		                               0, goto Error);
 		return;
 
 	case LIBUSB_IOCTL_SET_FEATURE:
@@ -260,7 +260,7 @@ VOID DefaultQueue_OnIoControl(__in WDFQUEUE Queue,
 		FormatFeatureRequestAsControlTransfer(requestContext, libusbRequest, TRUE);
 		mRequest_InitAndForwardToQueue(status, WdfRequestTypeWrite,
 		                               WdfRequestTypeDeviceControl, IoControlCode, ((ULONG)InputBufferLength), Request, deviceContext, requestContext,
-		                               0, break);
+		                               0, goto Error);
 		return;
 
 	case LIBUSB_IOCTL_CLEAR_FEATURE:
@@ -275,7 +275,7 @@ VOID DefaultQueue_OnIoControl(__in WDFQUEUE Queue,
 		FormatFeatureRequestAsControlTransfer(requestContext, libusbRequest, FALSE);
 		mRequest_InitAndForwardToQueue(status, WdfRequestTypeWrite,
 		                               WdfRequestTypeDeviceControl, IoControlCode, ((ULONG)InputBufferLength), Request, deviceContext, requestContext,
-		                               0, break);
+		                               0, goto Error);
 		return;
 
 	case LIBUSB_IOCTL_VENDOR_WRITE:
@@ -290,7 +290,7 @@ VOID DefaultQueue_OnIoControl(__in WDFQUEUE Queue,
 		FormatVendorRequestAsControlTransfer(requestContext, libusbRequest, TRUE);
 		mRequest_InitAndForwardToQueue(status, WdfRequestTypeWrite,
 		                               WdfRequestTypeDeviceControl, IoControlCode, InputBufferLength, Request, deviceContext, requestContext,
-		                               0, break);
+		                               0, goto Error);
 		return;
 
 	case LIBUSB_IOCTL_GET_VERSION:
@@ -625,6 +625,7 @@ VOID DefaultQueue_OnIoControl(__in WDFQUEUE Queue,
 		return;
 	}
 
+Error:
 
 	if (!NT_SUCCESS(status))
 	{
