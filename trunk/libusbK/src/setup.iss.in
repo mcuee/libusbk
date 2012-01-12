@@ -32,7 +32,6 @@ AppVersion			= @TARGET_VERSION@
 VersionInfoVersion	= @TARGET_VERSION@
 DefaultDirName		= {sd}\@K_LIBUSBK_NAME@-dev-kit
 DefaultGroupName	= @K_USBK_NAME@ Development Kit
-UninstallFilesDir	= {pf}\@K_LIBUSBK_NAME@-dev-kit
 Compression			= lzma/ultra64
 SolidCompression	= yes
 OutputDir			= @G_PACKAGE_ABS_DIR@
@@ -40,6 +39,7 @@ OutputBaseFilename	= @K_LIBUSBK_SETUP_NAME@
 PrivilegesRequired	= admin
 WizardSmallImageFile = @K_LIBUSBK_NAME@.bmp
 AllowNoIcons		= yes
+InfoBeforeFile		= .\output\ChangeLog.txt
 
 ; requires Win2k, or higher (x86 or amd64 only)
 MinVersion						= 0, 5.0.2195 
@@ -189,6 +189,11 @@ Source: "@K_PKG@\bindings\*"; Flags: recursesubdirs; DestDir: {app}\bindings; Co
 Source: "@K_PKG_BIN@\dll\@K_LIBUSBK_NAME@*";  Flags: recursesubdirs; DestDir: {app}\bin\dll; Components: devpackage\examples;
 Source: "@K_PKG_BIN@\lib\@K_LIBUSBK_NAME@*";  Flags: recursesubdirs; DestDir: {app}\bin\lib; Components: devpackage\examples;
 Source: "@K_PKG@\license\*"; Flags: recursesubdirs; DestDir: {app}\license;
+
+; ============================================================================
+; ** test applications
+Source: "@K_PKG@\bin\exe\x86\kList.exe"; DestDir: {app}; Components: devpackage;
+Source: "@K_PKG@\bin\exe\x86\kBench.exe"; DestDir: {app}; Components: devpackage;
 
 [Run]
 Filename: "{app}\@K_LIBUSBK_NAME@-inf-wizard.exe"; Parameters: "--no-welcome"; Description: "@K_LIBUSBK_NAME@ Driver Installer"; Flags: hidewizard runascurrentuser; Tasks: installer; AfterInstall: CheckInstallerResults;
