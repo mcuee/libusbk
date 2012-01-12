@@ -27,9 +27,23 @@
 // Example configuration:
 #define EP_ADDRESS				0x81
 #define ASYNC_PENDING_IO_COUNT	3
+#define ASYNC_TIMEOUT_MS		1000
 
 // Globals:
 KUSB_DRIVER_API Usb;
+
+typedef struct _MY_IO_REQUEST
+{
+	KOVL_HANDLE Ovl;
+	DWORD Index;
+	DWORD ErrorCode;
+	DWORD BufferSize;
+	UCHAR Buffer[4096];
+	DWORD TransferLength;
+
+	struct _MY_IO_REQUEST* prev;
+	struct _MY_IO_REQUEST* next;
+} MY_IO_REQUEST, *PMY_IO_REQUEST;
 
 DWORD __cdecl main(int argc, char* argv[])
 {
@@ -40,14 +54,12 @@ DWORD __cdecl main(int argc, char* argv[])
 	KLST_DEVINFO_HANDLE deviceInfo = NULL;
 	KUSB_HANDLE usbHandle = NULL;
 	KOVL_POOL_HANDLE ovlPool = NULL;
-	UCHAR myBuffer[4096];
-	KOVL_HANDLE ovlArray[ASYNC_PENDING_IO_COUNT];
+	MY_IO_REQUEST ovlArray[ASYNC_PENDING_IO_COUNT];
+	PMY_IO_REQUEST requestList = NULL;
+	PMY_IO_REQUEST myRequest;
 	DWORD ovlIndex;
 	BM_TEST_TYPE testType = USB_ENDPOINT_DIRECTION_IN(EP_ADDRESS) ? BM_TEST_TYPE_READ : BM_TEST_TYPE_WRITE;
 	ULONG totalLength = 0;
-	ULONG transferredLength;
-
-	memset(ovlArray, 0, sizeof(ovlArray));
 
 	/*
 	Find the test device. Uses "vid=hhhh pid=hhhh" arguments supplied on the
@@ -84,59 +96,80 @@ DWORD __cdecl main(int argc, char* argv[])
 	*/
 	OvlK_Init(&ovlPool, usbHandle, ASYNC_PENDING_IO_COUNT, 0);
 
+	memset(ovlArray, 0, sizeof(ovlArray));
+	for(ovlIndex = 0; ovlIndex < ASYNC_PENDING_IO_COUNT; ovlIndex++)
+	{
+		// Get an overlapped handle from the pool initialized above.
+		if (!OvlK_Acquire(&ovlArray[ovlIndex].Ovl, ovlPool))
+		{
+			errorCode = GetLastError();
+			printf("OvlK_Acquire failed. ErrorCode: %08Xh\n",  errorCode);
+			goto Done;
+		}
+
+		ovlArray[ovlIndex].Index		= ovlIndex;
+		ovlArray[ovlIndex].BufferSize	= sizeof(ovlArray[ovlIndex].Buffer);
+
+		DL_APPEND(requestList, &ovlArray[ovlIndex]);
+	}
+
 	/*
 	Submit ASYNC_PENDING_IO_COUNT number of I/O request.
 	*/
-	ovlIndex = (DWORD) - 1;
-	while (++ovlIndex < ASYNC_PENDING_IO_COUNT)
+	DL_FOREACH(requestList, myRequest)
 	{
-		// Get an overlapped handle from the pool initialized above.
-		if (!OvlK_Acquire(&ovlArray[ovlIndex], ovlPool))
+		// This examples works the same for reading and writing.  The endpoint address is used to
+		// determine which.
+		if (USB_ENDPOINT_DIRECTION_IN(EP_ADDRESS))
+			Usb.ReadPipe(usbHandle, EP_ADDRESS, myRequest->Buffer, myRequest->BufferSize, NULL, myRequest->Ovl);
+		else
+			Usb.WritePipe(usbHandle, EP_ADDRESS, myRequest->Buffer, myRequest->BufferSize, NULL, myRequest->Ovl);
+
+		// On success, all pipe transfer functions using overlapped I/O return false and set last
+		// error to ERROR_IO_PENDING.
+		myRequest->ErrorCode = GetLastError();
+		if (myRequest->ErrorCode != ERROR_IO_PENDING)
 		{
-			errorCode = GetLastError();
+			errorCode = myRequest->ErrorCode;
+			printf("Failed submitting transfer #%u for %u bytes.\n", myRequest->Index, myRequest->BufferSize);
 			break;
 		}
 
-		// This examples works the same fo reading and writing.  The endpoint address is used to
-		// determine which.
-		if (USB_ENDPOINT_DIRECTION_IN(EP_ADDRESS))
-			Usb.ReadPipe(usbHandle, EP_ADDRESS, myBuffer, sizeof(myBuffer), NULL, ovlArray[ovlIndex]);
-		else
-			Usb.WritePipe(usbHandle, EP_ADDRESS, myBuffer, sizeof(myBuffer), NULL, ovlArray[ovlIndex]);
 
-		// On success, all pipe transfer functions using overlapped I/O
-		// return false and set last error to ERROR_IO_PENDING.
-		if ((errorCode = GetLastError()) != ERROR_IO_PENDING) break;
-
-		errorCode = ERROR_SUCCESS;
-
-		printf("Transfer #%u submitted for %u bytes.\n", ovlIndex, sizeof(myBuffer));
+		printf("Transfer #%u submitted for %u bytes.\n", myRequest->Index, myRequest->BufferSize);
 	}
 
 	/*
 	Complete all I/O request submitted above.
 	*/
-	ovlIndex = (DWORD) - 1;
-	while (++ovlIndex < ASYNC_PENDING_IO_COUNT)
+	DL_FOREACH(requestList, myRequest)
 	{
-		if (!ovlArray[ovlIndex]) continue;
-
-		// Get the overlapped I/O result and check for errors.
-		success = OvlK_WaitAndRelease(ovlArray[ovlIndex], 1000, &transferredLength);
-		ovlArray[ovlIndex] = NULL;
-		if (!success)
+		if (myRequest->ErrorCode == ERROR_IO_PENDING)
 		{
-			errorCode = GetLastError();
-			printf("Transfer #%u did not complete.\n errorCode=%08Xh", ovlIndex, errorCode);
-		}
-		else
-		{
-			totalLength += transferredLength;
-			printf("Transfer #%u completed with %u bytes.\n", ovlIndex, transferredLength);
+			printf("Waiting %u ms for transfer #%u to complete..\n", ASYNC_TIMEOUT_MS, myRequest->Index);
+			success = OvlK_WaitOrCancel(myRequest->Ovl, ASYNC_TIMEOUT_MS, &myRequest->TransferLength);
+			if (!success)
+			{
+				errorCode = myRequest->ErrorCode = GetLastError();
+				printf("Transfer #%u did not complete. ErrorCode=%08Xh\n", myRequest->Index, myRequest->ErrorCode);
+			}
+			else
+			{
+				myRequest->ErrorCode = ERROR_SUCCESS;
+				totalLength += myRequest->TransferLength;
+				printf("Transfer #%u completed with %u bytes.\n", myRequest->Index, myRequest->TransferLength);
+			}
 		}
 	}
 
-	printf("Transferred %u bytes in %u transfers. errorCode=%08Xh\n", totalLength, ovlIndex, errorCode);
+	if (errorCode == ERROR_SUCCESS)
+	{
+		printf("Transferred %u bytes successfully.\n", totalLength, errorCode);
+	}
+	else
+	{
+		printf("Transferred %u bytes. ErrorCode=%08Xh\n", totalLength, errorCode);
+	}
 
 Done:
 
@@ -148,7 +181,9 @@ Done:
 	Free the device list.
 	*/
 	LstK_Free(deviceList);
-
+	/*
+	Free and release all resources assigned to this pool.
+	*/
 	OvlK_Free(ovlPool);
 	return errorCode;
 }
