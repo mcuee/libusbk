@@ -537,7 +537,7 @@ BOOL UsbStack_QueryPipe(
 	ErrorSet(!pipeEL, Error, ERROR_NO_MORE_ITEMS, "PipeIndex %u does not exists.", PipeIndex);
 
 	PipeInformation->PipeType			= pipeEL->Descriptor->bmAttributes & 0x03;
-	PipeInformation->MaximumPacketSize	= pipeEL->Descriptor->wMaxPacketSize;
+	PipeInformation->MaximumPacketSize	= (pipeEL->Descriptor->wMaxPacketSize & 0x7FF) * (((pipeEL->Descriptor->wMaxPacketSize >> 11) & 0x3) + 1);
 	PipeInformation->PipeId				= pipeEL->Descriptor->bEndpointAddress;
 	PipeInformation->Interval			= pipeEL->Descriptor->bInterval;
 
