@@ -243,12 +243,12 @@ KUSB_EXP BOOL KUSB_API Unsupported_GetPowerPolicy(
 
 KUSB_EXP BOOL KUSB_API Unsupported_GetOverlappedResult(
     _in KUSB_HANDLE InterfaceHandle,
-    _in LPOVERLAPPED lpOverlapped,
+    _in LPOVERLAPPED Overlapped,
     _out LPDWORD lpNumberOfBytesTransferred,
     _in BOOL bWait)
 {
 	UNREFERENCED_PARAMETER(InterfaceHandle);
-	UNREFERENCED_PARAMETER(lpOverlapped);
+	UNREFERENCED_PARAMETER(Overlapped);
 	UNREFERENCED_PARAMETER(lpNumberOfBytesTransferred);
 	UNREFERENCED_PARAMETER(bWait);
 

@@ -375,10 +375,6 @@ VOID XferIsoRdComplete(
 	PURB urb;
 	NTSTATUS status;
 	ULONG transferred = 0;
-#ifdef DEBUG_LOGGING_ENABLED
-	LONG fullPackets = 0;
-	LONG emptyPackets = 0;
-#endif
 
 	UNREFERENCED_PARAMETER(Target);
 
@@ -404,16 +400,6 @@ VOID XferIsoRdComplete(
 				LONG packetOffset = (LONG)urb->UrbIsochronousTransfer.IsoPacket[posPacket].Offset;
 				LONG packetLength = (LONG)urb->UrbIsochronousTransfer.IsoPacket[posPacket].Length;
 
-#ifdef DEBUG_LOGGING_ENABLED
-				if (packetLength == (LONG)requestContext->QueueContext->Info.MaximumPacketSize)
-				{
-					fullPackets++;
-				}
-				else if (packetLength == 0)
-				{
-					emptyPackets++;
-				}
-#endif
 				if (packetLength > 0 && dataBufferOffset < packetOffset)
 				{
 					if (dataBuffer == NULL)
@@ -431,26 +417,14 @@ VOID XferIsoRdComplete(
 				dataBufferOffset += packetLength;
 			}
 		}
-		else
-		{
-#ifdef DEBUG_LOGGING_ENABLED
-			fullPackets = (LONG)urb->UrbIsochronousTransfer.NumberOfPackets;
-#endif
-		}
 	}
 
 	if (NT_SUCCESS(status))
 	{
 		transferred = (ULONG)urb->UrbIsochronousTransfer.TransferBufferLength;
 
-#ifdef DEBUG_LOGGING_ENABLED
-		USBMSGN("Transferred=%u TotalPackets=%u FullPackets=%d EmptyPackets=%d StartFrame=%08Xh Errors=%d",
-		        transferred, urb->UrbIsochronousTransfer.NumberOfPackets, fullPackets, emptyPackets, urb->UrbIsochronousTransfer.StartFrame, urb->UrbIsochronousTransfer.ErrorCount);
-
-#else
 		USBMSGN("Transferred=%u StartFrame=%08Xh Errors=%d",
 		        transferred, urb->UrbIsochronousTransfer.StartFrame, urb->UrbIsochronousTransfer.ErrorCount);
-#endif
 	}
 
 Exit:

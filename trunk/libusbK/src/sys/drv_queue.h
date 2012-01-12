@@ -31,10 +31,7 @@ FORCEINLINE VOID ForwardToQueue(__in WDFREQUEST Request,
                                 __in PREQUEST_CONTEXT requestContext)
 
 {
-	ULONG                   packetSize;
 	NTSTATUS                status = STATUS_SUCCESS;
-
-	packetSize = requestContext->QueueContext->Info.MaximumPacketSize;
 
 	// forward the requests to their own queues.
 	//
