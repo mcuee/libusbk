@@ -288,7 +288,7 @@ int __cdecl main(int argc, char** argv)
 	LONG devicePos = 0;
 	LONG_PTR selection;
 	ULONG count = 0;
-	KLST_FLAG lstFlags = KLST_FLAG_INCLUDE_DISCONNECT;
+	KLST_FLAG lstFlags = KLST_FLAG_NONE;
 
 	UNREFERENCED_PARAMETER(argc);
 	UNREFERENCED_PARAMETER(argv);
@@ -746,9 +746,14 @@ BOOL DumpDescriptorInterface(PPUNI_DESCRIPTOR uniRef, PLONG remainingLength)
 			success = DumpDescriptorHid(uniRef, &currentInterface, remainingLength);
 			break;
 
-		default:
+		case USB_DESCRIPTOR_TYPE_INTERFACE:
 			DESC_SUB_END(USB_DESCRIPTOR_TYPE_INTERFACE);
 			return TRUE;
+
+		default:
+			success = DumpDescriptorCommon(uniRef, remainingLength);
+			break;
+
 		}
 		if (!success)
 			break;
