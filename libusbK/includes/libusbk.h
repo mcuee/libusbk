@@ -1185,7 +1185,7 @@ typedef BOOL KUSB_API KUSB_GetCurrentFrameNumber (
 
 typedef BOOL KUSB_API KUSB_GetOverlappedResult (
     _in KUSB_HANDLE InterfaceHandle,
-    _in LPOVERLAPPED lpOverlapped,
+    _in LPOVERLAPPED Overlapped,
     _out LPDWORD lpNumberOfBytesTransferred,
     _in BOOL bWait);
 
@@ -1193,7 +1193,7 @@ typedef BOOL KUSB_API KUSB_GetProperty (
     _in KUSB_HANDLE InterfaceHandle,
     _in KUSB_PROPERTY PropertyType,
     _ref PULONG PropertySize,
-    _out PVOID Property);
+    _out PVOID Value);
 
 
 
@@ -1417,13 +1417,13 @@ typedef struct _KUSB_DRIVER_API
 	*/
 	KUSB_GetCurrentFrameNumber* GetCurrentFrameNumber;
 
-	/*! \fn BOOL KUSB_API GetOverlappedResult (_in KUSB_HANDLE InterfaceHandle, _in LPOVERLAPPED lpOverlapped, _out LPDWORD lpNumberOfBytesTransferred, _in BOOL bWait)
+	/*! \fn BOOL KUSB_API GetOverlappedResult (_in KUSB_HANDLE InterfaceHandle, _in LPOVERLAPPED Overlapped, _out LPDWORD lpNumberOfBytesTransferred, _in BOOL bWait)
 	* \memberof KUSB_DRIVER_API
 	* \copydoc UsbK_GetOverlappedResult
 	*/
 	KUSB_GetOverlappedResult* GetOverlappedResult;
 
-	/*! \fn BOOL KUSB_API GetProperty (_in KUSB_HANDLE InterfaceHandle, _in KUSB_PROPERTY PropertyType, _ref PULONG PropertySize, _out PVOID Property)
+	/*! \fn BOOL KUSB_API GetProperty (_in KUSB_HANDLE InterfaceHandle, _in KUSB_PROPERTY PropertyType, _ref PULONG PropertySize, _out PVOID Value)
 	* \memberof KUSB_DRIVER_API
 	* \copydoc UsbK_GetProperty
 	*/
@@ -2951,7 +2951,7 @@ extern "C" {
 	* \param[in] InterfaceHandle
 	* An initialized usb handle, see \ref UsbK_Init.
 	*
-	* \param[in] lpOverlapped
+	* \param[in] Overlapped
 	* A pointer to a standard windows OVERLAPPED structure that was specified when the overlapped operation was
 	* started.
 	*
@@ -3000,7 +3000,7 @@ extern "C" {
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_GetOverlappedResult (
 	    _in KUSB_HANDLE InterfaceHandle,
-	    _in LPOVERLAPPED lpOverlapped,
+	    _in LPOVERLAPPED Overlapped,
 	    _out LPDWORD lpNumberOfBytesTransferred,
 	    _in BOOL bWait);
 
@@ -3014,9 +3014,9 @@ extern "C" {
 	* The propety type to retrieve.
 	*
 	* \param[in,out] PropertySize
-	* Size in bytes of \c Property.
+	* Size in bytes of \c Value.
 	*
-	* \param[out] Property
+	* \param[out] Value
 	* On success, receives the proprty data.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
@@ -3026,7 +3026,7 @@ extern "C" {
 	    _in KUSB_HANDLE InterfaceHandle,
 	    _in KUSB_PROPERTY PropertyType,
 	    _ref PULONG PropertySize,
-	    _out PVOID Property);
+	    _out PVOID Value);
 
 	/*! @} */
 

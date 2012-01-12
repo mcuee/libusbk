@@ -187,11 +187,11 @@ KUSB_EXP BOOL KUSB_API WinUsb_GetPowerPolicy(
 
 KUSB_EXP BOOL KUSB_API WinUsb_GetOverlappedResult(
     _in KUSB_HANDLE InterfaceHandle,
-    _in LPOVERLAPPED lpOverlapped,
+    _in LPOVERLAPPED Overlapped,
     _out LPDWORD lpNumberOfBytesTransferred,
     _in BOOL bWait)
 {
-	return UsbK_GetOverlappedResult (InterfaceHandle, lpOverlapped, lpNumberOfBytesTransferred, bWait);
+	return UsbK_GetOverlappedResult (InterfaceHandle, Overlapped, lpNumberOfBytesTransferred, bWait);
 }
 
 #endif // EXCLUDE_WINUSB_WRAPPER

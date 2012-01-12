@@ -504,6 +504,7 @@ NTSTATUS Policy_GetDevice(__in PDEVICE_CONTEXT deviceContext,
 	return STATUS_SUCCESS;
 }
 
+/*
 NTSTATUS Policy_ApplyIsoAutoPacketTemplate(
     __inout PDEVICE_CONTEXT deviceContext,
     __in PPIPE_CONTEXT pipeContext,
@@ -610,6 +611,7 @@ NTSTATUS Policy_ApplyIsoAutoPacketTemplate(
 	USBMSGN("PipeID=%02Xh Assigned %u iso packet descriptors.", pipeContext->PipeInformation.EndpointAddress, numPackets);
 	return STATUS_SUCCESS;
 }
+*/
 
 NTSTATUS Policy_SetPipe(
     __inout PDEVICE_CONTEXT deviceContext,

@@ -639,7 +639,7 @@ KUSB_EXP BOOL KUSB_API WUsb_ControlTransfer(
 
 KUSB_EXP BOOL KUSB_API WUsb_GetOverlappedResult(
     _in KUSB_HANDLE InterfaceHandle,
-    _in LPOVERLAPPED lpOverlapped,
+    _in LPOVERLAPPED Overlapped,
     _out LPDWORD lpNumberOfBytesTransferred,
     _in BOOL bWait)
 {
@@ -649,7 +649,7 @@ KUSB_EXP BOOL KUSB_API WUsb_GetOverlappedResult(
 	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
 	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
 
-	success = GetOverlappedResult(Dev_Handle(), lpOverlapped, lpNumberOfBytesTransferred, bWait);
+	success = GetOverlappedResult(Dev_Handle(), Overlapped, lpNumberOfBytesTransferred, bWait);
 
 	PoolHandle_Dec_UsbK(handle);
 	return success;
