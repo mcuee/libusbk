@@ -1,9 +1,9 @@
 ﻿#Region "Copyright (c) Travis Robinson"
-' Copyright (c) 2011 Travis Robinson <libusbdotnet@gmail.com>
+' Copyright (c) 2012 Travis Robinson <libusbdotnet@gmail.com>
 ' All rights reserved.
 '
 ' C# libusbK Bindings
-' Auto-generated on: 09.28.2011
+' Auto-generated on: 01.11.2012
 '
 ' Redistribution and use in source and binary forms, with or without
 ' modification, are permitted provided that the following conditions are met:
@@ -39,8 +39,193 @@ Namespace libusbK
 	Public NotInheritable Class Constants
 		Private Sub New()
 		End Sub
+		''' <summary>
+		'''   Allocated length for all strings in a \ref KLST_DEVINFO structure.
+		''' </summary>
 		Public Const KLST_STRING_MAX_LEN As Integer = 256
+
+		''' <summary>
+		'''   libusbK library
+		''' </summary>
 		Public Const LIBUSBK_DLL As String = "libusbK.dll"
+
+		''' <summary>
+		'''   Config power mask for the \c bmAttributes field of a \ref USB_CONFIGURATION_DESCRIPTOR
+		''' </summary>
+		Public Const USB_CONFIG_POWERED_MASK As Byte = &Hc0
+
+		''' <summary>
+		'''   Endpoint direction mask for the \c bEndpointAddress field of a \ref USB_ENDPOINT_DESCRIPTOR
+		''' </summary>
+		Public Const USB_ENDPOINT_DIRECTION_MASK As Byte = &H80
+
+		''' <summary>
+		'''   Endpoint address mask for the \c bEndpointAddress field of a \ref USB_ENDPOINT_DESCRIPTOR
+		''' </summary>
+		Public Const USB_ENDPOINT_ADDRESS_MASK As Byte = &Hf
+	End Class
+
+	Public Enum PipePolicyType
+		SHORT_PACKET_TERMINATE = &H1
+		AUTO_CLEAR_STALL = &H2
+		PIPE_TRANSFER_TIMEOUT = &H3
+		IGNORE_SHORT_PACKETS = &H4
+		ALLOW_PARTIAL_READS = &H5
+		AUTO_FLUSH = &H6
+		RAW_IO = &H7
+		MAXIMUM_TRANSFER_SIZE = &H8
+		RESET_PIPE_ON_RESUME = &H9
+
+		ISO_START_LATENCY = &H20
+		ISO_ALWAYS_START_ASAP = &H21
+		ISO_NUM_FIXED_PACKETS = &H22
+
+		SIMUL_PARALLEL_REQUESTS = &H30
+	End Enum
+
+	Public Enum PowerPolicyType
+		AUTO_SUSPEND = &H81
+		SUSPEND_DELAY = &H83
+	End Enum
+
+	Public Enum DeviceInformationType
+		DEVICE_SPEED = &H1
+	End Enum
+
+	Public Enum EndpointType
+		''' <summary>
+		'''   Indicates a control endpoint
+		''' </summary>
+		CONTROL = &H0
+
+		''' <summary>
+		'''   Indicates an isochronous endpoint
+		''' </summary>
+		ISOCHRONOUS = &H1
+
+		''' <summary>
+		'''   Indicates a bulk endpoint
+		''' </summary>
+		BULK = &H2
+
+		''' <summary>
+		'''   Indicates an interrupt endpoint
+		''' </summary>
+		INTERRUPT = &H3
+
+		''' <summary>
+		'''   Endpoint type mask for the \c bmAttributes field of a \ref USB_ENDPOINT_DESCRIPTOR
+		''' </summary>
+		MASK = &H3
+	End Enum
+
+	Public NotInheritable Class ErrorCodes
+		Private Sub New()
+		End Sub
+		''' <summary>
+		'''   The operation completed successfully.
+		''' </summary>
+		Public Const Success As Integer = 0
+
+		''' <summary>
+		'''   Access is denied.
+		''' </summary>
+		Public Const AccessDenied As Integer = 5
+
+		''' <summary>
+		'''   The handle is invalid.
+		''' </summary>
+		Public Const InvalidHandle As Integer = 6
+
+		''' <summary>
+		'''   Not enough storage is available to process this command.
+		''' </summary>
+		Public Const NotEnoughMemory As Integer = 8
+
+		''' <summary>
+		'''   The request is not supported.
+		''' </summary>
+		Public Const NotSupported As Integer = 50
+
+		''' <summary>
+		'''   The parameter is incorrect.
+		''' </summary>
+		Public Const InvalidParameter As Integer = 87
+
+		''' <summary>
+		'''   The semaphore timeout period has expired.
+		''' </summary>
+		Public Const SemTimeout As Integer = 121
+
+		''' <summary>
+		'''   The requested resource is in use.
+		''' </summary>
+		Public Const Busy As Integer = 170
+
+		''' <summary>
+		'''   Too many dynamic-link modules are attached to this program or dynamic-link module.
+		''' </summary>
+		Public Const TooManyModules As Integer = 214
+
+		''' <summary>
+		'''   More data is available.
+		''' </summary>
+		Public Const MoreData As Integer = 234
+
+		''' <summary>
+		'''   No more data is available.
+		''' </summary>
+		Public Const NoMoreItems As Integer = 259
+
+		''' <summary>
+		'''   An attempt was made to operate on a thread within a specific process, but the thread specified is not in the process specified.
+		''' </summary>
+		Public Const ThreadNotInProcess As Integer = 566
+
+		''' <summary>
+		'''   A thread termination occurred while the thread was suspended. The thread was resumed, and termination proceeded.
+		''' </summary>
+		Public Const ThreadWasSuspended As Integer = 699
+
+		''' <summary>
+		'''   The I/O operation has been aborted because of either a thread exit or an application request.
+		''' </summary>
+		Public Const OperationAborted As Integer = 995
+
+		''' <summary>
+		'''   Overlapped I/O event is not in a signaled state.
+		''' </summary>
+		Public Const IoIncomplete As Integer = 996
+
+		''' <summary>
+		'''   Overlapped I/O operation is in progress.
+		''' </summary>
+		Public Const IoPending As Integer = 997
+
+		''' <summary>
+		'''   Element not found.
+		''' </summary>
+		Public Const NotFound As Integer = 1168
+
+		''' <summary>
+		'''   The operation was canceled by the user.
+		''' </summary>
+		Public Const Cancelled As Integer = 1223
+
+		''' <summary>
+		'''   The library, drive, or media pool is empty.
+		''' </summary>
+		Public Const Empty As Integer = 4306
+
+		''' <summary>
+		'''   The cluster resource is not available.
+		''' </summary>
+		Public Const ResourceNotAvailable As Integer = 5006
+
+		''' <summary>
+		'''   The cluster resource could not be found.
+		''' </summary>
+		Public Const ResourceNotFound As Integer = 5007
 	End Class
 
 
@@ -569,11 +754,11 @@ Namespace libusbK
 		End Function
 
 		<DllImport(Constants.LIBUSBK_DLL, CallingConvention := CallingConvention.Winapi, CharSet := CharSet.Ansi, EntryPoint := "UsbK_GetOverlappedResult", SetLastError := True)> _
-		Public Shared Function UsbK_GetOverlappedResult(<[In]> InterfaceHandle As KUSB_HANDLE, lpOverlapped As IntPtr, ByRef lpNumberOfBytesTransferred As UInteger, bWait As Boolean) As Boolean
+		Public Shared Function UsbK_GetOverlappedResult(<[In]> InterfaceHandle As KUSB_HANDLE, Overlapped As IntPtr, ByRef lpNumberOfBytesTransferred As UInteger, bWait As Boolean) As Boolean
 		End Function
 
 		<DllImport(Constants.LIBUSBK_DLL, CallingConvention := CallingConvention.Winapi, CharSet := CharSet.Ansi, EntryPoint := "UsbK_GetProperty", SetLastError := True)> _
-		Public Shared Function UsbK_GetProperty(<[In]> InterfaceHandle As KUSB_HANDLE, PropertyType As KUSB_PROPERTY, ByRef PropertySize As UInteger, [Property] As IntPtr) As Boolean
+		Public Shared Function UsbK_GetProperty(<[In]> InterfaceHandle As KUSB_HANDLE, PropertyType As KUSB_PROPERTY, ByRef PropertySize As UInteger, Value As IntPtr) As Boolean
 		End Function
 
 		<DllImport(Constants.LIBUSBK_DLL, CallingConvention := CallingConvention.Winapi, CharSet := CharSet.Ansi, EntryPoint := "LstK_Init", SetLastError := True)> _
@@ -1051,6 +1236,9 @@ Namespace libusbK
 
 		''' <Summary>Always release the OverlappedK back to its pool.  If the operation timed-out, cancel it before releasing back to its pool.</Summary>
 		RELEASE_ALWAYS = &Hf
+
+		''' <Summary>Uses alterable wait functions.  See http://msdn.microsoft.com/en-us/library/windows/desktop/ms687036%28v=vs.85%29.aspx</Summary>
+		ALERTABLE = &H10
 	End Enum
 
 	''' <Summary>\c Overlapped pool config flags.</Summary>
@@ -1063,6 +1251,12 @@ Namespace libusbK
 	<Flags> _
 	Public Enum KSTM_FLAG
 		NONE = 0
+	End Enum
+
+	''' <Summary>Stream config flags.</Summary>
+	Public Enum KSTM_COMPLETE_RESULT
+		VALID = 0
+		INVALID
 	End Enum
 	#End Region
 
@@ -1082,10 +1276,6 @@ Namespace libusbK
 
 		''' <Summary>The pipe interval</Summary>
 		Public Interval As Byte
-
-		Public Overrides Function ToString() As String
-			Return String.Format("PipeType: {0}" & vbLf & "PipeId: {1}" & vbLf & "MaximumPacketSize: {2}" & vbLf & "Interval: {3}" & vbLf, PipeType, PipeId, MaximumPacketSize, Interval)
-		End Function
 	End Structure
 
 	''' <Summary>The \c WINUSB_SETUP_PACKET structure describes a USB setup packet.</Summary>
@@ -1120,7 +1310,9 @@ Namespace libusbK
 		Public Status As UShort
 	End Structure
 
-	''' <summary>KISO_CONTEXT_MAP is used for calculating field offsets only as it lacks an IsoPackets field.</summary>
+	''' <summary>
+	'''   KISO_CONTEXT_MAP is used for calculating field offsets only as it lacks an IsoPackets field.
+	''' </summary>
 	<StructLayout(LayoutKind.Sequential, CharSet := CharSet.Ansi, Pack := 1, Size := 16)> _
 	Friend Structure KISO_CONTEXT_MAP
 		''' <Summary>Additional ISO transfer flags. See \ref KISO_FLAG.</Summary>
@@ -1345,11 +1537,6 @@ Namespace libusbK
 
 		''' <Summary>Index of string descriptor describing this interface</Summary>
 		Public iInterface As Byte
-
-		Public Overrides Function ToString() As String
-			Return String.Format("BInterfaceNumber: {0}" & vbLf & "BAlternateSetting: {1}" & vbLf & "BNumEndpoints: {2}" & vbLf & "BInterfaceClass: {3}" & vbLf & "BInterfaceSubClass: {4}" & vbLf & "BInterfaceProtocol: {5}" & vbLf, bInterfaceNumber, bAlternateSetting, bNumEndpoints, bInterfaceClass, bInterfaceSubClass, _
-				bInterfaceProtocol)
-		End Function
 	End Structure
 
 	''' <Summary>A structure representing the standard USB string descriptor.</Summary>
@@ -1614,7 +1801,7 @@ Namespace libusbK
 		<MarshalAs(UnmanagedType.FunctionPtr)> _
 		Public Submit As KSTM_SUBMIT_CB
 
-		''' <Summary>Executed when a transfer competes.</Summary>
+		''' <Summary>Executed when a valid transfer completes.</Summary>
 		<MarshalAs(UnmanagedType.FunctionPtr)> _
 		Public Complete As KSTM_COMPLETE_CB
 
@@ -1625,19 +1812,23 @@ Namespace libusbK
 		''' <Summary>Executed for every transfer context when the stream is stopped with \ref StmK_Stop.</Summary>
 		<MarshalAs(UnmanagedType.FunctionPtr)> _
 		Public Stopped As KSTM_STOPPED_CB
+
+		''' <Summary>Executed immediately after a transfer completes.</Summary>
+		<MarshalAs(UnmanagedType.FunctionPtr)> _
+		Public BeforeComplete As KSTM_BEFORE_COMPLETE_CB
 	End Structure
 	#End Region
 
 
 	#Region "Delegates"
 	<UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet := CharSet.Ansi, SetLastError := True)> _
-	Public Delegate Function KLIB_HANDLE_CLEANUP_CB(<[In]> Handle As IntPtr, HandleType As IntPtr, UserContext As IntPtr) As Integer
+	Public Delegate Function KLIB_HANDLE_CLEANUP_CB(<[In]> Handle As IntPtr, HandleType As KLIB_HANDLE_TYPE, UserContext As IntPtr) As Integer
 
 	<UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet := CharSet.Ansi, SetLastError := True)> _
-	Public Delegate Function KISO_ENUM_PACKETS_CB(PacketIndex As UInteger, IsoPacket As IntPtr, UserState As IntPtr) As Boolean
+	Public Delegate Function KISO_ENUM_PACKETS_CB(PacketIndex As UInteger, <[In]> ByRef IsoPacket As KISO_PACKET, UserState As IntPtr) As Boolean
 
 	<UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet := CharSet.Ansi, SetLastError := True)> _
-	Public Delegate Function KLST_ENUM_DEVINFO_CB(<[In]> DeviceList As IntPtr, <[In]> DeviceInfo As IntPtr, Context As IntPtr) As Boolean
+	Public Delegate Function KLST_ENUM_DEVINFO_CB(<[In]> DeviceList As IntPtr, <[In]> DeviceInfo As KLST_DEVINFO_HANDLE, Context As IntPtr) As Boolean
 
 	<UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet := CharSet.Ansi, SetLastError := True)> _
 	Public Delegate Function KUSB_InitDelegate(<Out> ByRef InterfaceHandle As KUSB_HANDLE, <[In]> DevInfo As KLST_DEVINFO_HANDLE) As Boolean
@@ -1737,28 +1928,31 @@ Namespace libusbK
 	Public Delegate Function KUSB_GetCurrentFrameNumberDelegate(<[In]> InterfaceHandle As KUSB_HANDLE, ByRef FrameNumber As UInteger) As Boolean
 
 	<UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet := CharSet.Ansi, SetLastError := True)> _
-	Public Delegate Function KUSB_GetOverlappedResultDelegate(<[In]> InterfaceHandle As KUSB_HANDLE, lpOverlapped As IntPtr, ByRef lpNumberOfBytesTransferred As UInteger, bWait As Boolean) As Boolean
+	Public Delegate Function KUSB_GetOverlappedResultDelegate(<[In]> InterfaceHandle As KUSB_HANDLE, Overlapped As IntPtr, ByRef lpNumberOfBytesTransferred As UInteger, bWait As Boolean) As Boolean
 
 	<UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet := CharSet.Ansi, SetLastError := True)> _
-	Public Delegate Function KUSB_GetPropertyDelegate(<[In]> InterfaceHandle As KUSB_HANDLE, PropertyType As KUSB_PROPERTY, ByRef PropertySize As UInteger, [Property] As IntPtr) As Boolean
+	Public Delegate Function KUSB_GetPropertyDelegate(<[In]> InterfaceHandle As KUSB_HANDLE, PropertyType As KUSB_PROPERTY, ByRef PropertySize As UInteger, Value As IntPtr) As Boolean
 
 	<UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet := CharSet.Ansi, SetLastError := True)> _
-	Public Delegate Sub KHOT_PLUG_CB(<[In]> HotHandle As IntPtr, <[In]> DeviceInfo As IntPtr, PlugType As IntPtr)
+	Public Delegate Sub KHOT_PLUG_CB(<[In]> HotHandle As IntPtr, <[In]> DeviceInfo As KLST_DEVINFO_HANDLE, PlugType As KLST_SYNC_FLAG)
 
 	<UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet := CharSet.Ansi, SetLastError := True)> _
-	Public Delegate Function KSTM_ERROR_CB(StreamInfo As IntPtr, XferContext As IntPtr, ErrorCode As Integer) As Integer
+	Public Delegate Function KSTM_ERROR_CB(<[In]> ByRef StreamInfo As KSTM_INFO, <[In]> ByRef XferContext As KSTM_XFER_CONTEXT, ErrorCode As Integer) As Integer
 
 	<UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet := CharSet.Ansi, SetLastError := True)> _
-	Public Delegate Function KSTM_SUBMIT_CB(StreamInfo As IntPtr, XferContext As IntPtr, Overlapped As IntPtr) As Integer
+	Public Delegate Function KSTM_SUBMIT_CB(<[In]> ByRef StreamInfo As KSTM_INFO, <[In]> ByRef XferContext As KSTM_XFER_CONTEXT, Overlapped As IntPtr) As Integer
 
 	<UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet := CharSet.Ansi, SetLastError := True)> _
-	Public Delegate Function KSTM_STARTED_CB(StreamInfo As IntPtr, XferContext As IntPtr, XferContextIndex As Integer) As Integer
+	Public Delegate Function KSTM_STARTED_CB(<[In]> ByRef StreamInfo As KSTM_INFO, <[In]> ByRef XferContext As KSTM_XFER_CONTEXT, XferContextIndex As Integer) As Integer
 
 	<UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet := CharSet.Ansi, SetLastError := True)> _
-	Public Delegate Function KSTM_STOPPED_CB(StreamInfo As IntPtr, XferContext As IntPtr, XferContextIndex As Integer) As Integer
+	Public Delegate Function KSTM_STOPPED_CB(<[In]> ByRef StreamInfo As KSTM_INFO, <[In]> ByRef XferContext As KSTM_XFER_CONTEXT, XferContextIndex As Integer) As Integer
 
 	<UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet := CharSet.Ansi, SetLastError := True)> _
-	Public Delegate Function KSTM_COMPLETE_CB(StreamInfo As IntPtr, XferContext As IntPtr, ErrorCode As Integer) As Integer
+	Public Delegate Function KSTM_COMPLETE_CB(<[In]> ByRef StreamInfo As KSTM_INFO, <[In]> ByRef XferContext As KSTM_XFER_CONTEXT, ErrorCode As Integer) As Integer
+
+	<UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet := CharSet.Ansi, SetLastError := True)> _
+	Public Delegate Function KSTM_BEFORE_COMPLETE_CB(<[In]> ByRef StreamInfo As KSTM_INFO, <[In]> ByRef XferContext As KSTM_XFER_CONTEXT, ByRef ErrorCode As Integer) As KSTM_COMPLETE_RESULT
 	#End Region
 
 
@@ -1952,9 +2146,30 @@ Namespace libusbK
 				LengthTransferred)
 		End Function
 
+		''' <Summary>Gets the requested descriptor. This is a synchronous operation.</Summary>
+		Public Function GetDescriptor(DescriptorType As Byte, Index As Byte, LanguageID As UShort, Buffer As Array, BufferLength As UInteger, ByRef LengthTransferred As UInteger) As Boolean
+			Return driverAPI.GetDescriptor(m_handle, DescriptorType, Index, LanguageID, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, _
+				LengthTransferred)
+		End Function
+
 		''' <Summary>Transmits control data over a default control endpoint.</Summary>
 		Public Function ControlTransfer(SetupPacket As WINUSB_SETUP_PACKET, Buffer As IntPtr, BufferLength As UInteger, ByRef LengthTransferred As UInteger, Overlapped As IntPtr) As Boolean
 			Return driverAPI.ControlTransfer(m_handle, SetupPacket, Buffer, BufferLength, LengthTransferred, Overlapped)
+		End Function
+
+		''' <Summary>Transmits control data over a default control endpoint.</Summary>
+		Public Function ControlTransfer(SetupPacket As WINUSB_SETUP_PACKET, Buffer As Array, BufferLength As UInteger, ByRef LengthTransferred As UInteger, Overlapped As IntPtr) As Boolean
+			Return driverAPI.ControlTransfer(m_handle, SetupPacket, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, LengthTransferred, Overlapped)
+		End Function
+
+		''' <Summary>Transmits control data over a default control endpoint.</Summary>
+		Public Function ControlTransfer(SetupPacket As WINUSB_SETUP_PACKET, Buffer As Array, BufferLength As UInteger, ByRef LengthTransferred As UInteger, Overlapped As KOVL_HANDLE) As Boolean
+			Return driverAPI.ControlTransfer(m_handle, SetupPacket, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, LengthTransferred, Overlapped.DangerousGetHandle())
+		End Function
+
+		''' <Summary>Transmits control data over a default control endpoint.</Summary>
+		Public Function ControlTransfer(SetupPacket As WINUSB_SETUP_PACKET, Buffer As IntPtr, BufferLength As UInteger, ByRef LengthTransferred As UInteger, Overlapped As KOVL_HANDLE) As Boolean
+			Return driverAPI.ControlTransfer(m_handle, SetupPacket, Buffer, BufferLength, LengthTransferred, Overlapped.DangerousGetHandle())
 		End Function
 
 		''' <Summary>Sets the power policy for a device.</Summary>
@@ -1962,9 +2177,19 @@ Namespace libusbK
 			Return driverAPI.SetPowerPolicy(m_handle, PolicyType, ValueLength, Value)
 		End Function
 
+		''' <Summary>Sets the power policy for a device.</Summary>
+		Public Function SetPowerPolicy(PolicyType As UInteger, ValueLength As UInteger, Value As Array) As Boolean
+			Return driverAPI.SetPowerPolicy(m_handle, PolicyType, ValueLength, Marshal.UnsafeAddrOfPinnedArrayElement(Value, 0))
+		End Function
+
 		''' <Summary>Gets the power policy for a device.</Summary>
 		Public Function GetPowerPolicy(PolicyType As UInteger, ByRef ValueLength As UInteger, Value As IntPtr) As Boolean
 			Return driverAPI.GetPowerPolicy(m_handle, PolicyType, ValueLength, Value)
+		End Function
+
+		''' <Summary>Gets the power policy for a device.</Summary>
+		Public Function GetPowerPolicy(PolicyType As UInteger, ByRef ValueLength As UInteger, Value As Array) As Boolean
+			Return driverAPI.GetPowerPolicy(m_handle, PolicyType, ValueLength, Marshal.UnsafeAddrOfPinnedArrayElement(Value, 0))
 		End Function
 
 		''' <Summary>Sets the device configuration number.</Summary>
@@ -2027,9 +2252,19 @@ Namespace libusbK
 			Return driverAPI.SetPipePolicy(m_handle, PipeID, PolicyType, ValueLength, Value)
 		End Function
 
+		''' <Summary>Sets the policy for a specific pipe associated with an endpoint on the device. This is a synchronous operation.</Summary>
+		Public Function SetPipePolicy(PipeID As Byte, PolicyType As UInteger, ValueLength As UInteger, Value As Array) As Boolean
+			Return driverAPI.SetPipePolicy(m_handle, PipeID, PolicyType, ValueLength, Marshal.UnsafeAddrOfPinnedArrayElement(Value, 0))
+		End Function
+
 		''' <Summary>Gets the policy for a specific pipe (endpoint).</Summary>
 		Public Function GetPipePolicy(PipeID As Byte, PolicyType As UInteger, ByRef ValueLength As UInteger, Value As IntPtr) As Boolean
 			Return driverAPI.GetPipePolicy(m_handle, PipeID, PolicyType, ValueLength, Value)
+		End Function
+
+		''' <Summary>Gets the policy for a specific pipe (endpoint).</Summary>
+		Public Function GetPipePolicy(PipeID As Byte, PolicyType As UInteger, ByRef ValueLength As UInteger, Value As Array) As Boolean
+			Return driverAPI.GetPipePolicy(m_handle, PipeID, PolicyType, ValueLength, Marshal.UnsafeAddrOfPinnedArrayElement(Value, 0))
 		End Function
 
 		''' <Summary>Reads data from the specified pipe.</Summary>
@@ -2037,9 +2272,39 @@ Namespace libusbK
 			Return driverAPI.ReadPipe(m_handle, PipeID, Buffer, BufferLength, LengthTransferred, Overlapped)
 		End Function
 
+		''' <Summary>Reads data from the specified pipe.</Summary>
+		Public Function ReadPipe(PipeID As Byte, Buffer As Array, BufferLength As UInteger, ByRef LengthTransferred As UInteger, Overlapped As IntPtr) As Boolean
+			Return driverAPI.ReadPipe(m_handle, PipeID, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, LengthTransferred, Overlapped)
+		End Function
+
+		''' <Summary>Reads data from the specified pipe.</Summary>
+		Public Function ReadPipe(PipeID As Byte, Buffer As Array, BufferLength As UInteger, ByRef LengthTransferred As UInteger, Overlapped As KOVL_HANDLE) As Boolean
+			Return driverAPI.ReadPipe(m_handle, PipeID, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, LengthTransferred, Overlapped.DangerousGetHandle())
+		End Function
+
+		''' <Summary>Reads data from the specified pipe.</Summary>
+		Public Function ReadPipe(PipeID As Byte, Buffer As IntPtr, BufferLength As UInteger, ByRef LengthTransferred As UInteger, Overlapped As KOVL_HANDLE) As Boolean
+			Return driverAPI.ReadPipe(m_handle, PipeID, Buffer, BufferLength, LengthTransferred, Overlapped.DangerousGetHandle())
+		End Function
+
 		''' <Summary>Writes data to a pipe.</Summary>
 		Public Function WritePipe(PipeID As Byte, Buffer As IntPtr, BufferLength As UInteger, ByRef LengthTransferred As UInteger, Overlapped As IntPtr) As Boolean
 			Return driverAPI.WritePipe(m_handle, PipeID, Buffer, BufferLength, LengthTransferred, Overlapped)
+		End Function
+
+		''' <Summary>Writes data to a pipe.</Summary>
+		Public Function WritePipe(PipeID As Byte, Buffer As Array, BufferLength As UInteger, ByRef LengthTransferred As UInteger, Overlapped As IntPtr) As Boolean
+			Return driverAPI.WritePipe(m_handle, PipeID, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, LengthTransferred, Overlapped)
+		End Function
+
+		''' <Summary>Writes data to a pipe.</Summary>
+		Public Function WritePipe(PipeID As Byte, Buffer As Array, BufferLength As UInteger, ByRef LengthTransferred As UInteger, Overlapped As KOVL_HANDLE) As Boolean
+			Return driverAPI.WritePipe(m_handle, PipeID, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, LengthTransferred, Overlapped.DangerousGetHandle())
+		End Function
+
+		''' <Summary>Writes data to a pipe.</Summary>
+		Public Function WritePipe(PipeID As Byte, Buffer As IntPtr, BufferLength As UInteger, ByRef LengthTransferred As UInteger, Overlapped As KOVL_HANDLE) As Boolean
+			Return driverAPI.WritePipe(m_handle, PipeID, Buffer, BufferLength, LengthTransferred, Overlapped.DangerousGetHandle())
 		End Function
 
 		''' <Summary>Resets the data toggle and clears the stall condition on a pipe.</Summary>
@@ -2062,9 +2327,39 @@ Namespace libusbK
 			Return driverAPI.IsoReadPipe(m_handle, PipeID, Buffer, BufferLength, Overlapped, IsoContext)
 		End Function
 
+		''' <Summary>Reads from an isochronous pipe.</Summary>
+		Public Function IsoReadPipe(PipeID As Byte, Buffer As Array, BufferLength As UInteger, Overlapped As IntPtr, IsoContext As KISO_CONTEXT) As Boolean
+			Return driverAPI.IsoReadPipe(m_handle, PipeID, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, Overlapped, IsoContext)
+		End Function
+
+		''' <Summary>Reads from an isochronous pipe.</Summary>
+		Public Function IsoReadPipe(PipeID As Byte, Buffer As Array, BufferLength As UInteger, Overlapped As KOVL_HANDLE, IsoContext As KISO_CONTEXT) As Boolean
+			Return driverAPI.IsoReadPipe(m_handle, PipeID, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, Overlapped.DangerousGetHandle(), IsoContext)
+		End Function
+
+		''' <Summary>Reads from an isochronous pipe.</Summary>
+		Public Function IsoReadPipe(PipeID As Byte, Buffer As IntPtr, BufferLength As UInteger, Overlapped As KOVL_HANDLE, IsoContext As KISO_CONTEXT) As Boolean
+			Return driverAPI.IsoReadPipe(m_handle, PipeID, Buffer, BufferLength, Overlapped.DangerousGetHandle(), IsoContext)
+		End Function
+
 		''' <Summary>Writes to an isochronous pipe.</Summary>
 		Public Function IsoWritePipe(PipeID As Byte, Buffer As IntPtr, BufferLength As UInteger, Overlapped As IntPtr, IsoContext As KISO_CONTEXT) As Boolean
 			Return driverAPI.IsoWritePipe(m_handle, PipeID, Buffer, BufferLength, Overlapped, IsoContext)
+		End Function
+
+		''' <Summary>Writes to an isochronous pipe.</Summary>
+		Public Function IsoWritePipe(PipeID As Byte, Buffer As Array, BufferLength As UInteger, Overlapped As IntPtr, IsoContext As KISO_CONTEXT) As Boolean
+			Return driverAPI.IsoWritePipe(m_handle, PipeID, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, Overlapped, IsoContext)
+		End Function
+
+		''' <Summary>Writes to an isochronous pipe.</Summary>
+		Public Function IsoWritePipe(PipeID As Byte, Buffer As Array, BufferLength As UInteger, Overlapped As KOVL_HANDLE, IsoContext As KISO_CONTEXT) As Boolean
+			Return driverAPI.IsoWritePipe(m_handle, PipeID, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, Overlapped.DangerousGetHandle(), IsoContext)
+		End Function
+
+		''' <Summary>Writes to an isochronous pipe.</Summary>
+		Public Function IsoWritePipe(PipeID As Byte, Buffer As IntPtr, BufferLength As UInteger, Overlapped As KOVL_HANDLE, IsoContext As KISO_CONTEXT) As Boolean
+			Return driverAPI.IsoWritePipe(m_handle, PipeID, Buffer, BufferLength, Overlapped.DangerousGetHandle(), IsoContext)
 		End Function
 
 		''' <Summary>Retrieves the current USB frame number.</Summary>
@@ -2073,13 +2368,23 @@ Namespace libusbK
 		End Function
 
 		''' <Summary>Retrieves the results of an overlapped operation on the specified libusbK handle.</Summary>
-		Public Function GetOverlappedResult(lpOverlapped As IntPtr, ByRef lpNumberOfBytesTransferred As UInteger, bWait As Boolean) As Boolean
-			Return driverAPI.GetOverlappedResult(m_handle, lpOverlapped, lpNumberOfBytesTransferred, bWait)
+		Public Function GetOverlappedResult(Overlapped As IntPtr, ByRef lpNumberOfBytesTransferred As UInteger, bWait As Boolean) As Boolean
+			Return driverAPI.GetOverlappedResult(m_handle, Overlapped, lpNumberOfBytesTransferred, bWait)
+		End Function
+
+		''' <Summary>Retrieves the results of an overlapped operation on the specified libusbK handle.</Summary>
+		Public Function GetOverlappedResult(Overlapped As KOVL_HANDLE, ByRef lpNumberOfBytesTransferred As UInteger, bWait As Boolean) As Boolean
+			Return driverAPI.GetOverlappedResult(m_handle, Overlapped.DangerousGetHandle(), lpNumberOfBytesTransferred, bWait)
 		End Function
 
 		''' <Summary>Gets a USB device (driver specific) property from usb handle.</Summary>
-		Public Function GetProperty(PropertyType As KUSB_PROPERTY, ByRef PropertySize As UInteger, [Property] As IntPtr) As Boolean
-			Return driverAPI.GetProperty(m_handle, PropertyType, PropertySize, [Property])
+		Public Function GetProperty(PropertyType As KUSB_PROPERTY, ByRef PropertySize As UInteger, Value As IntPtr) As Boolean
+			Return driverAPI.GetProperty(m_handle, PropertyType, PropertySize, Value)
+		End Function
+
+		''' <Summary>Gets a USB device (driver specific) property from usb handle.</Summary>
+		Public Function GetProperty(PropertyType As KUSB_PROPERTY, ByRef PropertySize As UInteger, Value As Array) As Boolean
+			Return driverAPI.GetProperty(m_handle, PropertyType, PropertySize, Marshal.UnsafeAddrOfPinnedArrayElement(Value, 0))
 		End Function
 	End Class
 
@@ -2209,9 +2514,19 @@ Namespace libusbK
 			Return Functions.StmK_Read(m_handle, Buffer, Offset, Length, TransferredLength)
 		End Function
 
+		''' <Summary>Reads data from the stream buffer.</Summary>
+		Public Function Read(Buffer As Array, Offset As Integer, Length As Integer, ByRef TransferredLength As UInteger) As Boolean
+			Return Functions.StmK_Read(m_handle, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), Offset, Length, TransferredLength)
+		End Function
+
 		''' <Summary>Writes data to the stream buffer.</Summary>
 		Public Function Write(Buffer As IntPtr, Offset As Integer, Length As Integer, ByRef TransferredLength As UInteger) As Boolean
 			Return Functions.StmK_Write(m_handle, Buffer, Offset, Length, TransferredLength)
+		End Function
+
+		''' <Summary>Writes data to the stream buffer.</Summary>
+		Public Function Write(Buffer As Array, Offset As Integer, Length As Integer, ByRef TransferredLength As UInteger) As Boolean
+			Return Functions.StmK_Write(m_handle, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), Offset, Length, TransferredLength)
 		End Function
 	End Class
 

@@ -31,7 +31,6 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
-using Test.Devices;
 using Win32;
 using libusbK;
 
@@ -50,7 +49,7 @@ namespace Read.Isochronous
             KLST_DEVINFO_HANDLE deviceInfo;
 
             // TODO User: Set the test parameters for your device.
-            Test = new TestParameters(0x03eb, 0x2315, 0x81, 4, 24, 64, "xfer-iso-read.txt");
+            Test = new TestParameters(0x04b4, 0x1003, 3, 0x82, 4, 24, 96, "xfer-iso-read.txt");
             Test.FillFromCommandLine(Environment.CommandLine);
             Test.Init();
 
@@ -74,15 +73,17 @@ namespace Read.Isochronous
                 byte altSettingNumber = 0;
                 while (usb.QueryInterfaceSettings(altSettingNumber, out interfaceDescriptor))
                 {
-                    byte pipeIndex = 0;
-                    while (usb.QueryPipe(altSettingNumber, pipeIndex++, out pipeInfo))
+                    if (Test.AltInterfaceId == -1 || Test.AltInterfaceId == altSettingNumber)
                     {
-                        if (pipeInfo.PipeId == Test.PipeId && pipeInfo.MaximumPacketSize > 0 &&
-                            pipeInfo.PipeType == USBD_PIPE_TYPE.UsbdPipeTypeIsochronous)
+                        byte pipeIndex = 0;
+                        while (usb.QueryPipe(altSettingNumber, pipeIndex++, out pipeInfo))
                         {
-                            goto FindInterfaceDone;
+                            if (pipeInfo.PipeId == Test.PipeId && pipeInfo.MaximumPacketSize > 0 && pipeInfo.PipeType == USBD_PIPE_TYPE.UsbdPipeTypeIsochronous)
+                            {
+                                goto FindInterfaceDone;
+                            }
+                            pipeInfo.PipeId = 0;
                         }
-                        pipeInfo.PipeId = 0;
                     }
                     altSettingNumber++;
                 }
@@ -98,9 +99,7 @@ namespace Read.Isochronous
             // Set interface alt setting if needed.
             if (interfaceDescriptor.bAlternateSetting > 0)
             {
-                Console.WriteLine("Setting interface #{0} to bAlternateSetting #{1}..",
-                                  interfaceDescriptor.bInterfaceNumber,
-                                  interfaceDescriptor.bAlternateSetting);
+                Console.WriteLine("Setting interface #{0} to bAlternateSetting #{1}..", interfaceDescriptor.bInterfaceNumber, interfaceDescriptor.bAlternateSetting);
                 success = usb.SetAltInterface(interfaceDescriptor.bInterfaceNumber, false, interfaceDescriptor.bAlternateSetting);
                 if (!success)
                 {
@@ -109,8 +108,9 @@ namespace Read.Isochronous
                 }
             }
 
-            // TODO FOR USER: Remove this block if not using benchmark firmware.
-            // This configures devices running benchmark firmware for streaming DeviceToHost transfers.
+#if BMFW
+    // TODO FOR USER: Remove this block if not using benchmark firmware.
+    // This configures devices running benchmark firmware for streaming DeviceToHost transfers.
             Console.WriteLine("Configuring for benchmark device..");
             BM_TEST_TYPE testType = BM_TEST_TYPE.READ;
             success = Benchmark.Configure(usb, BM_COMMAND.SET_TEST, interfaceDescriptor.bInterfaceNumber, ref testType);
@@ -118,7 +118,7 @@ namespace Read.Isochronous
             {
                 Console.WriteLine("Bench_Configure failed.");
             }
-
+#endif
             // Create the ISO transfer queue.  This class manages the pending and outstanding transfer lists.
             ReadIsoTransferQueue readXfers = new ReadIsoTransferQueue(usb, ref pipeInfo, Test.MaxOutstandingTransfers, Test.IsoPacketsPerTransfer);
 
@@ -175,7 +175,7 @@ namespace Read.Isochronous
 
                 if (readXfers.Outstanding.Count == 0)
                 {
-                    // The MAX_TRANSFERS_TOTAL test limit as hit.
+                    // The MAX_TRANSFERS_TOTAL test limit hit.
                     Console.WriteLine("Done!");
                     goto Done;
                 }
@@ -345,20 +345,19 @@ namespace Read.Isochronous
             // Prepare the OvlK handle to be submitted.
             OvlPool.ReUse(isoTransferItem.Ovl);
 
-            // TODO Travis: libusbK binding is missing several function overloads.
             // The data buffer was pinned earlier when it was allocated.  Always pin managed memory before using it
             // in an asynchronous function to keep the framework from tampering with it.
             Usb.IsoReadPipe(PipeInfo.PipeId,
-                            isoTransferItem.BufferGC.AddrOfPinnedObject(),
+                            isoTransferItem.Buffer,
                             DataBufferSize,
-                            isoTransferItem.Ovl.DangerousGetHandle(),
+                            isoTransferItem.Ovl,
                             isoTransferItem.Iso.Handle);
+
             int errorCode = Marshal.GetLastWin32Error();
 
-            // TODO Travis: libusbK binding is missing several constants.
             // 997 is ERROR_IO_PENDING. For async, this means so far so good.
             // IE: The transfer is submitted but we won't know if a problem occurs until it is completed.
-            if (errorCode != 997) return errorCode;
+            if (errorCode != ErrorCodes.IoPending) return errorCode;
 
             TotalSubmittedCount++;
 
@@ -383,21 +382,23 @@ namespace Read.Isochronous
 
     internal class TestParameters
     {
-        public int Vid;
-        public int Pid;
-        public byte PipeId;
-        public int MaxOutstandingTransfers;
-        public int MaxTransfersTotal;
+        public int AltInterfaceId;
+        public HiPerfTimer Dcs = new HiPerfTimer();
         public int IsoPacketsPerTransfer;
         public string LogFilename;
+        public int MaxOutstandingTransfers;
+        public int MaxTransfersTotal;
+        public int Pid;
+        public byte PipeId;
+        public int Vid;
 
         private bool fileLoggingEnabled;
-        public HiPerfTimer Dcs = new HiPerfTimer();
 
         private StreamWriter logStream;
 
         public TestParameters(int vid,
                               int pid,
+                              int altInterfaceId,
                               byte pipeId,
                               int maxOutstandingTransfers,
                               int maxTransfersTotal,
@@ -407,6 +408,7 @@ namespace Read.Isochronous
             Vid = vid;
             Pid = pid;
             PipeId = pipeId;
+            AltInterfaceId = altInterfaceId;
             MaxOutstandingTransfers = maxOutstandingTransfers;
             MaxTransfersTotal = maxTransfersTotal;
             IsoPacketsPerTransfer = isoPacketsPerTransfer;

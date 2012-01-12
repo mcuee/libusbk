@@ -3,7 +3,7 @@
 // All rights reserved.
 //
 // C# libusbK Bindings
-// Auto-generated on: 09.28.2011
+// Auto-generated on: 12.03.2011
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -394,7 +394,22 @@ namespace libusbK
 
         public override string ToString()
         {
-            return string.Format("{{Common: {0}, DriverID: {1}, DeviceInterfaceGuid: {2}, InstanceId: {3}, ClassGuid: {4}, Mfg: {5}, DeviceDesc: {6}, Service: {7}, SymbolicLink: {8}, DevicePath: {9}, LUsb0FilterIndex: {10}, Connected: {11}, SyncFlags: {12}}}", Common, DriverID, DeviceInterfaceGUID, InstanceID, ClassGUID, Mfg, DeviceDesc, Service, SymbolicLink, DevicePath, LUsb0FilterIndex, Connected, SyncFlags);
+            return
+                string.Format(
+                    "{{Common: {0}, DriverID: {1}, DeviceInterfaceGuid: {2}, InstanceId: {3}, ClassGuid: {4}, Mfg: {5}, DeviceDesc: {6}, Service: {7}, SymbolicLink: {8}, DevicePath: {9}, LUsb0FilterIndex: {10}, Connected: {11}, SyncFlags: {12}}}",
+                    Common,
+                    DriverID,
+                    DeviceInterfaceGUID,
+                    InstanceID,
+                    ClassGUID,
+                    Mfg,
+                    DeviceDesc,
+                    Service,
+                    SymbolicLink,
+                    DevicePath,
+                    LUsb0FilterIndex,
+                    Connected,
+                    SyncFlags);
         }
     }
     #endregion
@@ -403,229 +418,368 @@ namespace libusbK
     #region Internal Function Imports
     internal static class Functions
     {
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "LibK_GetVersion", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "LibK_GetVersion",
+            SetLastError = true)]
         public static extern void LibK_GetVersion([Out] out KLIB_VERSION Version);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "LibK_GetContext", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "LibK_GetContext",
+            SetLastError = true)]
         public static extern IntPtr LibK_GetContext([In] IntPtr Handle, KLIB_HANDLE_TYPE HandleType);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "LibK_SetContext", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "LibK_SetContext",
+            SetLastError = true)]
         public static extern bool LibK_SetContext([In] IntPtr Handle, KLIB_HANDLE_TYPE HandleType, IntPtr ContextValue);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "LibK_SetCleanupCallback", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "LibK_SetCleanupCallback"
+            , SetLastError = true)]
         public static extern bool LibK_SetCleanupCallback([In] IntPtr Handle, KLIB_HANDLE_TYPE HandleType, KLIB_HANDLE_CLEANUP_CB CleanupCB);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "LibK_LoadDriverAPI", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "LibK_LoadDriverAPI",
+            SetLastError = true)]
         public static extern bool LibK_LoadDriverAPI([Out] out KUSB_DRIVER_API DriverAPI, int DriverID);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "LibK_CopyDriverAPI", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "LibK_CopyDriverAPI",
+            SetLastError = true)]
         public static extern bool LibK_CopyDriverAPI([Out] out KUSB_DRIVER_API DriverAPI, [In] KUSB_HANDLE UsbHandle);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "LibK_GetProcAddress", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "LibK_GetProcAddress",
+            SetLastError = true)]
         public static extern bool LibK_GetProcAddress(IntPtr ProcAddress, int DriverID, int FunctionID);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_Init", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_Init",
+            SetLastError = true)]
         public static extern bool UsbK_Init([Out] out KUSB_HANDLE InterfaceHandle, [In] KLST_DEVINFO_HANDLE DevInfo);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_Free", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_Free",
+            SetLastError = true)]
         public static extern bool UsbK_Free([In] IntPtr InterfaceHandle);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_ClaimInterface", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_ClaimInterface",
+            SetLastError = true)]
         public static extern bool UsbK_ClaimInterface([In] KUSB_HANDLE InterfaceHandle, byte NumberOrIndex, bool IsIndex);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_ReleaseInterface", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_ReleaseInterface",
+            SetLastError = true)]
         public static extern bool UsbK_ReleaseInterface([In] KUSB_HANDLE InterfaceHandle, byte NumberOrIndex, bool IsIndex);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_SetAltInterface", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_SetAltInterface",
+            SetLastError = true)]
         public static extern bool UsbK_SetAltInterface([In] KUSB_HANDLE InterfaceHandle, byte NumberOrIndex, bool IsIndex, byte AltSettingNumber);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_GetAltInterface", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_GetAltInterface",
+            SetLastError = true)]
         public static extern bool UsbK_GetAltInterface([In] KUSB_HANDLE InterfaceHandle, byte NumberOrIndex, bool IsIndex, out byte AltSettingNumber);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_GetDescriptor", SetLastError = true)]
-        public static extern bool UsbK_GetDescriptor([In] KUSB_HANDLE InterfaceHandle, byte DescriptorType, byte Index, ushort LanguageID, IntPtr Buffer, uint BufferLength, out uint LengthTransferred);
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_GetDescriptor",
+            SetLastError = true)]
+        public static extern bool UsbK_GetDescriptor([In] KUSB_HANDLE InterfaceHandle,
+                                                     byte DescriptorType,
+                                                     byte Index,
+                                                     ushort LanguageID,
+                                                     IntPtr Buffer,
+                                                     uint BufferLength,
+                                                     out uint LengthTransferred);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_ControlTransfer", SetLastError = true)]
-        public static extern bool UsbK_ControlTransfer([In] KUSB_HANDLE InterfaceHandle, WINUSB_SETUP_PACKET SetupPacket, IntPtr Buffer, uint BufferLength, out uint LengthTransferred, IntPtr Overlapped);
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_ControlTransfer",
+            SetLastError = true)]
+        public static extern bool UsbK_ControlTransfer([In] KUSB_HANDLE InterfaceHandle,
+                                                       WINUSB_SETUP_PACKET SetupPacket,
+                                                       IntPtr Buffer,
+                                                       uint BufferLength,
+                                                       out uint LengthTransferred,
+                                                       IntPtr Overlapped);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_SetPowerPolicy", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_SetPowerPolicy",
+            SetLastError = true)]
         public static extern bool UsbK_SetPowerPolicy([In] KUSB_HANDLE InterfaceHandle, uint PolicyType, uint ValueLength, IntPtr Value);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_GetPowerPolicy", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_GetPowerPolicy",
+            SetLastError = true)]
         public static extern bool UsbK_GetPowerPolicy([In] KUSB_HANDLE InterfaceHandle, uint PolicyType, ref uint ValueLength, IntPtr Value);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_SetConfiguration", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_SetConfiguration",
+            SetLastError = true)]
         public static extern bool UsbK_SetConfiguration([In] KUSB_HANDLE InterfaceHandle, byte ConfigurationNumber);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_GetConfiguration", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_GetConfiguration",
+            SetLastError = true)]
         public static extern bool UsbK_GetConfiguration([In] KUSB_HANDLE InterfaceHandle, out byte ConfigurationNumber);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_ResetDevice", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_ResetDevice",
+            SetLastError = true)]
         public static extern bool UsbK_ResetDevice([In] KUSB_HANDLE InterfaceHandle);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_Initialize", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_Initialize",
+            SetLastError = true)]
         public static extern bool UsbK_Initialize(IntPtr DeviceHandle, [Out] out KUSB_HANDLE InterfaceHandle);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_SelectInterface", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_SelectInterface",
+            SetLastError = true)]
         public static extern bool UsbK_SelectInterface([In] KUSB_HANDLE InterfaceHandle, byte NumberOrIndex, bool IsIndex);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_GetAssociatedInterface", SetLastError = true)]
-        public static extern bool UsbK_GetAssociatedInterface([In] KUSB_HANDLE InterfaceHandle, byte AssociatedInterfaceIndex, [Out] out KUSB_HANDLE AssociatedInterfaceHandle);
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi,
+            EntryPoint = "UsbK_GetAssociatedInterface", SetLastError = true)]
+        public static extern bool UsbK_GetAssociatedInterface([In] KUSB_HANDLE InterfaceHandle,
+                                                              byte AssociatedInterfaceIndex,
+                                                              [Out] out KUSB_HANDLE AssociatedInterfaceHandle);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_Clone", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_Clone",
+            SetLastError = true)]
         public static extern bool UsbK_Clone([In] KUSB_HANDLE InterfaceHandle, [Out] out KUSB_HANDLE DstInterfaceHandle);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_QueryInterfaceSettings", SetLastError = true)]
-        public static extern bool UsbK_QueryInterfaceSettings([In] KUSB_HANDLE InterfaceHandle, byte AltSettingNumber, [Out] out USB_INTERFACE_DESCRIPTOR UsbAltInterfaceDescriptor);
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi,
+            EntryPoint = "UsbK_QueryInterfaceSettings", SetLastError = true)]
+        public static extern bool UsbK_QueryInterfaceSettings([In] KUSB_HANDLE InterfaceHandle,
+                                                              byte AltSettingNumber,
+                                                              [Out] out USB_INTERFACE_DESCRIPTOR UsbAltInterfaceDescriptor);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_QueryDeviceInformation", SetLastError = true)]
-        public static extern bool UsbK_QueryDeviceInformation([In] KUSB_HANDLE InterfaceHandle, uint InformationType, ref uint BufferLength, IntPtr Buffer);
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi,
+            EntryPoint = "UsbK_QueryDeviceInformation", SetLastError = true)]
+        public static extern bool UsbK_QueryDeviceInformation([In] KUSB_HANDLE InterfaceHandle,
+                                                              uint InformationType,
+                                                              ref uint BufferLength,
+                                                              IntPtr Buffer);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_SetCurrentAlternateSetting", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi,
+            EntryPoint = "UsbK_SetCurrentAlternateSetting", SetLastError = true)]
         public static extern bool UsbK_SetCurrentAlternateSetting([In] KUSB_HANDLE InterfaceHandle, byte AltSettingNumber);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_GetCurrentAlternateSetting", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi,
+            EntryPoint = "UsbK_GetCurrentAlternateSetting", SetLastError = true)]
         public static extern bool UsbK_GetCurrentAlternateSetting([In] KUSB_HANDLE InterfaceHandle, out byte AltSettingNumber);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_QueryPipe", SetLastError = true)]
-        public static extern bool UsbK_QueryPipe([In] KUSB_HANDLE InterfaceHandle, byte AltSettingNumber, byte PipeIndex, [Out] out WINUSB_PIPE_INFORMATION PipeInformation);
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_QueryPipe",
+            SetLastError = true)]
+        public static extern bool UsbK_QueryPipe([In] KUSB_HANDLE InterfaceHandle,
+                                                 byte AltSettingNumber,
+                                                 byte PipeIndex,
+                                                 [Out] out WINUSB_PIPE_INFORMATION PipeInformation);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_SetPipePolicy", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_SetPipePolicy",
+            SetLastError = true)]
         public static extern bool UsbK_SetPipePolicy([In] KUSB_HANDLE InterfaceHandle, byte PipeID, uint PolicyType, uint ValueLength, IntPtr Value);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_GetPipePolicy", SetLastError = true)]
-        public static extern bool UsbK_GetPipePolicy([In] KUSB_HANDLE InterfaceHandle, byte PipeID, uint PolicyType, ref uint ValueLength, IntPtr Value);
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_GetPipePolicy",
+            SetLastError = true)]
+        public static extern bool UsbK_GetPipePolicy([In] KUSB_HANDLE InterfaceHandle,
+                                                     byte PipeID,
+                                                     uint PolicyType,
+                                                     ref uint ValueLength,
+                                                     IntPtr Value);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_ReadPipe", SetLastError = true)]
-        public static extern bool UsbK_ReadPipe([In] KUSB_HANDLE InterfaceHandle, byte PipeID, IntPtr Buffer, uint BufferLength, out uint LengthTransferred, IntPtr Overlapped);
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_ReadPipe",
+            SetLastError = true)]
+        public static extern bool UsbK_ReadPipe([In] KUSB_HANDLE InterfaceHandle,
+                                                byte PipeID,
+                                                IntPtr Buffer,
+                                                uint BufferLength,
+                                                out uint LengthTransferred,
+                                                IntPtr Overlapped);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_WritePipe", SetLastError = true)]
-        public static extern bool UsbK_WritePipe([In] KUSB_HANDLE InterfaceHandle, byte PipeID, IntPtr Buffer, uint BufferLength, out uint LengthTransferred, IntPtr Overlapped);
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_WritePipe",
+            SetLastError = true)]
+        public static extern bool UsbK_WritePipe([In] KUSB_HANDLE InterfaceHandle,
+                                                 byte PipeID,
+                                                 IntPtr Buffer,
+                                                 uint BufferLength,
+                                                 out uint LengthTransferred,
+                                                 IntPtr Overlapped);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_ResetPipe", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_ResetPipe",
+            SetLastError = true)]
         public static extern bool UsbK_ResetPipe([In] KUSB_HANDLE InterfaceHandle, byte PipeID);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_AbortPipe", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_AbortPipe",
+            SetLastError = true)]
         public static extern bool UsbK_AbortPipe([In] KUSB_HANDLE InterfaceHandle, byte PipeID);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_FlushPipe", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_FlushPipe",
+            SetLastError = true)]
         public static extern bool UsbK_FlushPipe([In] KUSB_HANDLE InterfaceHandle, byte PipeID);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_IsoReadPipe", SetLastError = true)]
-        public static extern bool UsbK_IsoReadPipe([In] KUSB_HANDLE InterfaceHandle, byte PipeID, IntPtr Buffer, uint BufferLength, IntPtr Overlapped, [In] KISO_CONTEXT IsoContext);
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_IsoReadPipe",
+            SetLastError = true)]
+        public static extern bool UsbK_IsoReadPipe([In] KUSB_HANDLE InterfaceHandle,
+                                                   byte PipeID,
+                                                   IntPtr Buffer,
+                                                   uint BufferLength,
+                                                   IntPtr Overlapped,
+                                                   [In] KISO_CONTEXT IsoContext);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_IsoWritePipe", SetLastError = true)]
-        public static extern bool UsbK_IsoWritePipe([In] KUSB_HANDLE InterfaceHandle, byte PipeID, IntPtr Buffer, uint BufferLength, IntPtr Overlapped, [In] KISO_CONTEXT IsoContext);
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_IsoWritePipe",
+            SetLastError = true)]
+        public static extern bool UsbK_IsoWritePipe([In] KUSB_HANDLE InterfaceHandle,
+                                                    byte PipeID,
+                                                    IntPtr Buffer,
+                                                    uint BufferLength,
+                                                    IntPtr Overlapped,
+                                                    [In] KISO_CONTEXT IsoContext);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_GetCurrentFrameNumber", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi,
+            EntryPoint = "UsbK_GetCurrentFrameNumber", SetLastError = true)]
         public static extern bool UsbK_GetCurrentFrameNumber([In] KUSB_HANDLE InterfaceHandle, out uint FrameNumber);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_GetOverlappedResult", SetLastError = true)]
-        public static extern bool UsbK_GetOverlappedResult([In] KUSB_HANDLE InterfaceHandle, IntPtr lpOverlapped, out uint lpNumberOfBytesTransferred, bool bWait);
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi,
+            EntryPoint = "UsbK_GetOverlappedResult", SetLastError = true)]
+        public static extern bool UsbK_GetOverlappedResult([In] KUSB_HANDLE InterfaceHandle,
+                                                           IntPtr lpOverlapped,
+                                                           out uint lpNumberOfBytesTransferred,
+                                                           bool bWait);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_GetProperty", SetLastError = true)]
-        public static extern bool UsbK_GetProperty([In] KUSB_HANDLE InterfaceHandle, KUSB_PROPERTY PropertyType, ref uint PropertySize, IntPtr Property);
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "UsbK_GetProperty",
+            SetLastError = true)]
+        public static extern bool UsbK_GetProperty([In] KUSB_HANDLE InterfaceHandle,
+                                                   KUSB_PROPERTY PropertyType,
+                                                   ref uint PropertySize,
+                                                   IntPtr Property);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "LstK_Init", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "LstK_Init",
+            SetLastError = true)]
         public static extern bool LstK_Init([Out] out KLST_HANDLE DeviceList, KLST_FLAG Flags);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "LstK_Free", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "LstK_Free",
+            SetLastError = true)]
         public static extern bool LstK_Free([In] IntPtr DeviceList);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "LstK_Enumerate", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "LstK_Enumerate",
+            SetLastError = true)]
         public static extern bool LstK_Enumerate([In] KLST_HANDLE DeviceList, KLST_ENUM_DEVINFO_CB EnumDevListCB, IntPtr Context);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "LstK_Current", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "LstK_Current",
+            SetLastError = true)]
         public static extern bool LstK_Current([In] KLST_HANDLE DeviceList, [Out] out KLST_DEVINFO_HANDLE DeviceInfo);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "LstK_MoveNext", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "LstK_MoveNext",
+            SetLastError = true)]
         public static extern bool LstK_MoveNext([In] KLST_HANDLE DeviceList, [Out] out KLST_DEVINFO_HANDLE DeviceInfo);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "LstK_MoveReset", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "LstK_MoveReset",
+            SetLastError = true)]
         public static extern void LstK_MoveReset([In] KLST_HANDLE DeviceList);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "LstK_FindByVidPid", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "LstK_FindByVidPid",
+            SetLastError = true)]
         public static extern bool LstK_FindByVidPid([In] KLST_HANDLE DeviceList, int Vid, int Pid, [Out] out KLST_DEVINFO_HANDLE DeviceInfo);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "LstK_Count", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "LstK_Count",
+            SetLastError = true)]
         public static extern bool LstK_Count([In] KLST_HANDLE DeviceList, ref uint Count);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "HotK_Init", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "HotK_Init",
+            SetLastError = true)]
         public static extern bool HotK_Init([Out] out KHOT_HANDLE Handle, [In, Out] ref KHOT_PARAMS InitParams);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "HotK_Free", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "HotK_Free",
+            SetLastError = true)]
         public static extern bool HotK_Free([In] IntPtr Handle);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "HotK_FreeAll", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "HotK_FreeAll",
+            SetLastError = true)]
         public static extern void HotK_FreeAll();
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "OvlK_Acquire", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "OvlK_Acquire",
+            SetLastError = true)]
         public static extern bool OvlK_Acquire([Out] out KOVL_HANDLE OverlappedK, [In] KOVL_POOL_HANDLE PoolHandle);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "OvlK_Release", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "OvlK_Release",
+            SetLastError = true)]
         public static extern bool OvlK_Release([In] KOVL_HANDLE OverlappedK);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "OvlK_Init", SetLastError = true)]
-        public static extern bool OvlK_Init([Out] out KOVL_POOL_HANDLE PoolHandle, [In] KUSB_HANDLE UsbHandle, int MaxOverlappedCount, KOVL_POOL_FLAG Flags);
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "OvlK_Init",
+            SetLastError = true)]
+        public static extern bool OvlK_Init([Out] out KOVL_POOL_HANDLE PoolHandle,
+                                            [In] KUSB_HANDLE UsbHandle,
+                                            int MaxOverlappedCount,
+                                            KOVL_POOL_FLAG Flags);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "OvlK_Free", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "OvlK_Free",
+            SetLastError = true)]
         public static extern bool OvlK_Free([In] IntPtr PoolHandle);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "OvlK_GetEventHandle", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "OvlK_GetEventHandle",
+            SetLastError = true)]
         public static extern IntPtr OvlK_GetEventHandle([In] KOVL_HANDLE OverlappedK);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "OvlK_Wait", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "OvlK_Wait",
+            SetLastError = true)]
         public static extern bool OvlK_Wait([In] KOVL_HANDLE OverlappedK, int TimeoutMS, KOVL_WAIT_FLAG WaitFlags, out uint TransferredLength);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "OvlK_WaitOrCancel", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "OvlK_WaitOrCancel",
+            SetLastError = true)]
         public static extern bool OvlK_WaitOrCancel([In] KOVL_HANDLE OverlappedK, int TimeoutMS, out uint TransferredLength);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "OvlK_WaitAndRelease", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "OvlK_WaitAndRelease",
+            SetLastError = true)]
         public static extern bool OvlK_WaitAndRelease([In] KOVL_HANDLE OverlappedK, int TimeoutMS, out uint TransferredLength);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "OvlK_IsComplete", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "OvlK_IsComplete",
+            SetLastError = true)]
         public static extern bool OvlK_IsComplete([In] KOVL_HANDLE OverlappedK);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "OvlK_ReUse", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "OvlK_ReUse",
+            SetLastError = true)]
         public static extern bool OvlK_ReUse([In] KOVL_HANDLE OverlappedK);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "StmK_Init", SetLastError = true)]
-        public static extern bool StmK_Init([Out] out KSTM_HANDLE StreamHandle, [In] KUSB_HANDLE UsbHandle, byte PipeID, int MaxTransferSize, int MaxPendingTransfers, int MaxPendingIO, [In] ref KSTM_CALLBACK Callbacks, KSTM_FLAG Flags);
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "StmK_Init",
+            SetLastError = true)]
+        public static extern bool StmK_Init([Out] out KSTM_HANDLE StreamHandle,
+                                            [In] KUSB_HANDLE UsbHandle,
+                                            byte PipeID,
+                                            int MaxTransferSize,
+                                            int MaxPendingTransfers,
+                                            int MaxPendingIO,
+                                            [In] ref KSTM_CALLBACK Callbacks,
+                                            KSTM_FLAG Flags);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "StmK_Free", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "StmK_Free",
+            SetLastError = true)]
         public static extern bool StmK_Free([In] IntPtr StreamHandle);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "StmK_Start", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "StmK_Start",
+            SetLastError = true)]
         public static extern bool StmK_Start([In] KSTM_HANDLE StreamHandle);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "StmK_Stop", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "StmK_Stop",
+            SetLastError = true)]
         public static extern bool StmK_Stop([In] KSTM_HANDLE StreamHandle, int TimeoutCancelMS);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "StmK_Read", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "StmK_Read",
+            SetLastError = true)]
         public static extern bool StmK_Read([In] KSTM_HANDLE StreamHandle, IntPtr Buffer, int Offset, int Length, out uint TransferredLength);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "StmK_Write", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "StmK_Write",
+            SetLastError = true)]
         public static extern bool StmK_Write([In] KSTM_HANDLE StreamHandle, IntPtr Buffer, int Offset, int Length, out uint TransferredLength);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "IsoK_Init", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "IsoK_Init",
+            SetLastError = true)]
         public static extern bool IsoK_Init([Out] out KISO_CONTEXT IsoContext, int NumberOfPackets, int StartFrame);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "IsoK_Free", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "IsoK_Free",
+            SetLastError = true)]
         public static extern bool IsoK_Free([In] IntPtr IsoContext);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "IsoK_SetPackets", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "IsoK_SetPackets",
+            SetLastError = true)]
         public static extern bool IsoK_SetPackets([In] KISO_CONTEXT IsoContext, int PacketSize);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "IsoK_SetPacket", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "IsoK_SetPacket",
+            SetLastError = true)]
         public static extern bool IsoK_SetPacket([In] KISO_CONTEXT IsoContext, int PacketIndex, [In] ref KISO_PACKET IsoPacket);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "IsoK_GetPacket", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "IsoK_GetPacket",
+            SetLastError = true)]
         public static extern bool IsoK_GetPacket([In] KISO_CONTEXT IsoContext, int PacketIndex, [Out] out KISO_PACKET IsoPacket);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "IsoK_EnumPackets", SetLastError = true)]
-        public static extern bool IsoK_EnumPackets([In] KISO_CONTEXT IsoContext, KISO_ENUM_PACKETS_CB EnumPackets, int StartPacketIndex, IntPtr UserState);
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "IsoK_EnumPackets",
+            SetLastError = true)]
+        public static extern bool IsoK_EnumPackets([In] KISO_CONTEXT IsoContext,
+                                                   KISO_ENUM_PACKETS_CB EnumPackets,
+                                                   int StartPacketIndex,
+                                                   IntPtr UserState);
 
-        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "IsoK_ReUse", SetLastError = true)]
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "IsoK_ReUse",
+            SetLastError = true)]
         public static extern bool IsoK_ReUse([In] KISO_CONTEXT IsoContext);
     }
     #endregion
@@ -981,6 +1135,9 @@ namespace libusbK
 
         /// <Summary>Always release the OverlappedK back to its pool.  If the operation timed-out, cancel it before releasing back to its pool.</Summary>
         RELEASE_ALWAYS = 0x000F,
+
+        /// <Summary>Uses alterable wait functions.  See http://msdn.microsoft.com/en-us/library/windows/desktop/ms687036%28v=vs.85%29.aspx</Summary>
+        ALERTABLE = 0x0010,
     }
 
     /// <Summary>\c Overlapped pool config flags.</Summary>
@@ -995,6 +1152,13 @@ namespace libusbK
     public enum KSTM_FLAG
     {
         NONE = 0,
+    }
+
+    /// <Summary>Stream config flags.</Summary>
+    public enum KSTM_COMPLETE_RESULT
+    {
+        VALID = 0,
+        INVALID,
     }
     #endregion
 
@@ -1015,11 +1179,6 @@ namespace libusbK
 
         /// <Summary>The pipe interval</Summary>
         public byte Interval;
-
-        public override string ToString()
-        {
-            return string.Format("PipeType: {0}\nPipeId: {1}\nMaximumPacketSize: {2}\nInterval: {3}\n", PipeType, PipeId, MaximumPacketSize, Interval);
-        }
     };
 
     /// <Summary>The \c WINUSB_SETUP_PACKET structure describes a USB setup packet.</Summary>
@@ -1289,11 +1448,6 @@ namespace libusbK
 
         /// <Summary>Index of string descriptor describing this interface</Summary>
         public byte iInterface;
-
-        public override string ToString()
-        {
-            return string.Format("BInterfaceNumber: {0}\nBAlternateSetting: {1}\nBNumEndpoints: {2}\nBInterfaceClass: {3}\nBInterfaceSubClass: {4}\nBInterfaceProtocol: {5}\n", bInterfaceNumber, bAlternateSetting, bNumEndpoints, bInterfaceClass, bInterfaceSubClass, bInterfaceProtocol);
-        }
     };
 
     /// <Summary>A structure representing the standard USB string descriptor.</Summary>
@@ -1568,7 +1722,7 @@ namespace libusbK
         [MarshalAs(UnmanagedType.FunctionPtr)]
         public KSTM_SUBMIT_CB Submit;
 
-        /// <Summary>Executed when a transfer competes.</Summary>
+        /// <Summary>Executed when a valid transfer completes.</Summary>
         [MarshalAs(UnmanagedType.FunctionPtr)]
         public KSTM_COMPLETE_CB Complete;
 
@@ -1579,6 +1733,10 @@ namespace libusbK
         /// <Summary>Executed for every transfer context when the stream is stopped with \ref StmK_Stop.</Summary>
         [MarshalAs(UnmanagedType.FunctionPtr)]
         public KSTM_STOPPED_CB Stopped;
+
+        /// <Summary>Executed immediately after a transfer completes.</Summary>
+        [MarshalAs(UnmanagedType.FunctionPtr)]
+        public KSTM_BEFORE_COMPLETE_CB BeforeComplete;
     };
     #endregion
 
@@ -1612,10 +1770,23 @@ namespace libusbK
     public delegate bool KUSB_GetAltInterfaceDelegate([In] KUSB_HANDLE InterfaceHandle, byte NumberOrIndex, bool IsIndex, out byte AltSettingNumber);
 
     [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet = CharSet.Ansi, SetLastError = true)]
-    public delegate bool KUSB_GetDescriptorDelegate([In] KUSB_HANDLE InterfaceHandle, byte DescriptorType, byte Index, ushort LanguageID, IntPtr Buffer, uint BufferLength, out uint LengthTransferred);
+    public delegate bool KUSB_GetDescriptorDelegate(
+        [In] KUSB_HANDLE InterfaceHandle,
+        byte DescriptorType,
+        byte Index,
+        ushort LanguageID,
+        IntPtr Buffer,
+        uint BufferLength,
+        out uint LengthTransferred);
 
     [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet = CharSet.Ansi, SetLastError = true)]
-    public delegate bool KUSB_ControlTransferDelegate([In] KUSB_HANDLE InterfaceHandle, WINUSB_SETUP_PACKET SetupPacket, IntPtr Buffer, uint BufferLength, out uint LengthTransferred, IntPtr Overlapped);
+    public delegate bool KUSB_ControlTransferDelegate(
+        [In] KUSB_HANDLE InterfaceHandle,
+        WINUSB_SETUP_PACKET SetupPacket,
+        IntPtr Buffer,
+        uint BufferLength,
+        out uint LengthTransferred,
+        IntPtr Overlapped);
 
     [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet = CharSet.Ansi, SetLastError = true)]
     public delegate bool KUSB_SetPowerPolicyDelegate([In] KUSB_HANDLE InterfaceHandle, uint PolicyType, uint ValueLength, IntPtr Value);
@@ -1639,16 +1810,19 @@ namespace libusbK
     public delegate bool KUSB_SelectInterfaceDelegate([In] KUSB_HANDLE InterfaceHandle, byte NumberOrIndex, bool IsIndex);
 
     [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet = CharSet.Ansi, SetLastError = true)]
-    public delegate bool KUSB_GetAssociatedInterfaceDelegate([In] KUSB_HANDLE InterfaceHandle, byte AssociatedInterfaceIndex, [Out] out KUSB_HANDLE AssociatedInterfaceHandle);
+    public delegate bool KUSB_GetAssociatedInterfaceDelegate(
+        [In] KUSB_HANDLE InterfaceHandle, byte AssociatedInterfaceIndex, [Out] out KUSB_HANDLE AssociatedInterfaceHandle);
 
     [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet = CharSet.Ansi, SetLastError = true)]
     public delegate bool KUSB_CloneDelegate([In] KUSB_HANDLE InterfaceHandle, [Out] out KUSB_HANDLE DstInterfaceHandle);
 
     [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet = CharSet.Ansi, SetLastError = true)]
-    public delegate bool KUSB_QueryInterfaceSettingsDelegate([In] KUSB_HANDLE InterfaceHandle, byte AltSettingNumber, [Out] out USB_INTERFACE_DESCRIPTOR UsbAltInterfaceDescriptor);
+    public delegate bool KUSB_QueryInterfaceSettingsDelegate(
+        [In] KUSB_HANDLE InterfaceHandle, byte AltSettingNumber, [Out] out USB_INTERFACE_DESCRIPTOR UsbAltInterfaceDescriptor);
 
     [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet = CharSet.Ansi, SetLastError = true)]
-    public delegate bool KUSB_QueryDeviceInformationDelegate([In] KUSB_HANDLE InterfaceHandle, uint InformationType, ref uint BufferLength, IntPtr Buffer);
+    public delegate bool KUSB_QueryDeviceInformationDelegate(
+        [In] KUSB_HANDLE InterfaceHandle, uint InformationType, ref uint BufferLength, IntPtr Buffer);
 
     [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet = CharSet.Ansi, SetLastError = true)]
     public delegate bool KUSB_SetCurrentAlternateSettingDelegate([In] KUSB_HANDLE InterfaceHandle, byte AltSettingNumber);
@@ -1657,19 +1831,23 @@ namespace libusbK
     public delegate bool KUSB_GetCurrentAlternateSettingDelegate([In] KUSB_HANDLE InterfaceHandle, out byte AltSettingNumber);
 
     [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet = CharSet.Ansi, SetLastError = true)]
-    public delegate bool KUSB_QueryPipeDelegate([In] KUSB_HANDLE InterfaceHandle, byte AltSettingNumber, byte PipeIndex, [Out] out WINUSB_PIPE_INFORMATION PipeInformation);
+    public delegate bool KUSB_QueryPipeDelegate(
+        [In] KUSB_HANDLE InterfaceHandle, byte AltSettingNumber, byte PipeIndex, [Out] out WINUSB_PIPE_INFORMATION PipeInformation);
 
     [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet = CharSet.Ansi, SetLastError = true)]
     public delegate bool KUSB_SetPipePolicyDelegate([In] KUSB_HANDLE InterfaceHandle, byte PipeID, uint PolicyType, uint ValueLength, IntPtr Value);
 
     [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet = CharSet.Ansi, SetLastError = true)]
-    public delegate bool KUSB_GetPipePolicyDelegate([In] KUSB_HANDLE InterfaceHandle, byte PipeID, uint PolicyType, ref uint ValueLength, IntPtr Value);
+    public delegate bool KUSB_GetPipePolicyDelegate([In] KUSB_HANDLE InterfaceHandle, byte PipeID, uint PolicyType, ref uint ValueLength, IntPtr Value
+        );
 
     [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet = CharSet.Ansi, SetLastError = true)]
-    public delegate bool KUSB_ReadPipeDelegate([In] KUSB_HANDLE InterfaceHandle, byte PipeID, IntPtr Buffer, uint BufferLength, out uint LengthTransferred, IntPtr Overlapped);
+    public delegate bool KUSB_ReadPipeDelegate(
+        [In] KUSB_HANDLE InterfaceHandle, byte PipeID, IntPtr Buffer, uint BufferLength, out uint LengthTransferred, IntPtr Overlapped);
 
     [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet = CharSet.Ansi, SetLastError = true)]
-    public delegate bool KUSB_WritePipeDelegate([In] KUSB_HANDLE InterfaceHandle, byte PipeID, IntPtr Buffer, uint BufferLength, out uint LengthTransferred, IntPtr Overlapped);
+    public delegate bool KUSB_WritePipeDelegate(
+        [In] KUSB_HANDLE InterfaceHandle, byte PipeID, IntPtr Buffer, uint BufferLength, out uint LengthTransferred, IntPtr Overlapped);
 
     [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet = CharSet.Ansi, SetLastError = true)]
     public delegate bool KUSB_ResetPipeDelegate([In] KUSB_HANDLE InterfaceHandle, byte PipeID);
@@ -1681,19 +1859,23 @@ namespace libusbK
     public delegate bool KUSB_FlushPipeDelegate([In] KUSB_HANDLE InterfaceHandle, byte PipeID);
 
     [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet = CharSet.Ansi, SetLastError = true)]
-    public delegate bool KUSB_IsoReadPipeDelegate([In] KUSB_HANDLE InterfaceHandle, byte PipeID, IntPtr Buffer, uint BufferLength, IntPtr Overlapped, [In] KISO_CONTEXT IsoContext);
+    public delegate bool KUSB_IsoReadPipeDelegate(
+        [In] KUSB_HANDLE InterfaceHandle, byte PipeID, IntPtr Buffer, uint BufferLength, IntPtr Overlapped, [In] KISO_CONTEXT IsoContext);
 
     [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet = CharSet.Ansi, SetLastError = true)]
-    public delegate bool KUSB_IsoWritePipeDelegate([In] KUSB_HANDLE InterfaceHandle, byte PipeID, IntPtr Buffer, uint BufferLength, IntPtr Overlapped, [In] KISO_CONTEXT IsoContext);
+    public delegate bool KUSB_IsoWritePipeDelegate(
+        [In] KUSB_HANDLE InterfaceHandle, byte PipeID, IntPtr Buffer, uint BufferLength, IntPtr Overlapped, [In] KISO_CONTEXT IsoContext);
 
     [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet = CharSet.Ansi, SetLastError = true)]
     public delegate bool KUSB_GetCurrentFrameNumberDelegate([In] KUSB_HANDLE InterfaceHandle, out uint FrameNumber);
 
     [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet = CharSet.Ansi, SetLastError = true)]
-    public delegate bool KUSB_GetOverlappedResultDelegate([In] KUSB_HANDLE InterfaceHandle, IntPtr lpOverlapped, out uint lpNumberOfBytesTransferred, bool bWait);
+    public delegate bool KUSB_GetOverlappedResultDelegate(
+        [In] KUSB_HANDLE InterfaceHandle, IntPtr lpOverlapped, out uint lpNumberOfBytesTransferred, bool bWait);
 
     [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet = CharSet.Ansi, SetLastError = true)]
-    public delegate bool KUSB_GetPropertyDelegate([In] KUSB_HANDLE InterfaceHandle, KUSB_PROPERTY PropertyType, ref uint PropertySize, IntPtr Property);
+    public delegate bool KUSB_GetPropertyDelegate([In] KUSB_HANDLE InterfaceHandle, KUSB_PROPERTY PropertyType, ref uint PropertySize, IntPtr Property
+        );
 
     [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet = CharSet.Ansi, SetLastError = true)]
     public delegate void KHOT_PLUG_CB([In] IntPtr HotHandle, [In] IntPtr DeviceInfo, IntPtr PlugType);
@@ -1712,12 +1894,28 @@ namespace libusbK
 
     [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet = CharSet.Ansi, SetLastError = true)]
     public delegate int KSTM_COMPLETE_CB(IntPtr StreamInfo, IntPtr XferContext, int ErrorCode);
+
+    [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet = CharSet.Ansi, SetLastError = true)]
+    public delegate KSTM_COMPLETE_RESULT KSTM_BEFORE_COMPLETE_CB(IntPtr StreamInfo, IntPtr XferContext, ref int ErrorCode);
     #endregion
 
 
     public class LstK
     {
         protected readonly KLST_HANDLE handle;
+
+        public KLST_HANDLE Handle
+        {
+            get { return handle; }
+        }
+
+        public virtual bool Free()
+        {
+            if (handle.IsInvalid || handle.IsClosed) return false;
+
+            handle.Close();
+            return true;
+        }
 
         /// <Summary>Initializes a new usb device list.</Summary>
         public LstK(KLST_FLAG Flags)
@@ -1738,19 +1936,6 @@ namespace libusbK
                     throw new Exception(GetType().Name + " failed. ErrorCode=" + errorCode.ToString("X"));
                 }
             }
-        }
-
-        public KLST_HANDLE Handle
-        {
-            get { return handle; }
-        }
-
-        public virtual bool Free()
-        {
-            if (handle.IsInvalid || handle.IsClosed) return false;
-
-            handle.Close();
-            return true;
         }
 
         /// <Summary>Enumerates \ref KLST_DEVINFO elements of a \ref KLST_HANDLE.</Summary>
@@ -1794,6 +1979,19 @@ namespace libusbK
     {
         protected readonly KHOT_HANDLE handle;
 
+        public KHOT_HANDLE Handle
+        {
+            get { return handle; }
+        }
+
+        public virtual bool Free()
+        {
+            if (handle.IsInvalid || handle.IsClosed) return false;
+
+            handle.Close();
+            return true;
+        }
+
         /// <Summary>Creates a new hot-plug handle for USB device arrival/removal event monitoring.</Summary>
         public HotK(ref KHOT_PARAMS InitParams)
         {
@@ -1815,7 +2013,18 @@ namespace libusbK
             }
         }
 
-        public KHOT_HANDLE Handle
+        /// <Summary>Frees all hot-plug handles initialized with \ref HotK_Init.</Summary>
+        public void FreeAll()
+        {
+            Functions.HotK_FreeAll();
+        }
+    }
+
+    public class UsbK
+    {
+        protected readonly KUSB_HANDLE handle;
+
+        public KUSB_HANDLE Handle
         {
             get { return handle; }
         }
@@ -1828,17 +2037,7 @@ namespace libusbK
             return true;
         }
 
-        /// <Summary>Frees all hot-plug handles initialized with \ref HotK_Init.</Summary>
-        public void FreeAll()
-        {
-            Functions.HotK_FreeAll();
-        }
-    }
-
-    public class UsbK
-    {
         protected readonly KUSB_DRIVER_API driverAPI;
-        protected readonly KUSB_HANDLE handle;
 
         /// <Summary>Creates/opens a libusbK interface handle from the device list. This is a preferred method.</Summary>
         public UsbK(KLST_DEVINFO_HANDLE DevInfo)
@@ -1864,45 +2063,6 @@ namespace libusbK
                     throw new Exception(GetType().Name + " failed. ErrorCode=" + errorCode.ToString("X"));
                 }
             }
-        }
-
-        /// <Summary>Creates a libusbK handle for the device specified by a file handle.</Summary>
-        public UsbK(IntPtr DeviceHandle, KUSB_DRVID driverID)
-        {
-            if (!Functions.LibK_LoadDriverAPI(out driverAPI, (int) driverID))
-            {
-                throw new Exception(GetType().Name + " failed loading Driver API. ErrorCode=" + Marshal.GetLastWin32Error().ToString("X"));
-            }
-
-            RuntimeHelpers.PrepareConstrainedRegions();
-
-            try
-            {
-            }
-            finally
-            {
-                bool success = driverAPI.Initialize(DeviceHandle, out handle);
-
-                if (!success || handle.IsInvalid || handle.IsClosed)
-                {
-                    handle.SetHandleAsInvalid();
-                    int errorCode = Marshal.GetLastWin32Error();
-                    throw new Exception(GetType().Name + " failed. ErrorCode=" + errorCode.ToString("X"));
-                }
-            }
-        }
-
-        public KUSB_HANDLE Handle
-        {
-            get { return handle; }
-        }
-
-        public virtual bool Free()
-        {
-            if (handle.IsInvalid || handle.IsClosed) return false;
-
-            handle.Close();
-            return true;
         }
 
         /// <Summary>Claims the specified interface by number or index.</Summary>
@@ -1969,6 +2129,32 @@ namespace libusbK
         public bool ResetDevice()
         {
             return driverAPI.ResetDevice(handle);
+        }
+
+        /// <Summary>Creates a libusbK handle for the device specified by a file handle.</Summary>
+        public UsbK(IntPtr DeviceHandle, KUSB_DRVID driverID)
+        {
+            if (!Functions.LibK_LoadDriverAPI(out driverAPI, (int) driverID))
+            {
+                throw new Exception(GetType().Name + " failed loading Driver API. ErrorCode=" + Marshal.GetLastWin32Error().ToString("X"));
+            }
+
+            RuntimeHelpers.PrepareConstrainedRegions();
+
+            try
+            {
+            }
+            finally
+            {
+                bool success = driverAPI.Initialize(DeviceHandle, out handle);
+
+                if (!success || handle.IsInvalid || handle.IsClosed)
+                {
+                    handle.SetHandleAsInvalid();
+                    int errorCode = Marshal.GetLastWin32Error();
+                    throw new Exception(GetType().Name + " failed. ErrorCode=" + errorCode.ToString("X"));
+                }
+            }
         }
 
         /// <Summary>Selects the specified interface by number or index as the current interface.</Summary>
@@ -2096,27 +2282,6 @@ namespace libusbK
     {
         protected readonly KOVL_POOL_HANDLE handle;
 
-        /// <Summary>Creates a new overlapped pool.</Summary>
-        public OvlK(KUSB_HANDLE UsbHandle, int MaxOverlappedCount, KOVL_POOL_FLAG Flags)
-        {
-            RuntimeHelpers.PrepareConstrainedRegions();
-
-            try
-            {
-            }
-            finally
-            {
-                bool success = Functions.OvlK_Init(out handle, UsbHandle, MaxOverlappedCount, Flags);
-
-                if (!success || handle.IsInvalid || handle.IsClosed)
-                {
-                    handle.SetHandleAsInvalid();
-                    int errorCode = Marshal.GetLastWin32Error();
-                    throw new Exception(GetType().Name + " failed. ErrorCode=" + errorCode.ToString("X"));
-                }
-            }
-        }
-
         public KOVL_POOL_HANDLE Handle
         {
             get { return handle; }
@@ -2140,6 +2305,27 @@ namespace libusbK
         public bool Release(KOVL_HANDLE OverlappedK)
         {
             return Functions.OvlK_Release(OverlappedK);
+        }
+
+        /// <Summary>Creates a new overlapped pool.</Summary>
+        public OvlK(KUSB_HANDLE UsbHandle, int MaxOverlappedCount, KOVL_POOL_FLAG Flags)
+        {
+            RuntimeHelpers.PrepareConstrainedRegions();
+
+            try
+            {
+            }
+            finally
+            {
+                bool success = Functions.OvlK_Init(out handle, UsbHandle, MaxOverlappedCount, Flags);
+
+                if (!success || handle.IsInvalid || handle.IsClosed)
+                {
+                    handle.SetHandleAsInvalid();
+                    int errorCode = Marshal.GetLastWin32Error();
+                    throw new Exception(GetType().Name + " failed. ErrorCode=" + errorCode.ToString("X"));
+                }
+            }
         }
 
         /// <Summary>Returns the internal event handle used to signal IO operations.</Summary>
@@ -2183,27 +2369,6 @@ namespace libusbK
     {
         protected readonly KSTM_HANDLE handle;
 
-        /// <Summary>Initializes a new uni-directional pipe stream.</Summary>
-        public StmK(KUSB_HANDLE UsbHandle, byte PipeID, int MaxTransferSize, int MaxPendingTransfers, int MaxPendingIO, ref KSTM_CALLBACK Callbacks, KSTM_FLAG Flags)
-        {
-            RuntimeHelpers.PrepareConstrainedRegions();
-
-            try
-            {
-            }
-            finally
-            {
-                bool success = Functions.StmK_Init(out handle, UsbHandle, PipeID, MaxTransferSize, MaxPendingTransfers, MaxPendingIO, ref Callbacks, Flags);
-
-                if (!success || handle.IsInvalid || handle.IsClosed)
-                {
-                    handle.SetHandleAsInvalid();
-                    int errorCode = Marshal.GetLastWin32Error();
-                    throw new Exception(GetType().Name + " failed. ErrorCode=" + errorCode.ToString("X"));
-                }
-            }
-        }
-
         public KSTM_HANDLE Handle
         {
             get { return handle; }
@@ -2215,6 +2380,40 @@ namespace libusbK
 
             handle.Close();
             return true;
+        }
+
+        /// <Summary>Initializes a new uni-directional pipe stream.</Summary>
+        public StmK(KUSB_HANDLE UsbHandle,
+                    byte PipeID,
+                    int MaxTransferSize,
+                    int MaxPendingTransfers,
+                    int MaxPendingIO,
+                    ref KSTM_CALLBACK Callbacks,
+                    KSTM_FLAG Flags)
+        {
+            RuntimeHelpers.PrepareConstrainedRegions();
+
+            try
+            {
+            }
+            finally
+            {
+                bool success = Functions.StmK_Init(out handle,
+                                                   UsbHandle,
+                                                   PipeID,
+                                                   MaxTransferSize,
+                                                   MaxPendingTransfers,
+                                                   MaxPendingIO,
+                                                   ref Callbacks,
+                                                   Flags);
+
+                if (!success || handle.IsInvalid || handle.IsClosed)
+                {
+                    handle.SetHandleAsInvalid();
+                    int errorCode = Marshal.GetLastWin32Error();
+                    throw new Exception(GetType().Name + " failed. ErrorCode=" + errorCode.ToString("X"));
+                }
+            }
         }
 
         /// <Summary>Starts the internal stream thread.</Summary>
@@ -2244,37 +2443,25 @@ namespace libusbK
 
     public class IsoK
     {
-        private static readonly int ofsFlags = Marshal.OffsetOf(typeof (KISO_CONTEXT_MAP), "Flags").ToInt32();
-        private static readonly int ofsStartFrame = Marshal.OffsetOf(typeof (KISO_CONTEXT_MAP), "StartFrame").ToInt32();
-        private static readonly int ofsErrorCount = Marshal.OffsetOf(typeof (KISO_CONTEXT_MAP), "ErrorCount").ToInt32();
-        private static readonly int ofsNumberOfPackets = Marshal.OffsetOf(typeof (KISO_CONTEXT_MAP), "NumberOfPackets").ToInt32();
         protected readonly KISO_CONTEXT handle;
-
-        /// <Summary>Creates a new isochronous transfer context.</Summary>
-        public IsoK(int NumberOfPackets, int StartFrame)
-        {
-            RuntimeHelpers.PrepareConstrainedRegions();
-
-            try
-            {
-            }
-            finally
-            {
-                bool success = Functions.IsoK_Init(out handle, NumberOfPackets, StartFrame);
-
-                if (!success || handle.IsInvalid || handle.IsClosed)
-                {
-                    handle.SetHandleAsInvalid();
-                    int errorCode = Marshal.GetLastWin32Error();
-                    throw new Exception(GetType().Name + " failed. ErrorCode=" + errorCode.ToString("X"));
-                }
-            }
-        }
 
         public KISO_CONTEXT Handle
         {
             get { return handle; }
         }
+
+        public virtual bool Free()
+        {
+            if (handle.IsInvalid || handle.IsClosed) return false;
+
+            handle.Close();
+            return true;
+        }
+
+        private static readonly int ofsFlags = Marshal.OffsetOf(typeof (KISO_CONTEXT_MAP), "Flags").ToInt32();
+        private static readonly int ofsStartFrame = Marshal.OffsetOf(typeof (KISO_CONTEXT_MAP), "StartFrame").ToInt32();
+        private static readonly int ofsErrorCount = Marshal.OffsetOf(typeof (KISO_CONTEXT_MAP), "ErrorCount").ToInt32();
+        private static readonly int ofsNumberOfPackets = Marshal.OffsetOf(typeof (KISO_CONTEXT_MAP), "NumberOfPackets").ToInt32();
 
         /// <Summary>Additional ISO transfer flags. See \ref KISO_FLAG.</Summary>
         public KISO_FLAG Flags
@@ -2304,12 +2491,25 @@ namespace libusbK
             set { Marshal.WriteInt16(handle.DangerousGetHandle(), ofsNumberOfPackets, value); }
         }
 
-        public virtual bool Free()
+        /// <Summary>Creates a new isochronous transfer context.</Summary>
+        public IsoK(int NumberOfPackets, int StartFrame)
         {
-            if (handle.IsInvalid || handle.IsClosed) return false;
+            RuntimeHelpers.PrepareConstrainedRegions();
 
-            handle.Close();
-            return true;
+            try
+            {
+            }
+            finally
+            {
+                bool success = Functions.IsoK_Init(out handle, NumberOfPackets, StartFrame);
+
+                if (!success || handle.IsInvalid || handle.IsClosed)
+                {
+                    handle.SetHandleAsInvalid();
+                    int errorCode = Marshal.GetLastWin32Error();
+                    throw new Exception(GetType().Name + " failed. ErrorCode=" + errorCode.ToString("X"));
+                }
+            }
         }
 
         /// <Summary>Convenience function for setting the offset of all ISO packets of an isochronous transfer context.</Summary>
