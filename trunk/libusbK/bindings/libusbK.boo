@@ -1,9 +1,9 @@
 ﻿#region Copyright (c) Travis Robinson
-// Copyright (c) 2011 Travis Robinson <libusbdotnet@gmail.com>
+// Copyright (c) 2012 Travis Robinson <libusbdotnet@gmail.com>
 // All rights reserved.
 //
 // C# libusbK Bindings
-// Auto-generated on: 09.28.2011
+// Auto-generated on: 01.11.2012
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -42,7 +42,142 @@ public static class Constants:
 
 	public static final KLST_STRING_MAX_LEN = 256
 
+	
 	public static final LIBUSBK_DLL = 'libusbK.dll'
+
+	
+	public static final USB_CONFIG_POWERED_MASK as byte = 192
+
+	
+	public static final USB_ENDPOINT_DIRECTION_MASK as byte = 128
+
+	
+	public static final USB_ENDPOINT_ADDRESS_MASK as byte = 15
+
+
+public enum PipePolicyType:
+
+	SHORT_PACKET_TERMINATE = 1
+
+	AUTO_CLEAR_STALL = 2
+
+	PIPE_TRANSFER_TIMEOUT = 3
+
+	IGNORE_SHORT_PACKETS = 4
+
+	ALLOW_PARTIAL_READS = 5
+
+	AUTO_FLUSH = 6
+
+	RAW_IO = 7
+
+	MAXIMUM_TRANSFER_SIZE = 8
+
+	RESET_PIPE_ON_RESUME = 9
+
+	
+	ISO_START_LATENCY = 32
+
+	ISO_ALWAYS_START_ASAP = 33
+
+	ISO_NUM_FIXED_PACKETS = 34
+
+	
+	SIMUL_PARALLEL_REQUESTS = 48
+
+
+public enum PowerPolicyType:
+
+	AUTO_SUSPEND = 129
+
+	SUSPEND_DELAY = 131
+
+
+public enum DeviceInformationType:
+
+	DEVICE_SPEED = 1
+
+
+public enum EndpointType:
+
+	CONTROL = 0
+
+	
+	ISOCHRONOUS = 1
+
+	
+	BULK = 2
+
+	
+	INTERRUPT = 3
+
+	
+	MASK = 3
+
+
+public static class ErrorCodes:
+
+	public static final Success = 0
+
+	
+	public static final AccessDenied = 5
+
+	
+	public static final InvalidHandle = 6
+
+	
+	public static final NotEnoughMemory = 8
+
+	
+	public static final NotSupported = 50
+
+	
+	public static final InvalidParameter = 87
+
+	
+	public static final SemTimeout = 121
+
+	
+	public static final Busy = 170
+
+	
+	public static final TooManyModules = 214
+
+	
+	public static final MoreData = 234
+
+	
+	public static final NoMoreItems = 259
+
+	
+	public static final ThreadNotInProcess = 566
+
+	
+	public static final ThreadWasSuspended = 699
+
+	
+	public static final OperationAborted = 995
+
+	
+	public static final IoIncomplete = 996
+
+	
+	public static final IoPending = 997
+
+	
+	public static final NotFound = 1168
+
+	
+	public static final Cancelled = 1223
+
+	
+	public static final Empty = 4306
+
+	
+	public static final ResourceNotAvailable = 5006
+
+	
+	public static final ResourceNotFound = 5007
 
 
 
@@ -593,12 +728,12 @@ internal static class Functions:
 
 	
 	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'UsbK_GetOverlappedResult', SetLastError: true)]
-	public static def UsbK_GetOverlappedResult([In] InterfaceHandle as KUSB_HANDLE, lpOverlapped as IntPtr, ref lpNumberOfBytesTransferred as uint, bWait as bool) as bool:
+	public static def UsbK_GetOverlappedResult([In] InterfaceHandle as KUSB_HANDLE, Overlapped as IntPtr, ref lpNumberOfBytesTransferred as uint, bWait as bool) as bool:
 		pass
 
 	
 	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'UsbK_GetProperty', SetLastError: true)]
-	public static def UsbK_GetProperty([In] InterfaceHandle as KUSB_HANDLE, PropertyType as KUSB_PROPERTY, ref PropertySize as uint, Property as IntPtr) as bool:
+	public static def UsbK_GetProperty([In] InterfaceHandle as KUSB_HANDLE, PropertyType as KUSB_PROPERTY, ref PropertySize as uint, Value as IntPtr) as bool:
 		pass
 
 	
@@ -1099,6 +1234,9 @@ public enum KOVL_WAIT_FLAG:
 	
 	RELEASE_ALWAYS = 15
 
+	
+	ALERTABLE = 16
+
 
 [Flags]
 public enum KOVL_POOL_FLAG:
@@ -1110,6 +1248,13 @@ public enum KOVL_POOL_FLAG:
 public enum KSTM_FLAG:
 
 	NONE = 0
+
+
+public enum KSTM_COMPLETE_RESULT:
+
+	VALID = 0
+
+	INVALID
 
 #endregion
 
@@ -1128,10 +1273,6 @@ public struct WINUSB_PIPE_INFORMATION:
 
 	
 	public Interval as byte
-
-	
-	public override def ToString() as string:
-		return string.Format('PipeType: {0}\nPipeId: {1}\nMaximumPacketSize: {2}\nInterval: {3}\n', PipeType, PipeId, MaximumPacketSize, Interval)
 
 
 [StructLayout(LayoutKind.Sequential, CharSet: CharSet.Ansi, Pack: 1)]
@@ -1382,10 +1523,6 @@ public struct USB_INTERFACE_DESCRIPTOR:
 
 	
 	public iInterface as byte
-
-	
-	public override def ToString() as string:
-		return string.Format('BInterfaceNumber: {0}\nBAlternateSetting: {1}\nBNumEndpoints: {2}\nBInterfaceClass: {3}\nBInterfaceSubClass: {4}\nBInterfaceProtocol: {5}\n', bInterfaceNumber, bAlternateSetting, bNumEndpoints, bInterfaceClass, bInterfaceSubClass, bInterfaceProtocol)
 
 
 [StructLayout(LayoutKind.Sequential, CharSet: CharSet.Unicode, Pack: 1)]
@@ -1686,18 +1823,22 @@ public struct KSTM_CALLBACK:
 	[MarshalAs(UnmanagedType.FunctionPtr)]
 	public Stopped as KSTM_STOPPED_CB
 
+	
+	[MarshalAs(UnmanagedType.FunctionPtr)]
+	public BeforeComplete as KSTM_BEFORE_COMPLETE_CB
+
 #endregion
 
 
 #region Delegates
 [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
-public callable KLIB_HANDLE_CLEANUP_CB([In] Handle as IntPtr, HandleType as IntPtr, UserContext as IntPtr) as int
+public callable KLIB_HANDLE_CLEANUP_CB([In] Handle as IntPtr, HandleType as KLIB_HANDLE_TYPE, UserContext as IntPtr) as int
 
 [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
-public callable KISO_ENUM_PACKETS_CB(PacketIndex as uint, IsoPacket as IntPtr, UserState as IntPtr) as bool
+public callable KISO_ENUM_PACKETS_CB(PacketIndex as uint, [In] ref IsoPacket as KISO_PACKET, UserState as IntPtr) as bool
 
 [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
-public callable KLST_ENUM_DEVINFO_CB([In] DeviceList as IntPtr, [In] DeviceInfo as IntPtr, Context as IntPtr) as bool
+public callable KLST_ENUM_DEVINFO_CB([In] DeviceList as IntPtr, [In] DeviceInfo as KLST_DEVINFO_HANDLE, Context as IntPtr) as bool
 
 [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
 public callable KUSB_InitDelegate([Out] ref InterfaceHandle as KUSB_HANDLE, [In] DevInfo as KLST_DEVINFO_HANDLE) as bool
@@ -1796,28 +1937,31 @@ public callable KUSB_IsoWritePipeDelegate([In] InterfaceHandle as KUSB_HANDLE, P
 public callable KUSB_GetCurrentFrameNumberDelegate([In] InterfaceHandle as KUSB_HANDLE, ref FrameNumber as uint) as bool
 
 [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
-public callable KUSB_GetOverlappedResultDelegate([In] InterfaceHandle as KUSB_HANDLE, lpOverlapped as IntPtr, ref lpNumberOfBytesTransferred as uint, bWait as bool) as bool
+public callable KUSB_GetOverlappedResultDelegate([In] InterfaceHandle as KUSB_HANDLE, Overlapped as IntPtr, ref lpNumberOfBytesTransferred as uint, bWait as bool) as bool
 
 [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
-public callable KUSB_GetPropertyDelegate([In] InterfaceHandle as KUSB_HANDLE, PropertyType as KUSB_PROPERTY, ref PropertySize as uint, Property as IntPtr) as bool
+public callable KUSB_GetPropertyDelegate([In] InterfaceHandle as KUSB_HANDLE, PropertyType as KUSB_PROPERTY, ref PropertySize as uint, Value as IntPtr) as bool
 
 [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
-public callable KHOT_PLUG_CB([In] HotHandle as IntPtr, [In] DeviceInfo as IntPtr, PlugType as IntPtr) as void
+public callable KHOT_PLUG_CB([In] HotHandle as IntPtr, [In] DeviceInfo as KLST_DEVINFO_HANDLE, PlugType as KLST_SYNC_FLAG) as void
 
 [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
-public callable KSTM_ERROR_CB(StreamInfo as IntPtr, XferContext as IntPtr, ErrorCode as int) as int
+public callable KSTM_ERROR_CB([In] ref StreamInfo as KSTM_INFO, [In] ref XferContext as KSTM_XFER_CONTEXT, ErrorCode as int) as int
 
 [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
-public callable KSTM_SUBMIT_CB(StreamInfo as IntPtr, XferContext as IntPtr, Overlapped as IntPtr) as int
+public callable KSTM_SUBMIT_CB([In] ref StreamInfo as KSTM_INFO, [In] ref XferContext as KSTM_XFER_CONTEXT, Overlapped as IntPtr) as int
 
 [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
-public callable KSTM_STARTED_CB(StreamInfo as IntPtr, XferContext as IntPtr, XferContextIndex as int) as int
+public callable KSTM_STARTED_CB([In] ref StreamInfo as KSTM_INFO, [In] ref XferContext as KSTM_XFER_CONTEXT, XferContextIndex as int) as int
 
 [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
-public callable KSTM_STOPPED_CB(StreamInfo as IntPtr, XferContext as IntPtr, XferContextIndex as int) as int
+public callable KSTM_STOPPED_CB([In] ref StreamInfo as KSTM_INFO, [In] ref XferContext as KSTM_XFER_CONTEXT, XferContextIndex as int) as int
 
 [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
-public callable KSTM_COMPLETE_CB(StreamInfo as IntPtr, XferContext as IntPtr, ErrorCode as int) as int
+public callable KSTM_COMPLETE_CB([In] ref StreamInfo as KSTM_INFO, [In] ref XferContext as KSTM_XFER_CONTEXT, ErrorCode as int) as int
+
+[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+public callable KSTM_BEFORE_COMPLETE_CB([In] ref StreamInfo as KSTM_INFO, [In] ref XferContext as KSTM_XFER_CONTEXT, ref ErrorCode as int) as KSTM_COMPLETE_RESULT
 #endregion
 
 
@@ -1987,16 +2131,40 @@ public class UsbK:
 		return driverAPI.GetDescriptor(handle, DescriptorType, Index, LanguageID, Buffer, BufferLength, LengthTransferred)
 
 	
+	public def GetDescriptor(DescriptorType as byte, Index as byte, LanguageID as ushort, Buffer as Array, BufferLength as uint, ref LengthTransferred as uint) as bool:
+		return driverAPI.GetDescriptor(handle, DescriptorType, Index, LanguageID, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, LengthTransferred)
+
+	
 	public def ControlTransfer(SetupPacket as WINUSB_SETUP_PACKET, Buffer as IntPtr, BufferLength as uint, ref LengthTransferred as uint, Overlapped as IntPtr) as bool:
 		return driverAPI.ControlTransfer(handle, SetupPacket, Buffer, BufferLength, LengthTransferred, Overlapped)
+
+	
+	public def ControlTransfer(SetupPacket as WINUSB_SETUP_PACKET, Buffer as Array, BufferLength as uint, ref LengthTransferred as uint, Overlapped as IntPtr) as bool:
+		return driverAPI.ControlTransfer(handle, SetupPacket, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, LengthTransferred, Overlapped)
+
+	
+	public def ControlTransfer(SetupPacket as WINUSB_SETUP_PACKET, Buffer as Array, BufferLength as uint, ref LengthTransferred as uint, Overlapped as KOVL_HANDLE) as bool:
+		return driverAPI.ControlTransfer(handle, SetupPacket, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, LengthTransferred, Overlapped.DangerousGetHandle())
+
+	
+	public def ControlTransfer(SetupPacket as WINUSB_SETUP_PACKET, Buffer as IntPtr, BufferLength as uint, ref LengthTransferred as uint, Overlapped as KOVL_HANDLE) as bool:
+		return driverAPI.ControlTransfer(handle, SetupPacket, Buffer, BufferLength, LengthTransferred, Overlapped.DangerousGetHandle())
 
 	
 	public def SetPowerPolicy(PolicyType as uint, ValueLength as uint, Value as IntPtr) as bool:
 		return driverAPI.SetPowerPolicy(handle, PolicyType, ValueLength, Value)
 
 	
+	public def SetPowerPolicy(PolicyType as uint, ValueLength as uint, Value as Array) as bool:
+		return driverAPI.SetPowerPolicy(handle, PolicyType, ValueLength, Marshal.UnsafeAddrOfPinnedArrayElement(Value, 0))
+
+	
 	public def GetPowerPolicy(PolicyType as uint, ref ValueLength as uint, Value as IntPtr) as bool:
 		return driverAPI.GetPowerPolicy(handle, PolicyType, ValueLength, Value)
+
+	
+	public def GetPowerPolicy(PolicyType as uint, ref ValueLength as uint, Value as Array) as bool:
+		return driverAPI.GetPowerPolicy(handle, PolicyType, ValueLength, Marshal.UnsafeAddrOfPinnedArrayElement(Value, 0))
 
 	
 	public def SetConfiguration(ConfigurationNumber as byte) as bool:
@@ -2047,16 +2215,48 @@ public class UsbK:
 		return driverAPI.SetPipePolicy(handle, PipeID, PolicyType, ValueLength, Value)
 
 	
+	public def SetPipePolicy(PipeID as byte, PolicyType as uint, ValueLength as uint, Value as Array) as bool:
+		return driverAPI.SetPipePolicy(handle, PipeID, PolicyType, ValueLength, Marshal.UnsafeAddrOfPinnedArrayElement(Value, 0))
+
+	
 	public def GetPipePolicy(PipeID as byte, PolicyType as uint, ref ValueLength as uint, Value as IntPtr) as bool:
 		return driverAPI.GetPipePolicy(handle, PipeID, PolicyType, ValueLength, Value)
+
+	
+	public def GetPipePolicy(PipeID as byte, PolicyType as uint, ref ValueLength as uint, Value as Array) as bool:
+		return driverAPI.GetPipePolicy(handle, PipeID, PolicyType, ValueLength, Marshal.UnsafeAddrOfPinnedArrayElement(Value, 0))
 
 	
 	public def ReadPipe(PipeID as byte, Buffer as IntPtr, BufferLength as uint, ref LengthTransferred as uint, Overlapped as IntPtr) as bool:
 		return driverAPI.ReadPipe(handle, PipeID, Buffer, BufferLength, LengthTransferred, Overlapped)
 
 	
+	public def ReadPipe(PipeID as byte, Buffer as Array, BufferLength as uint, ref LengthTransferred as uint, Overlapped as IntPtr) as bool:
+		return driverAPI.ReadPipe(handle, PipeID, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, LengthTransferred, Overlapped)
+
+	
+	public def ReadPipe(PipeID as byte, Buffer as Array, BufferLength as uint, ref LengthTransferred as uint, Overlapped as KOVL_HANDLE) as bool:
+		return driverAPI.ReadPipe(handle, PipeID, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, LengthTransferred, Overlapped.DangerousGetHandle())
+
+	
+	public def ReadPipe(PipeID as byte, Buffer as IntPtr, BufferLength as uint, ref LengthTransferred as uint, Overlapped as KOVL_HANDLE) as bool:
+		return driverAPI.ReadPipe(handle, PipeID, Buffer, BufferLength, LengthTransferred, Overlapped.DangerousGetHandle())
+
+	
 	public def WritePipe(PipeID as byte, Buffer as IntPtr, BufferLength as uint, ref LengthTransferred as uint, Overlapped as IntPtr) as bool:
 		return driverAPI.WritePipe(handle, PipeID, Buffer, BufferLength, LengthTransferred, Overlapped)
+
+	
+	public def WritePipe(PipeID as byte, Buffer as Array, BufferLength as uint, ref LengthTransferred as uint, Overlapped as IntPtr) as bool:
+		return driverAPI.WritePipe(handle, PipeID, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, LengthTransferred, Overlapped)
+
+	
+	public def WritePipe(PipeID as byte, Buffer as Array, BufferLength as uint, ref LengthTransferred as uint, Overlapped as KOVL_HANDLE) as bool:
+		return driverAPI.WritePipe(handle, PipeID, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, LengthTransferred, Overlapped.DangerousGetHandle())
+
+	
+	public def WritePipe(PipeID as byte, Buffer as IntPtr, BufferLength as uint, ref LengthTransferred as uint, Overlapped as KOVL_HANDLE) as bool:
+		return driverAPI.WritePipe(handle, PipeID, Buffer, BufferLength, LengthTransferred, Overlapped.DangerousGetHandle())
 
 	
 	public def ResetPipe(PipeID as byte) as bool:
@@ -2075,20 +2275,52 @@ public class UsbK:
 		return driverAPI.IsoReadPipe(handle, PipeID, Buffer, BufferLength, Overlapped, IsoContext)
 
 	
+	public def IsoReadPipe(PipeID as byte, Buffer as Array, BufferLength as uint, Overlapped as IntPtr, IsoContext as KISO_CONTEXT) as bool:
+		return driverAPI.IsoReadPipe(handle, PipeID, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, Overlapped, IsoContext)
+
+	
+	public def IsoReadPipe(PipeID as byte, Buffer as Array, BufferLength as uint, Overlapped as KOVL_HANDLE, IsoContext as KISO_CONTEXT) as bool:
+		return driverAPI.IsoReadPipe(handle, PipeID, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, Overlapped.DangerousGetHandle(), IsoContext)
+
+	
+	public def IsoReadPipe(PipeID as byte, Buffer as IntPtr, BufferLength as uint, Overlapped as KOVL_HANDLE, IsoContext as KISO_CONTEXT) as bool:
+		return driverAPI.IsoReadPipe(handle, PipeID, Buffer, BufferLength, Overlapped.DangerousGetHandle(), IsoContext)
+
+	
 	public def IsoWritePipe(PipeID as byte, Buffer as IntPtr, BufferLength as uint, Overlapped as IntPtr, IsoContext as KISO_CONTEXT) as bool:
 		return driverAPI.IsoWritePipe(handle, PipeID, Buffer, BufferLength, Overlapped, IsoContext)
+
+	
+	public def IsoWritePipe(PipeID as byte, Buffer as Array, BufferLength as uint, Overlapped as IntPtr, IsoContext as KISO_CONTEXT) as bool:
+		return driverAPI.IsoWritePipe(handle, PipeID, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, Overlapped, IsoContext)
+
+	
+	public def IsoWritePipe(PipeID as byte, Buffer as Array, BufferLength as uint, Overlapped as KOVL_HANDLE, IsoContext as KISO_CONTEXT) as bool:
+		return driverAPI.IsoWritePipe(handle, PipeID, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, Overlapped.DangerousGetHandle(), IsoContext)
+
+	
+	public def IsoWritePipe(PipeID as byte, Buffer as IntPtr, BufferLength as uint, Overlapped as KOVL_HANDLE, IsoContext as KISO_CONTEXT) as bool:
+		return driverAPI.IsoWritePipe(handle, PipeID, Buffer, BufferLength, Overlapped.DangerousGetHandle(), IsoContext)
 
 	
 	public def GetCurrentFrameNumber(ref FrameNumber as uint) as bool:
 		return driverAPI.GetCurrentFrameNumber(handle, FrameNumber)
 
 	
-	public def GetOverlappedResult(lpOverlapped as IntPtr, ref lpNumberOfBytesTransferred as uint, bWait as bool) as bool:
-		return driverAPI.GetOverlappedResult(handle, lpOverlapped, lpNumberOfBytesTransferred, bWait)
+	public def GetOverlappedResult(Overlapped as IntPtr, ref lpNumberOfBytesTransferred as uint, bWait as bool) as bool:
+		return driverAPI.GetOverlappedResult(handle, Overlapped, lpNumberOfBytesTransferred, bWait)
 
 	
-	public def GetProperty(PropertyType as KUSB_PROPERTY, ref PropertySize as uint, Property as IntPtr) as bool:
-		return driverAPI.GetProperty(handle, PropertyType, PropertySize, Property)
+	public def GetOverlappedResult(Overlapped as KOVL_HANDLE, ref lpNumberOfBytesTransferred as uint, bWait as bool) as bool:
+		return driverAPI.GetOverlappedResult(handle, Overlapped.DangerousGetHandle(), lpNumberOfBytesTransferred, bWait)
+
+	
+	public def GetProperty(PropertyType as KUSB_PROPERTY, ref PropertySize as uint, Value as IntPtr) as bool:
+		return driverAPI.GetProperty(handle, PropertyType, PropertySize, Value)
+
+	
+	public def GetProperty(PropertyType as KUSB_PROPERTY, ref PropertySize as uint, Value as Array) as bool:
+		return driverAPI.GetProperty(handle, PropertyType, PropertySize, Marshal.UnsafeAddrOfPinnedArrayElement(Value, 0))
 
 
 public class OvlK:
@@ -2199,8 +2431,16 @@ public class StmK:
 		return Functions.StmK_Read(handle, Buffer, Offset, Length, TransferredLength)
 
 	
+	public def Read(Buffer as Array, Offset as int, Length as int, ref TransferredLength as uint) as bool:
+		return Functions.StmK_Read(handle, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), Offset, Length, TransferredLength)
+
+	
 	public def Write(Buffer as IntPtr, Offset as int, Length as int, ref TransferredLength as uint) as bool:
 		return Functions.StmK_Write(handle, Buffer, Offset, Length, TransferredLength)
+
+	
+	public def Write(Buffer as Array, Offset as int, Length as int, ref TransferredLength as uint) as bool:
+		return Functions.StmK_Write(handle, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), Offset, Length, TransferredLength)
 
 
 public class IsoK:
