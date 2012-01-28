@@ -38,7 +38,8 @@ typedef struct _KUSB_ENUM_REGKEY_PARAMS
 	// (global)
 	PKLST_HANDLE_INTERNAL DeviceList;
 
-	KLST_INITEX_PARAMS InitParams;
+	KLST_FLAG Flags;
+	KLST_PATTERN_MATCH* PatternMatch;
 	// required before calling l_Enum_RegKey
 	HKEY hParentKey;
 	BOOL (*EnumRegKeyCB) (LPCSTR, struct _KUSB_ENUM_REGKEY_PARAMS* RegEnumParams);
@@ -669,7 +670,7 @@ static BOOL l_EnumKey_Instances(LPCSTR Name, KUSB_ENUM_REGKEY_PARAMS* RegEnumPar
 	if (status != ERROR_SUCCESS)
 		return TRUE;
 
-	if (!referenceCount && (!(RegEnumParams->InitParams.Flags & KLST_FLAG_INCLUDE_DISCONNECT)))
+	if (!referenceCount && (!(RegEnumParams->Flags & KLST_FLAG_INCLUDE_DISCONNECT)))
 		return TRUE;
 
 	RegEnumParams->TempItem->Connected = referenceCount > 0;
@@ -681,9 +682,9 @@ static BOOL l_EnumKey_Instances(LPCSTR Name, KUSB_ENUM_REGKEY_PARAMS* RegEnumPar
 		return TRUE;
 
 	// apply PatternMatch->InstanceID
-	if (RegEnumParams->InitParams.PatternMatch && RegEnumParams->InitParams.PatternMatch->InstanceID[0])
+	if (RegEnumParams->PatternMatch && RegEnumParams->PatternMatch->InstanceID[0])
 	{
-		if (!AllK.PathMatchSpec(RegEnumParams->TempItem->InstanceID, RegEnumParams->InitParams.PatternMatch->InstanceID))
+		if (!AllK.PathMatchSpec(RegEnumParams->TempItem->InstanceID, RegEnumParams->PatternMatch->InstanceID))
 			return TRUE;
 	}
 
@@ -694,9 +695,9 @@ static BOOL l_EnumKey_Instances(LPCSTR Name, KUSB_ENUM_REGKEY_PARAMS* RegEnumPar
 		return TRUE;
 
 	// apply PatternMatch->SymbolicLink
-	if (RegEnumParams->InitParams.PatternMatch && RegEnumParams->InitParams.PatternMatch->SymbolicLink[0])
+	if (RegEnumParams->PatternMatch && RegEnumParams->PatternMatch->SymbolicLink[0])
 	{
-		if (!AllK.PathMatchSpec(RegEnumParams->TempItem->SymbolicLink, RegEnumParams->InitParams.PatternMatch->SymbolicLink))
+		if (!AllK.PathMatchSpec(RegEnumParams->TempItem->SymbolicLink, RegEnumParams->PatternMatch->SymbolicLink))
 			return TRUE;
 	}
 	// DevicePath is equal to SymbolicLink unless it ends up being a libusb0 filter device
@@ -732,9 +733,9 @@ static BOOL l_EnumKey_Guids(LPCSTR Name, KUSB_ENUM_REGKEY_PARAMS* RegEnumParams)
 	BOOL success;
 
 	// If a Class guild was set, we
-	if (RegEnumParams->InitParams.PatternMatch && RegEnumParams->InitParams.PatternMatch->DeviceInterfaceGUID[0])
+	if (RegEnumParams->PatternMatch && RegEnumParams->PatternMatch->DeviceInterfaceGUID[0])
 	{
-		if (!AllK.PathMatchSpec(Name, RegEnumParams->InitParams.PatternMatch->DeviceInterfaceGUID))
+		if (!AllK.PathMatchSpec(Name, RegEnumParams->PatternMatch->DeviceInterfaceGUID))
 			return TRUE;
 	}
 
@@ -790,8 +791,9 @@ KUSB_EXP BOOL KUSB_API LstK_Free(
 }
 
 KUSB_EXP BOOL KUSB_API LstK_InitEx(
-    _out KLST_HANDLE* DeviceList,
-    _in PKLST_INITEX_PARAMS InitParams)
+	_out KLST_HANDLE* DeviceList,
+	_in KLST_FLAG Flags,
+	_in KLST_PATTERN_MATCH* PatternMatch)
 {
 	KUSB_ENUM_REGKEY_PARAMS enumParams;
 	BOOL success = FALSE;
@@ -800,13 +802,14 @@ KUSB_EXP BOOL KUSB_API LstK_InitEx(
 
 	handle = PoolHandle_Acquire_LstK(&Cleanup_DeviceList);
 	ErrorNoSetAction(!IsHandleValid(handle), return FALSE, "->PoolHandle_Acquire_LstK");
-	ErrorParamAction(!IsHandleValid(InitParams), "InitParams", return FALSE);
 
 	Mem_Zero(&enumParams, sizeof(enumParams));
 
 	Mem_Zero(&TempItem, sizeof(TempItem));
 	enumParams.DeviceList		= handle;
-	memcpy(&enumParams.InitParams, InitParams, sizeof(KLST_INITEX_PARAMS));
+	enumParams.Flags = Flags;
+	if (PatternMatch)
+		memcpy(&enumParams.PatternMatch, PatternMatch, sizeof(enumParams.PatternMatch));
 	enumParams.EnumRegKeyCB		= l_EnumKey_Guids;
 	enumParams.hParentKey		= HKEY_LOCAL_MACHINE;
 	enumParams.SubKey			= KEY_DEVICECLASSES;
@@ -818,7 +821,7 @@ KUSB_EXP BOOL KUSB_API LstK_InitEx(
 	{
 		if (handle->head)
 		{
-			LstK_Enumerate((KLST_HANDLE)enumParams.DeviceList, l_DevEnum_Apply_Filter, &enumParams.InitParams.Flags);
+			LstK_Enumerate((KLST_HANDLE)enumParams.DeviceList, l_DevEnum_Apply_Filter, &enumParams.Flags);
 		}
 
 		success = TRUE;
@@ -841,11 +844,7 @@ KUSB_EXP BOOL KUSB_API LstK_Init(
     _out KLST_HANDLE* DeviceList,
     _in KLST_FLAG Flags)
 {
-	KLST_INITEX_PARAMS initParams;
-	Mem_Zero(&initParams, sizeof(initParams));
-	initParams.Flags = Flags;
-
-	return LstK_InitEx(DeviceList, &initParams);
+	return LstK_InitEx(DeviceList, Flags, NULL);
 }
 
 KUSB_EXP BOOL KUSB_API LstK_MoveNext(
