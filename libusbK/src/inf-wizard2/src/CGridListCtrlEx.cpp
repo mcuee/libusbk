@@ -1975,6 +1975,20 @@ BOOL CGridListCtrlEx::OnDisplayCellTooltip(int nRow, int nCol, CString& strResul
 }
 
 //------------------------------------------------------------------------
+//! Override this method to display a custom tooltip text when holding the
+//! mouse over a cell. Called after the tooltip timer has fired.
+//!
+//! @param nRow The index of the row
+//! @param nCol The index of the column
+//! @param strResult The text value to display in the tooltip
+//! @return Is tooltip available for current cell (true / false)
+//------------------------------------------------------------------------
+BOOL CGridListCtrlEx::OnDisplayCellTooltip(int nRow, int nCol, CString** strResult, int* maxTipWidth, DWORD* tipDelayMS)
+{
+	return false;
+}
+
+//------------------------------------------------------------------------
 //! Called by the MFC framework during mouse over to detemine whether a
 //! point is in the bounding rectangle of the specified tool.
 //! It requests a TTN_NEEDTEXT notification when the tooltip text is needed
@@ -2046,16 +2060,49 @@ BOOL CGridListCtrlEx::OnToolNeedText(UINT id, NMHDR* pNMHDR, LRESULT* pResult)
 
 	int nRow, nCol;
 	CellHitTest(pt, nRow, nCol);
-
-	// Make const-reference to the returned anonymous CString-object,
-	// will keep it alive until reaching scope end
-	CString tooltip;
-	if (!OnDisplayCellTooltip(nRow, nCol, tooltip) || tooltip.IsEmpty())
-		return FALSE;
-
 	// Non-unicode applications can receive requests for tooltip-text in unicode
 	TOOLTIPTEXTA* pTTTA = reinterpret_cast<TOOLTIPTEXTA*>(pNMHDR);
 	TOOLTIPTEXTW* pTTTW = reinterpret_cast<TOOLTIPTEXTW*>(pNMHDR);
+
+	CString* toolTipPtr;
+	CString tooltip;
+	int maxTipWidth = 0;
+	DWORD tipDelayMS = 0;
+	if (OnDisplayCellTooltip(nRow, nCol, &toolTipPtr, &maxTipWidth, &tipDelayMS))
+	{
+		CToolTipCtrl* pToolTip = AfxGetModuleThreadState()->m_pToolTip;
+		if (pToolTip)
+		{
+			if (maxTipWidth)
+			{
+				pToolTip->SetMaxTipWidth(maxTipWidth);
+			}
+
+			if (!tipDelayMS)
+			{
+				tipDelayMS = toolTipPtr->GetLength() * 64;
+				if (tipDelayMS < 5000)
+					tipDelayMS = 5000;
+				else if (tipDelayMS > 25000)
+					tipDelayMS = 25000;
+
+				pToolTip->SetDelayTime(TTDT_AUTOPOP, tipDelayMS);
+			}
+		}
+
+#ifndef _UNICODE
+		pTTTA->lpszText = toolTipPtr->GetBuffer(0);
+#else
+		pTTTW->lpszText = toolTipPtr->GetBuffer(0);
+#endif
+		return TRUE;
+	}
+
+	// Make const-reference to the returned anonymous CString-object,
+	// will keep it alive until reaching scope end
+	if (!OnDisplayCellTooltip(nRow, nCol, tooltip) || tooltip.IsEmpty())
+		return FALSE;
+
 #ifndef _UNICODE
 	if (pNMHDR->code == TTN_NEEDTEXTA)
 		lstrcpyn(pTTTA->szText, static_cast<LPCTSTR>(tooltip), sizeof(pTTTA->szText));

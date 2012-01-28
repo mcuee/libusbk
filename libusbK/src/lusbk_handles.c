@@ -32,14 +32,14 @@ binary distributions.
 
 
 #define ALLK_HANDLES_INIT(AllKSection) do {										\
-	memset(AllK->AllKSection.Handles, 0, sizeof(AllK->AllKSection.Handles));	\
-}while(0)
+		memset(AllK->AllKSection.Handles, 0, sizeof(AllK->AllKSection.Handles));	\
+	}while(0)
 
 #define ALLK_INIT_SECTION(AllKSection) 	\
-/* AllKSection			= */{			\
-/* Index				= */	-1,		\
-/* Handles				= */	{0}, 	\
-							}
+	/* AllKSection			= */{			\
+		/* Index				= */	-1,		\
+		/* Handles				= */	{0}, 	\
+	}
 ALLK_CONTEXT AllK =
 {
 	/* Valid			= */	FALSE,
@@ -58,11 +58,6 @@ ALLK_CONTEXT AllK =
 	ALLK_INIT_SECTION(OvlPoolK),
 	ALLK_INIT_SECTION(StmK),
 };
-
-BOOL MatchPattern(LPCSTR Pattern, LPCSTR File)
-{
-	return AllK.PathMatchSpec(File, Pattern);
-}
 
 static BOOL AllK_Context_Initialize(ALLK_CONTEXT* AllK)
 {
@@ -114,28 +109,28 @@ void CheckLibInit()
 }
 
 #define POOLHANDLE_ACQUIRE(ReturnHandle,AllKSection) do { 																\
-	long nextPos,startPos;																								\
-	if (!AllK.Valid) CheckLibInit();   																					\
-	nextPos = startPos = (IncLock(AllK.AllKSection.Index)) % ALLK_HANDLE_COUNT(AllKSection);							\
-	do																													\
-	{ 																													\
-		(ReturnHandle) = &AllK.AllKSection.Handles[nextPos];  															\
-		if (mSpin_Try_Acquire(&(ReturnHandle)->Base.Count.Use)) 														\
-		{ 																												\
-			Init_Handle_ObjK(&(ReturnHandle)->Base,AllKSection);  														\
-			Init_Handle_##AllKSection((ReturnHandle));																	\
-			break;																										\
-		} 																												\
-		(ReturnHandle) = NULL;																							\
-		nextPos = (IncLock(AllK.AllKSection.Index)) % ALLK_HANDLE_COUNT(AllKSection);   								\
-	}while(nextPos!=startPos);																							\
-  																														\
-	if (!(ReturnHandle))  																								\
-	{ 																													\
-		USBERRN("no more internal " DEFINE_TO_STR(AllKSection) " handles! (max=%d)",  ALLK_HANDLE_COUNT(AllKSection));	\
-		LusbwError(ERROR_OUT_OF_STRUCTURES);  																			\
-	} 																													\
-}while(0)
+		long nextPos,startPos;																								\
+		if (!AllK.Valid) CheckLibInit();   																					\
+		nextPos = startPos = (IncLock(AllK.AllKSection.Index)) % ALLK_HANDLE_COUNT(AllKSection);							\
+		do																													\
+		{ 																													\
+			(ReturnHandle) = &AllK.AllKSection.Handles[nextPos];  															\
+			if (mSpin_Try_Acquire(&(ReturnHandle)->Base.Count.Use)) 														\
+			{ 																												\
+				Init_Handle_ObjK(&(ReturnHandle)->Base,AllKSection);  														\
+				Init_Handle_##AllKSection((ReturnHandle));																	\
+				break;																										\
+			} 																												\
+			(ReturnHandle) = NULL;																							\
+			nextPos = (IncLock(AllK.AllKSection.Index)) % ALLK_HANDLE_COUNT(AllKSection);   								\
+		}while(nextPos!=startPos);																							\
+		\
+		if (!(ReturnHandle))  																								\
+		{ 																													\
+			USBERRN("no more internal " DEFINE_TO_STR(AllKSection) " handles! (max=%d)",  ALLK_HANDLE_COUNT(AllKSection));	\
+			LusbwError(ERROR_OUT_OF_STRUCTURES);  																			\
+		} 																													\
+	}while(0)
 
 
 #define FN_POOLHANDLE(AllKSection,HandleType)											\

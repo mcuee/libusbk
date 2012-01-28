@@ -29,19 +29,19 @@ extern LPCSTR UsbIdsText;
 
 #ifndef InitUsbIdsContext
 #define InitUsbIdsContext(UsbIdsContext,StartTextPtr,PredicateCallback,MatchValuePtr)	\
-{																						\
-	UsbIdsContext.MatchLinePredicate = &PredicateCallback;								\
-	UsbIdsContext.MatchValue = MatchValuePtr;											\
-	UsbIdsContext.SourceText = StartTextPtr;											\
-}
+	{																						\
+		UsbIdsContext.MatchLinePredicate = &PredicateCallback;								\
+		UsbIdsContext.MatchValue = MatchValuePtr;											\
+		UsbIdsContext.SourceText = StartTextPtr;											\
+	}
 #endif
 
 #ifndef CopyUsbIdText
 #define CopyUsbIdText(UsbIdsContext,Buffer)												\
-{																						\
-	strncpy(Buffer, UsbIdsContext.Found.MatchStart, UsbIdsContext.Found.MatchLength);	\
-	Buffer[UsbIdsContext.Found.MatchLength]='\0';									\
-}
+	{																						\
+		strncpy(Buffer, UsbIdsContext.Found.MatchStart, UsbIdsContext.Found.MatchLength);	\
+		Buffer[UsbIdsContext.Found.MatchLength]='\0';									\
+	}
 #endif
 
 typedef struct _FIND_USBIDS_CONTEXT

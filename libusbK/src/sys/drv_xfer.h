@@ -7,35 +7,35 @@
 #include "drv_private.h"
 
 #define mXfer_HandlePipeResetScenarios(mStatus,mQueueContext, mRequestContext) do { 															\
-	/* handle pipe reset scenarios: ResetPipeOnResume, AutoClearStall */																		\
-	if ((mQueueContext->ResetPipeForResume && mRequestContext->Policies.ResetPipeOnResume) ||   												\
-			(mQueueContext->ResetPipeForStall && mRequestContext->Policies.AutoClearStall)) 													\
-	{   																																		\
-		mStatus = WdfUsbTargetPipeResetSynchronously(mQueueContext->PipeHandle, WDF_NO_HANDLE, NULL);   										\
-		if (!NT_SUCCESS(mStatus))   																											\
-		{   																																	\
-			USBERR(" PipeID=%02Xh WdfUsbTargetPipeResetSynchronously failed. Status=%08Xh\n", mQueueContext->Info.EndpointAddress, mStatus);	\
-		}   																																	\
-		else																																	\
-		{   																																	\
-			mQueueContext->IsFreshPipeReset=TRUE;																								\
-			mQueueContext->ResetPipeForResume = FALSE;  																						\
-			mQueueContext->ResetPipeForStall = FALSE;   																						\
-		}   																																	\
-	}   																																		\
-} while(0)
+		/* handle pipe reset scenarios: ResetPipeOnResume, AutoClearStall */																		\
+		if ((mQueueContext->ResetPipeForResume && mRequestContext->Policies.ResetPipeOnResume) ||   												\
+		        (mQueueContext->ResetPipeForStall && mRequestContext->Policies.AutoClearStall)) 													\
+		{   																																		\
+			mStatus = WdfUsbTargetPipeResetSynchronously(mQueueContext->PipeHandle, WDF_NO_HANDLE, NULL);   										\
+			if (!NT_SUCCESS(mStatus))   																											\
+			{   																																	\
+				USBERR(" PipeID=%02Xh WdfUsbTargetPipeResetSynchronously failed. Status=%08Xh\n", mQueueContext->Info.EndpointAddress, mStatus);	\
+			}   																																	\
+			else																																	\
+			{   																																	\
+				mQueueContext->IsFreshPipeReset=TRUE;																								\
+				mQueueContext->ResetPipeForResume = FALSE;  																						\
+				mQueueContext->ResetPipeForStall = FALSE;   																						\
+			}   																																	\
+		}   																																		\
+	} while(0)
 
 
 #define mXfer_HandlePipeResetScenariosForComplete(mStatus, mQueueContext, mRequestContext) do {									\
-	if (!NT_SUCCESS(mStatus)) 																									\
-	{ 																															\
-		if ((mRequestContext->Policies.AutoClearStall) && (mStatus != STATUS_DEVICE_NOT_CONNECTED && mStatus != STATUS_CANCELLED))	\
-		{ 																														\
-			USBMSGN("PipeID=%02Xh AutoClearStall engaged.", mQueueContext->Info.EndpointAddress); 								\
-			mQueueContext->ResetPipeForStall = TRUE;  																			\
-		} 																														\
-	} 																															\
-}while(0)
+		if (!NT_SUCCESS(mStatus)) 																									\
+		{ 																															\
+			if ((mRequestContext->Policies.AutoClearStall) && (mStatus != STATUS_DEVICE_NOT_CONNECTED && mStatus != STATUS_CANCELLED))	\
+			{ 																														\
+				USBMSGN("PipeID=%02Xh AutoClearStall engaged.", mQueueContext->Info.EndpointAddress); 								\
+				mQueueContext->ResetPipeForStall = TRUE;  																			\
+			} 																														\
+		} 																															\
+	}while(0)
 
 // STATUS_IO_TIMEOUT is set by the driver when a timeout policy expires.
 // STATUS_CANCELLED is set as a result of the user cancelling the request.

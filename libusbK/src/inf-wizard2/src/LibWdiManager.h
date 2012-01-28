@@ -4,6 +4,7 @@
 #include "libwdisession.h"
 #include "afxcoll.h"
 #include "afxtempl.h"
+#include "afxtempl.h"
 
 class CLibWdiManager: public CLibWdiDynamicAPI
 {
@@ -24,6 +25,8 @@ public:
 
 	BOOL LoadDll(CWnd* parent);
 
+	BOOL GetDriverResource(WORD nIDName, WORD nIDType, LPVOID* Data, DWORD* DataSize);
+
 public:
 	inline CLibWdiSession*	Session()
 	{
@@ -40,3 +43,4 @@ private:
 	CString m_LibWdiDllPath;
 
 };
+

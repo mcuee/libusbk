@@ -12,7 +12,9 @@ enum DEVCFG_FIELD_TYPE
     DEVCFG_FIELD_DESC,
     DEVCFG_FIELD_MI,
     DEVCFG_FIELD_GUID,
-    //    DEVCFG_FIELD_DEVID,
+    DEVCFG_FIELD_INF_CLASS,
+    DEVCFG_FIELD_INF_CLASS_GUID,
+    DEVCFG_FIELD_INF_PROVIDER,
 
     DEVCFG_FIELD_MAX
 };
@@ -32,7 +34,7 @@ class CGridDevCfgListCtrl : public CGridListCtrlEx, public CInfWizardDisplay
 public:
 	CGridDevCfgListCtrl(void);
 	virtual ~CGridDevCfgListCtrl(void);
-	virtual BOOL OnDisplayCellTooltip(int nRow, int nCol, CString& strResult);
+	virtual BOOL OnDisplayCellTooltip(int nRow, int nCol, CString** strResult, int* maxTipWidth, DWORD* tipDelayMS);
 	CLibWdiSession* m_WdiSession;
 	BOOL Load(CLibWdiSession* wdi);
 

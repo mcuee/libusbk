@@ -112,7 +112,7 @@ GOTO :EOF
 	REM CALL :MakeGccLibs "\lib\gcc\*.def" "\lib\gcc"
 	
 	REM - Move the customized libusbK inf-wizard files into the libwdi directory.
-	CALL ".\src\libwdi\copy-to-libwdi.cmd" "!K_LIBWDI_DIR!"
+	COPY /Y ".\src\libwdi\config.h" "!K_LIBWDI_DIR!"
 	
 	REM - Build libwdiK and inf-wizardK.
 	IF EXIST "!K_LIBWDI_DIR!\libwdi\embedded.h" DEL /Q "!K_LIBWDI_DIR!\libwdi\embedded.h"
@@ -123,14 +123,13 @@ GOTO :EOF
 		ECHO.
 	)
 	
+	IF EXIST ".\src\inf-wizard2\lib\libwdi.lib" DEL /Q ".\src\inf-wizard2\lib\libwdi.lib"
 	SET CL=/DLIBUSBK_DIR=\"!K_PKG_BIN:\=/!\" /DLIBUSB0_DIR=\"!K_LIBUSB0_DEP_DIR:\=/!\" /DDDK_DIR=\"!G_WDK_DIR:\=/!\"
 	!G_DEVENV_EXE! "!K_LIBWDI_DIR!\libwdi_2008.sln" /build "!K_DBGorREL!|Win32" /project "libwdi (static)"
 	IF "!ERRORLEVEL!" NEQ "0" (
 		ECHO [BUILD ERROR] - libwdi_2008
 		goto SetError
 	)
-	
-	pause
 	
 	SET CL=
 	COPY /Y "!K_LIBWDI_DIR!\Win32\!K_DBGorREL!\lib\libwdi.lib" ".\src\inf-wizard2\lib\libwdi.lib"
@@ -159,7 +158,7 @@ GOTO :EOF
 
 	IF NOT EXIST "!K_PKG!\libusbK-inf-wizard.exe" (
 		ECHO ERROR - "!K_PKG!\libusbK-inf-wizard.exe" not found.
-		GOTO :EOF
+		goto SetError
 	)
 	
 	CALL :SignFile "!K_PKG!\libusbK-inf-wizard.exe"
@@ -175,8 +174,12 @@ GOTO :EOF
 	SET TOKVAR_LTAG=
 	SET TOKVAR_RTAG=
 	COPY /Y .\make_tasks\libusbK.bmp "!G_PACKAGE_ABS_DIR!\"
+	
 	!K_ISCC_EXE! "!G_PACKAGE_ABS_DIR!\!K_LIBUSBK_SETUP_NAME!.iss"
-
+	IF EXIST "!G_PACKAGE_ABS_DIR!\!K_LIBUSBK_SETUP_NAME!.exe" (
+		CALL :SignFile "!G_PACKAGE_ABS_DIR!\!K_LIBUSBK_SETUP_NAME!.exe"
+	)	
+	
 GOTO :EOF
 
 :RenameOutputSubDirs

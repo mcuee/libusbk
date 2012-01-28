@@ -173,48 +173,55 @@ Done:
 	return CGridListCtrlEx::OnDisplayCellColor(nRow, nCol, textColor, backColor);
 }
 
-BOOL CGridDevCfgListCtrl::OnDisplayCellTooltip(int nRow, int nCol, CString& strResult)
+BOOL CGridDevCfgListCtrl::OnDisplayCellTooltip(int nRow, int nCol, CString** strResult, int* maxTipWidth, DWORD* tipDelayMS)
 {
 	if (nRow != -1 && nCol != -1)
 	{
 		if (nCol == DEVCFG_COLID_FIELD)
 		{
+			*maxTipWidth = 400;
 			switch(nRow)
 			{
 			case DEVCFG_FIELD_VID:
-				strResult = CInfWizardDisplay::GetTipString(IDS_TIP_VENDOR_ID)->GetBuffer(0);
+				*strResult = CInfWizardDisplay::GetTipString(IDS_TIP_VENDOR_ID);
 				return TRUE;
 
 			case DEVCFG_FIELD_PID:
-				strResult = CInfWizardDisplay::GetTipString(IDS_TIP_PRODUCT_ID)->GetBuffer(0);
+				*strResult = CInfWizardDisplay::GetTipString(IDS_TIP_PRODUCT_ID);
 				return TRUE;
 
 			case DEVCFG_FIELD_MFG:
-				strResult = CInfWizardDisplay::GetTipString(IDS_TIP_MANUFACTURER)->GetBuffer(0);
+				*strResult = CInfWizardDisplay::GetTipString(IDS_TIP_MANUFACTURER);
 				return TRUE;
 
 			case DEVCFG_FIELD_DESC:
-				strResult = CInfWizardDisplay::GetTipString(IDS_TIP_DEVICE_DESCRIPTION)->GetBuffer(0);
+				*strResult = CInfWizardDisplay::GetTipString(IDS_TIP_DEVICE_DESCRIPTION);
 				return TRUE;
 
 			case DEVCFG_FIELD_MI:
-				strResult = CInfWizardDisplay::GetTipString(IDS_TIP_INTERFACE_NUMBER)->GetBuffer(0);
+				*strResult = CInfWizardDisplay::GetTipString(IDS_TIP_INTERFACE_NUMBER);
 				return TRUE;
 
 			case DEVCFG_FIELD_GUID:
-				strResult = CInfWizardDisplay::GetTipString(IDS_TIP_INTERFACE_GUID)->GetBuffer(0);
+				*strResult = CInfWizardDisplay::GetTipString(IDS_TIP_INTERFACE_GUID);
 				return TRUE;
 
-				//case DEVCFG_FIELD_DEVID:
-				//	strResult = CInfWizardDisplay::GetTipString(IDS_TIP_DEVICE_ID)->GetBuffer(0);
-				//return TRUE;
+			case DEVCFG_FIELD_INF_CLASS:
+				*strResult = CInfWizardDisplay::GetTipString(IDS_TIP_INF_CLASS);
+				return TRUE;
+
+			case DEVCFG_FIELD_INF_CLASS_GUID:
+				*strResult = CInfWizardDisplay::GetTipString(IDS_TIP_INF_CLASS_GUID);
+				return TRUE;
+
+			case DEVCFG_FIELD_INF_PROVIDER:
+				*strResult = CInfWizardDisplay::GetTipString(IDS_TIP_INF_PROVIDER);
+				return TRUE;
 
 			}
 		}
-		strResult = GetItemText(nRow, nCol);	// Cell-ToolTip
-		return true;
 	}
-	return false;
+	return FALSE;
 }
 
 BOOL CGridDevCfgListCtrl::Load(CLibWdiSession* wdi)
@@ -261,6 +268,18 @@ BOOL CGridDevCfgListCtrl::Load(CLibWdiSession* wdi)
 		case DEVCFG_FIELD_GUID:
 			fieldName.LoadString(IDS_GUID);
 			fieldValue = wdi->GetGuid();
+			break;
+		case DEVCFG_FIELD_INF_CLASS:
+			fieldName.LoadString(IDS_INF_CLASS);
+			fieldValue = wdi->GetInfClassName();
+			break;
+		case DEVCFG_FIELD_INF_CLASS_GUID:
+			fieldName.LoadString(IDS_INF_CLASS_GUID);
+			fieldValue = wdi->GetInfClassGuid();
+			break;
+		case DEVCFG_FIELD_INF_PROVIDER:
+			fieldName.LoadString(IDS_INF_PROVIDER);
+			fieldValue = wdi->GetInfProvider();
 			break;
 		default:
 			ASSERT(FALSE);

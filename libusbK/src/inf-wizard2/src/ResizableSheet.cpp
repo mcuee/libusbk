@@ -180,8 +180,11 @@ void CResizableSheet::PresetLayout()
 	// add all possible buttons, if they exist
 	for (int i = 0; i < _propButtonsCount; i++)
 	{
-		if (NULL != GetDlgItem(_propButtons[i]))
+		CWnd* pWnd =  GetDlgItem(_propButtons[i]);
+		if (pWnd != NULL)
+		{
 			AddAnchor(_propButtons[i], BOTTOM_RIGHT);
+		}
 	}
 
 	// prevent flickering

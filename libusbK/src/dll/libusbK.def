@@ -45,6 +45,7 @@ EXPORTS
     UsbK_GetProperty
     
     LstK_Init
+    LstK_InitEx
     LstK_Free
     LstK_Enumerate
     LstK_Current

@@ -72,6 +72,7 @@
 				AdditionalDependencies="setupapi.lib libwdi.lib"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="..\lib"
+				UACExecutionLevel="2"
 				IgnoreAllDefaultLibraries="false"
 				IgnoreDefaultLibraryNames="libcmt"
 				GenerateDebugInformation="true"
@@ -157,6 +158,7 @@
 				AdditionalDependencies="setupapi.lib libwdi.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="..\lib"
+				UACExecutionLevel="2"
 				IgnoreDefaultLibraryNames=""
 				GenerateDebugInformation="true"
 				SubSystem="2"
@@ -298,6 +300,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\libwdi.h"
+				>
+			</File>
+			<File
 				RelativePath="LibWdiDynamicAPI.h"
 				>
 			</File>
@@ -344,11 +350,43 @@
 			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
 			>
 			<File
+				RelativePath=".\res\cancel-1.bmp"
+				>
+			</File>
+			<File
+				RelativePath=".\res\finish.bmp"
+				>
+			</File>
+			<File
+				RelativePath=".\res\Icons.16x16.Information.ico"
+				>
+			</File>
+			<File
+				RelativePath=".\res\Icons.16x16.Information.png"
+				>
+			</File>
+			<File
 				RelativePath=".\res\InfWizard.ico"
 				>
 			</File>
 			<File
 				RelativePath=".\InfWizard.rc"
+				>
+			</File>
+			<File
+				RelativePath=".\res\nav-back.bmp"
+				>
+			</File>
+			<File
+				RelativePath=".\res\nav-next-1.bmp"
+				>
+			</File>
+			<File
+				RelativePath=".\res\packed_resources.h"
+				>
+			</File>
+			<File
+				RelativePath=".\res\PayPal.Donate.bmp"
 				>
 			</File>
 			<File

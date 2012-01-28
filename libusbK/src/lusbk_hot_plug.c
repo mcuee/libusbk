@@ -33,9 +33,9 @@ binary distributions.
 #define GUID_MAXSIZE 38
 #define GUID_FORMAT_STRING "%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X"
 #define IsPatternMatch(IsMatch,HotHandle,DeviceInfo,FieldName) if (strlen(HotHandle->Public.PatternMatch.FieldName)) {		\
-	if (!MatchPattern(HotHandle->Public.PatternMatch.FieldName, DeviceInfo->FieldName))										\
-		IsMatch = FALSE;																									\
-}
+		if (!AllK.PathMatchSpec(DeviceInfo->FieldName, HotHandle->Public.PatternMatch.FieldName))										\
+			IsMatch = FALSE;																									\
+	}
 
 #define KUSB_STR_EL_CLEANUP(StrElList, StrEL, StrTmp)	\
 	DL_FOREACH_SAFE(StrElList, StrEL, StrTmp)			\
@@ -153,7 +153,7 @@ static BOOL KUSB_API h_DevEnum_UpdateForRemoval(KLST_HANDLE DeviceList, KLST_DEV
 	UNREFERENCED_PARAMETER(DeviceList);
 
 	if (!DeviceInfo->Connected) return TRUE;
-	if (MatchPattern(DeviceInfo->SymbolicLink, Context->dbcc_name))
+	if (AllK.PathMatchSpec(Context->dbcc_name, DeviceInfo->SymbolicLink))
 	{
 		DeviceInfo->SyncFlags = KLST_SYNC_FLAG_REMOVED;
 		DeviceInfo->Connected = FALSE;
@@ -250,7 +250,7 @@ static BOOL h_IsHotMatch(PKHOT_HANDLE_INTERNAL HotHandle, KLST_DEVINFO_HANDLE De
 	IsPatternMatch(isMatch, HotHandle, DeviceInfo, DeviceInterfaceGUID);
 	if (!isMatch) return FALSE;
 
-	IsPatternMatch(isMatch, HotHandle, DeviceInfo, DevicePath);
+	IsPatternMatch(isMatch, HotHandle, DeviceInfo, SymbolicLink);
 	if (!isMatch) return FALSE;
 
 	return isMatch;
@@ -725,12 +725,15 @@ KUSB_EXP BOOL KUSB_API HotK_Init(
 	// Create the top-level window for monitoring. WM_DEVICE_CHANGE.
 	if (IncLock(g_HotNotifierList.HotLockCount) == 1)
 	{
-		KLST_FLAG listInit = KLST_FLAG_INCLUDE_DISCONNECT;
+		KLST_INITEX_PARAMS listInit;
+		Mem_Zero(&listInit, sizeof(listInit));
+		listInit.Flags = KLST_FLAG_INCLUDE_DISCONNECT;
+		listInit.PatternMatch = &InitParams->PatternMatch;
 
 		g_HotNotifierList.DevNodesChangePending = 0;
 		if (!g_HotNotifierList.hAppInstance) g_HotNotifierList.hAppInstance = GetModuleHandle(NULL);
 
-		success = LstK_Init(&g_HotNotifierList.DeviceList, listInit);
+		success = LstK_InitEx(&g_HotNotifierList.DeviceList, &listInit);
 		ErrorNoSet(!success, Error, "Failed creating master device list.");
 
 		success = h_Create_Thread(&g_HotNotifierList);

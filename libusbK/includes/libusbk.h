@@ -336,7 +336,7 @@ typedef struct _KLST_DEVINFO
 //! Pointer to a \ref KLST_DEVINFO structure. (semi-opaque)
 typedef KLST_DEVINFO* KLST_DEVINFO_HANDLE;
 
-//! Initialization parameters for \ref LstK_Init
+//! Device list initialization flags.
 typedef enum _KLST_FLAG
 {
     //! No flags (or 0)
@@ -349,6 +349,56 @@ typedef enum _KLST_FLAG
     KLST_FLAG_INCLUDE_DISCONNECT = 0x0002,
 
 } KLST_FLAG;
+
+
+//! Hot plug parameter structure.
+/*!
+* \fixedstruct{1024}
+*
+* These ansi char strings are used to specify which devices should be included in a device list.
+* All strings file pattern match strings allowing asterisk or question mark chars as wildcards.
+*
+*/
+typedef struct _KLST_PATTERN_MATCH
+{
+	//! Pattern match a device instance id.
+	CHAR InstanceID[KLST_STRING_MAX_LEN];
+
+	//! Pattern match a device interface guid.
+	CHAR DeviceInterfaceGUID[KLST_STRING_MAX_LEN];
+
+	//! Pattern match a symbolic link.
+	CHAR SymbolicLink[KLST_STRING_MAX_LEN];
+
+	//! fixed structure padding.
+	UCHAR z_F_i_x_e_d[1024 - KLST_STRING_MAX_LEN * 3];
+
+} KLST_PATTERN_MATCH;
+C_ASSERT(sizeof(KLST_PATTERN_MATCH) == 1024);
+
+//! Device list parameter structure.
+/*!
+* \fixedstruct{64}
+*
+* This structure is used as a parameter of \ref LstK_InitEx.
+*
+*/
+typedef struct _KLST_INITEX_PARAMS
+{
+	//! Device list initialization flags.
+	KLST_FLAG Flags;
+
+	//! File pattern match includes.
+	KLST_PATTERN_MATCH* PatternMatch;
+
+	//! fixed structure padding.
+	UCHAR z_F_i_x_e_d[64 - sizeof(KLST_FLAG) - sizeof(KLST_PATTERN_MATCH*)];
+
+} KLST_INITEX_PARAMS;
+C_ASSERT(sizeof(KLST_INITEX_PARAMS) == 64);
+
+//! Pointer to a \ref KLST_INITEX_PARAMS structure.
+typedef KLST_INITEX_PARAMS* PKLST_INITEX_PARAMS;
 
 //! Device list enumeration function callback typedef.
 /*!
@@ -1460,33 +1510,6 @@ typedef enum _KHOT_FLAG
     KHOT_FLAG_POST_USER_MESSAGE				= 0x0004,
 } KHOT_FLAG;
 
-//! Hot plug parameter structure.
-/*!
-* \fixedstruct{1024}
-*
-* This structure is member of \ref KHOT_PARAMS.
-*
-* These ansi char strings are used to restrict which devices are matched/consumed by a \ref KHOT_HANDLE.
-* All strings are treated as file pattern match strings allowing asterisk or question mark chars as wildcards.
-*
-*/
-typedef struct _KHOT_PATTERN_MATCH
-{
-	//! Pattern match a device instance id.
-	CHAR InstanceID[KLST_STRING_MAX_LEN];
-
-	//! Pattern match a device interface guid.
-	CHAR DeviceInterfaceGUID[KLST_STRING_MAX_LEN];
-
-	//! Pattern match a device path.
-	CHAR DevicePath[KLST_STRING_MAX_LEN];
-
-	//! fixed structure padding.
-	UCHAR z_F_i_x_e_d[1024 - KLST_STRING_MAX_LEN * 3];
-
-} KHOT_PATTERN_MATCH;
-C_ASSERT(sizeof(KHOT_PATTERN_MATCH) == 1024);
-
 typedef VOID KUSB_API KHOT_PLUG_CB(
     _in KHOT_HANDLE HotHandle,
     _in KLST_DEVINFO_HANDLE DeviceInfo,
@@ -1517,7 +1540,7 @@ typedef struct _KHOT_PARAMS
 	KHOT_FLAG Flags;
 
 	//! File pattern matches for restricting notifcations to a single/group or all supported usb devices.
-	KHOT_PATTERN_MATCH PatternMatch;
+	KLST_PATTERN_MATCH PatternMatch;
 
 	//! Hot plug event callback function invoked when notifications occur.
 	/*! \fn VOID KUSB_API OnHotPlug (_in KHOT_HANDLE HotHandle, _in KLST_DEVINFO_HANDLE DeviceInfo, _in KLST_SYNC_FLAG PlugType)
@@ -1526,7 +1549,7 @@ typedef struct _KHOT_PARAMS
 	KHOT_PLUG_CB* OnHotPlug;
 
 	//! fixed structure padding.
-	UCHAR z_F_i_x_e_d[2048 - sizeof(KHOT_PATTERN_MATCH) - sizeof(UINT_PTR) * 2 - sizeof(UINT) * 2];
+	UCHAR z_F_i_x_e_d[2048 - sizeof(KLST_PATTERN_MATCH) - sizeof(UINT_PTR) * 2 - sizeof(UINT) * 2];
 
 } KHOT_PARAMS;
 C_ASSERT(sizeof(KHOT_PARAMS) == 2048);
@@ -3038,7 +3061,7 @@ extern "C" {
 	*@{
 	*/
 
-//! Initializes a new usb device list.
+//! Initializes a new usb device list containing all supported devices.
 	/*!
 	*
 	* \param[out] DeviceList
@@ -3059,7 +3082,32 @@ extern "C" {
 	    _out KLST_HANDLE* DeviceList,
 	    _in KLST_FLAG Flags);
 
-//! Frees a usb device list.
+//! Initializes a new usb device list containing only devices matching a specific class GUID.
+	/*!
+	*
+	* \param[out] DeviceList
+	* Pointer reference that will receive a populated device list.
+	*
+	* \param[in] InitParams
+	* Search, filter, and listing options. see \c KLST_FLAG
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
+	* \c LstK_InitEx populates \c DeviceList with usb devices that can be used by libusbK.  Only device
+	* matching the \ref KLST_PATTERN_PATCH string are included in the list.
+	*
+	* \note
+	* This function significantly improves performance when used with a device interface guid pattern patch.
+	*
+	* \note if \ref LstK_InitEx returns TRUE, the device list must be freed with \ref LstK_Free when it it's no
+	* longer needed.
+	*
+	*/
+	KUSB_EXP BOOL KUSB_API LstK_InitEx(
+	    _out KLST_HANDLE* DeviceList,
+	    _in PKLST_INITEX_PARAMS InitParams);
+
+	//! Frees a usb device list.
 	/*!
 	*
 	* \note if \ref LstK_Init returns TRUE, the device list must be freed with \ref LstK_Free when it is no

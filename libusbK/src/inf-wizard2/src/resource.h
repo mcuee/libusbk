@@ -31,9 +31,9 @@
 #define IDS_MANUFACTURER                23
 #define IDS_TIP_SAVE_BASE_FOLDER        24
 #define IDS_TIP_PACKAGE_NAME            25
-#define IDS_TXT_PACKAGE_SAVE_HEADER     26
-#define IDS_TXT_PACKAGE_INSTALL_HEADER  27
-#define IDS_TXT_PACKAGE_SAVE_AND_INSTALL_HEADER 28
+#define IDS_TXT_CLIENT_INSTALLER        26
+#define IDS_TXT_LEGACY_PACKAGE          27
+#define IDS_TXT_INSTALL_ONLY            28
 #define IDS_STATUS_START_PACKAGER       29
 #define IDS_STATUS_INVALID_PATH         30
 #define IDS_STATUS_PREPARE_DRIVER       31
@@ -53,11 +53,28 @@
 #define IDS_TIP_DEVICE_DESCRIPTION      45
 #define IDS_TIP_INTERFACE_NUMBER        46
 #define IDS_TIP_INTERFACE_GUID          47
-#define IDS_TIP_SAVE_PACKAGE            48
-#define IDS_TIP_INSTALL_PACKAGE         49
-#define IDS_TIP_SAVE_AND_INSTALL_PACKAGE 50
+#define IDS_TIP_CLIENT_INSTALLER        48
+#define IDS_TIP_LEGACY_PACKAGE          49
+#define IDS_TIP_INSTALL_ONLY            50
 #define IDS_TIP_EXPLORE_PACKAGE_FOLDER  51
 #define IDS_TIP_EXPLORE_BASE_FOLDER     52
+#define IDS_INF_CLASS                   53
+#define IDS_INF_CLASS_GUID              54
+#define IDS_INF_PROVIDER                55
+#define IDS_TIP_INF_CLASS               56
+#define IDS_TIP_INF_CLASS_GUID          57
+#define IDS_TIP_INF_PROVIDER            58
+#define IDS_NEXT                        59
+#define IDS_BACK                        60
+#define IDS_CANCEL                      61
+#define IDS_FINISH                      62
+#define IDSF_PATH_TO_LONG               63
+#define IDS_CREATE_FILE_FAILED          64
+#define IDSF_CREATE_FILE_FAILED         64
+#define IDS_STATUS_CREATE_USER_INSTALLER 65
+#define IDS_STATUS_EXPORT_INSTALLER_RESOURCES 66
+#define IDSE_CREATE_USER_INSTALLER      67
+#define IDSE_UNKNOWN                    68
 #define IDS_ABOUTBOX                    101
 #define IDC_BIGBOLDTITLE                102
 #define IDC_BOLDTITLE                   103
@@ -103,20 +120,23 @@
 #define IDI_ICON2                       2034
 #define IDI_ICON_EXPLORER               2034
 #define IDB_BITMAP1                     2035
-#define IDB_BMP_INFORMATION             2035
+#define IDB_PAYPAL                      2038
+#define IDB_NAV_BACK                    2039
+#define IDB_NAV_NEXT                    2040
+#define IDB_CANCEL                      2041
+#define IDB_FINISH                      2043
 #define IDC_SHOW_NEW_DEVICES            3002
 #define IDC_SHOW_ALL_DEVICES            3003
-#define IDC_BTN_INSTALL_PACKAGE         3003
-#define IDC_BTN_SAVE_PACKAGE            3004
-#define IDC_BTN_SAVE_AND_INSTALL_PACKAGE 3005
+#define IDC_BTN_LEGACY_PACKAGE          3003
+#define IDC_BTN_CLIENT_INSTALLER        3004
+#define IDC_BTN_INSTALL_ONLY            3005
 #define IDC_GRP_SAVE_INFORMATION        3006
-#define IDC_RICHEDIT21                  3007
 #define IDC_TXT_STATUS                  3007
 #define IDC_GRP_STATUS                  3008
 #define IDC_LBL_SAVE_BASE_FOLDER        3009
-#define IDC_LBL_SAVE_BASE_FOLDER2       3010
 #define IDC_LBL_SAVE_NAME               3010
 #define IDC_LINK_OPEN_SESSION           3010
+#define IDC_LBL_TEXT_FINISH             3010
 #define IDC_LINK_SAVE_SESSION           3011
 #define IDC_LINK_EXPLORE_PACKAGE_FOLDER 3012
 #define IDC_LINK_EXPLORE_BASE_FOLDER    3013
@@ -126,16 +146,20 @@
 #define IDC_BTN_EXPLORE_BASE_FOLDER     3018
 #define IDC_LBL_EXPLORE_PACKAGE_FOLDER  3019
 #define IDC_LBL_EXPLORE_BASE_FOLDER     3020
-#define IDC_SYSLINK1                    3021
 #define IDC_LINK_SELECT_DRIVER          3021
+#define IDC_LBL_TEXT_BACK               3022
+#define IDC_PIC_TEXT_BACK               3024
+#define IDC_DONATE                      3025
+#define IDC_LBL_DONATE                  3026
+#define IDC_BUTTON1                     3027
 
 // Next default values for new objects
 //
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        2036
+#define _APS_NEXT_RESOURCE_VALUE        2044
 #define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         3022
+#define _APS_NEXT_CONTROL_VALUE         3028
 #define _APS_NEXT_SYMED_VALUE           4000
 #endif
 #endif

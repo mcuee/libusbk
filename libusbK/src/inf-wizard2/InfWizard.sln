@@ -2,6 +2,13 @@ Microsoft Visual Studio Solution File, Format Version 10.00
 # Visual Studio 2008
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "InfWizard", "src\InfWizard.vcproj", "{3DAD51F1-FC69-4542-83A2-4592B932CE25}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "packed_resources", "packed_resources", "{21272505-C32A-4635-A5AB-A440F128043A}"
+	ProjectSection(SolutionItems) = preProject
+		packed-resources\dpinst.xml.in = packed-resources\dpinst.xml.in
+		packed-resources\instructions.txt = packed-resources\instructions.txt
+		packed-resources\re-pack-files.cmd = packed-resources\re-pack-files.cmd
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32

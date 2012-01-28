@@ -1,9 +1,9 @@
 ﻿#region Copyright (c) Travis Robinson
-// Copyright (c) 2012 Travis Robinson <libusbdotnet@gmail.com>
+// Copyright (c) 2011 Travis Robinson <libusbdotnet@gmail.com>
 // All rights reserved.
 //
 // C# libusbK Bindings
-// Auto-generated on: 01.11.2012
+// Auto-generated on: 01.28.2012
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -781,6 +781,9 @@ namespace libusbK
         [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "LstK_Init", SetLastError = true)]
         public static extern bool LstK_Init([Out] out KLST_HANDLE DeviceList, KLST_FLAG Flags);
 
+        [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "LstK_InitEx", SetLastError = true)]
+        public static extern bool LstK_InitEx([Out] out KLST_HANDLE DeviceList, [In] ref KLST_INITEX_PARAMS InitParams);
+
         [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "LstK_Free", SetLastError = true)]
         public static extern bool LstK_Free([In] IntPtr DeviceList);
 
@@ -971,7 +974,7 @@ namespace libusbK
         MASK = 0x000F,
     }
 
-    /// <Summary>Initialization parameters for \ref LstK_Init</Summary>
+    /// <Summary>Device list initialization flags.</Summary>
     [Flags]
     public enum KLST_FLAG
     {
@@ -1426,6 +1429,34 @@ namespace libusbK
         public KLST_SYNC_FLAG SyncFlags;
     };
 
+    /// <Summary>Hot plug parameter structure.</Summary>
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Size = 1024)]
+    public struct KLST_PATTERN_MATCH
+    {
+        /// <Summary>Pattern match a device instance id.</Summary>
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = Constants.KLST_STRING_MAX_LEN)]
+        public string InstanceID;
+
+        /// <Summary>Pattern match a device interface guid.</Summary>
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = Constants.KLST_STRING_MAX_LEN)]
+        public string DeviceInterfaceGUID;
+
+        /// <Summary>Pattern match a symbolic link.</Summary>
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = Constants.KLST_STRING_MAX_LEN)]
+        public string SymbolicLink;
+    };
+
+    /// <Summary>Device list parameter structure.</Summary>
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Size = 64)]
+    public struct KLST_INITEX_PARAMS
+    {
+        /// <Summary>Device list initialization flags.</Summary>
+        public KLST_FLAG Flags;
+
+        /// <Summary>File pattern match includes.</Summary>
+        public KLST_PATTERN_MATCH[] PatternMatch;
+    };
+
     /// <Summary>A structure representing the standard USB device descriptor.</Summary>
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
     public struct USB_DEVICE_DESCRIPTOR
@@ -1734,23 +1765,6 @@ namespace libusbK
     };
 
     /// <Summary>Hot plug parameter structure.</Summary>
-    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Size = 1024)]
-    public struct KHOT_PATTERN_MATCH
-    {
-        /// <Summary>Pattern match a device instance id.</Summary>
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = Constants.KLST_STRING_MAX_LEN)]
-        public string InstanceID;
-
-        /// <Summary>Pattern match a device interface guid.</Summary>
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = Constants.KLST_STRING_MAX_LEN)]
-        public string DeviceInterfaceGUID;
-
-        /// <Summary>Pattern match a device path.</Summary>
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = Constants.KLST_STRING_MAX_LEN)]
-        public string DevicePath;
-    };
-
-    /// <Summary>Hot plug parameter structure.</Summary>
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Size = 2048)]
     public struct KHOT_PARAMS
     {
@@ -1764,7 +1778,7 @@ namespace libusbK
         public KHOT_FLAG Flags;
 
         /// <Summary>File pattern matches for restricting notifcations to a single/group or all supported usb devices.</Summary>
-        public KHOT_PATTERN_MATCH PatternMatch;
+        public KLST_PATTERN_MATCH PatternMatch;
 
         /// <Summary>Hot plug event callback function invoked when notifications occur.</Summary>
         [MarshalAs(UnmanagedType.FunctionPtr)]
@@ -1996,7 +2010,7 @@ namespace libusbK
     {
         protected readonly KLST_HANDLE handle;
 
-        /// <Summary>Initializes a new usb device list.</Summary>
+        /// <Summary>Initializes a new usb device list containing all supported devices.</Summary>
         public LstK(KLST_FLAG Flags)
         {
             RuntimeHelpers.PrepareConstrainedRegions();
@@ -2007,6 +2021,27 @@ namespace libusbK
             finally
             {
                 bool success = Functions.LstK_Init(out handle, Flags);
+
+                if (!success || handle.IsInvalid || handle.IsClosed)
+                {
+                    handle.SetHandleAsInvalid();
+                    int errorCode = Marshal.GetLastWin32Error();
+                    throw new Exception(GetType().Name + " failed. ErrorCode=" + errorCode.ToString("X"));
+                }
+            }
+        }
+
+        /// <Summary>Initializes a new usb device list containing only devices matching a specific class GUID.</Summary>
+        public LstK(ref KLST_INITEX_PARAMS InitParams)
+        {
+            RuntimeHelpers.PrepareConstrainedRegions();
+
+            try
+            {
+            }
+            finally
+            {
+                bool success = Functions.LstK_InitEx(out handle, ref InitParams);
 
                 if (!success || handle.IsInvalid || handle.IsClosed)
                 {

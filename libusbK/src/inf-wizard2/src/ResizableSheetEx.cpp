@@ -19,6 +19,7 @@
 
 #include "stdafx.h"
 #include "ResizableSheetEx.h"
+#include "Resource.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -224,11 +225,55 @@ void CResizableSheetEx::PresetLayout()
 	// add all possible buttons, if they exist
 	for (int i = 0; i < _propButtonsCount; i++)
 	{
-		CWnd* dlgBtn = GetDlgItem(_propButtons[i]);
-		if (dlgBtn == NULL) continue;
-		AddAnchor(_propButtons[i], BOTTOM_RIGHT);
-	}
+		CButton* dlgBtn = reinterpret_cast<CButton*>(GetDlgItem(_propButtons[i]));
+		if (dlgBtn != NULL)
+		{
+			CRect rcBtn;
+			CString sBtn;
 
+			dlgBtn->GetWindowRect(rcBtn);
+			ScreenToClient(rcBtn);
+			dlgBtn->SetWindowPos(NULL, rcBtn.left - 14, rcBtn.top - 4, rcBtn.Width(), rcBtn.Height() + 4, SWP_NOZORDER | SWP_NOREDRAW);
+
+			AddAnchor(_propButtons[i], BOTTOM_RIGHT);
+			HBITMAP hBmp = NULL;
+			switch(_propButtons[i])
+			{
+			case ID_WIZBACK:
+				sBtn.LoadString(IDS_BACK);
+				sBtn.Insert(0, _T("  "));
+				hBmp = (HBITMAP)LoadImage(AfxGetApp()->m_hInstance, MAKEINTRESOURCE(IDB_NAV_BACK), IMAGE_BITMAP, 0, 0, LR_SHARED);
+				dlgBtn->SetWindowText(sBtn);
+				dlgBtn->ModifyStyle(BS_ICON | BS_CENTER, BS_LEFT);
+				dlgBtn->SetBitmap(hBmp);
+				break;
+			case ID_WIZNEXT:
+				sBtn.LoadString(IDS_NEXT);
+				sBtn.Append(_T("  "));
+				hBmp = (HBITMAP)LoadImage(AfxGetApp()->m_hInstance, MAKEINTRESOURCE(IDB_NAV_NEXT), IMAGE_BITMAP, 0, 0, LR_SHARED);
+				dlgBtn->SetWindowText(sBtn);
+				dlgBtn->ModifyStyle(BS_ICON | BS_CENTER, BS_RIGHT);
+				dlgBtn->SetBitmap(hBmp);
+				break;
+			case IDCANCEL:
+				sBtn.LoadString(IDS_CANCEL);
+				sBtn.Insert(0, _T("  "));
+				hBmp = (HBITMAP)LoadImage(AfxGetApp()->m_hInstance, MAKEINTRESOURCE(IDB_CANCEL), IMAGE_BITMAP, 0, 0, LR_SHARED);
+				dlgBtn->SetWindowText(sBtn);
+				dlgBtn->ModifyStyle(BS_ICON | BS_CENTER, BS_LEFT);
+				dlgBtn->SetBitmap(hBmp);
+				break;
+			case ID_WIZFINISH:
+				sBtn.LoadString(IDS_FINISH);
+				sBtn.Append(_T("  "));
+				hBmp = (HBITMAP)LoadImage(AfxGetApp()->m_hInstance, MAKEINTRESOURCE(IDB_FINISH), IMAGE_BITMAP, 0, 0, LR_SHARED);
+				dlgBtn->SetWindowText(sBtn);
+				dlgBtn->ModifyStyle(BS_ICON | BS_CENTER, BS_RIGHT);
+				dlgBtn->SetBitmap(hBmp);
+				break;
+			}
+		}
+	}
 }
 
 BOOL CResizableSheetEx::ArrangeLayoutCallback(LAYOUTINFO& layout) const

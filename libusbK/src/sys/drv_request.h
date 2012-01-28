@@ -8,9 +8,9 @@
 
 #define VALIDATE_REQUEST_CONTEXT(RequestContext, NtStatusVar)										\
 	if (!RequestContext)																			\
-		{ NtStatusVar = STATUS_INVALID_DEVICE_REQUEST; USBERRN("Invalid Request Context"); }		\
+	{ NtStatusVar = STATUS_INVALID_DEVICE_REQUEST; USBERRN("Invalid Request Context"); }		\
 	else if (!RequestContext->QueueContext)															\
-		{ NtStatusVar = STATUS_PIPE_BROKEN; USBERRN("Invalid Queue Context."); }					\
+	{ NtStatusVar = STATUS_PIPE_BROKEN; USBERRN("Invalid Queue Context."); }					\
 	else																							\
 		NtStatusVar = STATUS_SUCCESS
 
@@ -19,29 +19,29 @@
 
 #define FormatDescriptorRequestAsControlTransfer(mRequestContext, mLibUsbReqPtr, mIsSetDescriptor) 					\
 	WDF_USB_CONTROL_SETUP_PACKET_INIT(																				\
-	(PWDF_USB_CONTROL_SETUP_PACKET)&((mRequestContext)->IoControlRequest.control), 									\
-	(mIsSetDescriptor) ? BmRequestHostToDevice : BmRequestDeviceToHost,   											\
-	(WDF_USB_BMREQUEST_RECIPIENT)(mLibUsbReqPtr)->descriptor.recipient,   											\
-	(mIsSetDescriptor) ? USB_REQUEST_SET_DESCRIPTOR : USB_REQUEST_GET_DESCRIPTOR, 									\
-	(USHORT)(((((mLibUsbReqPtr)->descriptor.type) << 8) & 0xFF00) | (((mLibUsbReqPtr)->descriptor.index) & 0xFF)),	\
-	(USHORT)((mLibUsbReqPtr)->descriptor.language_id))																\
- 
+	        (PWDF_USB_CONTROL_SETUP_PACKET)&((mRequestContext)->IoControlRequest.control), 									\
+	        (mIsSetDescriptor) ? BmRequestHostToDevice : BmRequestDeviceToHost,   											\
+	        (WDF_USB_BMREQUEST_RECIPIENT)(mLibUsbReqPtr)->descriptor.recipient,   											\
+	        (mIsSetDescriptor) ? USB_REQUEST_SET_DESCRIPTOR : USB_REQUEST_GET_DESCRIPTOR, 									\
+	        (USHORT)(((((mLibUsbReqPtr)->descriptor.type) << 8) & 0xFF00) | (((mLibUsbReqPtr)->descriptor.index) & 0xFF)),	\
+	        (USHORT)((mLibUsbReqPtr)->descriptor.language_id))																\
+	 
 #define FormatVendorRequestAsControlTransfer(mRequestContext, mLibUsbReqPtr, mIsVendorWrite)   						\
 	WDF_USB_CONTROL_SETUP_PACKET_INIT_VENDOR( 																		\
-	(PWDF_USB_CONTROL_SETUP_PACKET)&((mRequestContext)->IoControlRequest.control), 									\
-	(mIsVendorWrite) ? BmRequestHostToDevice : BmRequestDeviceToHost, 												\
-	(WDF_USB_BMREQUEST_RECIPIENT)(mLibUsbReqPtr)->vendor.recipient,   												\
-	(BYTE)  (mLibUsbReqPtr)->vendor.request,																		\
-	(USHORT)(mLibUsbReqPtr)->vendor.value,																			\
-	(USHORT)(mLibUsbReqPtr)->vendor.index)																			\
- 
+	        (PWDF_USB_CONTROL_SETUP_PACKET)&((mRequestContext)->IoControlRequest.control), 									\
+	        (mIsVendorWrite) ? BmRequestHostToDevice : BmRequestDeviceToHost, 												\
+	        (WDF_USB_BMREQUEST_RECIPIENT)(mLibUsbReqPtr)->vendor.recipient,   												\
+	        (BYTE)  (mLibUsbReqPtr)->vendor.request,																		\
+	        (USHORT)(mLibUsbReqPtr)->vendor.value,																			\
+	        (USHORT)(mLibUsbReqPtr)->vendor.index)																			\
+	 
 #define FormatFeatureRequestAsControlTransfer(mRequestContext,mLibUsbReqPtr,mIsSetFeature) 							\
 	WDF_USB_CONTROL_SETUP_PACKET_INIT_FEATURE(																		\
-	(PWDF_USB_CONTROL_SETUP_PACKET)&((mRequestContext)->IoControlRequest.control), 									\
-		(WDF_USB_BMREQUEST_RECIPIENT) (mLibUsbReqPtr)->feature.recipient,   										\
-		(USHORT) (mLibUsbReqPtr)->feature.feature,  																\
-		(USHORT) (mLibUsbReqPtr)->feature.index,																	\
-		mIsSetFeature)
+	        (PWDF_USB_CONTROL_SETUP_PACKET)&((mRequestContext)->IoControlRequest.control), 									\
+	        (WDF_USB_BMREQUEST_RECIPIENT) (mLibUsbReqPtr)->feature.recipient,   										\
+	        (USHORT) (mLibUsbReqPtr)->feature.feature,  																\
+	        (USHORT) (mLibUsbReqPtr)->feature.index,																	\
+	        mIsSetFeature)
 
 NTSTATUS Request_Descriptor(__in PDEVICE_CONTEXT deviceContext,
                             __in PWDF_MEMORY_DESCRIPTOR memoryDescriptor,

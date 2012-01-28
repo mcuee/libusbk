@@ -217,9 +217,17 @@ void CPageConfigDevice::OnLvnEndlabeleditDevList(NMHDR* pNMHDR, LRESULT* pResult
 			g_App->Wdi.Session()->m_VendorName = fieldValue;
 			break;
 
-			//		case DEVCFG_FIELD_DEVID:
-			//			g_App->Wdi.Session()->device_id = fieldValue;
-			//			break;
+		case DEVCFG_FIELD_INF_CLASS:
+			g_App->Wdi.Session()->SetInfClassName(fieldValue);
+			break;
+
+		case DEVCFG_FIELD_INF_CLASS_GUID:
+			g_App->Wdi.Session()->SetInfClassGuid(fieldValue);
+			break;
+
+		case DEVCFG_FIELD_INF_PROVIDER:
+			g_App->Wdi.Session()->SetInfProvider(fieldValue);
+			break;
 
 		default:
 			TRACE0("[ERROR] Unhandled field.\n");

@@ -32,22 +32,22 @@ EVT_WDF_REQUEST_COMPLETION_ROUTINE Xfer_WriteBulkRawComplete;
 EVT_WDF_REQUEST_COMPLETION_ROUTINE Xfer_WriteBulkComplete;
 
 #define mXfer_CopyPartialReadToUserMemory(mStatus,mQueueContext, mTransferBuffer, mTransferLength, ErrorAction)	do {	\
-	mStatus = WdfMemoryCopyFromBuffer( 																					\
-		mQueueContext->Xfer.UserMem,   																					\
-		mQueueContext->Xfer.Transferred,   																				\
-		mTransferBuffer,   																								\
-		mTransferLength);  																								\
-		   																												\
-	if (!NT_SUCCESS(mStatus))  																							\
-	{  																													\
-		USBERR("WdfMemoryCopyFromBuffer failed. Status=%08Xh\n", mStatus); 												\
-		ErrorAction;   																									\
-	}  																													\
-   																														\
-	mQueueContext->OverOfs.BufferOffset	+= mTransferLength; 															\
-	mQueueContext->OverOfs.BufferLength	-= mTransferLength; 															\
-	mQueueContext->Xfer.Transferred		+= mTransferLength; 															\
-}while(0)
+		mStatus = WdfMemoryCopyFromBuffer( 																					\
+		          mQueueContext->Xfer.UserMem,   																					\
+		          mQueueContext->Xfer.Transferred,   																				\
+		          mTransferBuffer,   																								\
+		          mTransferLength);  																								\
+		\
+		if (!NT_SUCCESS(mStatus))  																							\
+		{  																													\
+			USBERR("WdfMemoryCopyFromBuffer failed. Status=%08Xh\n", mStatus); 												\
+			ErrorAction;   																									\
+		}  																													\
+		\
+		mQueueContext->OverOfs.BufferOffset	+= mTransferLength; 															\
+		mQueueContext->OverOfs.BufferLength	-= mTransferLength; 															\
+		mQueueContext->Xfer.Transferred		+= mTransferLength; 															\
+	}while(0)
 
 
 /*
@@ -59,95 +59,95 @@ EVT_WDF_REQUEST_COMPLETION_ROUTINE Xfer_WriteBulkComplete;
 * - WDF_REQUEST_SEND_OPTIONS sendOptions [out]
 */
 #define mXfer_SubmitNextRead(mStatus, mQueueContext, mRequestContext, mRequest, mCompletionRoutine, mErrorAction) do { 							\
-	/* One or more transfers required  */  																										\
-	remainingLength	= mQueueContext->Xfer.Length - mQueueContext->Xfer.Transferred; 															\
-	stageLength		= remainingLength > mQueueContext->Info.MaximumTransferSize ? mQueueContext->Info.MaximumTransferSize : remainingLength;	\
-	remainderLength = stageLength % mQueueContext->Info.MaximumPacketSize; 																		\
-   																																				\
-   																																				\
-	if (stageLength < mQueueContext->Info.MaximumPacketSize)   																					\
-	{  																																			\
-		if (!mRequestContext->Policies.AllowPartialReads)  																						\
-		{  																																		\
-			mStatus = STATUS_INVALID_BUFFER_SIZE;  																								\
-			USBERRN("Read buffer is not an interval of MaximumPacketSize. MaximumPacketSize: %u RemainderLength: %u",  							\
-					mQueueContext->Info.MaximumPacketSize, remainderLength);   																	\
-			mErrorAction;  																														\
-		}  																																		\
-		/* Use the over-run buffer; CompletionRoutine must update UserMem */   																	\
-		mQueueContext->OverOfs.BufferOffset = 0;   																								\
-		mQueueContext->OverOfs.BufferLength = stageLength; 																						\
-   																																				\
-		mStatus = WdfUsbTargetPipeFormatRequestForRead(mQueueContext->PipeHandle, mRequest, mQueueContext->OverMem, NULL); 						\
-	}  																																			\
-	else   																																		\
-	{  																																			\
-		/* One or more whole packets can be read directly into the user buffer. */ 																\
-		stageLength -= remainderLength;																											\
-		mQueueContext->Xfer.UserOfs.BufferOffset = mQueueContext->Xfer.Transferred;																\
-		mQueueContext->Xfer.UserOfs.BufferLength = stageLength;																					\
-   																																				\
-		mStatus = WdfUsbTargetPipeFormatRequestForRead(mQueueContext->PipeHandle, mRequest, mQueueContext->Xfer.UserMem, &mQueueContext->Xfer.UserOfs); 	\
-	}  																																			\
-   																																				\
-	if (!NT_SUCCESS(mStatus))  																													\
-	{  																																			\
-		USBERR("WdfIoTargetFormatRequestForRead failed. Status=%08Xh\n", mStatus); 																\
-		mErrorAction;  																															\
-	}  																																			\
-   																																				\
-	WDF_REQUEST_SEND_OPTIONS_INIT(&sendOptions, 0);																								\
-	mStatus = SetRequestTimeout(mRequestContext, mRequest, &sendOptions);  																		\
-	if (!NT_SUCCESS(mStatus))  																													\
-	{  																																			\
-		USBERR("SetRequestTimeout failed. Status=%08Xh\n", mStatus);   																			\
-		mErrorAction;  																															\
-	}  																																			\
-   																																				\
-	USBMSG("PipeID=%02Xh Staging=%u\n",	mQueueContext->Info.EndpointAddress, stageLength);  													\
-	mStatus = SubmitAsyncQueueRequest(mQueueContext, mRequest, mCompletionRoutine, &sendOptions, mQueueContext);   								\
-	if (!NT_SUCCESS(mStatus))  																													\
-	{  																																			\
-		USBERR("SubmitAsyncQueueRequest failed. Status=%08Xh\n", mStatus); 																		\
-		mErrorAction;  																															\
-	}  																																			\
-}while(0)
+		/* One or more transfers required  */  																										\
+		remainingLength	= mQueueContext->Xfer.Length - mQueueContext->Xfer.Transferred; 															\
+		stageLength		= remainingLength > mQueueContext->Info.MaximumTransferSize ? mQueueContext->Info.MaximumTransferSize : remainingLength;	\
+		remainderLength = stageLength % mQueueContext->Info.MaximumPacketSize; 																		\
+		\
+		\
+		if (stageLength < mQueueContext->Info.MaximumPacketSize)   																					\
+		{  																																			\
+			if (!mRequestContext->Policies.AllowPartialReads)  																						\
+			{  																																		\
+				mStatus = STATUS_INVALID_BUFFER_SIZE;  																								\
+				USBERRN("Read buffer is not an interval of MaximumPacketSize. MaximumPacketSize: %u RemainderLength: %u",  							\
+				        mQueueContext->Info.MaximumPacketSize, remainderLength);   																	\
+				mErrorAction;  																														\
+			}  																																		\
+			/* Use the over-run buffer; CompletionRoutine must update UserMem */   																	\
+			mQueueContext->OverOfs.BufferOffset = 0;   																								\
+			mQueueContext->OverOfs.BufferLength = stageLength; 																						\
+			\
+			mStatus = WdfUsbTargetPipeFormatRequestForRead(mQueueContext->PipeHandle, mRequest, mQueueContext->OverMem, NULL); 						\
+		}  																																			\
+		else   																																		\
+		{  																																			\
+			/* One or more whole packets can be read directly into the user buffer. */ 																\
+			stageLength -= remainderLength;																											\
+			mQueueContext->Xfer.UserOfs.BufferOffset = mQueueContext->Xfer.Transferred;																\
+			mQueueContext->Xfer.UserOfs.BufferLength = stageLength;																					\
+			\
+			mStatus = WdfUsbTargetPipeFormatRequestForRead(mQueueContext->PipeHandle, mRequest, mQueueContext->Xfer.UserMem, &mQueueContext->Xfer.UserOfs); 	\
+		}  																																			\
+		\
+		if (!NT_SUCCESS(mStatus))  																													\
+		{  																																			\
+			USBERR("WdfIoTargetFormatRequestForRead failed. Status=%08Xh\n", mStatus); 																\
+			mErrorAction;  																															\
+		}  																																			\
+		\
+		WDF_REQUEST_SEND_OPTIONS_INIT(&sendOptions, 0);																								\
+		mStatus = SetRequestTimeout(mRequestContext, mRequest, &sendOptions);  																		\
+		if (!NT_SUCCESS(mStatus))  																													\
+		{  																																			\
+			USBERR("SetRequestTimeout failed. Status=%08Xh\n", mStatus);   																			\
+			mErrorAction;  																															\
+		}  																																			\
+		\
+		USBMSG("PipeID=%02Xh Staging=%u\n",	mQueueContext->Info.EndpointAddress, stageLength);  													\
+		mStatus = SubmitAsyncQueueRequest(mQueueContext, mRequest, mCompletionRoutine, &sendOptions, mQueueContext);   								\
+		if (!NT_SUCCESS(mStatus))  																													\
+		{  																																			\
+			USBERR("SubmitAsyncQueueRequest failed. Status=%08Xh\n", mStatus); 																		\
+			mErrorAction;  																															\
+		}  																																			\
+	}while(0)
 
 #define mXfer_SubmitNextWrite(mStatus, mQueueContext, mRequestContext, mRequest, mCompletionRoutine, mErrorAction) do {							\
-	/* One or more transfers required  */  																										\
-	remainingLength	= mQueueContext->Xfer.Length - mQueueContext->Xfer.Transferred; 															\
-	stageLength		= remainingLength > mQueueContext->Info.MaximumTransferSize ? mQueueContext->Info.MaximumTransferSize : remainingLength;	\
-   																																				\
-	mQueueContext->Xfer.UserOfs.BufferOffset = mQueueContext->Xfer.Transferred;																	\
-	mQueueContext->Xfer.UserOfs.BufferLength = stageLength;																						\
-   																																				\
-	if (stageLength)   																															\
-		mStatus = WdfUsbTargetPipeFormatRequestForWrite(mQueueContext->PipeHandle, mRequest, mQueueContext->Xfer.UserMem, &mQueueContext->Xfer.UserOfs); 	\
-	else   																																		\
-		mStatus = WdfUsbTargetPipeFormatRequestForWrite(mQueueContext->PipeHandle, mRequest, NULL, NULL);  										\
-	   																																			\
-	if (!NT_SUCCESS(mStatus))  																													\
-	{  																																			\
-		USBERR("WdfIoTargetFormatRequestForWrite failed. Status=%08Xh\n", mStatus);																\
-		mErrorAction;  																															\
-	}  																																			\
-   																																				\
-	WDF_REQUEST_SEND_OPTIONS_INIT(&sendOptions, 0);																								\
-	mStatus = SetRequestTimeout(mRequestContext, mRequest, &sendOptions);  																		\
-	if (!NT_SUCCESS(mStatus))  																													\
-	{  																																			\
-		USBERR("SetRequestTimeout failed. Status=%08Xh\n", mStatus);   																			\
-		mErrorAction;  																															\
-	}  																																			\
-   																																				\
-	USBMSG("PipeID=%02Xh Staging=%u\n",	mQueueContext->Info.EndpointAddress, stageLength);  													\
-	mStatus = SubmitAsyncQueueRequest(mQueueContext, mRequest, mCompletionRoutine, &sendOptions, mQueueContext);   								\
-	if (!NT_SUCCESS(mStatus))  																													\
-	{  																																			\
-		USBERR("SubmitAsyncQueueRequest failed. Status=%08Xh\n", mStatus); 																		\
-		mErrorAction;  																															\
-	}  																																			\
-}while(0)
+		/* One or more transfers required  */  																										\
+		remainingLength	= mQueueContext->Xfer.Length - mQueueContext->Xfer.Transferred; 															\
+		stageLength		= remainingLength > mQueueContext->Info.MaximumTransferSize ? mQueueContext->Info.MaximumTransferSize : remainingLength;	\
+		\
+		mQueueContext->Xfer.UserOfs.BufferOffset = mQueueContext->Xfer.Transferred;																	\
+		mQueueContext->Xfer.UserOfs.BufferLength = stageLength;																						\
+		\
+		if (stageLength)   																															\
+			mStatus = WdfUsbTargetPipeFormatRequestForWrite(mQueueContext->PipeHandle, mRequest, mQueueContext->Xfer.UserMem, &mQueueContext->Xfer.UserOfs); 	\
+		else   																																		\
+			mStatus = WdfUsbTargetPipeFormatRequestForWrite(mQueueContext->PipeHandle, mRequest, NULL, NULL);  										\
+		\
+		if (!NT_SUCCESS(mStatus))  																													\
+		{  																																			\
+			USBERR("WdfIoTargetFormatRequestForWrite failed. Status=%08Xh\n", mStatus);																\
+			mErrorAction;  																															\
+		}  																																			\
+		\
+		WDF_REQUEST_SEND_OPTIONS_INIT(&sendOptions, 0);																								\
+		mStatus = SetRequestTimeout(mRequestContext, mRequest, &sendOptions);  																		\
+		if (!NT_SUCCESS(mStatus))  																													\
+		{  																																			\
+			USBERR("SetRequestTimeout failed. Status=%08Xh\n", mStatus);   																			\
+			mErrorAction;  																															\
+		}  																																			\
+		\
+		USBMSG("PipeID=%02Xh Staging=%u\n",	mQueueContext->Info.EndpointAddress, stageLength);  													\
+		mStatus = SubmitAsyncQueueRequest(mQueueContext, mRequest, mCompletionRoutine, &sendOptions, mQueueContext);   								\
+		if (!NT_SUCCESS(mStatus))  																													\
+		{  																																			\
+			USBERR("SubmitAsyncQueueRequest failed. Status=%08Xh\n", mStatus); 																		\
+			mErrorAction;  																															\
+		}  																																			\
+	}while(0)
 
 VOID Xfer_ReadBulk (
     __in WDFQUEUE Queue,

@@ -4,3 +4,4 @@ libusbK.lib = PACKAGE; .\common_version_h.in; .\src\lib\lusbk_version.h;
 libusbK.dll = PACKAGE; .\common_version_h.in; .\src\dll\lusbk_version.h;
 kBench.exe = PACKAGE; .\common_version_h.in; .\src\kBench\lusbk_version.h;
 kList.exe = PACKAGE; .\common_version_h.in; .\src\kList\lusbk_version.h;
+dpscat.exe = PACKAGE; .\common_version_h.in; .\src\dpscat\lusbk_version.h;

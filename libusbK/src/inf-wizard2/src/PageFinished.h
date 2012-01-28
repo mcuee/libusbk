@@ -14,6 +14,8 @@
 #define AFX_COMPLETION_H__19E7B195_4A5C_11D1_BF2C_00C04FC99F83__INCLUDED_
 
 #include "ResizablePageEx.h"
+#include "afxwin.h"
+#include "afxcmn.h"
 
 #if _MSC_VER > 1000
 #pragma once
@@ -47,6 +49,7 @@ public:
 	//{{AFX_VIRTUAL(CPageFinished)
 public:
 	virtual BOOL OnSetActive();
+	virtual BOOL OnKillActive();
 protected:
 	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
 	//}}AFX_VIRTUAL
@@ -62,13 +65,16 @@ protected:
 	DECLARE_MESSAGE_MAP()
 
 public:
-	afx_msg void OnNMClickLinkOpenSession(NMHDR* pNMHDR, LRESULT* pResult);
 	afx_msg void OnNMClickLinkSaveSession(NMHDR* pNMHDR, LRESULT* pResult);
-	afx_msg void OnBnClickedBtnExplorePackageFolder();
-	afx_msg void OnBnClickedBtnExploreBaseFolder();
 
 private:
 	CToolTipCtrl m_ToolTip;
+	CBitmap m_BmpDonate;
+public:
+	afx_msg void OnNMClickLinkExplorePackageFolder(NMHDR* pNMHDR, LRESULT* pResult);
+	CStatic m_PicTextBack;
+	afx_msg void OnBnClickedDonate();
+	CButton m_BtnDonate;
 };
 
 //{{AFX_INSERT_LOCATION}}
