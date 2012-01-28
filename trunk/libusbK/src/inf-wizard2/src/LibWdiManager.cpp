@@ -1,11 +1,15 @@
 #include "stdafx.h"
+#include <shlwapi.h>
 #include "LibWdiManager.h"
+#include "Resource.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
 #endif
+
+
 
 CLibWdiManager::CLibWdiManager(void)
 	: m_pSession(NULL)
@@ -149,6 +153,21 @@ BOOL CLibWdiManager::LoadDll(CWnd* parent)
 		{
 			m_LibWdiDllPath = sLidWdiDll;
 			return TRUE;
+		}
+	}
+	return FALSE;
+}
+BOOL CLibWdiManager::GetDriverResource(WORD nIDName, WORD nIDType, LPVOID* Data, DWORD* DataSize)
+{
+	HRSRC hSrc;
+	if ((hSrc = FindResourceA(NULL, MAKEINTRESOURCEA(nIDName), MAKEINTRESOURCEA(nIDType))) != NULL)
+	{
+		HGLOBAL hData;
+		*DataSize = SizeofResource(NULL, hSrc);
+		if ((hData = LoadResource(NULL, hSrc)) != NULL)
+		{
+			if ((*Data = LockResource(hData)) != NULL)
+				return TRUE;
 		}
 	}
 	return FALSE;

@@ -105,13 +105,16 @@ void CLibWdiSession::CopyTo(PWDI_DEVICE_INFO deviceInfo)
 	WDI_ALLOC_STRING(deviceInfo, hardware_id);
 	WDI_ALLOC_STRING(deviceInfo, compatible_id);
 	WDI_ALLOC_STRING(deviceInfo, upper_filter);
-
 }
 
 void CLibWdiSession::RefreshSession(void)
 {
 	wcstombs(chVendorName, m_VendorName, sizeof(chVendorName));
 	wcstombs(chDeviceGuid, m_InterfaceGuid, sizeof(chDeviceGuid));
+
+	wcstombs(chInfClassGuid, m_InfClassGuid, sizeof(chInfClassGuid));
+	wcstombs(chInfClassName, m_InfClassName, sizeof(chInfClassName));
+	wcstombs(chInfProvider, m_InfProvider, sizeof(chInfProvider));
 }
 
 void CLibWdiSession::Serialize(CArchive& archive)
@@ -132,9 +135,10 @@ void CLibWdiSession::Serialize(CArchive& archive)
 		        << is_composite
 		        << mi
 		        << desc
-		        << driver_version;
-
-		// << driver << device_id << hardware_id << compatible_id << upper_filter << driver_version;
+		        << driver_version
+		        << m_InfClassGuid
+		        << m_InfClassName
+		        << m_InfProvider;
 	}
 	else
 	{
@@ -149,7 +153,11 @@ void CLibWdiSession::Serialize(CArchive& archive)
 		        >> is_composite
 		        >> mi
 		        >> desc
-		        >> driver_version;
+		        >> driver_version
+		        >> m_InfClassGuid
+		        >> m_InfClassName
+		        >> m_InfProvider;
+
 	}
 }
 
@@ -224,6 +232,99 @@ BOOL CLibWdiSession::SetGuid(CString& newGuid)
 	return GuidToString(&guid, m_InterfaceGuid);
 }
 
+
+CString CLibWdiSession::GetInfClassName(void)
+{
+	m_InfClassName.Trim();
+	if (m_InfClassName.GetLength() == 0)
+		m_InfClassName = DefaultInfTags[driver_type].ClassName;
+
+	CString checkValue = m_InfClassName;
+	checkValue.MakeLower();
+	for (int i = 0; i < WDI_NB_DRIVERS; i++)
+	{
+		CString s = DefaultInfTags[i].ClassName;
+		s.MakeLower();
+		if (checkValue.Compare(s) == 0)
+		{
+			if (i != driver_type)
+			{
+				m_InfClassName = DefaultInfTags[driver_type].ClassName;
+				break;
+			}
+		}
+	}
+	return m_InfClassName;
+}
+BOOL CLibWdiSession::SetInfClassName(CString& className)
+{
+	m_InfClassName = className;
+	GetInfClassName();
+	return TRUE;
+}
+
+CString CLibWdiSession::GetInfClassGuid(void)
+{
+	m_InfClassGuid.Trim();
+	if (m_InfClassGuid.GetLength() == 0)
+		m_InfClassGuid = DefaultInfTags[driver_type].ClassGuid;
+
+	CString checkValue = m_InfClassGuid;
+	checkValue.MakeLower();
+	for (int i = 0; i < WDI_NB_DRIVERS; i++)
+	{
+		CString s = DefaultInfTags[i].ClassGuid;
+		s.MakeLower();
+		if (checkValue.Compare(s) == 0)
+		{
+			if (i != driver_type)
+			{
+				m_InfClassGuid = DefaultInfTags[driver_type].ClassGuid;
+				break;
+			}
+		}
+	}
+	return m_InfClassGuid;
+}
+BOOL CLibWdiSession::SetInfClassGuid(CString& classGuid)
+{
+	m_InfClassGuid = classGuid;
+	GetInfClassGuid();
+	return TRUE;
+}
+
+CString CLibWdiSession::GetInfProvider(void)
+{
+	m_InfProvider.Trim();
+	if (m_InfProvider.GetLength() == 0)
+		m_InfProvider = DefaultInfTags[driver_type].Provider;
+
+	CString checkValue = m_InfProvider;
+	checkValue.MakeLower();
+
+	for (int i = 0; i < WDI_NB_DRIVERS; i++)
+	{
+		CString s = DefaultInfTags[i].Provider;
+		s.MakeLower();
+		if (checkValue.Compare(s) == 0)
+		{
+			if (i != driver_type)
+				m_InfProvider = DefaultInfTags[driver_type].Provider;
+
+			break;
+		}
+	}
+	return m_InfProvider;
+}
+BOOL CLibWdiSession::SetInfProvider(CString& provider)
+{
+	m_InfProvider = provider;
+	GetInfProvider();
+	return TRUE;
+}
+
+
+
 CString CLibWdiSession::GetPackageBaseDir(void)
 {
 	if (m_PackageBaseDir.IsEmpty())
@@ -291,7 +392,7 @@ BOOL CLibWdiSession::ShowSavePackageDialog(CWnd* parent, CString baseDir, CStrin
 	txtPath.ReleaseBuffer();
 
 
-	CFileDialog dlg(FALSE, NULL, txtPath.GetBuffer(4096), 0, _T("Folder|*.[Folder]|"), parent);
+	CFileDialog dlg(FALSE, NULL, txtPath.GetBuffer(4096), 0, _T("Package/Sub-Folder Name||"), parent);
 
 	if (dlg.DoModal() == IDOK)
 	{

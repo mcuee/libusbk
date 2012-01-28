@@ -103,8 +103,11 @@ BOOL CPageIntro::OnInitDialog()
 	wDlgItem = GetDlgItem(IDC_BIGBOLDTITLE);
 	wDlgItem->GetFont()->GetLogFont(&m_LogFontBig);
 
-	m_LogFontBig.lfWeight = FW_BOLD;
-	m_LogFontBig.lfHeight *= 2;
+	m_LogFontBig.lfWeight	= FW_BOLD;
+	m_LogFontBig.lfHeight	*= 2;
+	m_LogFontBig.lfWidth	= 0;
+	m_LogFontBig.lfQuality	= CLEARTYPE_QUALITY;
+	_tcscpy(m_LogFontBig.lfFaceName, _T("Tahoma"));
 	m_FontBig.CreateFontIndirect(&m_LogFontBig);
 
 	wDlgItem->SetFont(&m_FontBig);

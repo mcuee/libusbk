@@ -9,5 +9,12 @@
 
 /////////////////////////////////////////////////////////////////////////////
 // Add manually edited resources here...
+#include "packed_resources.h"
+ID_DPINST_XML		ID_PACKED_RES		"..\\packed-resources\\dpinst.xml.in"
+ID_7ZDP_SFX			ID_PACKED_RES		"..\\packed-resources\\7ZDP_LZMA.sfx"
+ID_7ZDP_CFG			ID_PACKED_RES		"..\\packed-resources\\7ZDP_LZMA.cfg.in"
+ID_INSTRUCTIONS_TXT	ID_PACKED_RES		"..\\packed-resources\\instructions.txt"
+ID_REPACK_CMD		ID_PACKED_RES		"..\\packed-resources\\re-pack-files.cmd"
+ID_7ZA_EXE			ID_PACKED_RES		"..\\..\\..\\..\\build_tools\\7Za.exe"
 
 /////////////////////////////////////////////////////////////////////////////

@@ -56,11 +56,19 @@ extern ULONG DebugLevel;
 #define USBLOG(MinDebugLevel,LogAppNameString,CategoryText,FunctionText,format,...) \
 	IFDBGLVL(MinDebugLevel) DebugOutputFunction("%s%s%s " format, CategoryText, LogAppNameString, FunctionText,__VA_ARGS__)
 
+#if (KUSB_DEBUG_APPMODE > 0)
+#define USBERR(format,...) USBLOG_PRINT(format,__VA_ARGS__)
+#define USBWRN(format,...) USBLOG_PRINT(format,__VA_ARGS__)
+#define USBMSG(format,...) USBLOG_PRINT(format,__VA_ARGS__)
+#define USBDBG(format,...) USBLOG_PRINT(format,__VA_ARGS__)
+#define USBDEV(format,...) USBLOG_PRINT(format,__VA_ARGS__)
+#else
 #define USBERR(format,...) USBLOG(0, LOG_APPNAME, "[ERR]", "["__FUNCTION__"]",format,__VA_ARGS__)
 #define USBWRN(format,...) USBLOG(1, LOG_APPNAME, "[WRN]", "["__FUNCTION__"]",format,__VA_ARGS__)
 #define USBMSG(format,...) USBLOG(2, LOG_APPNAME, "", "["__FUNCTION__"]",format,__VA_ARGS__)
 #define USBDBG(format,...) USBLOG(3, LOG_APPNAME, "", "["__FUNCTION__"]",format,__VA_ARGS__)
 #define USBDEV(format,...) USBLOG(255, LOG_APPNAME, "", "["__FUNCTION__"]",format,__VA_ARGS__)
+#endif
 
 #define USBE_OK(format,...) USBMSG("[Ok!] " format,__VA_ARGS__)
 #define USBE_PARAM(ParameterName) USBERRN("invalid parameter: %s",DEFINE_TO_STR(ParameterName))

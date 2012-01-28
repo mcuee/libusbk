@@ -29,7 +29,7 @@ binary distributions.
 	if (NT_SUCCESS(status))																						\
 	{																											\
 		USBMSG("%s=%u\n",																						\
-		DEFINE_TO_STR(RegKeyValueName),(deviceContext->DeviceRegSettings.RegKeyValueName) );					\
+		       DEFINE_TO_STR(RegKeyValueName),(deviceContext->DeviceRegSettings.RegKeyValueName) );					\
 	}																											\
 	else																										\
 	{																											\

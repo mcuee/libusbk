@@ -100,21 +100,21 @@ typedef struct _DATA_COUNTER_STATS
 } DATA_COUNTER_STATS, *PDATA_COUNTER_STATS;
 
 #define mDcs_Init(mDataCounterStats) do {																		\
-	memset((mDataCounterStats),0,sizeof(DATA_COUNTER_STATS));													\
-	QueryPerformanceFrequency(&((mDataCounterStats)->Freq)); 													\
-	(mDataCounterStats)->dFreq = 1.0/(double)(mDataCounterStats)->Freq.QuadPart; 								\
-	QueryPerformanceCounter(&((mDataCounterStats)->Start));  													\
-}while(0)
+		memset((mDataCounterStats),0,sizeof(DATA_COUNTER_STATS));													\
+		QueryPerformanceFrequency(&((mDataCounterStats)->Freq)); 													\
+		(mDataCounterStats)->dFreq = 1.0/(double)(mDataCounterStats)->Freq.QuadPart; 								\
+		QueryPerformanceCounter(&((mDataCounterStats)->Start));  													\
+	}while(0)
 
 #define mDcs_MarkStop(mDataCounterStats,mAddTransferLength) do { 												\
-	QueryPerformanceCounter(&((mDataCounterStats)->Stop));   													\
-	(mDataCounterStats)->TotalBytes+=(LONG)(mAddTransferLength); 												\
-	(mDataCounterStats)->Duration =  																			\
-		((mDataCounterStats)->dFreq) *   																		\
-		((double) ((mDataCounterStats)->Stop.QuadPart - (mDataCounterStats)->Start.QuadPart));   				\
-	if ((mDataCounterStats)->Duration != 0.0)																	\
-		(mDataCounterStats)->Bps = ((double)(mDataCounterStats)->TotalBytes) / (mDataCounterStats)->Duration;	\
-}while(0)
+		QueryPerformanceCounter(&((mDataCounterStats)->Stop));   													\
+		(mDataCounterStats)->TotalBytes+=(LONG)(mAddTransferLength); 												\
+		(mDataCounterStats)->Duration =  																			\
+		        ((mDataCounterStats)->dFreq) *   																		\
+		        ((double) ((mDataCounterStats)->Stop.QuadPart - (mDataCounterStats)->Start.QuadPart));   				\
+		if ((mDataCounterStats)->Duration != 0.0)																	\
+			(mDataCounterStats)->Bps = ((double)(mDataCounterStats)->TotalBytes) / (mDataCounterStats)->Duration;	\
+	}while(0)
 
 
 #endif
@@ -207,16 +207,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 * Element to add.
 */
 #define DL_PREPEND(head,add)                                                                   \
-do {                                                                                           \
- (add)->next = head;                                                                           \
- if (head) {                                                                                   \
-   (add)->prev = (head)->prev;                                                                 \
-   (head)->prev = (add);                                                                       \
- } else {                                                                                      \
-   (add)->prev = (add);                                                                        \
- }                                                                                             \
- (head) = (add);                                                                               \
-} while (0)
+	do {                                                                                           \
+		(add)->next = head;                                                                           \
+		if (head) {                                                                                   \
+			(add)->prev = (head)->prev;                                                                 \
+			(head)->prev = (add);                                                                       \
+		} else {                                                                                      \
+			(add)->prev = (add);                                                                        \
+		}                                                                                             \
+		(head) = (add);                                                                               \
+	} while (0)
 
 //! Adds an element to the end of a linked list.
 /*!
@@ -227,18 +227,18 @@ do {                                                                            
 * Element to add.
 */
 #define DL_APPEND(head,add)                                                                    \
-do {                                                                                           \
-  if (head) {                                                                                  \
-      (add)->prev = (head)->prev;                                                              \
-      (head)->prev->next = (add);                                                              \
-      (head)->prev = (add);                                                                    \
-      (add)->next = NULL;                                                                      \
-  } else {                                                                                     \
-      (head)=(add);                                                                            \
-      (head)->prev = (head);                                                                   \
-      (head)->next = NULL;                                                                     \
-  }                                                                                            \
-} while (0);
+	do {                                                                                           \
+		if (head) {                                                                                  \
+			(add)->prev = (head)->prev;                                                              \
+			(head)->prev->next = (add);                                                              \
+			(head)->prev = (add);                                                                    \
+			(add)->next = NULL;                                                                      \
+		} else {                                                                                     \
+			(head)=(add);                                                                            \
+			(head)->prev = (head);                                                                   \
+			(head)->next = NULL;                                                                     \
+		}                                                                                            \
+	} while (0);
 
 //! Removes an element from a linked list.
 /*!
@@ -254,21 +254,21 @@ do {                                                                            
 * It "de-links" the element specified by \c del from the list.
 */
 #define DL_DELETE(head,del)                                                                    \
-do {                                                                                           \
-  if ((del)->prev == (del)) {                                                                  \
-      (head)=NULL;                                                                             \
-  } else if ((del)==(head)) {                                                                  \
-      (del)->next->prev = (del)->prev;                                                         \
-      (head) = (del)->next;                                                                    \
-  } else {                                                                                     \
-      (del)->prev->next = (del)->next;                                                         \
-      if ((del)->next) {                                                                       \
-          (del)->next->prev = (del)->prev;                                                     \
-      } else {                                                                                 \
-          (head)->prev = (del)->prev;                                                          \
-      }                                                                                        \
-  }                                                                                            \
-} while (0);
+	do {                                                                                           \
+		if ((del)->prev == (del)) {                                                                  \
+			(head)=NULL;                                                                             \
+		} else if ((del)==(head)) {                                                                  \
+			(del)->next->prev = (del)->prev;                                                         \
+			(head) = (del)->next;                                                                    \
+		} else {                                                                                     \
+			(del)->prev->next = (del)->next;                                                         \
+			if ((del)->next) {                                                                       \
+				(del)->next->prev = (del)->prev;                                                     \
+			} else {                                                                                 \
+				(head)->prev = (del)->prev;                                                          \
+			}                                                                                        \
+		}                                                                                            \
+	} while (0);
 
 //! Start a \c foreach like enumeration though a linked list using a \b for loop.
 /*!
@@ -279,7 +279,7 @@ do {                                                                            
 * assigned to an element of the linked list on each iteration.
 */
 #define DL_FOREACH(head,el)                                                                    \
-    for(el=head;el;el=el->next)
+	for(el=head;el;el=el->next)
 
 //! \copybrief DL_FOREACH
 /*!
@@ -293,7 +293,7 @@ do {                                                                            
 * This version is safe for deleting the elements during iteration.
 */
 #define DL_FOREACH_SAFE(head,el,tmp)                                                           \
-  for((el)=(head);(el) && (tmp = (el)->next, 1); (el) = tmp)
+	for((el)=(head);(el) && (tmp = (el)->next, 1); (el) = tmp)
 
 /* these are identical to their singly-linked list counterparts */
 
@@ -312,11 +312,11 @@ do {                                                                            
 * Value to compare with the field member.
 */
 #define DL_SEARCH_SCALAR(head,out,field,val)                                                   \
-do {                                                                                           \
-    DL_FOREACH(head,out) {                                                                     \
-      if ((out)->field == (val)) break;                                                        \
-    }                                                                                          \
-} while(0)
+	do {                                                                                           \
+		DL_FOREACH(head,out) {                                                                     \
+			if ((out)->field == (val)) break;                                                        \
+		}                                                                                          \
+	} while(0)
 
 //! Searches for an element using a user-defined compare function such as memcmp or strcmp.
 /*!
@@ -333,11 +333,11 @@ do {                                                                            
 * User-defined compare function or macro.
 */
 #define DL_SEARCH(head,out,elt,cmp)                                                            \
-do {                                                                                           \
-    DL_FOREACH(head,out) {                                                                     \
-      if ((cmp(out,elt))==0) break;                                                            \
-    }                                                                                          \
-} while(0)
+	do {                                                                                           \
+		DL_FOREACH(head,out) {                                                                     \
+			if ((cmp(out,elt))==0) break;                                                            \
+		}                                                                                          \
+	} while(0)
 
 #endif /* UTLIST_H */
 

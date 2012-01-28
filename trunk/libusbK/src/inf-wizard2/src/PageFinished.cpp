@@ -48,6 +48,8 @@ void CPageFinished::DoDataExchange(CDataExchange* pDX)
 	//{{AFX_DATA_MAP(CPageFinished)
 	// NOTE: the ClassWizard will add DDX and DDV calls here
 	//}}AFX_DATA_MAP
+	DDX_Control(pDX, IDC_PIC_TEXT_BACK, m_PicTextBack);
+	DDX_Control(pDX, IDC_DONATE, m_BtnDonate);
 }
 
 
@@ -55,10 +57,9 @@ BEGIN_MESSAGE_MAP(CPageFinished, CResizablePageEx)
 	//{{AFX_MSG_MAP(CPageFinished)
 	//}}AFX_MSG_MAP
 	ON_NOTIFY_EX(TTN_NEEDTEXT, 0, OnToolTipNotify)
-	ON_NOTIFY(NM_CLICK, IDC_LINK_OPEN_SESSION, OnNMClickLinkOpenSession)
 	ON_NOTIFY(NM_CLICK, IDC_LINK_SAVE_SESSION, OnNMClickLinkSaveSession)
-	ON_BN_CLICKED(IDC_BTN_EXPLORE_PACKAGE_FOLDER, OnBnClickedBtnExplorePackageFolder)
-	ON_BN_CLICKED(IDC_BTN_EXPLORE_BASE_FOLDER, OnBnClickedBtnExploreBaseFolder)
+	ON_NOTIFY(NM_CLICK, IDC_LINK_EXPLORE_PACKAGE_FOLDER, &CPageFinished::OnNMClickLinkExplorePackageFolder)
+	ON_BN_CLICKED(IDC_DONATE, &CPageFinished::OnBnClickedDonate)
 END_MESSAGE_MAP()
 
 /////////////////////////////////////////////////////////////////////////////
@@ -68,45 +69,65 @@ BOOL CPageFinished::OnSetActive()
 {
 	CPropertySheet* pSheet = (CPropertySheet*)GetParent();
 	ASSERT_KINDOF(CPropertySheet, pSheet);
-	pSheet->SetWizardButtons( PSWIZB_BACK | PSWIZB_NEXT | PSWIZB_FINISH);
+	pSheet->SetWizardButtons( PSWIZB_BACK | PSWIZB_FINISH);
+
+	CWnd* pWndCancel = pSheet->GetDlgItem(IDCANCEL);
+	ASSERT_KINDOF(CWnd, pWndCancel);
+	pWndCancel->ShowWindow(SW_HIDE);
+
 	return CResizablePageEx::OnSetActive();
+}
+
+BOOL CPageFinished::OnKillActive()
+{
+	CPropertySheet* pSheet = (CPropertySheet*)GetParent();
+	ASSERT_KINDOF(CPropertySheet, pSheet);
+
+	CWnd* pWndCancel = pSheet->GetDlgItem(IDCANCEL);
+	ASSERT_KINDOF(CWnd, pWndCancel);
+	pWndCancel->ShowWindow(SW_SHOW);
+
+	return CResizablePageEx::OnKillActive();
 }
 
 BOOL CPageFinished::OnInitDialog()
 {
 	CResizablePageEx::OnInitDialog();
 
-	AddAnchor(IDC_LBL_FINISHED_CAPTION, TOP_LEFT, TOP_RIGHT);
 	AddAnchor(IDC_BIGBOLDTITLE, TOP_LEFT, TOP_RIGHT);
-	AddAnchor(IDC_PIC_FINISHED_TEXT, TOP_LEFT);
-	AddAnchor(IDC_LBL_FINISHED_TEXT, TOP_LEFT, TOP_RIGHT);
-	AddAnchor(IDC_GRP_ADDITIONAL_TASKS, TOP_LEFT, TOP_RIGHT);
-
-	AddAnchor(IDC_BTN_EXPLORE_PACKAGE_FOLDER, TOP_LEFT);
-	AddAnchor(IDC_BTN_EXPLORE_BASE_FOLDER, TOP_LEFT);
-	AddAnchor(IDC_LBL_EXPLORE_PACKAGE_FOLDER, TOP_LEFT, TOP_RIGHT);
-	AddAnchor(IDC_LBL_EXPLORE_BASE_FOLDER, TOP_LEFT, TOP_RIGHT);
-
-	AddAnchor(IDC_LINK_OPEN_SESSION, BOTTOM_LEFT);
-	AddAnchor(IDC_LINK_SAVE_SESSION, BOTTOM_LEFT);
+	AddAnchor(IDC_PIC_TEXT_BACK, TOP_LEFT);
+	AddAnchor(IDC_LBL_TEXT_BACK, TOP_LEFT, TOP_RIGHT);
+	AddAnchor(IDC_LBL_TEXT_FINISH, TOP_LEFT, TOP_RIGHT);
+	AddAnchor(IDC_LINK_EXPLORE_PACKAGE_FOLDER, TOP_LEFT, TOP_RIGHT);
+	AddAnchor(IDC_LINK_SAVE_SESSION, TOP_LEFT, TOP_RIGHT);
+	AddAnchor(IDC_LBL_DONATE, BOTTOM_LEFT, BOTTOM_RIGHT);
+	AddAnchor(IDC_DONATE, BOTTOM_RIGHT);
 
 	LOGFONT lfTitle, lfBig;
-	GetDlgItem(IDC_LBL_FINISHED_CAPTION)->GetFont()->GetLogFont(&lfTitle);
-	GetDlgItem(IDC_LBL_FINISHED_CAPTION)->GetFont()->GetLogFont(&lfBig);
+	GetDlgItem(IDC_BIGBOLDTITLE)->GetFont()->GetLogFont(&lfTitle);
+	_tcscpy(lfTitle.lfFaceName, _T("Tahoma"));
+	memcpy(&lfBig, &lfTitle, sizeof(lfBig));
 
-	lfTitle.lfWeight = FW_BOLD;
-	lfTitle.lfHeight *= 2;
+	lfTitle.lfWeight	= FW_BOLD;
+	lfTitle.lfHeight	*= 2;
+	lfTitle.lfWidth		= 0;
+	lfTitle.lfQuality	= CLEARTYPE_QUALITY;
 	m_FontTitle.CreateFontIndirect(&lfTitle);
 
-	lfBig.lfWeight = FW_BOLD;
-	m_FontBig.CreateFontIndirect(&lfBig);
+	HICON hImgInfo = (HICON)LoadImage(g_App->m_hInstance, MAKEINTRESOURCE(IDI_ICON_INFORMATION), IMAGE_ICON, 16, 16, LR_SHARED);
+	m_PicTextBack.SetIcon(hImgInfo);
 
+	HBITMAP hBmpDonate = (HBITMAP)LoadImage(g_App->m_hInstance, MAKEINTRESOURCE(IDB_PAYPAL), IMAGE_BITMAP, 0, 0, LR_SHARED);
+	m_BtnDonate.SetBitmap(hBmpDonate);
+
+	lfBig.lfWeight	= FW_BOLD;
+	lfBig.lfHeight	= 80;
+	lfBig.lfWidth	= 0;
+	lfBig.lfQuality	= CLEARTYPE_QUALITY;
+	m_FontBig.CreatePointFontIndirect(&lfBig);
+
+	GetDlgItem(IDC_LBL_DONATE)->SetFont(&m_FontBig);
 	GetDlgItem(IDC_BIGBOLDTITLE)->SetFont(&m_FontTitle);
-	GetDlgItem(IDC_LBL_FINISHED_CAPTION)->SetFont(&m_FontBig);
-
-	HICON hImgInfo = (HICON)LoadImage(AfxGetApp()->m_hInstance, MAKEINTRESOURCE(IDI_ICON_EXPLORER), IMAGE_ICON, 16, 16, LR_SHARED);
-	((CButton*)GetDlgItem(IDC_BTN_EXPLORE_PACKAGE_FOLDER))->SetIcon(hImgInfo);
-	((CButton*)GetDlgItem(IDC_BTN_EXPLORE_BASE_FOLDER))->SetIcon(hImgInfo);
 
 	if(!m_ToolTip.Create(this))
 	{
@@ -114,10 +135,7 @@ BOOL CPageFinished::OnInitDialog()
 		return FALSE;
 	}
 
-	CInfWizardDisplay::AddCallbackTool(&m_ToolTip, this, IDC_BTN_EXPLORE_PACKAGE_FOLDER, IDS_TIP_EXPLORE_PACKAGE_FOLDER);
-	CInfWizardDisplay::AddCallbackTool(&m_ToolTip, this, IDC_BTN_EXPLORE_BASE_FOLDER, IDS_TIP_EXPLORE_BASE_FOLDER);
-
-	CInfWizardDisplay::AddCallbackTool(&m_ToolTip, this, IDC_LINK_OPEN_SESSION, IDS_TIP_OPEN_SESSION);
+	CInfWizardDisplay::AddCallbackTool(&m_ToolTip, this, IDC_LINK_EXPLORE_PACKAGE_FOLDER, IDS_TIP_EXPLORE_PACKAGE_FOLDER);
 	CInfWizardDisplay::AddCallbackTool(&m_ToolTip, this, IDC_LINK_SAVE_SESSION, IDS_TIP_SAVE_SESSION);
 
 	m_ToolTip.Activate(TRUE);
@@ -127,41 +145,10 @@ BOOL CPageFinished::OnInitDialog()
 	// EXCEPTION: OCX Property Pages should return FALSE
 }
 
-void CPageFinished::OnNMClickLinkOpenSession(NMHDR* pNMHDR, LRESULT* pResult)
-{
-	*pResult = 0;
-	CPropertySheet* pSheet = (CPropertySheet*)GetParent();
-	if (g_App->Wdi.OpenSession(GetParent()))
-	{
-		pSheet->SetActivePage(3);
-		return;
-	}
-}
-
 void CPageFinished::OnNMClickLinkSaveSession(NMHDR* pNMHDR, LRESULT* pResult)
 {
 	*pResult = 0;
 	g_App->Wdi.SaveSession(GetParent());
-}
-
-void CPageFinished::OnBnClickedBtnExplorePackageFolder()
-{
-	CString packagePath = g_App->Wdi.Session()->GetPackageBaseDir();
-	CString packageName = g_App->Wdi.Session()->GetPackageName();
-
-	PathAppend(packagePath.GetBufferSetLength(4096), packageName.GetBuffer(0));
-	packagePath.ReleaseBuffer();
-
-	if (!PathIsDirectory(packagePath.GetBuffer(4096)))
-		packagePath =  g_App->Wdi.Session()->GetPackageBaseDir();
-
-	ShellExecute(NULL, _T("explore"), packagePath.GetBuffer(4096), NULL, NULL, SW_SHOW);
-}
-
-void CPageFinished::OnBnClickedBtnExploreBaseFolder()
-{
-	CString packagePath = g_App->Wdi.Session()->GetPackageBaseDir();
-	ShellExecute(NULL, _T("explore"), packagePath.GetBuffer(0), NULL, NULL, SW_SHOW);
 }
 
 BOOL CPageFinished::PreTranslateMessage(MSG* pMsg)
@@ -173,4 +160,26 @@ BOOL CPageFinished::PreTranslateMessage(MSG* pMsg)
 BOOL CPageFinished::OnToolTipNotify(UINT id, NMHDR* pNMHDR, LRESULT* pResult)
 {
 	return CInfWizardDisplay::HandleToolTipNotify(id, pNMHDR, pResult);
+}
+
+void CPageFinished::OnNMClickLinkExplorePackageFolder(NMHDR* pNMHDR, LRESULT* pResult)
+{
+	CString packagePath = g_App->Wdi.Session()->GetPackageBaseDir();
+	/*
+	CString packageName = g_App->Wdi.Session()->GetPackageName();
+
+	PathAppend(packagePath.GetBufferSetLength(4096), packageName.GetBuffer(0));
+	packagePath.ReleaseBuffer();
+
+	if (!PathIsDirectory(packagePath.GetBuffer(4096)))
+		packagePath =  g_App->Wdi.Session()->GetPackageBaseDir();
+	*/
+	ShellExecute(NULL, _T("explore"), packagePath.GetBuffer(4096), NULL, NULL, SW_SHOW);
+
+	*pResult = 0;
+}
+
+void CPageFinished::OnBnClickedDonate()
+{
+	ShellExecute(NULL, NULL, _T("http://sourceforge.net/donate/index.php?group_id=78138"), NULL, NULL, SW_SHOWNORMAL);
 }

@@ -183,10 +183,10 @@ static LPCSTR DescriptorTypeString[] =
 };
 #define GetDescriptorTypeString(DescriptorId)							\
 	(DescriptorTypeString[												\
-	(DescriptorId)-1>((sizeof(DescriptorTypeString)/sizeof(LPCSTR))) ?	\
-	((sizeof(DescriptorTypeString)/sizeof(LPCSTR))-1) :					\
-	((DescriptorId)-1)													\
-	])
+	        (DescriptorId)-1>((sizeof(DescriptorTypeString)/sizeof(LPCSTR))) ?	\
+	        ((sizeof(DescriptorTypeString)/sizeof(LPCSTR))-1) :					\
+	        ((DescriptorId)-1)													\
+	                     ])
 
 #define KF_X "0x%X"
 #define KF_X2 "0x%02X"
@@ -251,31 +251,31 @@ static LPCSTR DescriptorTypeString[] =
 #define HID_END(CategoryName,format,...)	\
 	_TAB_DEC();								\
 	WRITERAW(DESC_MARK_END KLIST_CATEGORY_FORMAT format KLIST_LN,CategoryName,__VA_ARGS__) \
- 
+	 
 #define PrintfDeviceElement(DeviceListFieldName) printf("    %-21s: %s\n",DEFINE_TO_STR(DeviceListFieldName),deviceElement->DeviceListFieldName)
 
 #define IsDescValid(DescriptorPtr, RemainingTotalSize)\
 	(((RemainingTotalSize) > sizeof(USB_COMMON_DESCRIPTOR)) && (RemainingTotalSize) >= (DescriptorPtr)->bLength)
 
 #define AdvanceDescriptor(DescriptorPtr, RemainingLength)										\
-{																								\
-	RemainingLength -= DescriptorPtr->bLength;													\
-	DescriptorPtr = (PUSB_COMMON_DESCRIPTOR)(((PUCHAR)DescriptorPtr) + DescriptorPtr->bLength);	\
-}
+	{																								\
+		RemainingLength -= DescriptorPtr->bLength;													\
+		DescriptorPtr = (PUSB_COMMON_DESCRIPTOR)(((PUCHAR)DescriptorPtr) + DescriptorPtr->bLength);	\
+	}
 
 #define IsUniDescriptorValid(DescriptorPtr, RemainingTotalSize)\
 	(((RemainingTotalSize) > sizeof(USB_COMMON_DESCRIPTOR)) && (RemainingTotalSize) >= (DescriptorPtr)->Common.bLength)
 
 #define AdvanceUniDescriptor(DescriptorPtr, RemainingLength)										\
-{																								\
-	(RemainingLength) -= (DescriptorPtr)->Common.bLength;													\
-	(DescriptorPtr) = (PUNI_DESCRIPTOR)(((PUCHAR)(DescriptorPtr)) + (DescriptorPtr)->Common.bLength);	\
-}
+	{																								\
+		(RemainingLength) -= (DescriptorPtr)->Common.bLength;													\
+		(DescriptorPtr) = (PUNI_DESCRIPTOR)(((PUCHAR)(DescriptorPtr)) + (DescriptorPtr)->Common.bLength);	\
+	}
 
 #define AdvanceDescriptorWithErrorBreak(DescriptorPtr, RemainingLength)							\
 	AdvanceDescriptor(DescriptorPtr, RemainingLength);											\
 	if (!IsDescValid(DescriptorPtr, RemainingLength))											\
-	break
+		break
 
 void ShowHelp(void);
 void ShowCopyright(void);

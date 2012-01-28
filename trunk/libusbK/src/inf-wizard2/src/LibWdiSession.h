@@ -5,6 +5,7 @@
 #include <GuidDef.h>
 
 typedef struct wdi_device_info WDI_DEVICE_INFO, *PWDI_DEVICE_INFO;
+typedef struct wdi_options_prepare_driver WDI_OPTIONS_PREPARE_DRIVER, *PWDI_OPTIONS_PREPARE_DRIVER;
 
 #define WDI_SESSION_INVALID_MASK (0x8000)
 
@@ -36,8 +37,18 @@ public:
 	static BOOL StringToGuid(GUID* GuidVal, CString GuidString);
 	static BOOL GuidToString(GUID* Guid, CString& GuidString);
 	static CString GetRandomGuid(void);
+
 	CString GetGuid(void);
 	BOOL SetGuid(CString& newGuid);
+
+	CString GetInfClassName(void);
+	BOOL SetInfClassName(CString& className);
+
+	CString GetInfClassGuid(void);
+	BOOL SetInfClassGuid(CString& classGuid);
+
+	CString GetInfProvider(void);
+	BOOL SetInfProvider(CString& provider);
 
 	virtual void Serialize( CArchive& archive );
 
@@ -64,10 +75,19 @@ public:
 	/** (Optional) Driver version (four WORDS). 0 if unused */
 	UINT64 driver_version;
 
+
 public:
 	CString m_VendorName;
+	CString m_InterfaceGuid;
+	CString m_InfClassName;
+	CString m_InfClassGuid;
+	CString m_InfProvider;
+
 	CHAR chVendorName[512];
-	CHAR chDeviceGuid[64];
+	CHAR chDeviceGuid[512];
+	CHAR chInfClassName[512];
+	CHAR chInfClassGuid[512];
+	CHAR chInfProvider[512];
 
 public:
 	CString m_PackageBaseDir;
@@ -82,7 +102,6 @@ public:
 private:
 	/** (Optional) The selected WDI driver type  */
 	int driver_type;
-	CString m_InterfaceGuid;
 
 	// Implementation
 protected:

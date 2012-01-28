@@ -53,62 +53,62 @@ binary distributions.
 	}
 
 #define SetKInterfaceOutput(OutputBufferPtr, InterfaceContextPtr)															\
-if (OutputBufferPtr)																										\
-{																															\
-	((libusb_request*)OutputBufferPtr)->intf.interface_number=InterfaceContextPtr->InterfaceDescriptor.bInterfaceNumber;	\
-	((libusb_request*)OutputBufferPtr)->intf.interface_index=InterfaceContextPtr->InterfaceIndex;							\
-	((libusb_request*)OutputBufferPtr)->intf.altsetting_number=InterfaceContextPtr->InterfaceDescriptor.bAlternateSetting;	\
-	((libusb_request*)OutputBufferPtr)->intf.altsetting_index=InterfaceContextPtr->SettingIndex;							\
-}
+	if (OutputBufferPtr)																										\
+	{																															\
+		((libusb_request*)OutputBufferPtr)->intf.interface_number=InterfaceContextPtr->InterfaceDescriptor.bInterfaceNumber;	\
+		((libusb_request*)OutputBufferPtr)->intf.interface_index=InterfaceContextPtr->InterfaceIndex;							\
+		((libusb_request*)OutputBufferPtr)->intf.altsetting_number=InterfaceContextPtr->InterfaceDescriptor.bAlternateSetting;	\
+		((libusb_request*)OutputBufferPtr)->intf.altsetting_index=InterfaceContextPtr->SettingIndex;							\
+	}
 
 #define mRequest_InitAndForwardToQueue(mStatus,mRequestType, mActualRequestType, mIoControlCode, mRequestLength, mRequest, mDeviceContext, mRequestContext, mPipeID, mErrorAction) do { 	\
-	PPIPE_CONTEXT tempPipeCtx = GetPipeContextByID(mDeviceContext, mPipeID);  						\
-	if (!tempPipeCtx || !tempPipeCtx->IsValid || !tempPipeCtx->Queue) 								\
-	{ 																								\
-		mStatus = STATUS_NOT_FOUND;   																\
-		USBERRN("Invalid pipe context."); 															\
-		mErrorAction; 																				\
-	} 																								\
-   																									\
-	if (tempPipeCtx->IsQueueDirty)																	\
-	{																								\
-		mStatus = Pipe_RefreshQueue(mDeviceContext, tempPipeCtx);									\
-		if(!NT_SUCCESS(mStatus))  																	\
-		{ 																							\
-			USBERRN("Pipe_RefreshQueue failed. Status=%08Xh", mStatus);  							\
-			mErrorAction; 																			\
-		}																							\
-	}																								\
-	mRequestContext->QueueContext = GetQueueContext(tempPipeCtx->Queue);  							\
-	if (!mRequestContext->QueueContext)   															\
-	{ 																								\
-		mStatus = STATUS_INVALID_PARAMETER;   														\
-		USBERRN("Invalid queue context."); 															\
-		mErrorAction; 																				\
-	} 																								\
-  																									\
-	mRequestContext->RequestType	= mRequestType;   												\
-	mRequestContext->Length			= (ULONG)mRequestLength;   										\
-  																									\
-	if (mActualRequestType)   																		\
-		mRequestContext->ActualRequestType	= mActualRequestType;   								\
-  																									\
-	if (mIoControlCode)   																			\
-		mRequestContext->IoControlCode = mIoControlCode;  											\
-  																									\
-	mRequestContext->Policies.values = tempPipeCtx->Policies.values;  								\
-  																									\
-	mRequestContext->Timeout = 	tempPipeCtx->TimeoutPolicy;											\
-	if (mRequestContext->IoControlRequest.timeout)  												\
-		mRequestContext->Timeout = mRequestContext->IoControlRequest.timeout; 						\
-  																									\
-	mStatus = WdfRequestForwardToIoQueue(mRequest, tempPipeCtx->Queue);   							\
-	if(!NT_SUCCESS(mStatus))  																		\
-	{ 																								\
-		USBERRN("WdfRequestForwardToIoQueue failed. Status=%08Xh", mStatus);  						\
-		mErrorAction; 																				\
-	} 																								\
-}while(0)
+		PPIPE_CONTEXT tempPipeCtx = GetPipeContextByID(mDeviceContext, mPipeID);  						\
+		if (!tempPipeCtx || !tempPipeCtx->IsValid || !tempPipeCtx->Queue) 								\
+		{ 																								\
+			mStatus = STATUS_NOT_FOUND;   																\
+			USBERRN("Invalid pipe context."); 															\
+			mErrorAction; 																				\
+		} 																								\
+		\
+		if (tempPipeCtx->IsQueueDirty)																	\
+		{																								\
+			mStatus = Pipe_RefreshQueue(mDeviceContext, tempPipeCtx);									\
+			if(!NT_SUCCESS(mStatus))  																	\
+			{ 																							\
+				USBERRN("Pipe_RefreshQueue failed. Status=%08Xh", mStatus);  							\
+				mErrorAction; 																			\
+			}																							\
+		}																								\
+		mRequestContext->QueueContext = GetQueueContext(tempPipeCtx->Queue);  							\
+		if (!mRequestContext->QueueContext)   															\
+		{ 																								\
+			mStatus = STATUS_INVALID_PARAMETER;   														\
+			USBERRN("Invalid queue context."); 															\
+			mErrorAction; 																				\
+		} 																								\
+		\
+		mRequestContext->RequestType	= mRequestType;   												\
+		mRequestContext->Length			= (ULONG)mRequestLength;   										\
+		\
+		if (mActualRequestType)   																		\
+			mRequestContext->ActualRequestType	= mActualRequestType;   								\
+		\
+		if (mIoControlCode)   																			\
+			mRequestContext->IoControlCode = mIoControlCode;  											\
+		\
+		mRequestContext->Policies.values = tempPipeCtx->Policies.values;  								\
+		\
+		mRequestContext->Timeout = 	tempPipeCtx->TimeoutPolicy;											\
+		if (mRequestContext->IoControlRequest.timeout)  												\
+			mRequestContext->Timeout = mRequestContext->IoControlRequest.timeout; 						\
+		\
+		mStatus = WdfRequestForwardToIoQueue(mRequest, tempPipeCtx->Queue);   							\
+		if(!NT_SUCCESS(mStatus))  																		\
+		{ 																								\
+			USBERRN("WdfRequestForwardToIoQueue failed. Status=%08Xh", mStatus);  						\
+			mErrorAction; 																				\
+		} 																								\
+	}while(0)
 
 
 // DefaultQueue_OnIoControl

@@ -48,6 +48,8 @@ public:
 	CBitmap m_bmpWatermark;
 	CBitmap m_bmpHeader;
 
+	CString m_InstallResults;
+
 	// Operations
 public:
 

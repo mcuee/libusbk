@@ -1,9 +1,9 @@
 ﻿#region Copyright (c) Travis Robinson
-// Copyright (c) 2012 Travis Robinson <libusbdotnet@gmail.com>
+// Copyright (c) 2011 Travis Robinson <libusbdotnet@gmail.com>
 // All rights reserved.
 //
 // C# libusbK Bindings
-// Auto-generated on: 01.11.2012
+// Auto-generated on: 01.28.2012
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -742,6 +742,11 @@ internal static class Functions:
 		pass
 
 	
+	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'LstK_InitEx', SetLastError: true)]
+	public static def LstK_InitEx([Out] ref DeviceList as KLST_HANDLE, [In] ref InitParams as KLST_INITEX_PARAMS) as bool:
+		pass
+
+	
 	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'LstK_Free', SetLastError: true)]
 	public static def LstK_Free([In] DeviceList as IntPtr) as bool:
 		pass
@@ -1402,6 +1407,30 @@ public struct KLST_DEVINFO:
 	public SyncFlags as KLST_SYNC_FLAG
 
 
+[StructLayout(LayoutKind.Sequential, CharSet: CharSet.Ansi, Size: 1024)]
+public struct KLST_PATTERN_MATCH:
+
+	[MarshalAs(UnmanagedType.ByValTStr, SizeConst: Constants.KLST_STRING_MAX_LEN)]
+	public InstanceID as string
+
+	
+	[MarshalAs(UnmanagedType.ByValTStr, SizeConst: Constants.KLST_STRING_MAX_LEN)]
+	public DeviceInterfaceGUID as string
+
+	
+	[MarshalAs(UnmanagedType.ByValTStr, SizeConst: Constants.KLST_STRING_MAX_LEN)]
+	public SymbolicLink as string
+
+
+[StructLayout(LayoutKind.Sequential, CharSet: CharSet.Ansi, Size: 64)]
+public struct KLST_INITEX_PARAMS:
+
+	public Flags as KLST_FLAG
+
+	
+	public PatternMatch as (KLST_PATTERN_MATCH)
+
+
 [StructLayout(LayoutKind.Sequential, CharSet: CharSet.Ansi, Pack: 1)]
 public struct USB_DEVICE_DESCRIPTOR:
 
@@ -1725,21 +1754,6 @@ public struct KUSB_DRIVER_API:
 	public GetProperty as KUSB_GetPropertyDelegate
 
 
-[StructLayout(LayoutKind.Sequential, CharSet: CharSet.Ansi, Size: 1024)]
-public struct KHOT_PATTERN_MATCH:
-
-	[MarshalAs(UnmanagedType.ByValTStr, SizeConst: Constants.KLST_STRING_MAX_LEN)]
-	public InstanceID as string
-
-	
-	[MarshalAs(UnmanagedType.ByValTStr, SizeConst: Constants.KLST_STRING_MAX_LEN)]
-	public DeviceInterfaceGUID as string
-
-	
-	[MarshalAs(UnmanagedType.ByValTStr, SizeConst: Constants.KLST_STRING_MAX_LEN)]
-	public DevicePath as string
-
-
 [StructLayout(LayoutKind.Sequential, CharSet: CharSet.Ansi, Size: 2048)]
 public struct KHOT_PARAMS:
 
@@ -1752,7 +1766,7 @@ public struct KHOT_PARAMS:
 	public Flags as KHOT_FLAG
 
 	
-	public PatternMatch as KHOT_PATTERN_MATCH
+	public PatternMatch as KLST_PATTERN_MATCH
 
 	
 	[MarshalAs(UnmanagedType.FunctionPtr)]
@@ -1977,6 +1991,20 @@ public class LstK:
 			pass
 		ensure:
 			success as bool = Functions.LstK_Init(handle, Flags)
+			
+			if ((not success) or handle.IsInvalid) or handle.IsClosed:
+				handle.SetHandleAsInvalid()
+				errorCode as int = Marshal.GetLastWin32Error()
+				raise Exception(((GetType().Name + ' failed. ErrorCode=') + errorCode.ToString('X')))
+
+	
+	public def constructor(ref InitParams as KLST_INITEX_PARAMS):
+		RuntimeHelpers.PrepareConstrainedRegions()
+		
+		try:
+			pass
+		ensure:
+			success as bool = Functions.LstK_InitEx(handle, InitParams)
 			
 			if ((not success) or handle.IsInvalid) or handle.IsClosed:
 				handle.SetHandleAsInvalid()

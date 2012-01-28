@@ -99,11 +99,11 @@ extern CONST PCHAR BoolStrings[2];
 //
 #if defined(PAGING_ENABLED)
 #define PAGED_CODE() \
-{																													\
-	if (KeGetCurrentIrql() > APC_LEVEL) {																			\
-        DbgPrint("ERROR:%s[%s] Pageable code called at IRQL %d\n",LOG_APPNAME,__FUNCTION__,KeGetCurrentIrql());		\
-    }																												\
-}
+	{																													\
+		if (KeGetCurrentIrql() > APC_LEVEL) {																			\
+			DbgPrint("ERROR:%s[%s] Pageable code called at IRQL %d\n",LOG_APPNAME,__FUNCTION__,KeGetCurrentIrql());		\
+		}																												\
+	}
 #else
 #define PAGED_CODE() NOP_FUNCTION
 #endif

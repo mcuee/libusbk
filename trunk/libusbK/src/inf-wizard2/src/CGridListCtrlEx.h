@@ -167,6 +167,7 @@ public:
 	virtual BOOL OnDisplayCellText(int nRow, int nCol, CString& strResult);
 	virtual BOOL OnDisplayCellImage(int nRow, int nCol, int& nImageId);
 	virtual BOOL OnDisplayCellTooltip(const CPoint& point) const;
+	virtual BOOL OnDisplayCellTooltip(int nRow, int nCol, CString** strResult, int* maxTipWidth, DWORD* tipDelayMS);
 	virtual BOOL OnDisplayCellTooltip(int nRow, int nCol, CString& strResult);
 	virtual BOOL OnDisplayCellColor(int nRow, int nCol, COLORREF& textColor, COLORREF& backColor);
 	virtual BOOL OnDisplayCellFont(int nRow, int nCol, LOGFONT& font);

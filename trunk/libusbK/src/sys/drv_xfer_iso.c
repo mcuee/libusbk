@@ -42,85 +42,85 @@ const USHORT Frames_Per_bInterval_FullSpeed[32] =
 #pragma warning(disable: 4127)
 
 #define mXfer_IsoInitUrb(mUrb, mUrbSize, mWdmPipeHandle, mNumberOfPackets, mTransferMdl, mTransferLength, mTransferFlags) do {	\
-	RtlZeroMemory(mUrb, mUrbSize);																								\
-	mUrb->UrbIsochronousTransfer.Hdr.Length           = (USHORT) mUrbSize;														\
-	mUrb->UrbIsochronousTransfer.Hdr.Function         = URB_FUNCTION_ISOCH_TRANSFER;  											\
-	mUrb->UrbIsochronousTransfer.PipeHandle           = mWdmPipeHandle;   														\
-	mUrb->UrbIsochronousTransfer.NumberOfPackets      = mNumberOfPackets; 														\
-	mUrb->UrbIsochronousTransfer.TransferBufferMDL    = mTransferMdl; 															\
-	mUrb->UrbIsochronousTransfer.TransferBufferLength = mTransferLength;  														\
-	mUrb->UrbIsochronousTransfer.TransferFlags        = mTransferFlags;   														\
-}while(0) 																														\
- 
+		RtlZeroMemory(mUrb, mUrbSize);																								\
+		mUrb->UrbIsochronousTransfer.Hdr.Length           = (USHORT) mUrbSize;														\
+		mUrb->UrbIsochronousTransfer.Hdr.Function         = URB_FUNCTION_ISOCH_TRANSFER;  											\
+		mUrb->UrbIsochronousTransfer.PipeHandle           = mWdmPipeHandle;   														\
+		mUrb->UrbIsochronousTransfer.NumberOfPackets      = mNumberOfPackets; 														\
+		mUrb->UrbIsochronousTransfer.TransferBufferMDL    = mTransferMdl; 															\
+		mUrb->UrbIsochronousTransfer.TransferBufferLength = mTransferLength;  														\
+		mUrb->UrbIsochronousTransfer.TransferFlags        = mTransferFlags;   														\
+	}while(0) 																														\
+		 
 #define mXfer_IsoPacketsToUrb(mIsoPacketArray,mUrb,mNumberOfPackets,mDataLength,mErrorAction) do {  	\
-	LONG mPos; 																							\
-	for (mPos = 0; mPos < (LONG)mNumberOfPackets; mPos++)  												\
-	{  																									\
-		if (mIsoPacketArray[mPos].Offset >= mDataLength)   												\
-		{  																								\
-			status = STATUS_INVALID_BUFFER_SIZE;   														\
-			USBERRN("Last packet offset references data that is out-of-range. IsoPacket[%u].Offset=%u",	\
-					mPos, mIsoPacketArray[mPos].Offset);   												\
-			mErrorAction; 																				\
-		}  																								\
-		(mUrb)->UrbIsochronousTransfer.IsoPacket[mPos].Offset = mIsoPacketArray[mPos].Offset;  			\
-	}  																									\
-}while(0)
+		LONG mPos; 																							\
+		for (mPos = 0; mPos < (LONG)mNumberOfPackets; mPos++)  												\
+		{  																									\
+			if (mIsoPacketArray[mPos].Offset >= mDataLength)   												\
+			{  																								\
+				status = STATUS_INVALID_BUFFER_SIZE;   														\
+				USBERRN("Last packet offset references data that is out-of-range. IsoPacket[%u].Offset=%u",	\
+				        mPos, mIsoPacketArray[mPos].Offset);   												\
+				mErrorAction; 																				\
+			}  																								\
+			(mUrb)->UrbIsochronousTransfer.IsoPacket[mPos].Offset = mIsoPacketArray[mPos].Offset;  			\
+		}  																									\
+	}while(0)
 
 
 #define mXfer_IsoReadPacketsFromUrb(mIsoPacketArray,mUrb,mNumberOfPackets) do {										\
-	LONG mPos;																										\
-	for (mPos = 0; mPos < (mNumberOfPackets); mPos++)																\
-	{																												\
-		mIsoPacketArray[mPos].Length = (USHORT)(mUrb)->UrbIsochronousTransfer.IsoPacket[mPos].Length;				\
-		mIsoPacketArray[mPos].Status = (USHORT)(((mUrb)->UrbIsochronousTransfer.IsoPacket[mPos].Status & 0xFFFF)|((mUrb)->UrbIsochronousTransfer.IsoPacket[mPos].Status >> 15));	\
-	}																												\
-}while(0)
+		LONG mPos;																										\
+		for (mPos = 0; mPos < (mNumberOfPackets); mPos++)																\
+		{																												\
+			mIsoPacketArray[mPos].Length = (USHORT)(mUrb)->UrbIsochronousTransfer.IsoPacket[mPos].Length;				\
+			mIsoPacketArray[mPos].Status = (USHORT)(((mUrb)->UrbIsochronousTransfer.IsoPacket[mPos].Status & 0xFFFF)|((mUrb)->UrbIsochronousTransfer.IsoPacket[mPos].Status >> 15));	\
+		}																												\
+	}while(0)
 
 #define mXfer_IsoCheckInitNextFrameNumber(mStatus, mWdfUsbTargetDevice, mRequestContext, mIsHS, mOut_UseNextStartFrame) do { 				\
-	if (mRequestContext->QueueContext->IsFreshPipeReset) 																					\
-	{																																		\
-		if (!mRequestContext->Policies.IsoAlwaysStartAsap)   																				\
-		{																																	\
-			mRequestContext->QueueContext->IsFreshPipeReset = FALSE; 																		\
-			mStatus = WdfUsbTargetDeviceRetrieveCurrentFrameNumber(mWdfUsbTargetDevice, &mRequestContext->QueueContext->NextFrameNumber);	\
-			if (!NT_SUCCESS(mStatus))																										\
-			{																																\
-				USBWRNN("WdfUsbTargetDeviceRetrieveCurrentFrameNumber failed. Status=%08Xh",mStatus);    									\
-				mOut_UseNextStartFrame = FALSE;  																							\
-				mRequestContext->QueueContext->NextFrameNumber = 0;  																		\
-			}																																\
-			else 																															\
-			{																																\
-				mOut_UseNextStartFrame=TRUE; 																								\
-				mRequestContext->QueueContext->NextFrameNumber+=(USHORT)mRequestContext->Policies.IsoStartLatency;   						\
-				if (mIsHS && (mRequestContext->QueueContext->NextFrameNumber % 8))   														\
-				{																															\
-					mRequestContext->QueueContext->NextFrameNumber+=(8-(mRequestContext->QueueContext->NextFrameNumber % 8));				\
-				}																															\
-			}																																\
-		}																																	\
-		else 																																\
-		{																																	\
-			mRequestContext->QueueContext->IsFreshPipeReset = FALSE; 																		\
-			mOut_UseNextStartFrame = FALSE;  																								\
-		}																																	\
-	}																																		\
-}while(0)
+		if (mRequestContext->QueueContext->IsFreshPipeReset) 																					\
+		{																																		\
+			if (!mRequestContext->Policies.IsoAlwaysStartAsap)   																				\
+			{																																	\
+				mRequestContext->QueueContext->IsFreshPipeReset = FALSE; 																		\
+				mStatus = WdfUsbTargetDeviceRetrieveCurrentFrameNumber(mWdfUsbTargetDevice, &mRequestContext->QueueContext->NextFrameNumber);	\
+				if (!NT_SUCCESS(mStatus))																										\
+				{																																\
+					USBWRNN("WdfUsbTargetDeviceRetrieveCurrentFrameNumber failed. Status=%08Xh",mStatus);    									\
+					mOut_UseNextStartFrame = FALSE;  																							\
+					mRequestContext->QueueContext->NextFrameNumber = 0;  																		\
+				}																																\
+				else 																															\
+				{																																\
+					mOut_UseNextStartFrame=TRUE; 																								\
+					mRequestContext->QueueContext->NextFrameNumber+=(USHORT)mRequestContext->Policies.IsoStartLatency;   						\
+					if (mIsHS && (mRequestContext->QueueContext->NextFrameNumber % 8))   														\
+					{																															\
+						mRequestContext->QueueContext->NextFrameNumber+=(8-(mRequestContext->QueueContext->NextFrameNumber % 8));				\
+					}																															\
+				}																																\
+			}																																	\
+			else 																																\
+			{																																	\
+				mRequestContext->QueueContext->IsFreshPipeReset = FALSE; 																		\
+				mOut_UseNextStartFrame = FALSE;  																								\
+			}																																	\
+		}																																		\
+	}while(0)
 
 #define mXfer_IsoAssignNextFrameNumber(mUrb, mQueueContext, mIsHS, mOut_FramesPerPacket) do {						\
-	mUrb->UrbIsochronousTransfer.StartFrame = mQueueContext->NextFrameNumber;   									\
-	if (mIsHS)  																									\
-	{   																											\
-		mOut_FramesPerPacket = Frames_Per_bInterval_HighSpeed[(mQueueContext->Info.Interval-1) % 32];   			\
-		mQueueContext->NextFrameNumber+=((mUrb->UrbIsochronousTransfer.NumberOfPackets >> 3)*mOut_FramesPerPacket);	\
-	}   																											\
-	else																											\
-	{   																											\
-		mOut_FramesPerPacket = Frames_Per_bInterval_FullSpeed[(mQueueContext->Info.Interval-1) % 32];   			\
-		mQueueContext->NextFrameNumber+=(mUrb->UrbIsochronousTransfer.NumberOfPackets*mOut_FramesPerPacket);		\
-	}   																											\
-}while(0)
+		mUrb->UrbIsochronousTransfer.StartFrame = mQueueContext->NextFrameNumber;   									\
+		if (mIsHS)  																									\
+		{   																											\
+			mOut_FramesPerPacket = Frames_Per_bInterval_HighSpeed[(mQueueContext->Info.Interval-1) % 32];   			\
+			mQueueContext->NextFrameNumber+=((mUrb->UrbIsochronousTransfer.NumberOfPackets >> 3)*mOut_FramesPerPacket);	\
+		}   																											\
+		else																											\
+		{   																											\
+			mOut_FramesPerPacket = Frames_Per_bInterval_FullSpeed[(mQueueContext->Info.Interval-1) % 32];   			\
+			mQueueContext->NextFrameNumber+=(mUrb->UrbIsochronousTransfer.NumberOfPackets*mOut_FramesPerPacket);		\
+		}   																											\
+	}while(0)
 
 //
 // Required for doing ISOCH transfer. This context is associated with every

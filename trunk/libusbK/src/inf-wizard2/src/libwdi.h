@@ -60,7 +60,24 @@ extern "C" {
 		WDI_LIBUSB0,
 		WDI_LIBUSBK,
 		WDI_USER,
-		WDI_NB_DRIVERS	// Total number of drivers in the enum
+		WDI_NB_DRIVERS,	// Total number of drivers in the enum
+		WDI_ALL_DRIVERS = 0x80,
+	};
+
+	typedef struct _WDI_DEF_INF_ENTITY
+	{
+		const TCHAR* ClassGuid;
+		const TCHAR* ClassName;
+		const TCHAR* Provider;
+	} WDI_DEF_INF_ENTITY;
+
+	static WDI_DEF_INF_ENTITY DefaultInfTags[WDI_NB_DRIVERS + 1] =
+	{
+		{_T("{88BAE032-5A81-49F0-BC3D-A4FF138216D6}"),	_T("Universal Serial Bus devices"),	_T("Microsoft")},
+		{_T("{EB781AAF-9C70-4523-A5DF-642A87ECA567}"),	_T("libusb-win32 Usb Devices"),		_T("libusb-win32")},
+		{_T("{ECFB0CFD-74C4-4f52-BBF7-343461CD72AC}"),	_T("libusbK Usb Devices"),			_T("libusbK")},
+		{_T("{D9173AB3-4838-4a86-9BAD-E664C7A95927}"),	_T("Custom Usb Devices"),			_T("libusb.org")},
+		{NULL, NULL, NULL}
 	};
 
 	/*
@@ -150,6 +167,14 @@ extern "C" {
 	                         update the wdi_strerror() function implementation! */
 	};
 
+	enum wdi_package_flag
+	{
+	    WDI_PACKAGE_FLAG_CREATE_NORMAL			= (1 << 31),
+	    WDI_PACKAGE_FLAG_CREATE_USER_INSTALLER	= (1 << 29),
+	    WDI_PACKAGE_FLAG_FOR_INSTALL			= (1 << 28),
+
+	    WDI_PACKAGE_FLAG_MASK					= 0xFFFFFF00,
+	};
 
 	/*
 	 * Device information structure, used by libwdi functions
@@ -215,6 +240,13 @@ extern "C" {
 		char* cert_subject;
 		/** Install a generic driver, for WCID devices, to allow for automated installation */
 		bool use_wcid_driver;
+		/** (Optional) Class name used in inf file. 0 if unused */
+		char* inf_class;
+		/** (Optional) ClassGuid used in inf file. 0 if unused */
+		char* inf_class_guid;
+		/** (Optional) Provider name used in inf file. 0 if unused */
+		char* inf_provider;
+
 	};
 
 // wdi_install_driver options:

@@ -70,6 +70,7 @@ IDI_ICON_OK             ICON                    "res\\Icons.16x16.OK.ico"
 IDI_ICON_EXCLAMATION    ICON                    "res\\Exclamation.ico"
 IDI_ICON_OPEN_FOLDER    ICON                    "res\\Icons.16x16.OpenFileIcon.ico"
 IDI_ICON_EXPLORER       ICON                    "res\\Explorer.ico"
+IDI_ICON_INFORMATION    ICON                    "res\\Icons.16x16.Information.ico"
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -85,8 +86,8 @@ BEGIN
     CONTROL         "",IDC_DRIVER_LIST,"SysListView32",LVS_REPORT | LVS_ALIGNLEFT | WS_BORDER | WS_TABSTOP,132,82,198,39
     CONTROL         "InfWizard creates reusable USB installation packages customized for a specific to usb device.",IDC_INTRO_TEXT1,
                     "SysLink",WS_TABSTOP,132,29,198,21
-    CONTROL         "<a>Open Session</a>",IDC_LINK_OPEN_SESSION,"SysLink",WS_TABSTOP,132,125,59,14
-    CONTROL         "<a>Save Session</a>",IDC_LINK_SAVE_SESSION,"SysLink",WS_TABSTOP,203,125,59,14
+    CONTROL         "<a>Open Session..</a>",IDC_LINK_OPEN_SESSION,"SysLink",WS_TABSTOP,132,125,59,14
+    CONTROL         "<a>Save Session..</a>",IDC_LINK_SAVE_SESSION,"SysLink",WS_TABSTOP,203,125,59,14
     CONTROL         "To begin, Select the windows kernel driver that your USB applications will target: <a>Open External Package</a> | <a>Download</a>",IDC_LINK_SELECT_DRIVER,
                     "SysLink",WS_TABSTOP,132,56,198,24
 END
@@ -101,12 +102,12 @@ BEGIN
     CONTROL         "Show All Devices",IDC_SHOW_ALL_DEVICES,"Button",BS_AUTORADIOBUTTON | BS_NOTIFY,100,7,69,13
 END
 
-IDD_PAGE_CONFIG_DEVICE DIALOGEX 0, 0, 291, 132
+IDD_PAGE_CONFIG_DEVICE DIALOGEX 0, 0, 291, 146
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
 CAPTION "Sample Wizard"
 FONT 8, "Tahoma", 400, 0, 0x0
 BEGIN
-    CONTROL         "",IDC_DEV_LIST,"SysListView32",LVS_REPORT | LVS_SINGLESEL | LVS_EDITLABELS | LVS_ALIGNLEFT | LVS_NOSCROLL | LVS_NOCOLUMNHEADER | LVS_NOSORTHEADER | WS_BORDER | WS_TABSTOP,7,7,277,118,WS_EX_TRANSPARENT
+    CONTROL         "",IDC_DEV_LIST,"SysListView32",LVS_REPORT | LVS_SINGLESEL | LVS_EDITLABELS | LVS_ALIGNLEFT | LVS_NOSCROLL | LVS_NOCOLUMNHEADER | LVS_NOSORTHEADER | WS_BORDER | WS_TABSTOP,7,7,277,132,WS_EX_TRANSPARENT
 END
 
 IDD_PAGE_INSTALL DIALOGEX 0, 0, 291, 132
@@ -114,10 +115,9 @@ STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSME
 CAPTION "Sample Wizard"
 FONT 8, "Tahoma", 400, 0, 0x0
 BEGIN
-    CONTROL         "Save Package",IDC_BTN_SAVE_PACKAGE,"Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,11,7,61,10
-    CONTROL         "Install Package",IDC_BTN_INSTALL_PACKAGE,"Button",BS_AUTORADIOBUTTON | WS_TABSTOP,101,7,64,10
-    CONTROL         "Save && Install Package",IDC_BTN_SAVE_AND_INSTALL_PACKAGE,
-                    "Button",BS_AUTORADIOBUTTON | WS_TABSTOP,194,7,89,10
+    CONTROL         "Client Installer",IDC_BTN_CLIENT_INSTALLER,"Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,11,7,62,10
+    CONTROL         "Legacy Package",IDC_BTN_LEGACY_PACKAGE,"Button",BS_AUTORADIOBUTTON | WS_TABSTOP,101,7,67,10
+    CONTROL         "Install Only",IDC_BTN_INSTALL_ONLY,"Button",BS_AUTORADIOBUTTON | WS_TABSTOP,194,7,52,10
     GROUPBOX        "Package Save Information:",IDC_GRP_SAVE_INFORMATION,7,24,277,48,WS_GROUP
     RTEXT           "Base Folder:",IDC_LBL_SAVE_BASE_FOLDER,11,36,52,14,SS_CENTERIMAGE | NOT WS_GROUP
     EDITTEXT        IDC_TXT_SAVE_BASE_FOLDER,63,36,159,14,ES_AUTOHSCROLL | NOT WS_BORDER,WS_EX_CLIENTEDGE
@@ -128,22 +128,20 @@ BEGIN
     CONTROL         "",IDC_TXT_STATUS,"RichEdit20W",0x8c4,11,84,269,36,WS_EX_STATICEDGE
 END
 
-IDD_PAGE_FINISHED DIALOGEX 0, 0, 329, 153
+IDD_PAGE_FINISHED DIALOGEX 0, 0, 329, 166
 STYLE DS_SETFONT | WS_CHILD | WS_DISABLED | WS_CAPTION
 CAPTION "Sample Wizard"
 FONT 8, "Tahoma", 0, 0, 0x0
 BEGIN
-    LTEXT           "You have finished with",IDC_LBL_FINISHED_CAPTION,121,7,201,12
-    LTEXT           "USB Inf Creator/Installer Wizard",IDC_BIGBOLDTITLE,132,23,190,19
-    CONTROL         2035,IDC_PIC_FINISHED_TEXT,"Static",SS_BITMAP,132,47,21,20
-    LTEXT           "Click Back to review package create/install status.",IDC_LBL_FINISHED_TEXT,157,47,165,19,SS_CENTERIMAGE
-    GROUPBOX        "Additional Tasks:",IDC_GRP_ADDITIONAL_TASKS,132,79,190,48
-    PUSHBUTTON      "",IDC_BTN_EXPLORE_PACKAGE_FOLDER,137,91,20,16,BS_ICON | BS_CENTER | BS_VCENTER
-    PUSHBUTTON      "",IDC_BTN_EXPLORE_BASE_FOLDER,137,107,20,16,BS_ICON | BS_CENTER | BS_VCENTER
-    CONTROL         "<a>Open Session</a>",IDC_LINK_OPEN_SESSION,"SysLink",WS_TABSTOP,132,132,89,14
-    CONTROL         "<a>Save Session</a>",IDC_LINK_SAVE_SESSION,"SysLink",WS_TABSTOP,224,132,62,14
-    LTEXT           "Explore Base Folder..",IDC_LBL_EXPLORE_BASE_FOLDER,163,107,147,16,SS_CENTERIMAGE
-    LTEXT           "Explore Package Folder..",IDC_LBL_EXPLORE_PACKAGE_FOLDER,163,91,147,16,SS_CENTERIMAGE
+    LTEXT           "Completing UsbK InfWizard",IDC_BIGBOLDTITLE,121,7,201,33
+    ICON            "",IDC_PIC_TEXT_BACK,121,43,20,20,SS_CENTERIMAGE,WS_EX_TRANSPARENT
+    LTEXT           "Click Back to review package create/install status.",IDC_LBL_TEXT_BACK,146,46,175,13,SS_CENTERIMAGE,WS_EX_TRANSPARENT
+    LTEXT           "Click Finish to exit InfWizard.",IDC_LBL_TEXT_FINISH,146,59,176,13,SS_CENTERIMAGE,WS_EX_TRANSPARENT
+    CONTROL         "<a>Explore Package Folder..</a>",IDC_LINK_EXPLORE_PACKAGE_FOLDER,
+                    "SysLink",WS_TABSTOP,132,89,190,14
+    CONTROL         "<a>Save Session..</a>",IDC_LINK_SAVE_SESSION,"SysLink",WS_TABSTOP,132,104,90,14
+    RTEXT           "Help us keep libusb-win32 && libusbK alive!",IDC_LBL_DONATE,121,126,201,12,0,WS_EX_TRANSPARENT
+    PUSHBUTTON      "",IDC_DONATE,274,139,48,20,BS_BITMAP
 END
 
 
@@ -218,7 +216,7 @@ BEGIN
         LEFTMARGIN, 7
         RIGHTMARGIN, 284
         TOPMARGIN, 7
-        BOTTOMMARGIN, 125
+        BOTTOMMARGIN, 139
     END
 
     IDD_PAGE_INSTALL, DIALOG
@@ -245,15 +243,11 @@ BEGIN
         LEFTMARGIN, 121
         RIGHTMARGIN, 322
         VERTGUIDE, 132
-        VERTGUIDE, 157
+        VERTGUIDE, 146
         TOPMARGIN, 7
-        BOTTOMMARGIN, 146
-        HORZGUIDE, 42
-        HORZGUIDE, 47
-        HORZGUIDE, 66
-        HORZGUIDE, 79
-        HORZGUIDE, 91
-        HORZGUIDE, 107
+        BOTTOMMARGIN, 159
+        HORZGUIDE, 60
+        HORZGUIDE, 73
     END
 END
 #endif    // APSTUDIO_INVOKED
@@ -269,7 +263,11 @@ IDB_WATERMARK           BITMAP                  "res\\Water16.bmp"
 IDB_BAR_BLUE            BITMAP                  "res\\Bar.Blue.bmp"
 IDB_BAR_GREEN           BITMAP                  "res\\Bar.Green.bmp"
 IDB_BAR_ORANGE          BITMAP                  "res\\Bar.Orange.bmp"
-IDB_BMP_INFORMATION     BITMAP                  "res\\information.bmp"
+IDB_PAYPAL              BITMAP                  "res\\PayPal.Donate.bmp"
+IDB_NAV_BACK            BITMAP                  "res\\nav-back.bmp"
+IDB_NAV_NEXT            BITMAP                  "res\\nav-next-1.bmp"
+IDB_CANCEL              BITMAP                  "res\\cancel-1.bmp"
+IDB_FINISH              BITMAP                  "res\\finish.bmp"
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -321,12 +319,11 @@ BEGIN
                             "The driver package is ready to be created. Choose whether to install this package now, save this package, or install and save this package."
     IDS_MANUFACTURER        "Manufacturer"
     IDS_TIP_SAVE_BASE_FOLDER 
-                            "Base location for this package.\n[package name is appended as a sub-folder]"
-    IDS_TIP_PACKAGE_NAME    "Name and sub-folder for this package."
-    IDS_TXT_PACKAGE_SAVE_HEADER "[Click Next to save this package]"
-    IDS_TXT_PACKAGE_INSTALL_HEADER "[Click Next to install this package]"
-    IDS_TXT_PACKAGE_SAVE_AND_INSTALL_HEADER 
-                            "[Click Next to save and install this package]"
+                            "Specifies the base folder for driver packages.  The package is saved in a sub-folder of this base folder. IE. The final output folder will be:\n[Base Folder]\\[Package Name]"
+    IDS_TIP_PACKAGE_NAME    "Specifies the sub-folder and INF/CAT name. The sub-folder is relative to the base folder above. IE. The .INF file will be saved to:\n[Base Folder]\\[Package Name]\\[Package Name].inf."
+    IDS_TXT_CLIENT_INSTALLER "[Click Next to create an end-user installer]"
+    IDS_TXT_LEGACY_PACKAGE  "[Click Next to create a legacy package]"
+    IDS_TXT_INSTALL_ONLY    "[Click Next to install]"
     IDS_STATUS_START_PACKAGER "Starting libwdi packager"
     IDS_STATUS_INVALID_PATH "An invalid folder name was specified"
     IDS_STATUS_PREPARE_DRIVER "Creating and preparing driver package "
@@ -352,19 +349,40 @@ BEGIN
                             "Description or name string describing the device."
     IDS_TIP_INTERFACE_NUMBER 
                             "Interface number (MI_) of a multiple interface composite device."
-    IDS_TIP_INTERFACE_GUID  "Unique 128bit GUID applications can use to quickly find and open this device."
+    IDS_TIP_INTERFACE_GUID  "Unique 128bit GUID. Applications can use this to quickly find and open the device."
 END
 
 STRINGTABLE 
 BEGIN
-    IDS_TIP_SAVE_PACKAGE    "Create this package in the location specified below."
-    IDS_TIP_INSTALL_PACKAGE "Create this package in a temporary directory and install."
-    IDS_TIP_SAVE_AND_INSTALL_PACKAGE 
-                            "Create this package in the location specified below and install."
+    IDS_TIP_CLIENT_INSTALLER 
+                            "Create an end-user installation wizard. Client installers are highly configurable, self-contained, LZMA compressed executables.  See the instuctions in the output folder for more information."
+    IDS_TIP_LEGACY_PACKAGE  "Create a legacy package containing binaries and .inf only. Legacy packages can be installed from the device manager or a third party application."
+    IDS_TIP_INSTALL_ONLY    "Create this package in the location specified below and install."
     IDS_TIP_EXPLORE_PACKAGE_FOLDER 
                             "Open the full package location in windows explorer."
     IDS_TIP_EXPLORE_BASE_FOLDER 
                             "Open the base package location in windows explorer."
+    IDS_INF_CLASS           "Class Name"
+    IDS_INF_CLASS_GUID      "Class Guid"
+    IDS_INF_PROVIDER        "Provider Name"
+    IDS_TIP_INF_CLASS       "Specifies a unique, case-insensitive class-name value that must differ from any of the system-supplied classes. The length of the class-name string must be 32 characters or less.\n\nA new class name MUST be set in conjunction with a new class guid."
+    IDS_TIP_INF_CLASS_GUID  "Specifies the device-class GUID. This GUID value determines the device setup class subkey in the registry ...\\Class tree under which to write registry information for the drivers of devices installed from this INF file. For a new device setup class, specify a newly generated ClassGUID value.\n\nA new class name MUST be set in conjunction with a new class guid."
+    IDS_TIP_INF_PROVIDER    "Identifies the provider of the INF file."
+    IDS_NEXT                "Next"
+    IDS_BACK                "Back"
+    IDS_CANCEL              "Cancel"
+    IDS_FINISH              "Finish"
+    IDSF_PATH_TO_LONG       "Path must be less than %d chars.\n%s\n\n(Error Code = 0x%08X)"
+END
+
+STRINGTABLE 
+BEGIN
+    IDSF_CREATE_FILE_FAILED "Failed creating file. Ensure you have sufficient permission and check that the file is not already in-use.\n%s\n\n(Error Code = 0x%08X)"
+    IDS_STATUS_CREATE_USER_INSTALLER "Creating client installer"
+    IDS_STATUS_EXPORT_INSTALLER_RESOURCES 
+                            "Exporting client installer resources"
+    IDSE_CREATE_USER_INSTALLER "Failed creating client installer"
+    IDSE_UNKNOWN            "An unknown error occured"
 END
 
 #endif    // English (U.S.) resources

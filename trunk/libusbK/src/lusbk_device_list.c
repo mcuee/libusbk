@@ -37,8 +37,8 @@ typedef struct _KUSB_ENUM_REGKEY_PARAMS
 	// assigned by LstK_Init, copied by sub enumeration routines
 	// (global)
 	PKLST_HANDLE_INTERNAL DeviceList;
-	KLST_FLAG Flags;
 
+	KLST_INITEX_PARAMS InitParams;
 	// required before calling l_Enum_RegKey
 	HKEY hParentKey;
 	BOOL (*EnumRegKeyCB) (LPCSTR, struct _KUSB_ENUM_REGKEY_PARAMS* RegEnumParams);
@@ -538,20 +538,15 @@ static BOOL l_Build_AssignDriver(KLST_DEVINFO_HANDLE devItem)
 		if (devItem->DriverID == KUSB_DRVID_LIBUSB0_FILTER ||
 		        devItem->DriverID == KUSB_DRVID_LIBUSB0 )
 		{
-			if (devItem->LUsb0FilterIndex <= 255)
-			{
-				sprintf_s(devItem->DevicePath, sizeof(devItem->DevicePath) - 1,
-				          "\\\\.\\libusb0-%04d", devItem->LUsb0FilterIndex);
+			if (devItem->LUsb0FilterIndex > 255) return FALSE;
 
-				// new device with  an assigned driver (ready for device list)
-				return TRUE;
-			}
+			// libusb-win32 filter driver is active on this device.
+			sprintf_s(devItem->DevicePath, sizeof(devItem->DevicePath) - 1,
+			          "\\\\.\\libusb0-%04d", devItem->LUsb0FilterIndex);
+
 		}
-		else
-		{
-			// new device with  an assigned driver (ready for device list)
-			return TRUE;
-		}
+		// new device with  an assigned driver (ready for device list)
+		return TRUE;
 	}
 	return FALSE;
 }
@@ -674,7 +669,7 @@ static BOOL l_EnumKey_Instances(LPCSTR Name, KUSB_ENUM_REGKEY_PARAMS* RegEnumPar
 	if (status != ERROR_SUCCESS)
 		return TRUE;
 
-	if (!referenceCount && (!(RegEnumParams->Flags & KLST_FLAG_INCLUDE_DISCONNECT)))
+	if (!referenceCount && (!(RegEnumParams->InitParams.Flags & KLST_FLAG_INCLUDE_DISCONNECT)))
 		return TRUE;
 
 	RegEnumParams->TempItem->Connected = referenceCount > 0;
@@ -685,12 +680,25 @@ static BOOL l_EnumKey_Instances(LPCSTR Name, KUSB_ENUM_REGKEY_PARAMS* RegEnumPar
 	if (status != ERROR_SUCCESS)
 		return TRUE;
 
+	// apply PatternMatch->InstanceID
+	if (RegEnumParams->InitParams.PatternMatch && RegEnumParams->InitParams.PatternMatch->InstanceID[0])
+	{
+		if (!AllK.PathMatchSpec(RegEnumParams->TempItem->InstanceID, RegEnumParams->InitParams.PatternMatch->InstanceID))
+			return TRUE;
+	}
+
 	// query symbolic link value
 	// e.g. HKLM\SYSTEM\CurrentControlSet\Control\DeviceClasses\{20343a29-6da1-4db8-8a3c-16e774057bf5}\##?#USB#VID_1234&PID_0001#BMD001#{20343a29-6da1-4db8-8a3c-16e774057bf5}\#\SymbolicLink
 	status = l_GetReg_String(RegEnumParams->hOpenedKey, Name, "\\#", "SymbolicLink",  RegEnumParams->TempItem->SymbolicLink);
 	if (status != ERROR_SUCCESS)
 		return TRUE;
 
+	// apply PatternMatch->SymbolicLink
+	if (RegEnumParams->InitParams.PatternMatch && RegEnumParams->InitParams.PatternMatch->SymbolicLink[0])
+	{
+		if (!AllK.PathMatchSpec(RegEnumParams->TempItem->SymbolicLink, RegEnumParams->InitParams.PatternMatch->SymbolicLink))
+			return TRUE;
+	}
 	// DevicePath is equal to SymbolicLink unless it ends up being a libusb0 filter device
 	strcpy_s(RegEnumParams->TempItem->DevicePath, sizeof(RegEnumParams->TempItem->DevicePath), RegEnumParams->TempItem->SymbolicLink);
 
@@ -722,6 +730,13 @@ static BOOL l_EnumKey_Guids(LPCSTR Name, KUSB_ENUM_REGKEY_PARAMS* RegEnumParams)
 
 	KUSB_ENUM_REGKEY_PARAMS enumParamsInterfaceGUIDs;
 	BOOL success;
+
+	// If a Class guild was set, we
+	if (RegEnumParams->InitParams.PatternMatch && RegEnumParams->InitParams.PatternMatch->DeviceInterfaceGUID[0])
+	{
+		if (!AllK.PathMatchSpec(Name, RegEnumParams->InitParams.PatternMatch->DeviceInterfaceGUID))
+			return TRUE;
+	}
 
 	memcpy(&enumParamsInterfaceGUIDs, RegEnumParams, sizeof(enumParamsInterfaceGUIDs));
 
@@ -774,9 +789,9 @@ KUSB_EXP BOOL KUSB_API LstK_Free(
 	return TRUE;
 }
 
-KUSB_EXP BOOL KUSB_API LstK_Init(
+KUSB_EXP BOOL KUSB_API LstK_InitEx(
     _out KLST_HANDLE* DeviceList,
-    _in KLST_FLAG Flags)
+    _in PKLST_INITEX_PARAMS InitParams)
 {
 	KUSB_ENUM_REGKEY_PARAMS enumParams;
 	BOOL success = FALSE;
@@ -785,12 +800,13 @@ KUSB_EXP BOOL KUSB_API LstK_Init(
 
 	handle = PoolHandle_Acquire_LstK(&Cleanup_DeviceList);
 	ErrorNoSetAction(!IsHandleValid(handle), return FALSE, "->PoolHandle_Acquire_LstK");
+	ErrorParamAction(!IsHandleValid(InitParams), "InitParams", return FALSE);
 
 	Mem_Zero(&enumParams, sizeof(enumParams));
 
 	Mem_Zero(&TempItem, sizeof(TempItem));
 	enumParams.DeviceList		= handle;
-	enumParams.Flags			= Flags;
+	memcpy(&enumParams.InitParams, InitParams, sizeof(KLST_INITEX_PARAMS));
 	enumParams.EnumRegKeyCB		= l_EnumKey_Guids;
 	enumParams.hParentKey		= HKEY_LOCAL_MACHINE;
 	enumParams.SubKey			= KEY_DEVICECLASSES;
@@ -802,7 +818,7 @@ KUSB_EXP BOOL KUSB_API LstK_Init(
 	{
 		if (handle->head)
 		{
-			LstK_Enumerate((KLST_HANDLE)enumParams.DeviceList, l_DevEnum_Apply_Filter, &enumParams.Flags);
+			LstK_Enumerate((KLST_HANDLE)enumParams.DeviceList, l_DevEnum_Apply_Filter, &enumParams.InitParams.Flags);
 		}
 
 		success = TRUE;
@@ -819,6 +835,17 @@ KUSB_EXP BOOL KUSB_API LstK_Init(
 		if (handle) PoolHandle_Dec_LstK(handle);
 	}
 	return success;
+}
+
+KUSB_EXP BOOL KUSB_API LstK_Init(
+    _out KLST_HANDLE* DeviceList,
+    _in KLST_FLAG Flags)
+{
+	KLST_INITEX_PARAMS initParams;
+	Mem_Zero(&initParams, sizeof(initParams));
+	initParams.Flags = Flags;
+
+	return LstK_InitEx(DeviceList, &initParams);
 }
 
 KUSB_EXP BOOL KUSB_API LstK_MoveNext(

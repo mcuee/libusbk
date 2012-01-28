@@ -24,6 +24,7 @@
 #pragma once
 #endif // _MSC_VER > 1000
 
+
 /////////////////////////////////////////////////////////////////////////////
 // CPageInstall dialog
 
@@ -63,12 +64,6 @@ protected:
 
 	// Implementation
 protected:
-	void SetStatus(DWORD pfaAlignment, CString statusText, LPCTSTR fontName, LONG fontSize, BOOL fontBold, COLORREF textColor);
-	void SetStatusFont(BOOL isBold, COLORREF textColor, LPCTSTR pszFontName, LONG fontSize);
-	void SetStatusFormat(DWORD pfaAlignment, BOOL bulletMode);
-	void AppendStatus(CString statusText);
-	void WritePackageStatus(void);
-	void WriteStatusError(LPCTSTR szCaption, LPCTSTR szText);
 
 	int TwipsPerPixelY();
 	afx_msg BOOL OnToolTipNotify(UINT id, NMHDR* pNMHDR, LRESULT* pResult);
@@ -85,12 +80,24 @@ protected:
 private:
 	CToolTipCtrl m_ToolTip;
 
+	void SetStatus(DWORD pfaAlignment, CString statusText, LPCTSTR fontName, LONG fontSize, BOOL fontBold, COLORREF textColor);
+	void SetStatusFont(BOOL isBold, COLORREF textColor, LPCTSTR pszFontName, LONG fontSize);
+	void SetStatusFormat(DWORD pfaAlignment, BOOL bulletMode);
+	void AppendStatus(CString statusText);
+	void WritePackageStatus(void);
+	void WriteStatusError(LPCTSTR szCaption, LPCTSTR szText);
+	BOOL FinalizePrepareDriver(
+	    PWDI_DEVICE_INFO DeviceInfo,
+	    LPCSTR InfPath,
+	    LPCSTR InfName,
+	    PWDI_OPTIONS_PREPARE_DRIVER Options);
+
+
 public:
 	CImageList m_InstallImages;
-	CButton m_BtnSavePackage;
-	afx_msg void OnBnClickedBtnSavePackage();
-	afx_msg void OnBnClickedBtnInstallPackage();
-	afx_msg void OnBnClickedBtnSaveAndInstallPackage();
+	afx_msg void OnBnClickedBtnClientInstaller();
+	afx_msg void OnBnClickedBtnLegacyPackage();
+	afx_msg void OnBnClickedBtnInstallOnly();
 	CRichEditCtrl m_TxtStatus;
 	CButton m_BtnSaveLocation;
 	afx_msg void OnBnClickedBtnSaveBaseFolder();

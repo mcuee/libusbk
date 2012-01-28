@@ -31,17 +31,17 @@ binary distributions.
 #endif
 
 #define mPipe_CheckValueLength(mStatus,mPolicyType,mPipeID,mMinValueLength,mCheckValueLength,mCheckValueUpdateLength,mErrorAction) do {	\
-	if ((int)(mMinValueLength) > (int)(mCheckValueLength)) 																				\
-	{  																																	\
-		mStatus = STATUS_INVALID_BUFFER_SIZE;  																							\
-		USBERRN("PipeID=%02Xh Invalid policy length %u for policy type %u. MinimumLength=%u",  											\
-			mPipeID,mCheckValueLength,mPolicyType,mMinValueLength);																		\
-	   																																	\
-		if (mCheckValueUpdateLength) ((PULONG)(mCheckValueUpdateLength))[0]=(ULONG)(mCheckValueLength); 								\
-		mErrorAction;  																													\
-	}  																																	\
-	if (mCheckValueUpdateLength) ((PULONG)(mCheckValueUpdateLength))[0]=(ULONG)(mCheckValueLength); 									\
-}while(0)
+		if ((int)(mMinValueLength) > (int)(mCheckValueLength)) 																				\
+		{  																																	\
+			mStatus = STATUS_INVALID_BUFFER_SIZE;  																							\
+			USBERRN("PipeID=%02Xh Invalid policy length %u for policy type %u. MinimumLength=%u",  											\
+			        mPipeID,mCheckValueLength,mPolicyType,mMinValueLength);																		\
+			\
+			if (mCheckValueUpdateLength) ((PULONG)(mCheckValueUpdateLength))[0]=(ULONG)(mCheckValueLength); 								\
+			mErrorAction;  																													\
+		}  																																	\
+		if (mCheckValueUpdateLength) ((PULONG)(mCheckValueUpdateLength))[0]=(ULONG)(mCheckValueLength); 									\
+	}while(0)
 
 POLICY_DEFAULT PowerPolicyDefaults[MAX_POLICY] =
 {
@@ -164,10 +164,9 @@ VOID Policy_InitPipe(
 	defaultPolicies.values = 0;
 	defaultPolicies.AllowPartialReads = TRUE;
 	defaultPolicies.IsoStartLatency = IsHighSpeedDevice(deviceContext) ? 32 : 8;
-	//defaultPolicies.IsoAlwaysStartAsap=TRUE;
 	if (pipeContext)
 	{
-		defaultPolicies.IsoAlwaysStartAsap = USB_ENDPOINT_DIRECTION_IN(pipeContext->PipeInformation.EndpointAddress) ? TRUE : FALSE;
+		defaultPolicies.IsoAlwaysStartAsap = USB_ENDPOINT_DIRECTION_IN(pipeContext->PipeInformation.EndpointAddress) ? FALSE:TRUE;
 		pipeContext->Policies.values = defaultPolicies.values;
 	}
 }

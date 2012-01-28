@@ -12,14 +12,34 @@
 
 #include "stdafx.h"
 #include "InfWizardApp.h"
+#include "InfWizardDlg.h"
 #include "PageInstall.h"
 #include <shlwapi.h>
+#include "libwdimanager.h"
+#include "res\\packed_resources.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
 #endif
+
+typedef struct _PACKED_ITEM
+{
+	WORD	nID;
+	LPCTSTR Filename;
+} PACKED_ITEM, *PPACKED_ITEM;
+
+PACKED_ITEM PackedItems[] =
+{
+	{ ID_DPINST_XML,		_T("dpinst.xml") },
+	{ ID_7ZDP_SFX,			_T("7ZDP_LZMA.sfx") },
+	{ ID_7ZDP_CFG,			_T("7zDP_LZMA.cfg") },
+	{ ID_INSTRUCTIONS_TXT,	_T("Instructions.txt") },
+	{ ID_REPACK_CMD,		_T("re-pack-files.cmd") },
+	{ ID_7ZA_EXE,			_T("7za.exe") },
+};
+const DWORD PackedItemsCount = sizeof(PackedItems) / sizeof(PackedItems[0]);
 
 extern InfWizardApp* g_App;
 
@@ -49,7 +69,6 @@ void CPageInstall::DoDataExchange(CDataExchange* pDX)
 	//{{AFX_DATA_MAP(CPageInstall)
 	// NOTE: the ClassWizard will add DDX and DDV calls here
 	//}}AFX_DATA_MAP
-	DDX_Control(pDX, IDC_BTN_SAVE_PACKAGE, m_BtnSavePackage);
 	DDX_Control(pDX, IDC_TXT_STATUS, m_TxtStatus);
 	DDX_Control(pDX, IDC_BTN_SAVE_BASE_FOLDER, m_BtnSaveLocation);
 	DDX_Control(pDX, IDC_TXT_SAVE_BASE_FOLDER, m_TxtSaveBaseFolder);
@@ -63,9 +82,9 @@ BEGIN_MESSAGE_MAP(CPageInstall, CResizablePageEx)
 	ON_NOTIFY_EX(TTN_NEEDTEXT, 0, OnToolTipNotify)
 
 	//}}AFX_MSG_MAP
-	ON_BN_CLICKED(IDC_BTN_SAVE_PACKAGE, OnBnClickedBtnSavePackage)
-	ON_BN_CLICKED(IDC_BTN_INSTALL_PACKAGE, OnBnClickedBtnInstallPackage)
-	ON_BN_CLICKED(IDC_BTN_SAVE_AND_INSTALL_PACKAGE, OnBnClickedBtnSaveAndInstallPackage)
+	ON_BN_CLICKED(IDC_BTN_CLIENT_INSTALLER, OnBnClickedBtnClientInstaller)
+	ON_BN_CLICKED(IDC_BTN_LEGACY_PACKAGE, OnBnClickedBtnLegacyPackage)
+	ON_BN_CLICKED(IDC_BTN_INSTALL_ONLY, OnBnClickedBtnInstallOnly)
 	ON_BN_CLICKED(IDC_BTN_SAVE_BASE_FOLDER, OnBnClickedBtnSaveBaseFolder)
 END_MESSAGE_MAP()
 
@@ -90,23 +109,23 @@ BOOL CPageInstall::OnSetActive()
 
 LRESULT CPageInstall::OnWizardNext()
 {
-	BOOL bSave = ((CButton*)GetDlgItem(IDC_BTN_SAVE_PACKAGE))->GetCheck() == BST_CHECKED;
-	BOOL bInstallOnly = ((CButton*)GetDlgItem(IDC_BTN_INSTALL_PACKAGE))->GetCheck() == BST_CHECKED;
-	BOOL bSaveInstall = ((CButton*)GetDlgItem(IDC_BTN_SAVE_AND_INSTALL_PACKAGE))->GetCheck() == BST_CHECKED;
+	BOOL bClientInstaller = ((CButton*)GetDlgItem(IDC_BTN_CLIENT_INSTALLER))->GetCheck() == BST_CHECKED;
+	BOOL bLegacyPackage = ((CButton*)GetDlgItem(IDC_BTN_LEGACY_PACKAGE))->GetCheck() == BST_CHECKED;
+	BOOL bInstallOnly = ((CButton*)GetDlgItem(IDC_BTN_INSTALL_ONLY))->GetCheck() == BST_CHECKED;
 	CString fmtRtf;
 	CStringA infPathA;
 	CStringA infNameA;
 
 	int errorCode = ERROR_SUCCESS;
 
-	if (!bSave && !bInstallOnly && !bSaveInstall)
+	if (!bClientInstaller && !bLegacyPackage && !bInstallOnly)
 		return CResizablePageEx::OnWizardNext();
 
 	CLibWdiDynamicAPI& API = g_App->Wdi;
 
 	m_TxtStatus.SetWindowText(_T(""));
 	m_TxtStatus.SetSel(0, -1);
-	SetStatusFont(TRUE, RGB(60, 133, 201), _T("Tahoma"), TwipsPerPixelY() * 9);
+	SetStatusFont(TRUE, RGB(0, 0, 0), _T("Tahoma"), TwipsPerPixelY() * 9);
 	SetStatusFormat(PFA_LEFT, TRUE);
 
 	fmtRtf.Format(_T("%s..\n"), CInfWizardDisplay::GetTipString(IDS_STATUS_START_PACKAGER)->GetBuffer(0));
@@ -122,6 +141,19 @@ LRESULT CPageInstall::OnWizardNext()
 	if (g_App->Wdi.Session()->m_VendorName.GetLength() > 0)
 		prepareOptions.vendor_name = g_App->Wdi.Session()->chVendorName;
 	prepareOptions.device_guid = g_App->Wdi.Session()->chDeviceGuid;
+
+	g_App->Wdi.Session()->m_InfClassName.Trim();
+	g_App->Wdi.Session()->m_InfClassGuid.Trim();
+	g_App->Wdi.Session()->m_InfProvider.Trim();
+
+	if (g_App->Wdi.Session()->m_InfClassName.GetLength() > 0)
+		prepareOptions.inf_class = g_App->Wdi.Session()->chInfClassName;
+
+	if (g_App->Wdi.Session()->m_InfClassGuid.GetLength() > 0)
+		prepareOptions.inf_class_guid = g_App->Wdi.Session()->chInfClassGuid;
+
+	if (g_App->Wdi.Session()->m_InfProvider.GetLength() > 0)
+		prepareOptions.inf_provider = g_App->Wdi.Session()->chInfProvider;
 
 	wdi_options_install_driver installOptions;
 	memset(&installOptions, 0, sizeof(installOptions));
@@ -183,6 +215,18 @@ LRESULT CPageInstall::OnWizardNext()
 	fmtRtf.Format(_T("%s..\n"), CInfWizardDisplay::GetTipString(IDS_STATUS_PREPARE_DRIVER)->GetBuffer(0));
 	this->AppendStatus(fmtRtf);
 
+	if (bClientInstaller)
+	{
+		prepareOptions.driver_type |= WDI_PACKAGE_FLAG_CREATE_USER_INSTALLER;
+	}
+	else if (bLegacyPackage)
+	{
+		prepareOptions.driver_type |= WDI_PACKAGE_FLAG_CREATE_NORMAL;
+	}
+
+	prepareOptions.disable_signing = 1;
+	prepareOptions.disable_cat = 1;
+
 	errorCode = g_App->Wdi.PrepareDriver(&deviceInfo, infPathA.GetBuffer(0), infNameA.GetBuffer(0), &prepareOptions);
 	if (errorCode != ERROR_SUCCESS)
 	{
@@ -194,7 +238,13 @@ LRESULT CPageInstall::OnWizardNext()
 		goto Done;
 	}
 
-	if (bInstallOnly || bSaveInstall)
+	if (!FinalizePrepareDriver(&deviceInfo, infPathA.GetBuffer(0), infNameA.GetBuffer(0), &prepareOptions))
+	{
+		errorCode = GetLastError();
+		goto Done;
+	}
+
+	if (bInstallOnly)
 	{
 		fmtRtf.Format(_T("%s..\n"), CInfWizardDisplay::GetTipString(IDS_STATUS_INSTALL_DRIVER)->GetBuffer(0));
 		this->AppendStatus(fmtRtf);
@@ -216,7 +266,7 @@ Done:
 	g_App->Wdi.Session()->Destroy(&deviceInfo);
 	if (errorCode == ERROR_SUCCESS)
 	{
-		if (bInstallOnly)
+		if (bLegacyPackage)
 		{
 			RemoveDirectory(infPath);
 		}
@@ -230,18 +280,22 @@ Done:
 
 		}
 
-		if (bSave)
-			((CButton*)GetDlgItem(IDC_BTN_SAVE_PACKAGE))->SetCheck(BST_UNCHECKED);
+		if (bClientInstaller)
+			((CButton*)GetDlgItem(IDC_BTN_CLIENT_INSTALLER))->SetCheck(BST_UNCHECKED);
+		else if (bLegacyPackage)
+			((CButton*)GetDlgItem(IDC_BTN_LEGACY_PACKAGE))->SetCheck(BST_UNCHECKED);
 		else if (bInstallOnly)
-			((CButton*)GetDlgItem(IDC_BTN_INSTALL_PACKAGE))->SetCheck(BST_UNCHECKED);
-		else if (bSaveInstall)
-			((CButton*)GetDlgItem(IDC_BTN_SAVE_AND_INSTALL_PACKAGE))->SetCheck(BST_UNCHECKED);
+			((CButton*)GetDlgItem(IDC_BTN_INSTALL_ONLY))->SetCheck(BST_UNCHECKED);
 
 		CString* pTxtPackageSuccess = CInfWizardDisplay::GetTipString(IDS_STATUS_PACKAGE_SUCCESS);
 		fmtRtf.Format(_T("%s\n"), pTxtPackageSuccess->GetBuffer(0));
-		SetStatusFont(TRUE, CInfWizardDisplay::ColorSuccess, NULL, TwipsPerPixelY() * 11);
+		SetStatusFont(TRUE, CInfWizardDisplay::ColorGood, NULL, TwipsPerPixelY() * 11);
 		this->AppendStatus(fmtRtf);
 
+		InfWizardDlg* pDlg = (InfWizardDlg*)GetParent();
+		ASSERT_KINDOF(InfWizardDlg, pDlg);
+
+		m_TxtStatus.GetTextRange(0, m_TxtStatus.GetTextLength(), pDlg->m_InstallResults);
 		return CResizablePageEx::OnWizardNext();
 	}
 	return -1;
@@ -255,9 +309,9 @@ BOOL CPageInstall::OnInitDialog()
 	HICON hImgSaveLocation = (HICON)LoadImageW(g_App->m_hInstance, MAKEINTRESOURCE(IDI_ICON_OPEN_FOLDER), IMAGE_ICON, 16, 16, LR_SHARED);
 	m_BtnSaveLocation.SetIcon(hImgSaveLocation);
 
-	AddAnchor(IDC_BTN_SAVE_PACKAGE, TOP_LEFT);
-	AddAnchor(IDC_BTN_INSTALL_PACKAGE, TOP_LEFT);
-	AddAnchor(IDC_BTN_SAVE_AND_INSTALL_PACKAGE, TOP_LEFT);
+	AddAnchor(IDC_BTN_CLIENT_INSTALLER, TOP_LEFT);
+	AddAnchor(IDC_BTN_LEGACY_PACKAGE, TOP_LEFT);
+	AddAnchor(IDC_BTN_INSTALL_ONLY, TOP_LEFT);
 
 	AddAnchor(IDC_GRP_SAVE_INFORMATION, TOP_LEFT, TOP_RIGHT);
 
@@ -276,9 +330,9 @@ BOOL CPageInstall::OnInitDialog()
 
 	if (g_App->Wdi.Session()->m_PackageBaseDir.IsEmpty())
 	{
-		CButton* wndInstallPackage = (CButton*)GetDlgItem(IDC_BTN_SAVE_AND_INSTALL_PACKAGE);
+		CButton* wndInstallPackage = (CButton*)GetDlgItem(IDC_BTN_CLIENT_INSTALLER);
 		wndInstallPackage->SetCheck(BST_CHECKED);
-		OnBnClickedBtnSaveAndInstallPackage();
+		OnBnClickedBtnClientInstaller();
 	}
 
 	if(!m_ToolTip.Create(this))
@@ -287,16 +341,17 @@ BOOL CPageInstall::OnInitDialog()
 		return FALSE;
 	}
 
-	CInfWizardDisplay::AddCallbackTool(&m_ToolTip, this, IDC_BTN_SAVE_PACKAGE, IDS_TIP_SAVE_PACKAGE);
-	CInfWizardDisplay::AddCallbackTool(&m_ToolTip, this, IDC_BTN_INSTALL_PACKAGE, IDS_TIP_INSTALL_PACKAGE);
-	CInfWizardDisplay::AddCallbackTool(&m_ToolTip, this, IDC_BTN_SAVE_AND_INSTALL_PACKAGE, IDS_TIP_SAVE_AND_INSTALL_PACKAGE);
+	CInfWizardDisplay::AddCallbackTool(&m_ToolTip, this, IDC_BTN_CLIENT_INSTALLER, IDS_TIP_CLIENT_INSTALLER);
+	CInfWizardDisplay::AddCallbackTool(&m_ToolTip, this, IDC_BTN_LEGACY_PACKAGE, IDS_TIP_LEGACY_PACKAGE);
+	CInfWizardDisplay::AddCallbackTool(&m_ToolTip, this, IDC_BTN_INSTALL_ONLY, IDS_TIP_INSTALL_ONLY);
 
 	CInfWizardDisplay::AddCallbackTool(&m_ToolTip, this, IDC_TXT_SAVE_BASE_FOLDER, IDS_TIP_SAVE_BASE_FOLDER);
 	CInfWizardDisplay::AddCallbackTool(&m_ToolTip, this, IDC_TXT_SAVE_NAME, IDS_TIP_PACKAGE_NAME);
 
 	m_ToolTip.Activate(TRUE);
 
-	m_ToolTip.SetMaxTipWidth(250);
+	m_ToolTip.SetMaxTipWidth(400);
+	m_ToolTip.SetDelayTime(TTDT_AUTOPOP, 10000);
 
 	return TRUE;  // return TRUE unless you set the focus to a control
 	// EXCEPTION: OCX Property Pages should return FALSE
@@ -364,17 +419,17 @@ void CPageInstall::WriteStatusError(LPCTSTR szCaption, LPCTSTR szText)
 
 void CPageInstall::WritePackageStatus()
 {
-	BOOL bSave = ((CButton*)GetDlgItem(IDC_BTN_SAVE_PACKAGE))->GetCheck() == BST_CHECKED;
-	BOOL bInstallOnly = ((CButton*)GetDlgItem(IDC_BTN_INSTALL_PACKAGE))->GetCheck() == BST_CHECKED;
-	BOOL bSaveInstall = ((CButton*)GetDlgItem(IDC_BTN_SAVE_AND_INSTALL_PACKAGE))->GetCheck() == BST_CHECKED;
+	BOOL bClientInstaller = ((CButton*)GetDlgItem(IDC_BTN_CLIENT_INSTALLER))->GetCheck() == BST_CHECKED;
+	BOOL bLegacyPackage = ((CButton*)GetDlgItem(IDC_BTN_LEGACY_PACKAGE))->GetCheck() == BST_CHECKED;
+	BOOL bInstallOnly = ((CButton*)GetDlgItem(IDC_BTN_INSTALL_ONLY))->GetCheck() == BST_CHECKED;
 
 	CString* headerText;
-	if (bSave)
-		headerText = CInfWizardDisplay::GetTipString(IDS_TXT_PACKAGE_SAVE_HEADER);
+	if (bClientInstaller)
+		headerText = CInfWizardDisplay::GetTipString(IDS_TXT_CLIENT_INSTALLER);
+	else if (bLegacyPackage)
+		headerText = CInfWizardDisplay::GetTipString(IDS_TXT_LEGACY_PACKAGE);
 	else if (bInstallOnly)
-		headerText = CInfWizardDisplay::GetTipString(IDS_TXT_PACKAGE_INSTALL_HEADER);
-	else if (bSaveInstall)
-		headerText = CInfWizardDisplay::GetTipString(IDS_TXT_PACKAGE_SAVE_AND_INSTALL_HEADER);
+		headerText = CInfWizardDisplay::GetTipString(IDS_TXT_INSTALL_ONLY);
 	else
 		return;
 
@@ -431,22 +486,22 @@ void CPageInstall::EnableWindowGroup(WORD nID, BOOL bEnabled)
 	}
 }
 
-void CPageInstall::OnBnClickedBtnSavePackage()
+void CPageInstall::OnBnClickedBtnClientInstaller()
 {
 	WritePackageStatus();
 	EnableWindowGroup(IDC_GRP_SAVE_INFORMATION, TRUE);
 }
 
-void CPageInstall::OnBnClickedBtnInstallPackage()
+void CPageInstall::OnBnClickedBtnLegacyPackage()
+{
+	WritePackageStatus();
+	EnableWindowGroup(IDC_GRP_SAVE_INFORMATION, TRUE);
+}
+
+void CPageInstall::OnBnClickedBtnInstallOnly()
 {
 	WritePackageStatus();
 	EnableWindowGroup(IDC_GRP_SAVE_INFORMATION, FALSE);
-}
-
-void CPageInstall::OnBnClickedBtnSaveAndInstallPackage()
-{
-	WritePackageStatus();
-	EnableWindowGroup(IDC_GRP_SAVE_INFORMATION, TRUE);
 }
 
 BOOL CPageInstall::PreTranslateMessage(MSG* pMsg)
@@ -460,7 +515,7 @@ BOOL CPageInstall::OnToolTipNotify(UINT id, NMHDR* pNMHDR, LRESULT* pResult)
 	return CInfWizardDisplay::HandleToolTipNotify(id, pNMHDR, pResult);
 }
 
-void CPageInstall::OnBnClickedBtnSaveBaseFolder()
+VOID CPageInstall::OnBnClickedBtnSaveBaseFolder()
 {
 	CString baseDir, name;
 
@@ -472,4 +527,147 @@ void CPageInstall::OnBnClickedBtnSaveBaseFolder()
 		m_TxtSaveBaseFolder.SetWindowText(g_App->Wdi.Session()->GetPackageBaseDir());
 		m_TxtSaveName.SetWindowText(g_App->Wdi.Session()->GetPackageName());
 	}
+}
+
+BOOL CPageInstall::FinalizePrepareDriver(
+    PWDI_DEVICE_INFO DeviceInfo,
+    LPCSTR InfPathA,
+    LPCSTR InfNameA,
+    PWDI_OPTIONS_PREPARE_DRIVER Options)
+{
+	CString infPath(InfPathA);
+	CString infName(InfNameA);
+	CString fileName;
+	CFile extractFile;
+	CString errorMessage;
+	DWORD errorCode;
+	BYTE* resourceData;
+	DWORD resourceSize;
+	BOOL success;
+	PPACKED_ITEM packedItem = NULL;
+	CString fmtRtf;
+
+
+	if (Options->driver_type & WDI_PACKAGE_FLAG_CREATE_USER_INSTALLER)
+	{
+		fmtRtf.Format(_T("%s..\n"), CInfWizardDisplay::GetTipString(IDS_STATUS_EXPORT_INSTALLER_RESOURCES)->GetBuffer(0));
+		this->AppendStatus(fmtRtf);
+
+		WORD idPacked = ID_PACKED_BEGIN - 1;
+		while (g_App->Wdi.GetDriverResource(++idPacked, ID_PACKED_RES, (LPVOID*)&resourceData, &resourceSize))
+		{
+			BOOL bTag = FALSE;
+			BOOL bOverwrite = TRUE;
+			LPCTSTR outFileName = NULL;
+			int i;
+
+			for(i = 0; i < ::PackedItemsCount; i++)
+			{
+				if (idPacked == PackedItems[i].nID)
+				{
+					packedItem = &PackedItems[i];
+					break;
+				}
+			}
+			if (!packedItem)
+			{
+				MessageBox(_T("You must compile from source to add resources."), _T("Missing file definitions"), MB_OK | MB_ICONEXCLAMATION);
+				continue;
+			}
+
+
+			switch(idPacked)
+			{
+			case ID_7ZA_EXE:
+				// Extract the 7za.exe tool.
+				GetTempPath(MAX_PATH, fileName.GetBufferSetLength(MAX_PATH));
+				PathAppend(fileName.GetBuffer(), _T("7za.exe"));
+				fileName.ReleaseBuffer();
+				outFileName = NULL;
+				SetEnvironmentVariable(_T("7ZA_EXE"), fileName);
+				bOverwrite = FALSE;
+				break;
+			default:
+				fileName = infPath;
+				outFileName = packedItem->Filename;
+				break;
+			}
+
+			if (outFileName)
+			{
+				if (!PathAppend(fileName.GetBufferSetLength(MAX_PATH), outFileName))
+				{
+					errorCode = GetLastError();
+					errorMessage.Format(IDSF_PATH_TO_LONG, MAX_PATH, fileName, errorCode);
+					MessageBox(errorMessage, _T("Path is to long"), MB_OK | MB_ICONEXCLAMATION);
+					return FALSE;
+				}
+				fileName.ReleaseBuffer();
+			}
+
+			if (!bOverwrite && PathFileExists(fileName))
+				continue;
+
+			success = extractFile.Open(fileName, CFile::modeCreate | CFile::shareDenyNone | CFile::modeWrite);
+
+			if (!success)
+			{
+				errorCode = GetLastError();
+				errorMessage.Format(IDSF_CREATE_FILE_FAILED, fileName, errorCode);
+				MessageBox(errorMessage, _T("Create file failed"), MB_OK | MB_ICONEXCLAMATION);
+				return FALSE;
+			}
+
+			extractFile.Write(resourceData, resourceSize);
+			extractFile.Flush();
+			extractFile.Close();
+
+		}
+
+		packedItem = NULL;
+		for(int i = 0; i < PackedItemsCount; i++)
+		{
+			if (PackedItems[i].nID == ID_REPACK_CMD)
+			{
+				packedItem = &PackedItems[i];
+				break;
+			}
+		}
+		if (packedItem)
+		{
+			SHELLEXECUTEINFO execInfo;
+			DWORD exitCode = 0;
+
+			fmtRtf.Format(_T("%s..\n"), CInfWizardDisplay::GetTipString(IDS_STATUS_CREATE_USER_INSTALLER)->GetBuffer(0));
+			this->AppendStatus(fmtRtf);
+
+			memset(&execInfo, 0, sizeof(execInfo));
+			execInfo.cbSize = sizeof(execInfo);
+			execInfo.lpDirectory = infPath;
+			execInfo.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_NOASYNC | SEE_MASK_FLAG_NO_UI | SEE_MASK_NO_CONSOLE;
+			execInfo.nShow = SW_HIDE;
+			execInfo.lpFile =  packedItem->Filename;
+
+			if(ShellExecuteEx(&execInfo) != FALSE)
+			{
+				WaitForSingleObject(execInfo.hProcess, INFINITE);
+				GetExitCodeProcess(execInfo.hProcess, &exitCode);
+				if (exitCode != 0)
+				{
+					LPCTSTR caption = CInfWizardDisplay::GetTipString(IDSE_CREATE_USER_INSTALLER)->GetBuffer(0);
+					WriteStatusError(caption, execInfo.lpFile);
+					MessageBox(execInfo.lpFile, caption, MB_OK | MB_ICONEXCLAMATION);
+					return FALSE;
+				}
+			}
+			else
+			{
+				LPCTSTR caption = CInfWizardDisplay::GetTipString(IDSE_UNKNOWN)->GetBuffer(0);
+				WriteStatusError(caption, execInfo.lpFile);
+				MessageBox(execInfo.lpFile, caption, MB_OK | MB_ICONEXCLAMATION);
+				return FALSE;
+			}
+		}
+	}
+	return TRUE;
 }

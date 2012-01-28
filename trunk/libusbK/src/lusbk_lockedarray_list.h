@@ -13,10 +13,10 @@
 	ALCorALH##_PushTail(mArray_List_TypeName, mArray_List_Name);   														\
 	ALCorALH##_PopHead(mArray_List_TypeName, mArray_List_Name);															\
 	ALCorALH##_PopTail(mArray_List_TypeName, mArray_List_Name);															\
-   																														\
+	\
 	ALCorALH##_Create(mArray_List_TypeName, mArray_List_Name); 															\
 	ALCorALH##_CreateItem(mArray_List_TypeName, mArray_List_Name); 														\
-   																														\
+	\
 	ALCorALH##_Destroy(mArray_List_TypeName, mArray_List_Name);															\
 	ALCorALH##_DestroyItem(mArray_List_TypeName, mArray_List_Name)
 
@@ -31,20 +31,20 @@
 	ALDEF_LIST_FUNCTIONS(ALH,mArray_List_TypeName,mArray_List_Name)
 
 #define ALDEF_LOCKED_ARRAY_LIST(mArray_List_TypeName)  						\
-typedef struct _##mArray_List_TypeName##_LIST   							\
-{   																		\
-																			\
-	volatile P##mArray_List_TypeName##_ITEM* Items; 						\
-	long MaxCount;  														\
-																			\
-	struct  																\
-	{   																	\
-		volatile long Count;												\
-		volatile long Head; 												\
-		volatile long Tail; 												\
-	}Idx;   																\
-																			\
-}mArray_List_TypeName##_LIST,*P##mArray_List_TypeName##_LIST
+	typedef struct _##mArray_List_TypeName##_LIST   							\
+	{   																		\
+		\
+		volatile P##mArray_List_TypeName##_ITEM* Items; 						\
+		long MaxCount;  														\
+		\
+		struct  																\
+		{   																	\
+			volatile long Count;												\
+			volatile long Head; 												\
+			volatile long Tail; 												\
+		}Idx;   																\
+		\
+	}mArray_List_TypeName##_LIST,*P##mArray_List_TypeName##_LIST
 
 #define AL_Inc_Idx(mArray_List,mIdxField) ((((ULONG)InterlockedIncrement(&((mArray_List)->Idx.mIdxField))) % (mArray_List)->MaxCount))
 #define AL_Dec_Idx(mArray_List,mIdxField) ((((ULONG)InterlockedDecrement(&((mArray_List)->Idx.mIdxField))) % (mArray_List)->MaxCount))
@@ -82,7 +82,7 @@ typedef struct _##mArray_List_TypeName##_LIST   							\
 				idx = AL_ExgDec_Idx((mArray_List_Name##List),Head);AL_DBG("idx:%d\n",idx); 								\
 				while(AL_Synchronize_Push(mArray_List_TypeName,mArray_List_Name,idx)) SleepEx(0,TRUE);					\
 				return ERROR_SUCCESS;  																					\
-   																														\
+				\
 			}  																											\
 		}  																												\
 		return ERROR_NO_MORE_ITEMS;																						\
@@ -99,7 +99,7 @@ typedef struct _##mArray_List_TypeName##_LIST   							\
 				idx = AL_ExgInc_Idx(mArray_List_Name##List,Tail);AL_DBG("idx:%d\n",idx);  									\
 				while(AL_Synchronize_Push(mArray_List_TypeName,mArray_List_Name,idx)) SleepEx(0,TRUE); 				\
 				return ERROR_SUCCESS;  																					\
-   																														\
+				\
 			}  																											\
 		}  																												\
 		return ERROR_NO_MORE_ITEMS;																						\
@@ -116,7 +116,7 @@ typedef struct _##mArray_List_TypeName##_LIST   							\
 				idx = AL_ExgInc_Idx(mArray_List_Name##List,Head);AL_DBG("idx:%d\n",idx);  									\
 				while(AL_Synchronize_Pop(mArray_List_TypeName,mArray_List_Name,idx)) SleepEx(0,TRUE); 					\
 				return ERROR_SUCCESS;  																					\
-   																														\
+				\
 			}  																											\
 		}  																												\
 		return ERROR_NO_MORE_ITEMS;																						\
@@ -133,7 +133,7 @@ typedef struct _##mArray_List_TypeName##_LIST   							\
 				idx = AL_ExgDec_Idx(mArray_List_Name##List,Tail); AL_DBG("idx:%d\n",idx);  								\
 				while(AL_Synchronize_Pop(mArray_List_TypeName,mArray_List_Name,idx)) SleepEx(0,TRUE); 					\
 				return ERROR_SUCCESS;  																					\
-   																														\
+				\
 			}  																											\
 		}  																												\
 		return ERROR_NO_MORE_ITEMS;																						\
@@ -147,7 +147,7 @@ typedef struct _##mArray_List_TypeName##_LIST   							\
 		(*(mArray_List_Name##List))->Items = (P##mArray_List_TypeName##_ITEM*)AL_MemAlloc(Heap,sizeof(P##mArray_List_TypeName##_ITEM)*(MaxCount+1)); 	\
 		if ((*(mArray_List_Name##List))->Items == NULL) return GetLastError(); 											\
 		(*(mArray_List_Name##List))->MaxCount = MaxCount;  																\
-   																														\
+		\
 		return ERROR_SUCCESS;  																							\
 	}
 

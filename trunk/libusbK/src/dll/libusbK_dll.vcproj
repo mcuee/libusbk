@@ -35,6 +35,9 @@
 				Name="VCXMLDataGeneratorTool"
 			/>
 			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
 				Name="VCMIDLTool"
 			/>
 			<Tool
@@ -60,8 +63,9 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib advapi32.lib $(NOINHERIT)"
-				IgnoreAllDefaultLibraries="true"
+				AdditionalDependencies="kernel32.lib user32.lib advapi32.lib $(NOINHERIT)"
+				IgnoreAllDefaultLibraries="false"
+				IgnoreDefaultLibraryNames=""
 				ModuleDefinitionFile="libusbK.def"
 				AddModuleNamesToAssembly=""
 				GenerateDebugInformation="true"
@@ -106,6 +110,9 @@
 				Name="VCXMLDataGeneratorTool"
 			/>
 			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
 				Name="VCMIDLTool"
 				TargetEnvironment="3"
 			/>
@@ -132,8 +139,9 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib advapi32.lib $(NOINHERIT)"
-				IgnoreAllDefaultLibraries="true"
+				AdditionalDependencies="kernel32.lib user32.lib advapi32.lib $(NOINHERIT)"
+				IgnoreAllDefaultLibraries="false"
+				IgnoreDefaultLibraryNames=""
 				ModuleDefinitionFile="libusbK.def"
 				AddModuleNamesToAssembly=""
 				GenerateDebugInformation="true"
@@ -179,6 +187,9 @@
 				Name="VCXMLDataGeneratorTool"
 			/>
 			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
 				Name="VCMIDLTool"
 			/>
 			<Tool
@@ -205,8 +216,9 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib advapi32.lib $(NOINHERIT)"
-				IgnoreAllDefaultLibraries="true"
+				AdditionalDependencies="kernel32.lib user32.lib advapi32.lib $(NOINHERIT)"
+				IgnoreAllDefaultLibraries="false"
+				IgnoreDefaultLibraryNames="msvcrt.lib"
 				ModuleDefinitionFile="libusbK.def"
 				AddModuleNamesToAssembly=""
 				TargetMachine="1"
@@ -251,6 +263,9 @@
 				Name="VCXMLDataGeneratorTool"
 			/>
 			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
 				Name="VCMIDLTool"
 				TargetEnvironment="3"
 			/>
@@ -278,8 +293,9 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib advapi32.lib $(NOINHERIT)"
-				IgnoreAllDefaultLibraries="true"
+				AdditionalDependencies="kernel32.lib user32.lib advapi32.lib $(NOINHERIT)"
+				IgnoreAllDefaultLibraries="false"
+				IgnoreDefaultLibraryNames="msvcrt.lib"
 				ModuleDefinitionFile="libusbK.def"
 				AddModuleNamesToAssembly=""
 				TargetMachine="17"
@@ -315,6 +331,10 @@
 			Filter="cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx"
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
+			<File
+				RelativePath="..\app_msvc_config.c"
+				>
+			</File>
 			<File
 				RelativePath="..\lusbk_bknd_libusb0.c"
 				>
@@ -423,6 +443,10 @@
 			</File>
 			<File
 				RelativePath=".\lusbk_version.h"
+				>
+			</File>
+			<File
+				RelativePath="..\wdk_msvc_config.h"
 				>
 			</File>
 		</Filter>
