@@ -376,29 +376,8 @@ typedef struct _KLST_PATTERN_MATCH
 } KLST_PATTERN_MATCH;
 C_ASSERT(sizeof(KLST_PATTERN_MATCH) == 1024);
 
-//! Device list parameter structure.
-/*!
-* \fixedstruct{64}
-*
-* This structure is used as a parameter of \ref LstK_InitEx.
-*
-*/
-typedef struct _KLST_INITEX_PARAMS
-{
-	//! Device list initialization flags.
-	KLST_FLAG Flags;
-
-	//! File pattern match includes.
-	KLST_PATTERN_MATCH* PatternMatch;
-
-	//! fixed structure padding.
-	UCHAR z_F_i_x_e_d[64 - sizeof(KLST_FLAG) - sizeof(KLST_PATTERN_MATCH*)];
-
-} KLST_INITEX_PARAMS;
-C_ASSERT(sizeof(KLST_INITEX_PARAMS) == 64);
-
-//! Pointer to a \ref KLST_INITEX_PARAMS structure.
-typedef KLST_INITEX_PARAMS* PKLST_INITEX_PARAMS;
+//! Pointer to a \ref KLST_PATTERN_MATCH structure.
+typedef KLST_PATTERN_MATCH* PKLST_PATTERN_MATCH;
 
 //! Device list enumeration function callback typedef.
 /*!
@@ -3088,8 +3067,11 @@ extern "C" {
 	* \param[out] DeviceList
 	* Pointer reference that will receive a populated device list.
 	*
-	* \param[in] InitParams
+	* \param[in] Flags
 	* Search, filter, and listing options. see \c KLST_FLAG
+	*
+	* \param[in] PatternMatch
+	* Pattern Search filter.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*
@@ -3105,7 +3087,8 @@ extern "C" {
 	*/
 	KUSB_EXP BOOL KUSB_API LstK_InitEx(
 	    _out KLST_HANDLE* DeviceList,
-	    _in PKLST_INITEX_PARAMS InitParams);
+	    _in KLST_FLAG Flags,
+		_in PKLST_PATTERN_MATCH PatternMatch);
 
 	//! Frees a usb device list.
 	/*!

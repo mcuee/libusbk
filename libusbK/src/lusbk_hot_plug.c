@@ -725,15 +725,10 @@ KUSB_EXP BOOL KUSB_API HotK_Init(
 	// Create the top-level window for monitoring. WM_DEVICE_CHANGE.
 	if (IncLock(g_HotNotifierList.HotLockCount) == 1)
 	{
-		KLST_INITEX_PARAMS listInit;
-		Mem_Zero(&listInit, sizeof(listInit));
-		listInit.Flags = KLST_FLAG_INCLUDE_DISCONNECT;
-		listInit.PatternMatch = &InitParams->PatternMatch;
-
 		g_HotNotifierList.DevNodesChangePending = 0;
 		if (!g_HotNotifierList.hAppInstance) g_HotNotifierList.hAppInstance = GetModuleHandle(NULL);
 
-		success = LstK_InitEx(&g_HotNotifierList.DeviceList, &listInit);
+		success = LstK_InitEx(&g_HotNotifierList.DeviceList, KLST_FLAG_INCLUDE_DISCONNECT, &InitParams->PatternMatch);
 		ErrorNoSet(!success, Error, "Failed creating master device list.");
 
 		success = h_Create_Thread(&g_HotNotifierList);
