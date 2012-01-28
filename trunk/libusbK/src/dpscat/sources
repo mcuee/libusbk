@@ -1,0 +1,38 @@
+# ++ AUTO-GENERATED - dpscat.exe.sources
+TARGET_OUTPUT_FILENAME_EXT=exe
+TARGET_OUTPUT_BASE_DIR=..\..\bin
+TARGETNAME = dpscat
+TARGETPATH = $(TARGET_OUTPUT_BASE_DIR)\$(TARGET_OUTPUT_FILENAME_EXT)
+
+WDK_OUTPUT_SUBDIR=$(_BUILDARCH)
+!IF "$(_BUILDARCH)"=="x86"
+WDK_OUTPUT_SUBDIR=i386
+!ENDIF
+
+SXS_MANIFEST=dpscat.manifest
+SXS_MANIFEST_IN_RESOURCES=1
+
+TARGETTYPE = PROGRAM
+USE_MSVCRT = 1
+UMTYPE     = windows
+UMENTRY    = _tWinMain
+UMENTRYABS = wWinMainCRTStartup
+
+!IFNDEF MSC_WARNING_LEVEL
+MSC_WARNING_LEVEL=/W4 /WX
+!ENDIF
+
+C_DEFINES=$(C_DEFINES) -DUNICODE -D_UNICODE  -DKWDK_COMPILER
+
+TARGETLIBS=$(SDK_LIB_PATH)\kernel32.lib \
+           $(SDK_LIB_PATH)\setupapi.lib \
+           $(SDK_LIB_PATH)\user32.lib \
+		   $(SDK_LIB_PATH)\advapi32.lib \
+		   $(SDK_LIB_PATH)\newdev.lib \
+		   $(SDK_LIB_PATH)\ole32.lib \
+		   $(SDK_LIB_PATH)\shlwapi.lib \
+		   $(SDK_LIB_PATH)\shell32.lib
+
+INCLUDES=.\;..\;..\..\includes;$(DDK_INC_PATH);$(INCLUDES)
+
+SOURCES=dpscat_rc.rc dpscat.c inf_parser.c pki.c ..\lusbk_debug_view_output.c

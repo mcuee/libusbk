@@ -1,0 +1,10 @@
+
+Creates self-signed .cat files from .inf files.  By default, dpscat.exe
+searches the working directory for all files matching the FileSpec
+*.inf.
+
+USAGE:
+dpscat.exe [/PATH Path]
+
+/PATH Path   - Specifies an alternate .inf file search directory. 
+
