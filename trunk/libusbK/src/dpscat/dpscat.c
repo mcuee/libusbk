@@ -25,6 +25,7 @@ binary distributions.
 #define HANDLE_IS_VALID(mHandle) (mHandle && mHandle!=INVALID_HANDLE_VALUE)
 
 unsigned long DebugLevel = 4;
+
 SYSTEM_INFO g_SystemInfo;
 BOOL g_ConsoleAttached = FALSE;
 HANDLE g_hConsoleOutput = NULL;
@@ -98,6 +99,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
 	int argCount = 0;
 	int ret = 0;
 	static TCHAR _lineBuffer[1024];
+	static TCHAR _spaceBuffer[1024];
 	DWORD numChars;
 
 	LPWSTR lpCmdLineW		= GetCommandLineW();
@@ -109,6 +111,8 @@ int APIENTRY _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
 	UNREFERENCED_PARAMETER(nCmdShow);
 
 	memset(_lineBuffer, 0, sizeof(_lineBuffer));
+	memset(_spaceBuffer, ' ', sizeof(_lineBuffer));
+	_spaceBuffer[sizeof(_lineBuffer)-1]='\0';
 
 	if ((g_ConsoleAttached = AttachConsole(ATTACH_PARENT_PROCESS)) != FALSE)
 	{
@@ -130,6 +134,8 @@ int APIENTRY _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
 				else
 				{
 					g_CursorPos.X = 0;
+					SetConsoleCursorPosition(g_hConsoleOutput, g_CursorPos);
+					WriteConA(_spaceBuffer,numChars,&numChars);
 					if (--g_CursorPos.Y & 0x80000000)
 						g_CursorPos.Y = 0;
 
@@ -177,6 +183,11 @@ int RunProgram(int argc, LPWSTR* argv)
 
 	// startup initialization
 	memset(searchPath, 0, sizeof(searchPath));
+	USBMSGN("");
+	USBMSGN("%s v%s (%s)",
+	        RC_FILENAME_STR,
+	        RC_VERSION_STR,
+	        DEFINE_TO_STR(VERSION_DATE));
 
 #if _WIN32_WINNT >= 0x0501
 	GetNativeSystemInfo(&g_SystemInfo);
@@ -187,6 +198,7 @@ int RunProgram(int argc, LPWSTR* argv)
 	// arg parsing
 	if (argc == 3)
 	{
+		USBMSGN("");
 		if (_wcsicmp(argv[1], L"/path") != 0)
 		{
 			returnCode = ERROR_INVALID_PARAMETER;
@@ -214,6 +226,7 @@ int RunProgram(int argc, LPWSTR* argv)
 	}
 	else
 	{
+		USBMSGN("");
 		// Set the .inf search path to the current directory.
 		length = GetCurrentDirectoryW(sizeof(searchPath), searchPath);
 		if (!length)
@@ -262,6 +275,7 @@ int RunProgram(int argc, LPWSTR* argv)
 	}
 
 Error:
+	USBMSG("\n");
 	InfK_Free(infList);
 	return (int)returnCode;
 
@@ -272,12 +286,8 @@ Error:
 //////////////////////////////////////////////////////////////////////////////
 void ShowCopyright(void)
 {
-	USBMSGN("\n%s v%s (%s)",
-	        RC_FILENAME_STR,
-	        RC_VERSION_STR,
-	        DEFINE_TO_STR(VERSION_DATE));
-
-	USBMSGN("%s", "Copyright (c) 2011 Travis Lee Robinson. <libusbdotnet@gmail.com>");
+	USBMSGN("Copyright (c) 2012 Travis Lee Robinson. <libusbdotnet@gmail.com>");
+	USBMSGN("");
 }
 
 void ShowHelp(void)

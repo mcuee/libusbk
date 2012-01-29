@@ -1,6 +1,6 @@
 /*
  * libwdi: Library for automated Windows Driver Installation - PKI part
- * Copyright (c) 2011 Pete Batard <pbatard@gmail.com>
+ * Copyright (c) 2012 Pete Batard <pbatard@gmail.com>
  * For more info, please visit http://libwdi.akeo.ie
  *
  * This library is free software; you can redistribute it and/or
@@ -487,7 +487,7 @@ BOOL RemoveCertFromStore(LPCSTR szCertSubject, LPCSTR szStoreName)
 	                       CERT_FIND_SUBJECT_NAME, (const void*)&certNameBlob, NULL)) != NULL)
 	{
 		pfCertDeleteCertificateFromStore(pCertContext);
-		USBMSGN("deleted existing certificate '%s' from '%s' store", szCertSubject, szStoreName);
+		USBMSGN("Deleted existing certificate: %s (%s store)", szCertSubject, szStoreName);
 	}
 	r = TRUE;
 
@@ -708,16 +708,16 @@ PCCERT_CONTEXT CreateSelfSignedCert(LPCSTR szCertSubject)
 
 	certExtensionsArray.cExtension = ARRAYSIZE(certExtension);
 	certExtensionsArray.rgExtension = certExtension;
-	USBDBGN("set Enhanced Key Usage, URL and CPS");
+	USBDBGN("Set Enhanced Key Usage, URL and CPS..");
 
 	if (CryptAcquireContextW(&hCSP, wszKeyContainer, NULL, PROV_RSA_FULL, CRYPT_MACHINE_KEYSET | CRYPT_SILENT))
 	{
-		USBDBGN("acquired existing key container");
+		USBDBGN("Acquired existing key container..");
 	}
 	else if ( (GetLastError() == NTE_BAD_KEYSET)
 	          && (CryptAcquireContextW(&hCSP, wszKeyContainer, NULL, PROV_RSA_FULL, CRYPT_NEWKEYSET | CRYPT_MACHINE_KEYSET | CRYPT_SILENT)) )
 	{
-		USBDBGN("created new key container");
+		USBDBGN("Created new key container..");
 	}
 	else
 	{
@@ -731,7 +731,7 @@ PCCERT_CONTEXT CreateSelfSignedCert(LPCSTR szCertSubject)
 		USBDBGN("could not generate keypair: %s", windows_error_str(0));
 		goto out;
 	}
-	USBDBGN("generated new keypair");
+	USBDBGN("Generated new keypair.");
 
 	// Set the subject
 	if ( (!pfCertStrToNameA(X509_ASN_ENCODING, szCertSubject, CERT_X500_NAME_STR, NULL, NULL, &SubjectIssuerBlob.cbData, NULL))
@@ -764,7 +764,7 @@ PCCERT_CONTEXT CreateSelfSignedCert(LPCSTR szCertSubject)
 		USBWRNN("could not create self signed certificate: %s", windows_error_str(0));
 		goto out;
 	}
-	USBMSGN("created new self-signed certificate '%s'", szCertSubject);
+	USBMSGN("Created new self-signed certificate: %s", szCertSubject);
 	success = TRUE;
 
 out:
@@ -905,13 +905,12 @@ BOOL SelfSignFile(LPCSTR szFileName, LPCSTR szCertSubject)
 	{
 		goto out;
 	}
-	USBDBGN("successfully created certificate '%s'", szCertSubject);
 	if ( (!AddCertToStore(pCertContext, "Root"))
 	        || (!AddCertToStore(pCertContext, "TrustedPublisher")) )
 	{
 		goto out;
 	}
-	USBMSGN("added certificate '%s' to 'Root' and 'TrustedPublisher' stores", szCertSubject);
+	USBMSGN("Added certificate to 'Root' and 'TrustedPublisher' stores..", szCertSubject);
 
 	// Setup SIGNER_FILE_INFO struct
 	signerFileInfo.cbSize = sizeof(SIGNER_FILE_INFO);
@@ -973,7 +972,7 @@ BOOL SelfSignFile(LPCSTR szFileName, LPCSTR szCertSubject)
 		goto out;
 	}
 	r = TRUE;
-	USBMSGN("successfully signed file '%s'", szFileName);
+	USBMSGN("Signed file: %s", szFileName);
 
 	// Clean up
 out:
@@ -984,7 +983,12 @@ out:
 	 */
 	if ((pCertContext != NULL) && (DeletePrivateKey(pCertContext)))
 	{
-		USBMSGN("successfully deleted private key");
+		USBMSGN("Deleted private key..");
+	}
+
+	if (r==TRUE)
+	{
+		USBMSGN("Success!");
 	}
 	if (pSignerContext != NULL) pfSignerFreeSignerContext(pSignerContext);
 	if (pCertContext != NULL) pfCertFreeCertificateContext(pCertContext);
@@ -1074,11 +1078,11 @@ static BOOL AddFileHash(HANDLE hCat, LPCSTR szFileName, BYTE* pbFileHash)
 	        PathMatchSpecA(szFileName, "*.sys") ||
 	        PathMatchSpecA(szFileName, "*.exe"))
 	{
-		USBDBGN("'%s': PE type", szFileName);
+		USBDBGN("Using PE guid..");
 	}
 	else if (PathMatchSpecA(szFileName, "*.inf"))
 	{
-		USBDBGN("'%s': INF type", szFileName);
+		USBDBGN("Using INF guid..");
 		bPEType = FALSE;
 	}
 	else
@@ -1207,8 +1211,9 @@ BOOL CreateCatEx(PKINF_EL infEL)
 
 	DL_FOREACH(infEL->Files, sourceFileEL)
 	{
-		CHAR szFilePath[MAX_PATH];
-		CHAR szEntry[MAX_PATH];
+		static CHAR szFilePath[MAX_PATH];
+		static CHAR szEntry[MAX_PATH];
+		static CHAR szRelPath[MAX_PATH];
 
 		strcpy_s(szFilePath, MAX_PATH, WcsToTempMbs(infEL->BaseDir));
 		strcpy_s(szEntry, MAX_PATH, WcsToTempMbs(sourceFileEL->Filename));
@@ -1226,10 +1231,12 @@ BOOL CreateCatEx(PKINF_EL infEL)
 		{
 			if (CalcHash(pbHash, szFilePath))
 			{
-				USBMSGN("Hash caculated for '%s'",  szFilePath);
+				szRelPath[0]='\0';
+				PathRelativePathToA(szRelPath,WcsToTempMbs(infEL->BaseDir),FILE_ATTRIBUTE_DIRECTORY,szFilePath,FILE_ATTRIBUTE_NORMAL);
+				USBMSGN("Hash calculated for: %s",  szRelPath);
 				if (AddFileHash(hCat, szEntry, pbHash))
 				{
-					USBMSGN("Hash added for '%s'",  szEntry);
+					USBMSGN("Hash added..");
 				}
 				else
 				{
@@ -1249,7 +1256,7 @@ BOOL CreateCatEx(PKINF_EL infEL)
 		USBWRNN("unable to sort file: %s",  windows_error_str(0));
 		goto out;
 	}
-	USBMSGN("successfully created file '%s'", WcsToTempMbs(infEL->CatTitle));
+	USBMSGN("Catalog file '%s' created..", WcsToTempMbs(infEL->CatTitle));
 	r = TRUE;
 
 out:
