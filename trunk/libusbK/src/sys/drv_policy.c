@@ -166,7 +166,7 @@ VOID Policy_InitPipe(
 	defaultPolicies.IsoStartLatency = IsHighSpeedDevice(deviceContext) ? 32 : 8;
 	if (pipeContext)
 	{
-		defaultPolicies.IsoAlwaysStartAsap = USB_ENDPOINT_DIRECTION_IN(pipeContext->PipeInformation.EndpointAddress) ? FALSE:TRUE;
+		defaultPolicies.IsoAlwaysStartAsap = USB_ENDPOINT_DIRECTION_IN(pipeContext->PipeInformation.EndpointAddress) ? FALSE : TRUE;
 		pipeContext->Policies.values = defaultPolicies.values;
 	}
 }
