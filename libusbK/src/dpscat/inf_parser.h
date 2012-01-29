@@ -2,15 +2,17 @@
 #define __INF_PARSER_H__
 
 #include "lusbk_linked_list.h"
-#include "installer.h"
 
 #if !defined(KINF_API)
 #define KINF_API WINAPI
 #endif
 
+#define MAX_PATH_LENGTH 512
+#define MAX_STR_LENGTH 1024
+
 typedef struct _KINF_DEVICE_EL
 {
-	WCHAR HardwareID[STR_BUFFER_SIZE];
+	WCHAR HardwareID[MAX_PATH];
 	WCHAR CatKey[8];
 
 	struct _KINF_DEVICE_EL* next;

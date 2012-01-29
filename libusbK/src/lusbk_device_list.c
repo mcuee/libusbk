@@ -807,9 +807,8 @@ KUSB_EXP BOOL KUSB_API LstK_InitEx(
 
 	Mem_Zero(&TempItem, sizeof(TempItem));
 	enumParams.DeviceList		= handle;
-	enumParams.Flags = Flags;
-	if (PatternMatch)
-		memcpy(&enumParams.PatternMatch, PatternMatch, sizeof(enumParams.PatternMatch));
+	enumParams.Flags			= Flags;
+	enumParams.PatternMatch		= PatternMatch;
 	enumParams.EnumRegKeyCB		= l_EnumKey_Guids;
 	enumParams.hParentKey		= HKEY_LOCAL_MACHINE;
 	enumParams.SubKey			= KEY_DEVICECLASSES;

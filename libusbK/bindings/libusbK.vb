@@ -766,7 +766,7 @@ Namespace libusbK
 		End Function
 
 		<DllImport(Constants.LIBUSBK_DLL, CallingConvention := CallingConvention.Winapi, CharSet := CharSet.Ansi, EntryPoint := "LstK_InitEx", SetLastError := True)> _
-		Public Shared Function LstK_InitEx(<Out> ByRef DeviceList As KLST_HANDLE, <[In]> ByRef InitParams As KLST_INITEX_PARAMS) As Boolean
+		Public Shared Function LstK_InitEx(<Out> ByRef DeviceList As KLST_HANDLE, Flags As KLST_FLAG, <[In]> ByRef PatternMatch As KLST_PATTERN_MATCH) As Boolean
 		End Function
 
 		<DllImport(Constants.LIBUSBK_DLL, CallingConvention := CallingConvention.Winapi, CharSet := CharSet.Ansi, EntryPoint := "LstK_Free", SetLastError := True)> _
@@ -1432,16 +1432,6 @@ Namespace libusbK
 		Public SymbolicLink As String
 	End Structure
 
-	''' <Summary>Device list parameter structure.</Summary>
-	<StructLayout(LayoutKind.Sequential, CharSet := CharSet.Ansi, Size := 64)> _
-	Public Structure KLST_INITEX_PARAMS
-		''' <Summary>Device list initialization flags.</Summary>
-		Public Flags As KLST_FLAG
-
-		''' <Summary>File pattern match includes.</Summary>
-		Public PatternMatch As KLST_PATTERN_MATCH()
-	End Structure
-
 	''' <Summary>A structure representing the standard USB device descriptor.</Summary>
 	<StructLayout(LayoutKind.Sequential, CharSet := CharSet.Ansi, Pack := 1)> _
 	Public Structure USB_DEVICE_DESCRIPTOR
@@ -1990,12 +1980,12 @@ Namespace libusbK
 		End Sub
 
 		''' <Summary>Initializes a new usb device list containing only devices matching a specific class GUID.</Summary>
-		Public Sub New(ByRef InitParams As KLST_INITEX_PARAMS)
+		Public Sub New(Flags As KLST_FLAG, ByRef PatternMatch As KLST_PATTERN_MATCH)
 			RuntimeHelpers.PrepareConstrainedRegions()
 
 			Try
 			Finally
-				Dim success As Boolean = Functions.LstK_InitEx(m_handle, InitParams)
+				Dim success As Boolean = Functions.LstK_InitEx(m_handle, Flags, PatternMatch)
 
 				If Not success OrElse m_handle.IsInvalid OrElse m_handle.IsClosed Then
 					m_handle.SetHandleAsInvalid()
