@@ -14,4 +14,14 @@
 // WDK library folder. eg: Z:\WinDDK\7600.16385.1\lib
 #define WDK_LIB_FOLDER WDK_BASE_FOLDER "\\lib"
 
+#define _MSC_VER_MIN	1400
+#define _MSC_VER_MAX	1600
+
+#if defined(_MSC_VER) && (_MSC_VER < _MSC_VER_MIN || _MSC_VER > _MSC_VER_MAX)
+	#pragma message( "Warning: This MS compiler is not tested" )
+	#undef _MSC_VER_OK	
+#else
+	#define _MSC_VER_OK	
+#endif // _MSC_VER
+
 #endif

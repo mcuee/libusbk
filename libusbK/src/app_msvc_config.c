@@ -1,12 +1,10 @@
-/*! \file wdk_app_config.h
+/*! \file wdk_app_config.c
 */
 
 #include <windows.h>
 #include "wdk_msvc_config.h"
 
-#if defined(_MSC_VER)
-
-#if defined(_WIN32) && !defined(_DEBUG)
+#if defined (_MSC_VER_OK) && defined(_WIN32) && !defined(_DEBUG)
 ///////////////////////////////////////////////////////////////////////////////
 // Important: LNK1104 ERROR
 // If your getting a LNK1104 error it is because WDK is not installed or
