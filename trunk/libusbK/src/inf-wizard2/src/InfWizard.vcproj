@@ -316,6 +316,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\res\packed_resources.h"
+				>
+			</File>
+			<File
 				RelativePath="PageConfigDevice.h"
 				>
 			</File>
@@ -379,10 +383,6 @@
 			</File>
 			<File
 				RelativePath=".\res\nav-next-1.bmp"
-				>
-			</File>
-			<File
-				RelativePath=".\res\packed_resources.h"
 				>
 			</File>
 			<File

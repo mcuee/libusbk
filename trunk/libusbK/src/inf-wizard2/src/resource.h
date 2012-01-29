@@ -117,9 +117,6 @@
 #define IDI_ICON_OPEN_FOLDER            2031
 #define IDI_ICON_INFO                   2032
 #define IDI_ICON_INFORMATION            2032
-#define IDI_ICON2                       2034
-#define IDI_ICON_EXPLORER               2034
-#define IDB_BITMAP1                     2035
 #define IDB_PAYPAL                      2038
 #define IDB_NAV_BACK                    2039
 #define IDB_NAV_NEXT                    2040

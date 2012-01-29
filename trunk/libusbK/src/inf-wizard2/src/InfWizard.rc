@@ -69,7 +69,6 @@ IDR_MAINFRAME           ICON                    "res\\InfWizard.ico"
 IDI_ICON_OK             ICON                    "res\\Icons.16x16.OK.ico"
 IDI_ICON_EXCLAMATION    ICON                    "res\\Exclamation.ico"
 IDI_ICON_OPEN_FOLDER    ICON                    "res\\Icons.16x16.OpenFileIcon.ico"
-IDI_ICON_EXPLORER       ICON                    "res\\Explorer.ico"
 IDI_ICON_INFORMATION    ICON                    "res\\Icons.16x16.Information.ico"
 
 /////////////////////////////////////////////////////////////////////////////
@@ -265,8 +264,8 @@ IDB_BAR_GREEN           BITMAP                  "res\\Bar.Green.bmp"
 IDB_BAR_ORANGE          BITMAP                  "res\\Bar.Orange.bmp"
 IDB_PAYPAL              BITMAP                  "res\\PayPal.Donate.bmp"
 IDB_NAV_BACK            BITMAP                  "res\\nav-back.bmp"
-IDB_NAV_NEXT            BITMAP                  "res\\nav-next-1.bmp"
-IDB_CANCEL              BITMAP                  "res\\cancel-1.bmp"
+IDB_NAV_NEXT            BITMAP                  "res\\nav-next.bmp"
+IDB_CANCEL              BITMAP                  "res\\cancel.bmp"
 IDB_FINISH              BITMAP                  "res\\finish.bmp"
 
 /////////////////////////////////////////////////////////////////////////////
