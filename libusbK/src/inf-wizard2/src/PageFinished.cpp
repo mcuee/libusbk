@@ -165,7 +165,7 @@ BOOL CPageFinished::OnToolTipNotify(UINT id, NMHDR* pNMHDR, LRESULT* pResult)
 void CPageFinished::OnNMClickLinkExplorePackageFolder(NMHDR* pNMHDR, LRESULT* pResult)
 {
 	CString packagePath = g_App->Wdi.Session()->GetPackageBaseDir();
-	/*
+
 	CString packageName = g_App->Wdi.Session()->GetPackageName();
 
 	PathAppend(packagePath.GetBufferSetLength(4096), packageName.GetBuffer(0));
@@ -173,7 +173,7 @@ void CPageFinished::OnNMClickLinkExplorePackageFolder(NMHDR* pNMHDR, LRESULT* pR
 
 	if (!PathIsDirectory(packagePath.GetBuffer(4096)))
 		packagePath =  g_App->Wdi.Session()->GetPackageBaseDir();
-	*/
+
 	ShellExecute(NULL, _T("explore"), packagePath.GetBuffer(4096), NULL, NULL, SW_SHOW);
 
 	*pResult = 0;

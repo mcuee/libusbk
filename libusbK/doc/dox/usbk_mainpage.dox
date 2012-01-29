@@ -16,9 +16,8 @@ If you are a usb developers or usb device manufacturer seeking a driver
 solution for a new USB widget then libusbK could be for you.
 \par
 libusbK encompasses a 100% WinUSB compatible api/funtion set.  All WinUSB power/pipe polices
-are fully supported by the libusbK driver.  In Addition, the libusbK driver has full
-support for isochronous endpoints and the user library, includes several other usb releated
-modules (see \ref usbk_usage) as well as many extensions to the \ref usbk driver api itself.
+are fully supported by the libusbK driver.  In Addition, libusbK has full support for isochronous
+endpoints and an extensive set of additional modules to simplify development.
 
 \attention
 libusbK is not an end-user component.
@@ -53,6 +52,9 @@ standard C library are provided for the folllowing languages:
   <HR>
 - \subpage usbk_building
   <BR>Methods for building the libusbK user mode library and driver from source code.
+  <HR>
+- \subpage usbk_installers
+  <BR>Creating client installers for end-users with InfWizard.
   <HR>
 - \subpage usbk_mailing_list
   <BR>All libusbK related questions and issues.

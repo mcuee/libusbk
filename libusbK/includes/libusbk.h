@@ -1602,7 +1602,7 @@ typedef enum _KOVL_POOL_FLAG
 */
 typedef enum _KSTM_FLAG
 {
-	//! None
+    //! None
     KSTM_FLAG_NONE		= 0L,
 } KSTM_FLAG;
 
@@ -1612,10 +1612,10 @@ typedef enum _KSTM_FLAG
 */
 typedef enum _KSTM_COMPLETE_RESULT
 {
-	//! Valid
+    //! Valid
     KSTM_COMPLETE_RESULT_VALID		= 0L,
     //! Invalid
-	KSTM_COMPLETE_RESULT_INVALID,
+    KSTM_COMPLETE_RESULT_INVALID,
 } KSTM_COMPLETE_RESULT;
 
 //! Stream transfer context structure.
@@ -3091,7 +3091,7 @@ extern "C" {
 	KUSB_EXP BOOL KUSB_API LstK_InitEx(
 	    _out KLST_HANDLE* DeviceList,
 	    _in KLST_FLAG Flags,
-		_in PKLST_PATTERN_MATCH PatternMatch);
+	    _in PKLST_PATTERN_MATCH PatternMatch);
 
 	//! Frees a usb device list.
 	/*!

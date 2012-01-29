@@ -791,9 +791,9 @@ KUSB_EXP BOOL KUSB_API LstK_Free(
 }
 
 KUSB_EXP BOOL KUSB_API LstK_InitEx(
-	_out KLST_HANDLE* DeviceList,
-	_in KLST_FLAG Flags,
-	_in KLST_PATTERN_MATCH* PatternMatch)
+    _out KLST_HANDLE* DeviceList,
+    _in KLST_FLAG Flags,
+    _in KLST_PATTERN_MATCH* PatternMatch)
 {
 	KUSB_ENUM_REGKEY_PARAMS enumParams;
 	BOOL success = FALSE;
