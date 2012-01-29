@@ -2046,5 +2046,5 @@ void ShowCopyright(void)
 	       RC_FILENAME_STR,
 	       RC_VERSION_STR,
 	       DEFINE_TO_STR(VERSION_DATE));
-	CONMSG0("Copyright (c) 2011 Travis Lee Robinson. <libusbdotnet@gmail.com>\n");
+	CONMSG0("Copyright (c) 2012 Travis Lee Robinson. <libusbdotnet@gmail.com>\n");
 }

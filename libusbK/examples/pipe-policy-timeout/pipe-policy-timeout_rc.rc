@@ -1,6 +1,6 @@
 /*
 #
-# Copyright (c) 2011 Travis Robinson <libusbdotnet@gmail.com>
+# Copyright (c) 2012 Travis Robinson <libusbdotnet@gmail.com>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -51,7 +51,7 @@
 #define VER_FILEDESCRIPTION_STR     "libusbK pipe-policy-timeout example"
 #define VER_PRODUCTNAME_STR			RC_FILENAME_STR
 #define VER_INTERNALNAME_STR        RC_FILENAME_STR
-#define VER_LEGALCOPYRIGHT_YEARS	"2010-2011"
+#define VER_LEGALCOPYRIGHT_YEARS	"2010-2012"
 #define VER_LEGALCOPYRIGHT_STR		"\251 Travis Lee Robinson " VER_LEGALCOPYRIGHT_YEARS
 
 #define VER_PRODUCTVERSION			RC_VERSION

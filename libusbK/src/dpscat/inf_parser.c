@@ -262,7 +262,7 @@ BOOL KINF_API InfK_AddInfFile(PKINF_LIST List, LPCWSTR InfFilename)
 			success = SetupDiGetActualSectionToInstallExW(infHandle, sectionName, &platFormInfo, sectionNameWithExt, sizeof(sectionNameWithExt), &sectionSize, &sectionNameExt, NULL);
 			if (success)
 			{
-				USBDBGN("ActualSectionToInstall=%s", WcsToTempMbs(sectionNameWithExt));
+				USBDBGN("Actual section to install: %s", WcsToTempMbs(sectionNameWithExt));
 				success = SetupFindFirstLineW(infHandle, sectionNameWithExt, NULL, &infContextProperty);
 				while (success)
 				{
@@ -272,6 +272,7 @@ BOOL KINF_API InfK_AddInfFile(PKINF_LIST List, LPCWSTR InfFilename)
 					while(SetupGetStringFieldW(&infContextProperty, ++sectionIndex, sectionName, sizeof(sectionName), &sectionSize))
 					{
 						PKINF_DEVICE_EL deviceEL = HeapAlloc(List->HeapHandle, HEAP_ZERO_MEMORY, sizeof(KINF_DEVICE_EL));
+						USBMSGN("Found Hwid: %s",WcsToTempMbs(sectionName));
 						wcscpy_s(deviceEL->HardwareID, sizeof(deviceEL->HardwareID), sectionName);
 						DL_APPEND(infFileEL->Devices, deviceEL);
 					}
