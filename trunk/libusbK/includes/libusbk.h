@@ -1602,6 +1602,7 @@ typedef enum _KOVL_POOL_FLAG
 */
 typedef enum _KSTM_FLAG
 {
+	//! None
     KSTM_FLAG_NONE		= 0L,
 } KSTM_FLAG;
 
@@ -1611,8 +1612,10 @@ typedef enum _KSTM_FLAG
 */
 typedef enum _KSTM_COMPLETE_RESULT
 {
+	//! Valid
     KSTM_COMPLETE_RESULT_VALID		= 0L,
-    KSTM_COMPLETE_RESULT_INVALID,
+    //! Invalid
+	KSTM_COMPLETE_RESULT_INVALID,
 } KSTM_COMPLETE_RESULT;
 
 //! Stream transfer context structure.
@@ -3076,7 +3079,7 @@ extern "C" {
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*
 	* \c LstK_InitEx populates \c DeviceList with usb devices that can be used by libusbK.  Only device
-	* matching the \ref KLST_PATTERN_PATCH string are included in the list.
+	* matching the \ref KLST_PATTERN_MATCH string are included in the list.
 	*
 	* \note
 	* This function significantly improves performance when used with a device interface guid pattern patch.

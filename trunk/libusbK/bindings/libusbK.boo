@@ -743,7 +743,7 @@ internal static class Functions:
 
 	
 	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'LstK_InitEx', SetLastError: true)]
-	public static def LstK_InitEx([Out] ref DeviceList as KLST_HANDLE, [In] ref InitParams as KLST_INITEX_PARAMS) as bool:
+	public static def LstK_InitEx([Out] ref DeviceList as KLST_HANDLE, Flags as KLST_FLAG, [In] ref PatternMatch as KLST_PATTERN_MATCH) as bool:
 		pass
 
 	
@@ -1422,15 +1422,6 @@ public struct KLST_PATTERN_MATCH:
 	public SymbolicLink as string
 
 
-[StructLayout(LayoutKind.Sequential, CharSet: CharSet.Ansi, Size: 64)]
-public struct KLST_INITEX_PARAMS:
-
-	public Flags as KLST_FLAG
-
-	
-	public PatternMatch as (KLST_PATTERN_MATCH)
-
-
 [StructLayout(LayoutKind.Sequential, CharSet: CharSet.Ansi, Pack: 1)]
 public struct USB_DEVICE_DESCRIPTOR:
 
@@ -1998,13 +1989,13 @@ public class LstK:
 				raise Exception(((GetType().Name + ' failed. ErrorCode=') + errorCode.ToString('X')))
 
 	
-	public def constructor(ref InitParams as KLST_INITEX_PARAMS):
+	public def constructor(Flags as KLST_FLAG, ref PatternMatch as KLST_PATTERN_MATCH):
 		RuntimeHelpers.PrepareConstrainedRegions()
 		
 		try:
 			pass
 		ensure:
-			success as bool = Functions.LstK_InitEx(handle, InitParams)
+			success as bool = Functions.LstK_InitEx(handle, Flags, PatternMatch)
 			
 			if ((not success) or handle.IsInvalid) or handle.IsClosed:
 				handle.SetHandleAsInvalid()

@@ -782,7 +782,7 @@ namespace libusbK
         public static extern bool LstK_Init([Out] out KLST_HANDLE DeviceList, KLST_FLAG Flags);
 
         [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "LstK_InitEx", SetLastError = true)]
-        public static extern bool LstK_InitEx([Out] out KLST_HANDLE DeviceList, [In] ref KLST_INITEX_PARAMS InitParams);
+        public static extern bool LstK_InitEx([Out] out KLST_HANDLE DeviceList, KLST_FLAG Flags, [In] ref KLST_PATTERN_MATCH PatternMatch);
 
         [DllImport(Constants.LIBUSBK_DLL, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Ansi, EntryPoint = "LstK_Free", SetLastError = true)]
         public static extern bool LstK_Free([In] IntPtr DeviceList);
@@ -1446,17 +1446,6 @@ namespace libusbK
         public string SymbolicLink;
     };
 
-    /// <Summary>Device list parameter structure.</Summary>
-    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Size = 64)]
-    public struct KLST_INITEX_PARAMS
-    {
-        /// <Summary>Device list initialization flags.</Summary>
-        public KLST_FLAG Flags;
-
-        /// <Summary>File pattern match includes.</Summary>
-        public KLST_PATTERN_MATCH[] PatternMatch;
-    };
-
     /// <Summary>A structure representing the standard USB device descriptor.</Summary>
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
     public struct USB_DEVICE_DESCRIPTOR
@@ -2032,7 +2021,7 @@ namespace libusbK
         }
 
         /// <Summary>Initializes a new usb device list containing only devices matching a specific class GUID.</Summary>
-        public LstK(ref KLST_INITEX_PARAMS InitParams)
+        public LstK(KLST_FLAG Flags, ref KLST_PATTERN_MATCH PatternMatch)
         {
             RuntimeHelpers.PrepareConstrainedRegions();
 
@@ -2041,7 +2030,7 @@ namespace libusbK
             }
             finally
             {
-                bool success = Functions.LstK_InitEx(out handle, ref InitParams);
+                bool success = Functions.LstK_InitEx(out handle, Flags, ref PatternMatch);
 
                 if (!success || handle.IsInvalid || handle.IsClosed)
                 {
