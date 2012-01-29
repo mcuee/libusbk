@@ -1118,5 +1118,5 @@ void ShowCopyright(void)
 	       RC_VERSION_STR,
 	       DEFINE_TO_STR(VERSION_DATE));
 
-	printf("%s", "Copyright (c) 2011 Travis Lee Robinson. <libusbdotnet@gmail.com>\n\n");
+	printf("%s", "Copyright (c) 2012 Travis Lee Robinson. <libusbdotnet@gmail.com>\n\n");
 }

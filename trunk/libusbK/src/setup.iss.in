@@ -1,6 +1,6 @@
 ; @K_LIBUSBK_NAME@ (KMDF) USB Library - installer/upgrader script
 ; 
-; Copyright (c) 2011 Travis Lee Robinson <libusbdotnet@gmail.com>
+; Copyright (c) 2012 Travis Lee Robinson <libusbdotnet@gmail.com>
 ; All rights reserved.
 ; 
 ; Redistribution and use in source and binary forms, with or without

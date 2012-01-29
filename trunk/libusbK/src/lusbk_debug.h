@@ -39,7 +39,10 @@ extern ULONG DebugLevel;
 #endif
 
 #define IFDBGLVL(level) if (DebugLevel > level)
+
+#ifndef USB_LN
 #define USB_LN "\n"
+#endif
 
 #define USBLOG_PRINTLN(format,...) DebugOutputFunction(format USB_LN,__VA_ARGS__)
 #define USBLOG_PRINT(format,...) DebugOutputFunction(format,__VA_ARGS__)
@@ -50,7 +53,7 @@ extern ULONG DebugLevel;
 #define USBDBGN(format,...) USBDBG(format USB_LN,__VA_ARGS__)
 #define USBDEVN(format,...) USBDEV(format USB_LN,__VA_ARGS__)
 
-#if (defined(DBG) || defined (_DEBUG))
+#if defined(DBG) || defined (_DEBUG) || defined(KUSB_DEBUG_APPMODE)
 #define DEBUG_LOGGING_ENABLED
 
 #define USBLOG(MinDebugLevel,LogAppNameString,CategoryText,FunctionText,format,...) \

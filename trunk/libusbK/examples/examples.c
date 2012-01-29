@@ -1,6 +1,6 @@
 /*!
 #
-# Copyright (c) 2011 Travis Robinson <libusbdotnet@gmail.com>
+# Copyright (c) 2012 Travis Robinson <libusbdotnet@gmail.com>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
