@@ -93,6 +93,16 @@ BEGIN_MESSAGE_MAP(CResizableSheetEx, CPropertySheetEx)
 	ON_REGISTERED_MESSAGE(WMU_RESIZESUPPORT, OnResizeSupport)
 END_MESSAGE_MAP()
 
+
+void CResizableSheetEx::DoDataExchange(CDataExchange* pDX)
+{
+	CPropertySheetEx::DoDataExchange(pDX);
+	//{{AFX_DATA_MAP(CPageInstall)
+	// NOTE: the ClassWizard will add DDX and DDV calls here
+	//}}AFX_DATA_MAP
+	DDX_Control(pDX, ID_WIZBACK, m_BtnNavBack);
+	DDX_Control(pDX, ID_WIZNEXT, m_BtnNavNext);
+}
 /////////////////////////////////////////////////////////////////////////////
 // CResizableSheetEx message handlers
 
@@ -233,43 +243,48 @@ void CResizableSheetEx::PresetLayout()
 
 			dlgBtn->GetWindowRect(rcBtn);
 			ScreenToClient(rcBtn);
-			dlgBtn->SetWindowPos(NULL, rcBtn.left - 14, rcBtn.top - 4, rcBtn.Width(), rcBtn.Height() + 4, SWP_NOZORDER | SWP_NOREDRAW);
 
-			AddAnchor(_propButtons[i], BOTTOM_RIGHT);
 			HBITMAP hBmp = NULL;
 			switch(_propButtons[i])
 			{
 			case ID_WIZBACK:
+				dlgBtn->SetWindowPos(NULL, rcBtn.left - 16, rcBtn.top - 8, rcBtn.Width(), rcBtn.Height() + 4, SWP_NOZORDER | SWP_NOREDRAW);
 				sBtn.LoadString(IDS_BACK);
-				sBtn.Insert(0, _T("  "));
-				hBmp = (HBITMAP)LoadImage(AfxGetApp()->m_hInstance, MAKEINTRESOURCE(IDB_NAV_BACK), IMAGE_BITMAP, 0, 0, LR_SHARED);
+				//sBtn.Insert(0, _T("  "));
 				dlgBtn->SetWindowText(sBtn);
-				dlgBtn->ModifyStyle(BS_ICON | BS_CENTER, BS_LEFT);
-				dlgBtn->SetBitmap(hBmp);
+				m_BtnNavBack.SubclassDlgItem(_propButtons[i], this);
+				m_BtnNavBack.SetIcon(IDI_ICON_NAV_BACK);
+				AddAnchor(_propButtons[i], BOTTOM_RIGHT);
 				break;
 			case ID_WIZNEXT:
+				dlgBtn->SetWindowPos(NULL, rcBtn.left - 14, rcBtn.top - 8, rcBtn.Width(), rcBtn.Height() + 4, SWP_NOZORDER | SWP_NOREDRAW);
 				sBtn.LoadString(IDS_NEXT);
-				sBtn.Append(_T("  "));
-				hBmp = (HBITMAP)LoadImage(AfxGetApp()->m_hInstance, MAKEINTRESOURCE(IDB_NAV_NEXT), IMAGE_BITMAP, 0, 0, LR_SHARED);
+				//sBtn.Append(_T("  "));
 				dlgBtn->SetWindowText(sBtn);
-				dlgBtn->ModifyStyle(BS_ICON | BS_CENTER, BS_RIGHT);
-				dlgBtn->SetBitmap(hBmp);
+				m_BtnNavNext.SubclassDlgItem(_propButtons[i], this);
+				m_BtnNavNext.SetIcon(IDI_ICON_NAV_NEXT);
+				m_BtnNavNext.SetAlign(CButtonST::ST_ALIGN_HORIZ_RIGHT);
+				AddAnchor(_propButtons[i], BOTTOM_RIGHT);
 				break;
 			case IDCANCEL:
+				dlgBtn->SetWindowPos(NULL, rcBtn.left - 14, rcBtn.top - 8, rcBtn.Width(), rcBtn.Height() + 4, SWP_NOZORDER | SWP_NOREDRAW);
 				sBtn.LoadString(IDS_CANCEL);
-				sBtn.Insert(0, _T("  "));
-				hBmp = (HBITMAP)LoadImage(AfxGetApp()->m_hInstance, MAKEINTRESOURCE(IDB_CANCEL), IMAGE_BITMAP, 0, 0, LR_SHARED);
+				//sBtn.Append(_T("  "));
 				dlgBtn->SetWindowText(sBtn);
-				dlgBtn->ModifyStyle(BS_ICON | BS_CENTER, BS_LEFT);
-				dlgBtn->SetBitmap(hBmp);
+				m_BtnNavCancel.SubclassDlgItem(_propButtons[i], this);
+				m_BtnNavCancel.SetIcon(IDI_ICON_NAV_CANCEL);
+				m_BtnNavCancel.SetAlign(CButtonST::ST_ALIGN_HORIZ_RIGHT);
+				AddAnchor(_propButtons[i], BOTTOM_RIGHT);
 				break;
 			case ID_WIZFINISH:
+				dlgBtn->SetWindowPos(NULL, rcBtn.left - 14, rcBtn.top - 8, rcBtn.Width(), rcBtn.Height() + 4, SWP_NOZORDER | SWP_NOREDRAW);
 				sBtn.LoadString(IDS_FINISH);
-				sBtn.Append(_T("  "));
-				hBmp = (HBITMAP)LoadImage(AfxGetApp()->m_hInstance, MAKEINTRESOURCE(IDB_FINISH), IMAGE_BITMAP, 0, 0, LR_SHARED);
+				//sBtn.Append(_T("  "));
 				dlgBtn->SetWindowText(sBtn);
-				dlgBtn->ModifyStyle(BS_ICON | BS_CENTER, BS_RIGHT);
-				dlgBtn->SetBitmap(hBmp);
+				m_BtnNavFinish.SubclassDlgItem(_propButtons[i], this);
+				m_BtnNavFinish.SetIcon(IDI_ICON_NAV_FINISH);
+				m_BtnNavFinish.SetAlign(CButtonST::ST_ALIGN_HORIZ_RIGHT);
+				AddAnchor(_propButtons[i], BOTTOM_RIGHT);
 				break;
 			}
 		}

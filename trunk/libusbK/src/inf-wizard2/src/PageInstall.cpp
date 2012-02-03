@@ -128,6 +128,10 @@ LRESULT CPageInstall::OnWizardNext()
 	SetStatusFont(TRUE, RGB(0, 0, 0), _T("Tahoma"), TwipsPerPixelY() * 9);
 	SetStatusFormat(PFA_LEFT, TRUE);
 
+	HCURSOR hWaitCursor = AfxGetApp()->LoadStandardCursor(IDC_WAIT);
+	HCURSOR hPrevCursor = SetCursor(hWaitCursor);
+	Sleep(0);
+
 	fmtRtf.Format(_T("%s..\n"), CInfWizardDisplay::GetTipString(IDS_STATUS_START_PACKAGER)->GetBuffer(0));
 	this->AppendStatus(fmtRtf);
 
@@ -262,6 +266,9 @@ LRESULT CPageInstall::OnWizardNext()
 	}
 
 Done:
+
+	SetCursor(hPrevCursor);
+
 	SetStatusFormat(PFA_LEFT, FALSE);
 	g_App->Wdi.Session()->Destroy(&deviceInfo);
 	if (errorCode == ERROR_SUCCESS)
@@ -298,6 +305,14 @@ Done:
 		m_TxtStatus.GetTextRange(0, m_TxtStatus.GetTextLength(), pDlg->m_InstallResults);
 		return CResizablePageEx::OnWizardNext();
 	}
+	else
+	{
+		CString* pTxtPackageError = CInfWizardDisplay::GetTipString(IDSE_STATUS_PACKAGE);
+		fmtRtf.Format(_T("%s\n"), pTxtPackageError->GetBuffer(0));
+		SetStatusFont(TRUE, CInfWizardDisplay::ColorError, NULL, TwipsPerPixelY() * 11);
+		this->AppendStatus(fmtRtf);
+
+	}
 	return -1;
 
 }
@@ -306,8 +321,7 @@ BOOL CPageInstall::OnInitDialog()
 {
 	CResizablePageEx::OnInitDialog();
 
-	HICON hImgSaveLocation = (HICON)LoadImageW(g_App->m_hInstance, MAKEINTRESOURCE(IDI_ICON_OPEN_FOLDER), IMAGE_ICON, 16, 16, LR_SHARED);
-	m_BtnSaveLocation.SetIcon(hImgSaveLocation);
+	m_BtnSaveLocation.SetIcon(IDI_ICON_OPEN_FOLDER);
 
 	AddAnchor(IDC_BTN_CLIENT_INSTALLER, TOP_LEFT);
 	AddAnchor(IDC_BTN_LEGACY_PACKAGE, TOP_LEFT);
@@ -395,6 +409,8 @@ void CPageInstall::SetStatusFont(BOOL isBold, COLORREF textColor, LPCTSTR pszFon
 void CPageInstall::AppendStatus(CString statusText)
 {
 	m_TxtStatus.ReplaceSel(statusText, FALSE);
+	m_TxtStatus.UpdateWindow();
+	Sleep(0);
 }
 
 int CPageInstall::TwipsPerPixelY()
@@ -600,6 +616,8 @@ BOOL CPageInstall::FinalizePrepareDriver(
 					errorCode = GetLastError();
 					errorMessage.Format(IDSF_PATH_TO_LONG, MAX_PATH, fileName, errorCode);
 					MessageBox(errorMessage, _T("Path is to long"), MB_OK | MB_ICONEXCLAMATION);
+
+					SetLastError(errorCode);
 					return FALSE;
 				}
 				fileName.ReleaseBuffer();
@@ -615,6 +633,8 @@ BOOL CPageInstall::FinalizePrepareDriver(
 				errorCode = GetLastError();
 				errorMessage.Format(IDSF_CREATE_FILE_FAILED, fileName, errorCode);
 				MessageBox(errorMessage, _T("Create file failed"), MB_OK | MB_ICONEXCLAMATION);
+
+				SetLastError(errorCode);
 				return FALSE;
 			}
 
@@ -657,14 +677,19 @@ BOOL CPageInstall::FinalizePrepareDriver(
 					LPCTSTR caption = CInfWizardDisplay::GetTipString(IDSE_CREATE_USER_INSTALLER)->GetBuffer(0);
 					WriteStatusError(caption, execInfo.lpFile);
 					MessageBox(execInfo.lpFile, caption, MB_OK | MB_ICONEXCLAMATION);
+
+					SetLastError(exitCode);
 					return FALSE;
 				}
 			}
 			else
 			{
+				errorCode = GetLastError();
 				LPCTSTR caption = CInfWizardDisplay::GetTipString(IDSE_UNKNOWN)->GetBuffer(0);
 				WriteStatusError(caption, execInfo.lpFile);
 				MessageBox(execInfo.lpFile, caption, MB_OK | MB_ICONEXCLAMATION);
+
+				SetLastError(errorCode);
 				return FALSE;
 			}
 		}

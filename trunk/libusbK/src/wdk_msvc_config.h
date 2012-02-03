@@ -18,10 +18,10 @@
 #define _MSC_VER_MAX	1600
 
 #if defined(_MSC_VER) && (_MSC_VER < _MSC_VER_MIN || _MSC_VER > _MSC_VER_MAX)
-	#pragma message( "Warning: This MS compiler is not tested" )
-	#undef _MSC_VER_OK	
+#pragma message( "Warning: This MS compiler is not tested" )
+#undef _MSC_VER_OK
 #else
-	#define _MSC_VER_OK	
+#define _MSC_VER_OK
 #endif // _MSC_VER
 
 #endif

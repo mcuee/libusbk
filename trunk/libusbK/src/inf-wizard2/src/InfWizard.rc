@@ -70,6 +70,10 @@ IDI_ICON_OK             ICON                    "res\\Icons.16x16.OK.ico"
 IDI_ICON_EXCLAMATION    ICON                    "res\\Exclamation.ico"
 IDI_ICON_OPEN_FOLDER    ICON                    "res\\Icons.16x16.OpenFileIcon.ico"
 IDI_ICON_INFORMATION    ICON                    "res\\Icons.16x16.Information.ico"
+IDI_ICON_NAV_BACK       ICON                    "res\\nav-back.ico"
+IDI_ICON_NAV_NEXT       ICON                    "res\\nav-next.ico"
+IDI_ICON_NAV_CANCEL     ICON                    "res\\nav-cancel.ico"
+IDI_ICON_NAV_FINISH     ICON                    "res\\nav-finsh.ico"
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -141,6 +145,17 @@ BEGIN
     CONTROL         "<a>Save Session..</a>",IDC_LINK_SAVE_SESSION,"SysLink",WS_TABSTOP,132,104,90,14
     RTEXT           "Help us keep libusb-win32 && libusbK alive!",IDC_LBL_DONATE,121,126,201,12,0,WS_EX_TRANSPARENT
     PUSHBUTTON      "",IDC_DONATE,274,139,48,20,BS_BITMAP
+END
+
+IDD_DIALOG_PROGRESS DIALOGEX 0, 0, 213, 81
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION
+EXSTYLE WS_EX_TOPMOST
+CAPTION "[Action Here]"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    CONTROL         2049,ID_PIC_PROGRESS,"Static",SS_BITMAP,7,7,44,41
+    CONTROL         "",IDC_CTL_PROGRESS,"msctls_progress32",WS_BORDER,7,60,199,14
+    CTEXT           "Please wait..",IDC_TXT_PROGRESS,58,7,148,40,SS_CENTERIMAGE
 END
 
 
@@ -248,6 +263,14 @@ BEGIN
         HORZGUIDE, 60
         HORZGUIDE, 73
     END
+
+    IDD_DIALOG_PROGRESS, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 206
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 74
+    END
 END
 #endif    // APSTUDIO_INVOKED
 
@@ -263,10 +286,7 @@ IDB_BAR_BLUE            BITMAP                  "res\\Bar.Blue.bmp"
 IDB_BAR_GREEN           BITMAP                  "res\\Bar.Green.bmp"
 IDB_BAR_ORANGE          BITMAP                  "res\\Bar.Orange.bmp"
 IDB_PAYPAL              BITMAP                  "res\\PayPal.Donate.bmp"
-IDB_NAV_BACK            BITMAP                  "res\\nav-back.bmp"
-IDB_NAV_NEXT            BITMAP                  "res\\nav-next.bmp"
-IDB_CANCEL              BITMAP                  "res\\cancel.bmp"
-IDB_FINISH              BITMAP                  "res\\finish.bmp"
+IDB_USB_LOGO            BITMAP                  "res\\usb-logo.bmp"
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -382,6 +402,7 @@ BEGIN
                             "Exporting client installer resources"
     IDSE_CREATE_USER_INSTALLER "Failed creating client installer"
     IDSE_UNKNOWN            "An unknown error occured"
+    IDSE_STATUS_PACKAGE     "Operation failed."
 END
 
 #endif    // English (U.S.) resources

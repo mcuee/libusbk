@@ -26,6 +26,7 @@
 #include "ResizableGrip.h"
 #include "ResizableMinMax.h"
 #include "ResizableSheetState.h"
+#include "BtnST.h"
 
 /////////////////////////////////////////////////////////////////////////////
 // ResizableSheetEx.h : header file
@@ -108,8 +109,15 @@ protected:
 		return CWnd::FromHandle(m_hWnd);
 	};
 
+protected:
+	CButtonST m_BtnNavBack;
+	CButtonST m_BtnNavNext;
+	CButtonST m_BtnNavCancel;
+	CButtonST m_BtnNavFinish;
+
 	// Generated message map functions
 protected:
+	virtual void DoDataExchange(CDataExchange* pDX);
 	void GetHeaderRect(LPRECT lpRect);
 	virtual BOOL CalcSizeExtra(HWND hWndChild, CSize sizeChild, CSize& sizeExtra);
 	virtual BOOL ArrangeLayoutCallback(LAYOUTINFO& layout) const;

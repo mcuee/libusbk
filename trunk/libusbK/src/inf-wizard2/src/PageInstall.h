@@ -99,7 +99,7 @@ public:
 	afx_msg void OnBnClickedBtnLegacyPackage();
 	afx_msg void OnBnClickedBtnInstallOnly();
 	CRichEditCtrl m_TxtStatus;
-	CButton m_BtnSaveLocation;
+	CButtonST m_BtnSaveLocation;
 	afx_msg void OnBnClickedBtnSaveBaseFolder();
 	CEdit m_TxtSaveBaseFolder;
 	CEdit m_TxtSaveName;
