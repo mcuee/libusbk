@@ -112,7 +112,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
 
 	memset(_lineBuffer, 0, sizeof(_lineBuffer));
 	memset(_spaceBuffer, ' ', sizeof(_lineBuffer));
-	_spaceBuffer[sizeof(_lineBuffer)-1]='\0';
+	_spaceBuffer[sizeof(_lineBuffer) - 1] = '\0';
 
 	if ((g_ConsoleAttached = AttachConsole(ATTACH_PARENT_PROCESS)) != FALSE)
 	{
@@ -135,7 +135,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
 				{
 					g_CursorPos.X = 0;
 					SetConsoleCursorPosition(g_hConsoleOutput, g_CursorPos);
-					WriteConA(_spaceBuffer,numChars,&numChars);
+					WriteConA(_spaceBuffer, numChars, &numChars);
 					if (--g_CursorPos.Y & 0x80000000)
 						g_CursorPos.Y = 0;
 
@@ -209,6 +209,8 @@ int RunProgram(int argc, LPWSTR* argv)
 		if (PathFileExistsW(argv[2]))
 		{
 			wcscpy_s(searchPath, _countof(searchPath), argv[2]);
+			PathAppendW(searchPath, L"*.inf");
+
 		}
 		else
 		{
@@ -235,10 +237,11 @@ int RunProgram(int argc, LPWSTR* argv)
 			USBERRN("GetCurrentDirectory Failed. ErrorCode=%08Xh", returnCode);
 			goto Error;
 		}
+
+		PathAppendW(searchPath, L"*.inf");
+
 	}
 
-	if (PathFindExtensionW(searchPath)[0] == (WCHAR)0)
-		PathAppendW(searchPath, L"*.inf");
 
 	hFind = FindFirstFileW(searchPath, &findFileData);
 	if (!hFind || hFind == INVALID_HANDLE_VALUE)

@@ -986,7 +986,7 @@ out:
 		USBMSGN("Deleted private key..");
 	}
 
-	if (r==TRUE)
+	if (r == TRUE)
 	{
 		USBMSGN("Success!");
 	}
@@ -1231,8 +1231,8 @@ BOOL CreateCatEx(PKINF_EL infEL)
 		{
 			if (CalcHash(pbHash, szFilePath))
 			{
-				szRelPath[0]='\0';
-				PathRelativePathToA(szRelPath,WcsToTempMbs(infEL->BaseDir),FILE_ATTRIBUTE_DIRECTORY,szFilePath,FILE_ATTRIBUTE_NORMAL);
+				szRelPath[0] = '\0';
+				PathRelativePathToA(szRelPath, WcsToTempMbs(infEL->BaseDir), FILE_ATTRIBUTE_DIRECTORY, szFilePath, FILE_ATTRIBUTE_NORMAL);
 				USBMSGN("Hash calculated for: %s",  szRelPath);
 				if (AddFileHash(hCat, szEntry, pbHash))
 				{

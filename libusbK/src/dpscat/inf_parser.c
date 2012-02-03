@@ -95,7 +95,7 @@ WCHAR* TcsToTempWcs(TCHAR* str)
 #endif
 }
 
-BOOL inf_AddSourceFiles(PKINF_LIST List, PKINF_EL infFileEL, HINF infHandle, INFCONTEXT* infContext, LPWSTR extension)
+static BOOL KINF_API inf_AddSourceFiles(PKINF_LIST List, PKINF_EL infFileEL, HINF infHandle, INFCONTEXT* infContext, LPWSTR extension)
 {
 	BOOL success;
 	DWORD length;
@@ -119,8 +119,14 @@ BOOL inf_AddSourceFiles(PKINF_LIST List, PKINF_EL infFileEL, HINF infHandle, INF
 		{
 			PKINF_FILE_EL fileCheckEL;
 			PKINF_FILE_EL fileEL;
+			size_t size = sizeof(KINF_FILE_EL);
 
-			fileEL = HeapAlloc(List->HeapHandle, HEAP_ZERO_MEMORY, sizeof(KINF_FILE_EL));
+			fileEL = HeapAlloc(List->HeapHandle, HEAP_ZERO_MEMORY, size);
+			if (!fileEL)
+			{
+				USBERRN("Memory allocation failure. 0x%08", GetLastError());
+				return FALSE;
+			}
 
 			wcscpy(fileEL->Filename, sourceFile);
 			_wcslwr(fileEL->Filename);
@@ -272,7 +278,7 @@ BOOL KINF_API InfK_AddInfFile(PKINF_LIST List, LPCWSTR InfFilename)
 					while(SetupGetStringFieldW(&infContextProperty, ++sectionIndex, sectionName, sizeof(sectionName), &sectionSize))
 					{
 						PKINF_DEVICE_EL deviceEL = HeapAlloc(List->HeapHandle, HEAP_ZERO_MEMORY, sizeof(KINF_DEVICE_EL));
-						USBMSGN("Found Hwid: %s",WcsToTempMbs(sectionName));
+						USBMSGN("Found Hwid: %s", WcsToTempMbs(sectionName));
 						wcscpy_s(deviceEL->HardwareID, sizeof(deviceEL->HardwareID), sectionName);
 						DL_APPEND(infFileEL->Devices, deviceEL);
 					}

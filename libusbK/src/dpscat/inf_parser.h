@@ -4,7 +4,7 @@
 #include "lusbk_linked_list.h"
 
 #if !defined(KINF_API)
-#define KINF_API WINAPI
+#define KINF_API
 #endif
 
 #define MAX_PATH_LENGTH 512

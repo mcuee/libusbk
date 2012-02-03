@@ -68,10 +68,10 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="kernel32.lib user32.lib advapi32.lib setupapi.lib newdev.lib ole32.lib shlwapi.lib shell32.lib $(NOINHERIT)"
+				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib advapi32.lib setupapi.lib newdev.lib ole32.lib shlwapi.lib shell32.lib $(NOINHERIT)"
 				LinkIncremental="2"
 				UACExecutionLevel="2"
-				IgnoreAllDefaultLibraries="false"
+				IgnoreAllDefaultLibraries="true"
 				IgnoreDefaultLibraryNames=""
 				GenerateDebugInformation="true"
 				SubSystem="2"
@@ -232,11 +232,11 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="kernel32.lib user32.lib advapi32.lib setupapi.lib newdev.lib ole32.lib shlwapi.lib shell32.lib $(NOINHERIT)"
+				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib advapi32.lib setupapi.lib newdev.lib ole32.lib shlwapi.lib shell32.lib $(NOINHERIT)"
 				LinkIncremental="1"
 				UACExecutionLevel="2"
-				IgnoreAllDefaultLibraries="false"
-				IgnoreDefaultLibraryNames="msvcrt.lib"
+				IgnoreAllDefaultLibraries="true"
+				IgnoreDefaultLibraryNames=""
 				SubSystem="2"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
@@ -320,7 +320,7 @@
 				LinkIncremental="1"
 				UACExecutionLevel="2"
 				IgnoreAllDefaultLibraries="false"
-				IgnoreDefaultLibraryNames="msvcrt.lib"
+				IgnoreDefaultLibraryNames=""
 				SubSystem="2"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
@@ -357,10 +357,6 @@
 			Filter="cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx"
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
-			<File
-				RelativePath="..\app_msvc_config.c"
-				>
-			</File>
 			<File
 				RelativePath=".\difx_dyn.c"
 				>
