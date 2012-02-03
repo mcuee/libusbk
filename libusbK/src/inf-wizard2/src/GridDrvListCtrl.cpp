@@ -80,12 +80,19 @@ BOOL CGridDrvListCtrl::AddRow(int driverType, LPCTSTR displayName, BOOL hasUsb0S
 
 	if (API.IsDriverSupported(driverType, &fileInfo))
 	{
-		sSupportedDrivers.Format(_T("%s v%d.%d.%d.%d\n"),
+		FILETIME ft;
+		ft.dwHighDateTime = fileInfo.dwFileDateMS;
+		ft.dwLowDateTime = fileInfo.dwFileDateLS;
+
+		CTime t(ft);
+
+		sSupportedDrivers.Format(_T("%s v%d.%d.%d.%d (%02d/%02d/%d)"),
 		                         displayName,
 		                         (int)fileInfo.dwFileVersionMS >> 16,
 		                         (int)fileInfo.dwFileVersionMS & 0xFFFF,
 		                         (int)fileInfo.dwFileVersionLS >> 16,
-		                         (int)fileInfo.dwFileVersionLS & 0xFFFF);
+		                         (int)fileInfo.dwFileVersionLS & 0xFFFF,
+		                         t.GetMonth(), t.GetDay(), t.GetYear());
 
 		// Row
 		InsertItem(nItem, _T(""), 0);

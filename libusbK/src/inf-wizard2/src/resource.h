@@ -75,6 +75,7 @@
 #define IDS_STATUS_EXPORT_INSTALLER_RESOURCES 66
 #define IDSE_CREATE_USER_INSTALLER      67
 #define IDSE_UNKNOWN                    68
+#define IDSE_STATUS_PACKAGE             69
 #define IDS_ABOUTBOX                    101
 #define IDC_BIGBOLDTITLE                102
 #define IDC_BOLDTITLE                   103
@@ -118,10 +119,13 @@
 #define IDI_ICON_INFO                   2032
 #define IDI_ICON_INFORMATION            2032
 #define IDB_PAYPAL                      2038
-#define IDB_NAV_BACK                    2039
-#define IDB_NAV_NEXT                    2040
-#define IDB_CANCEL                      2041
-#define IDB_FINISH                      2043
+#define IDI_ICON_NAV_BACK               2044
+#define IDI_ICON_NAV_NEXT               2045
+#define IDI_ICON_NAV_CANCEL             2046
+#define IDI_ICON_NAV_FINISH             2047
+#define IDD_DIALOG1                     2048
+#define IDD_DIALOG_PROGRESS             2048
+#define IDB_USB_LOGO                    2049
 #define IDC_SHOW_NEW_DEVICES            3002
 #define IDC_SHOW_ALL_DEVICES            3003
 #define IDC_BTN_LEGACY_PACKAGE          3003
@@ -149,14 +153,17 @@
 #define IDC_DONATE                      3025
 #define IDC_LBL_DONATE                  3026
 #define IDC_BUTTON1                     3027
+#define ID_PIC_PROGRESS                 3028
+#define IDC_CTL_PROGRESS                3029
+#define IDC_TXT_PROGRESS                3030
 
 // Next default values for new objects
 //
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        2044
+#define _APS_NEXT_RESOURCE_VALUE        2050
 #define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         3028
+#define _APS_NEXT_CONTROL_VALUE         3031
 #define _APS_NEXT_SYMED_VALUE           4000
 #endif
 #endif

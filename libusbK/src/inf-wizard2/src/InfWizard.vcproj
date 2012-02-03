@@ -198,6 +198,10 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
+				RelativePath=".\BtnST.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\DeviceNotifier.cpp"
 				>
 			</File>
@@ -267,6 +271,10 @@
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
+			<File
+				RelativePath=".\BtnST.h"
+				>
+			</File>
 			<File
 				RelativePath="DeviceNotifier.h"
 				>
@@ -358,6 +366,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\res\cancel.bmp"
+				>
+			</File>
+			<File
 				RelativePath=".\res\finish.bmp"
 				>
 			</File>
@@ -382,7 +394,27 @@
 				>
 			</File>
 			<File
+				RelativePath=".\res\nav-back.ico"
+				>
+			</File>
+			<File
+				RelativePath=".\res\nav-cancel.ico"
+				>
+			</File>
+			<File
+				RelativePath=".\res\nav-finsh.ico"
+				>
+			</File>
+			<File
 				RelativePath=".\res\nav-next-1.bmp"
+				>
+			</File>
+			<File
+				RelativePath=".\res\nav-next.bmp"
+				>
+			</File>
+			<File
+				RelativePath=".\res\nav-next.ico"
 				>
 			</File>
 			<File
@@ -391,6 +423,10 @@
 			</File>
 			<File
 				RelativePath=".\Resource.h"
+				>
+			</File>
+			<File
+				RelativePath=".\res\usb-logo.bmp"
 				>
 			</File>
 			<Filter
