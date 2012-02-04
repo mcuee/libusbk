@@ -1812,10 +1812,10 @@ int __cdecl main(int argc, char** argv)
 	}
 
 	if (Test.ReadLogEnabled)
-		fopen_s(&Test.ReadLogFile, "read.log", "wb");
+		Test.ReadLogFile = fopen("read.log", "wb");
 
 	if (Test.WriteLogEnabled)
-		fopen_s(&Test.WriteLogFile, "write.log", "wb");
+		Test.WriteLogFile = fopen("write.log", "wb");
 
 	// Get the device speed.
 	length = sizeof(Test.DeviceSpeed);
