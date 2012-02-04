@@ -286,7 +286,6 @@ IDB_BAR_BLUE            BITMAP                  "res\\Bar.Blue.bmp"
 IDB_BAR_GREEN           BITMAP                  "res\\Bar.Green.bmp"
 IDB_BAR_ORANGE          BITMAP                  "res\\Bar.Orange.bmp"
 IDB_PAYPAL              BITMAP                  "res\\PayPal.Donate.bmp"
-IDB_USB_LOGO            BITMAP                  "res\\usb-logo.bmp"
 
 /////////////////////////////////////////////////////////////////////////////
 //
