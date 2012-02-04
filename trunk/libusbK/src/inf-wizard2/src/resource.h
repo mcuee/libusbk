@@ -125,7 +125,6 @@
 #define IDI_ICON_NAV_FINISH             2047
 #define IDD_DIALOG1                     2048
 #define IDD_DIALOG_PROGRESS             2048
-#define IDB_USB_LOGO                    2049
 #define IDC_SHOW_NEW_DEVICES            3002
 #define IDC_SHOW_ALL_DEVICES            3003
 #define IDC_BTN_LEGACY_PACKAGE          3003
