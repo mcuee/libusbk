@@ -173,7 +173,7 @@ Source: "@K_PKG_BIN@\dll\amd64\@K_LIBUSB0_NAME@.dll"; DestDir: {sys}; Flags: rep
 
 ; ============================================================================
 ; ** @K_LIBUSBK_NAME@/@K_LIBUSB0_NAME@ inf-wizard
-Source: "@K_PKG@\@K_LIBUSBK_NAME@-inf-wizard.exe"; DestDir: {app}; Components: devpackage;
+Source: "@K_PKG@\@K_LIBUSBK_NAME@-inf-wizard.exe"; DestDir: {app}; Components: devpackage; Flags: replacesameversion restartreplace;
 
 ; ============================================================================
 ; ** @K_LIBUSB0_NAME@ filter installer
