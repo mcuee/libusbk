@@ -260,7 +260,6 @@ typedef struct _DEVICE_CONTEXT
 	UCHAR							InterfaceCount;
 	PIPE_CONTEXT					PipeContextByID[LIBUSB_MAX_ENDPOINT_COUNT]; // all pipes contexts by id
 	INTERFACE_CONTEXT				InterfaceContext[LIBUSB_MAX_INTERFACE_COUNT];
-	ULONG							PowerPolicy[MAX_POLICY];
 	ULONG							DevicePolicy[MAX_POLICY];	// DeviceInformation (actually).
 	USBD_VERSION_INFORMATION		UsbVersionInfo;
 	DEVICE_REGSETTINGS				DeviceRegSettings; // Device regisitry settings (from inf Dev_AddReq)

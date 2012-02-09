@@ -43,99 +43,33 @@ binary distributions.
 		if (mCheckValueUpdateLength) ((PULONG)(mCheckValueUpdateLength))[0]=(ULONG)(mCheckValueLength); 									\
 	}while(0)
 
-POLICY_DEFAULT PowerPolicyDefaults[MAX_POLICY] =
-{
-	{0, 0, 0},	// unused (internal use only)
-	{AUTO_SUSPEND, TRUE, 1},
-	{0, 0, 0},	// unused
-	{SUSPEND_DELAY, 5000, 4},
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-};
+#define mPower_CheckValueLength(mStatus,mPolicyType,mMinValueLength,mCheckValueLength,mCheckValueUpdateLength,mErrorAction) do {	\
+		if ((int)(mMinValueLength) > (int)(mCheckValueLength)) 																				\
+		{  																																	\
+			mStatus = STATUS_INVALID_BUFFER_SIZE;  																							\
+			USBERRN("Invalid policy length %u for power policy type %u. MinimumLength=%u",  											\
+			        mCheckValueLength,mPolicyType,mMinValueLength);																		\
+			\
+			if (mCheckValueUpdateLength) ((PULONG)(mCheckValueUpdateLength))[0]=(ULONG)(mCheckValueLength); 								\
+			mErrorAction;  																													\
+		}  																																	\
+		if (mCheckValueUpdateLength) ((PULONG)(mCheckValueUpdateLength))[0]=(ULONG)(mCheckValueLength); 									\
+	}while(0)
 
-POLICY_DEFAULT DevicePolicyDefaults[MAX_POLICY] =
-{
-	{0, 0, 0},	// unused (internal use only)
-	{DEVICE_SPEED, FullSpeed, 1},
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-	{0, 0, 0},	// unused
-};
+#define mDevice_CheckValueLength(mStatus,mPolicyType,mMinValueLength,mCheckValueLength,mCheckValueUpdateLength,mErrorAction) do {	\
+		if ((int)(mMinValueLength) > (int)(mCheckValueLength)) 																				\
+		{  																																	\
+			mStatus = STATUS_INVALID_BUFFER_SIZE;  																							\
+			USBERRN("Invalid length %u for device information type %u. MinimumLength=%u",  											\
+			        mCheckValueLength,mPolicyType,mMinValueLength);																		\
+			\
+			if (mCheckValueUpdateLength) ((PULONG)(mCheckValueUpdateLength))[0]=(ULONG)(mCheckValueLength); 								\
+			mErrorAction;  																													\
+		}  																																	\
+		if (mCheckValueUpdateLength) ((PULONG)(mCheckValueUpdateLength))[0]=(ULONG)(mCheckValueLength); 									\
+	}while(0)
 
 
-VOID Policy_SetValue(__out PULONG destValue,
-                     __in PVOID value,
-                     __in ULONG valueLength)
-{
-	switch(valueLength)
-	{
-	case 1:
-		*destValue = *((PUCHAR)value);
-		break;
-	case 2:
-		*destValue = *((PUSHORT)value);
-		break;
-	default:
-		*destValue = *((PULONG)value);
-		break;
-	}
-}
-
-VOID Policy_GetValue(__out PVOID destValue,
-                     __in ULONG value,
-                     __in ULONG valueLength)
-{
-	switch(valueLength)
-	{
-	case 1:
-		*((PUCHAR)destValue) = (UCHAR)value;
-		break;
-	case 2:
-		*((PUSHORT)destValue) = (USHORT)value;
-		break;
-	default:
-		*((PULONG)destValue) = (ULONG)value;
-		break;
-	}
-}
-
-PPOLICY_DEFAULT Policy_GetPowerDefault(__in ULONG policyType)
-{
-	policyType &= 0x7F;
-
-	if (policyType == 0 || policyType >= (sizeof(PowerPolicyDefaults) / sizeof(POLICY_DEFAULT)))
-		return NULL;
-	return &PowerPolicyDefaults[policyType];
-}
-
-PPOLICY_DEFAULT Policy_GetDeviceDefault(__in ULONG policyType)
-{
-
-	if (policyType == 0 || policyType >= (sizeof(DevicePolicyDefaults) / sizeof(POLICY_DEFAULT)))
-		return NULL;
-	return &DevicePolicyDefaults[policyType];
-}
 VOID Policy_SetAllPipesToDefault(__in PDEVICE_CONTEXT deviceContext)
 {
 	PPIPE_CONTEXT pipeContext = NULL;
@@ -201,89 +135,72 @@ NTSTATUS NONPAGABLE Policy_GetPipe(__in PDEVICE_CONTEXT deviceContext,
 	switch(policyType)
 	{
 	case SHORT_PACKET_TERMINATE:	// 0x01
-		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength[0], valueLength, break);
+		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength[0], valueLength, goto Done);
 		if (value) ((PUCHAR)value)[0] = (UCHAR)pipePolicies.ShortPacketTerminate;
 		break;
 
 	case AUTO_CLEAR_STALL:			// 0x02
-		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength[0], valueLength, break);
+		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength[0], valueLength, goto Done);
 		if (value) ((PUCHAR)value)[0] = (UCHAR)pipePolicies.AutoClearStall;
 		break;
 
 	case PIPE_TRANSFER_TIMEOUT:		// 0x03
-		mPipe_CheckValueLength(status, policyType, pipeID, sizeof(ULONG), valueLength[0], valueLength, break);
+		mPipe_CheckValueLength(status, policyType, pipeID, sizeof(ULONG), valueLength[0], valueLength, goto Done);
 		if (value) ((PULONG)value)[0] = pipeContext->TimeoutPolicy;
 		break;
 
 	case IGNORE_SHORT_PACKETS:		// 0x04
-		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength[0], valueLength, break);
+		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength[0], valueLength, goto Done);
 		if (value) ((PUCHAR)value)[0] = (UCHAR)pipePolicies.IgnoreShortPackets;
 		break;
 
 	case ALLOW_PARTIAL_READS:		// 0x05
-		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength[0], valueLength, break);
+		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength[0], valueLength, goto Done);
 		if (value) ((PUCHAR)value)[0] = (UCHAR)pipePolicies.AllowPartialReads;
 		break;
 
 	case AUTO_FLUSH:				// 0x06
-		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength[0], valueLength, break);
+		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength[0], valueLength, goto Done);
 		if (value) ((PUCHAR)value)[0] = (UCHAR)pipePolicies.AutoFlush;
 		break;
 
 	case RAW_IO:					// 0x07
-		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength[0], valueLength, break);
+		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength[0], valueLength, goto Done);
 		if (value) ((PUCHAR)value)[0] = (UCHAR)pipePolicies.RawIO;
 		break;
 
 	case MAXIMUM_TRANSFER_SIZE:		// 0x08
-		mPipe_CheckValueLength(status, policyType, pipeID, sizeof(ULONG), valueLength[0], valueLength, break);
+		mPipe_CheckValueLength(status, policyType, pipeID, sizeof(ULONG), valueLength[0], valueLength, goto Done);
 		if (value) ((PULONG)value)[0] = pipeContext->PipeInformation.MaximumTransferSize;
 		break;
 
 	case RESET_PIPE_ON_RESUME:		// 0x09
-		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength[0], valueLength, break);
+		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength[0], valueLength, goto Done);
 		if (value) ((PUCHAR)value)[0] = (UCHAR)pipePolicies.ResetPipeOnResume;
 		break;
 
 	case ISO_START_LATENCY:			// 0x20
-		mPipe_CheckValueLength(status, policyType, pipeID, 2, valueLength[0], valueLength, break);
+		mPipe_CheckValueLength(status, policyType, pipeID, 2, valueLength[0], valueLength, goto Done);
 		if (value) ((PUSHORT)value)[0] = (USHORT)pipePolicies.IsoStartLatency;
 		break;
 
 	case ISO_ALWAYS_START_ASAP:		// 0x21
-		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength[0], valueLength, break);
+		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength[0], valueLength, goto Done);
 		if (value) ((PUCHAR)value)[0] = (UCHAR)pipePolicies.IsoAlwaysStartAsap;
 		break;
 	case ISO_NUM_FIXED_PACKETS:		// 0x22
-		mPipe_CheckValueLength(status, policyType, pipeID, 2, valueLength[0], valueLength, break);
+		mPipe_CheckValueLength(status, policyType, pipeID, 2, valueLength[0], valueLength, goto Done);
 		if (value) ((PUSHORT)value)[0] = (USHORT)pipePolicies.IsoNumFixedPackets;
 		break;
 	case SIMUL_PARALLEL_REQUESTS:	// 0x30
-		mPipe_CheckValueLength(status, policyType, pipeID, sizeof(ULONG), valueLength[0], valueLength, break);
+		mPipe_CheckValueLength(status, policyType, pipeID, sizeof(ULONG), valueLength[0], valueLength, goto Done);
 		if (value) ((PULONG)value)[0] = pipeContext->SimulParallelRequests;
 		break;
-		/*
-		/*
-		case ISO_AUTO_PACKET_TEMPLATE:	// 0x10
-		if (pipeContext->SharedAutoIsoExPacketMemory)
-		{
-			size_t bufferSize;
-			PVOID buffer = WdfMemoryGetBuffer(pipeContext->SharedAutoIsoExPacketMemory, &bufferSize);
-
-			mPipe_CheckValueLength(status, policyType, pipeID, ((ULONG)bufferSize), ((ULONG)bufferSize), valueLength, break);
-			if (value && buffer) status = WdfMemoryCopyToBuffer(pipeContext->SharedAutoIsoExPacketMemory, 0, value, bufferSize);
-		}
-		else
-		{
-			if (valueLength) valueLength[0] = 0;
-		}
-		break;
-		*/
-
 	default:
 		status = STATUS_INVALID_PARAMETER;
 	}
 
+Done:
 	if (NT_SUCCESS(status))
 	{
 		if (value && valueLength)
@@ -326,12 +243,10 @@ NTSTATUS Policy_InitPower(__in PDEVICE_CONTEXT deviceContext)
 	the framework supports USB selective suspend whether or not the device
 	supports remote wakeup.
 	*/
-	if (deviceContext->RemoteWakeCapable)
+	if (deviceContext->RemoteWakeCapable || deviceContext->DeviceRegSettings.DeviceIdleIgnoreWakeEnable)
 		WDF_DEVICE_POWER_POLICY_IDLE_SETTINGS_INIT(&idleSettings, IdleUsbSelectiveSuspend);
-	else if (deviceContext->DeviceRegSettings.DeviceIdleIgnoreWakeEnable)
-		WDF_DEVICE_POWER_POLICY_IDLE_SETTINGS_INIT(&idleSettings, IdleCannotWakeFromS0);
 	else
-		return STATUS_SUCCESS;
+		WDF_DEVICE_POWER_POLICY_IDLE_SETTINGS_INIT(&idleSettings, IdleCannotWakeFromS0);
 
 	// IdleSettings.UserControlOfIdleSettings
 	if (!deviceContext->DeviceRegSettings.UserSetDeviceIdleEnabled)
@@ -401,47 +316,39 @@ NTSTATUS Policy_SetPower(__inout PDEVICE_CONTEXT deviceContext,
                          __in ULONG valueLength)
 {
 
-	PPOLICY_DEFAULT defaultPolicy;
-	ULONG tempValue = 0;
+	ULONG polBackup;
 	NTSTATUS status = STATUS_SUCCESS;
-
-	PAGED_CODE();
-	UNREFERENCED_PARAMETER(status);
-
-	defaultPolicy = Policy_GetPowerDefault(policyType);
-	if (defaultPolicy == NULL || defaultPolicy->PolicyType != policyType)
-	{
-		USBERR("unknown power policy %d\n", policyType);
-		return STATUS_INVALID_PARAMETER;
-	}
-
-	if (valueLength < defaultPolicy->ValueByteCount)
-	{
-		USBERR("buffer to small. policyType=%u\n", policyType);
-		return STATUS_BUFFER_TOO_SMALL;
-	}
-	Policy_SetValue(&tempValue, value, defaultPolicy->ValueByteCount);
 
 	switch(policyType)
 	{
 	case AUTO_SUSPEND:
-		deviceContext->DeviceRegSettings.DefaultIdleState = tempValue ? 1 : 0;
+
+		mPower_CheckValueLength(status, policyType, 1, valueLength, NULL, goto Done);
+		polBackup = deviceContext->DeviceRegSettings.DefaultIdleState;
+		deviceContext->DeviceRegSettings.DefaultIdleState = ((PUCHAR)value)[0] ? 1 : 0;
 
 		status = Policy_InitPower(deviceContext);
 
-		if (NT_SUCCESS(status))
-			Policy_SetValue(&deviceContext->PowerPolicy[policyType], value, defaultPolicy->ValueByteCount);
+		if (!NT_SUCCESS(status))
+			deviceContext->DeviceRegSettings.DefaultIdleState = polBackup;
 		break;
 	case SUSPEND_DELAY:
-		deviceContext->DeviceRegSettings.DefaultIdleTimeout = tempValue;
+		mPower_CheckValueLength(status, policyType, 4, valueLength, NULL, goto Done);
+		polBackup = deviceContext->DeviceRegSettings.DefaultIdleTimeout;
+		deviceContext->DeviceRegSettings.DefaultIdleTimeout = ((PULONG)value)[0];
 
 		status = Policy_InitPower(deviceContext);
 
-		if (NT_SUCCESS(status))
-			Policy_SetValue(&deviceContext->PowerPolicy[policyType], value, defaultPolicy->ValueByteCount);
+		if (!NT_SUCCESS(status))
+			deviceContext->DeviceRegSettings.DefaultIdleTimeout = polBackup;
 		break;
+	default:
+		USBERR("unknown power policy %d\n", policyType);
+		status = STATUS_INVALID_PARAMETER;
+
 	}
 
+Done:
 	return status;
 }
 
@@ -450,28 +357,26 @@ NTSTATUS Policy_GetPower(__in PDEVICE_CONTEXT deviceContext,
                          __out PVOID value,
                          __inout PULONG valueLength)
 {
-	PPOLICY_DEFAULT defaultPolicy;
+	NTSTATUS status = STATUS_SUCCESS;
 
-	PAGED_CODE();
-
-
-	defaultPolicy = Policy_GetPowerDefault(policyType);
-	if (defaultPolicy == NULL || defaultPolicy->PolicyType != policyType)
+	switch(policyType)
 	{
-		USBERR("unknown power policy %u\n", policyType);
-		return STATUS_INVALID_PARAMETER;
+	case AUTO_SUSPEND:
+		mPower_CheckValueLength(status, policyType, 1, valueLength[0], valueLength, goto Done);
+		if (value) ((PUCHAR)value)[0] = (UCHAR)deviceContext->DeviceRegSettings.DefaultIdleState;
+		break;
+	case SUSPEND_DELAY:
+		mPower_CheckValueLength(status, policyType, 4, valueLength[0], valueLength, goto Done);
+		if (value) ((PULONG)value)[0] = deviceContext->DeviceRegSettings.DefaultIdleTimeout;
+		break;
+	default:
+		USBERR("unknown power policy %d\n", policyType);
+		status = STATUS_INVALID_PARAMETER;
+
 	}
 
-	if (*valueLength < defaultPolicy->ValueByteCount)
-	{
-		USBERR("buffer to small. policyType=%u\n", policyType);
-		return STATUS_BUFFER_TOO_SMALL;
-	}
-
-	*valueLength = defaultPolicy->ValueByteCount;
-	Policy_GetValue(value, deviceContext->PowerPolicy[policyType], defaultPolicy->ValueByteCount);
-
-	return STATUS_SUCCESS;
+Done:
+	return status;
 }
 
 NTSTATUS Policy_GetDevice(__in PDEVICE_CONTEXT deviceContext,
@@ -479,28 +384,22 @@ NTSTATUS Policy_GetDevice(__in PDEVICE_CONTEXT deviceContext,
                           __out PVOID value,
                           __inout PULONG valueLength)
 {
-	PPOLICY_DEFAULT defaultPolicy;
+	NTSTATUS status = STATUS_SUCCESS;
 
-	PAGED_CODE();
-
-
-	defaultPolicy = Policy_GetDeviceDefault(policyType);
-	if (defaultPolicy == NULL || defaultPolicy->PolicyType != policyType)
+	switch(policyType)
 	{
-		USBERR("unknown devie policy %u\n", policyType);
-		return STATUS_INVALID_PARAMETER;
+	case DEVICE_SPEED:
+		mPower_CheckValueLength(status, policyType, 1, valueLength[0], valueLength, goto Done);
+		if (value) ((PUCHAR)value)[0] = (UCHAR)deviceContext->DeviceSpeed + 1;
+		break;
+	default:
+		USBERR("unknown device information type %d\n", policyType);
+		status = STATUS_INVALID_PARAMETER;
+
 	}
 
-	if (*valueLength < defaultPolicy->ValueByteCount)
-	{
-		USBERR("buffer to small. policyType=%u\n", policyType);
-		return STATUS_BUFFER_TOO_SMALL;
-	}
-
-	*valueLength = defaultPolicy->ValueByteCount;
-	Policy_GetValue(value, deviceContext->DevicePolicy[policyType], defaultPolicy->ValueByteCount);
-
-	return STATUS_SUCCESS;
+Done:
+	return status;
 }
 
 /*
@@ -637,32 +536,32 @@ NTSTATUS Policy_SetPipe(
 	switch(policyType)
 	{
 	case SHORT_PACKET_TERMINATE:	// 0x01
-		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength, NULL, break);
+		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength, NULL, goto Done);
 		pipePolicies.ShortPacketTerminate = ((PUCHAR)value)[0] ? 1 : 0;
 		break;
 
 	case AUTO_CLEAR_STALL:			// 0x02
-		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength, NULL, break);
+		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength, NULL, goto Done);
 		pipePolicies.AutoClearStall = ((PUCHAR)value)[0] ? 1 : 0;
 		break;
 
 	case PIPE_TRANSFER_TIMEOUT:		// 0x03
-		mPipe_CheckValueLength(status, policyType, pipeID,  sizeof(ULONG), sizeof(ULONG), NULL, break);
+		mPipe_CheckValueLength(status, policyType, pipeID,  sizeof(ULONG), sizeof(ULONG), NULL, goto Done);
 		pipeContext->TimeoutPolicy = ((PULONG)value)[0];
 		break;
 
 	case IGNORE_SHORT_PACKETS:		// 0x04
-		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength, NULL, break);
+		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength, NULL, goto Done);
 		pipePolicies.IgnoreShortPackets = ((PUCHAR)value)[0] ? 1 : 0;
 		break;
 
 	case ALLOW_PARTIAL_READS:		// 0x05
-		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength, NULL, break);
+		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength, NULL, goto Done);
 		pipePolicies.AllowPartialReads = ((PUCHAR)value)[0] ? 1 : 0;
 		break;
 
 	case AUTO_FLUSH:				// 0x06
-		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength, NULL, break);
+		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength, NULL, goto Done);
 		pipePolicies.AutoFlush = ((PUCHAR)value)[0] ? 1 : 0;
 		break;
 
@@ -673,7 +572,7 @@ NTSTATUS Policy_SetPipe(
 			status = STATUS_INVALID_PARAMETER;
 			break;
 		}
-		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength, NULL, break);
+		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength, NULL, goto Done);
 		tempVal = ((PUCHAR)value)[0];
 
 		if ((tempVal & 0x1) != pipePolicies.RawIO)
@@ -684,22 +583,22 @@ NTSTATUS Policy_SetPipe(
 		break;
 
 	case RESET_PIPE_ON_RESUME:		// 0x09
-		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength, NULL, break);
+		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength, NULL, goto Done);
 		pipePolicies.ResetPipeOnResume = ((PUCHAR)value)[0] ? 1 : 0;
 		break;
 
 	case ISO_START_LATENCY:			// 0x20
-		mPipe_CheckValueLength(status, policyType, pipeID, 2, valueLength, NULL, break);
+		mPipe_CheckValueLength(status, policyType, pipeID, 2, valueLength, NULL, goto Done);
 		pipePolicies.IsoStartLatency = ((PUSHORT)value)[0];
 		break;
 
 	case ISO_ALWAYS_START_ASAP:		// 0x21
-		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength, NULL, break);
+		mPipe_CheckValueLength(status, policyType, pipeID, 1, valueLength, NULL, goto Done);
 		pipePolicies.IsoAlwaysStartAsap = ((PUCHAR)value)[0] ? 1 : 0;
 		break;
 
 	case ISO_NUM_FIXED_PACKETS:		// 0x22
-		mPipe_CheckValueLength(status, policyType, pipeID, 2, valueLength, NULL, break);
+		mPipe_CheckValueLength(status, policyType, pipeID, 2, valueLength, NULL, goto Done);
 		pipePolicies.IsoNumFixedPackets = ((PUSHORT)value)[0] & 0x7FF;
 		if (pipePolicies.IsoNumFixedPackets)
 		{
@@ -731,7 +630,7 @@ NTSTATUS Policy_SetPipe(
 		break;
 
 	case SIMUL_PARALLEL_REQUESTS:
-		mPipe_CheckValueLength(status, policyType, pipeID, 4, valueLength, NULL, break);
+		mPipe_CheckValueLength(status, policyType, pipeID, 4, valueLength, NULL, goto Done);
 		if (pipeContext->SimulParallelRequests != ((PULONG)value)[0])
 		{
 			pipeContext->SimulParallelRequests = ((PULONG)value)[0];
@@ -749,6 +648,7 @@ NTSTATUS Policy_SetPipe(
 		status = STATUS_INVALID_PARAMETER;
 	}
 
+Done:
 	if (NT_SUCCESS(status))
 	{
 		USBMSGN("PipeID=%02Xh Applied value of length %u to policy type %u",
