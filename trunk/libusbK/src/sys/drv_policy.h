@@ -6,16 +6,6 @@
 
 #include "drv_private.h"
 
-typedef struct _POLICY_DEFAULT
-{
-	CONST ULONG		PolicyType;
-	CONST ULONG		DefaultValue;
-	CONST ULONG		ValueByteCount;
-} POLICY_DEFAULT, *PPOLICY_DEFAULT;
-
-extern POLICY_DEFAULT PowerPolicyDefaults[MAX_POLICY];
-extern POLICY_DEFAULT DevicePolicyDefaults[MAX_POLICY];
-
 //////////////////////////////////////////////////////////////////////////////
 // lusbk_policy.c function prototypes.
 // Pipe and power policy functions.
