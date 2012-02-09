@@ -25,14 +25,9 @@
 #include "examples.h"
 
 // Example configuration:
-#define EP_ADDRESS				0x02
-#define EP_PACKET_SIZE			512
-#define SYNC_TRANSFER_COUNT		128
-#define SYNC_TRANSFER_SIZE		((EP_PACKET_SIZE*4096))
 
 // Globals:
 KUSB_DRIVER_API Usb;
-UCHAR myBuffer[SYNC_TRANSFER_SIZE];
 
 DWORD __cdecl main(int argc, char* argv[])
 {
@@ -42,14 +37,9 @@ DWORD __cdecl main(int argc, char* argv[])
 	KLST_HANDLE deviceList = NULL;
 	KLST_DEVINFO_HANDLE deviceInfo = NULL;
 	KUSB_HANDLE usbHandle = NULL;
-	BM_TEST_TYPE testType = USB_ENDPOINT_DIRECTION_IN(EP_ADDRESS) ? BM_TEST_TYPE_READ : BM_TEST_TYPE_WRITE;
-	ULONG totalLength = 0;
-	ULONG transferredLength;
-	ULONG transferIndex;
-
-	BYTE polAutoSuspend = 1;
-	ULONG polSuspendDelay = 1000;
 	ULONG polLength;
+	BYTE polAutoSuspend;
+	ULONG polSuspendDelay;
 
 	/*
 	Find the test device. Uses "vid=hhhh pid=hhhh" arguments supplied on the
@@ -57,6 +47,26 @@ DWORD __cdecl main(int argc, char* argv[])
 	*/
 	if (!Examples_GetTestDevice(&deviceList, &deviceInfo, argc, argv))
 		return GetLastError();
+
+
+	if (deviceInfo->DriverID != KUSB_DRVID_LIBUSBK && deviceInfo->DriverID != KUSB_DRVID_WINUSB)
+	{
+		printf("[WARNING] libusb-win32 does not support power management.\n");
+	}
+	else
+	{
+		printf(
+		    "[NOTE] If the DeviceIdleEnabled policy is not set in the .inf file when\n"
+		    "       the device is installed, the AUTO_SUSPEND policy will be ignored.\n");
+
+		if (deviceInfo->DriverID == KUSB_DRVID_WINUSB)
+		{
+			printf(
+			    "[NOTE] WinUSB behaves slightly different then libusbK because it reset\n"
+			    "       power policies back to their default values when the usb handle\n"
+			    "       is closed.\n");
+		}
+	}
 
 	/*
 	This example will use the dynamic driver api so that it can be used
@@ -75,15 +85,40 @@ DWORD __cdecl main(int argc, char* argv[])
 	}
 	printf("Device opened successfully!\n");
 
-	/*!
-	Configure the benchmark test device to accept/send data.
-	*/
-	success = Bench_Configure(usbHandle, BM_COMMAND_SET_TEST, 0, &Usb, &testType);
-	if (!success) printf("Bench_Configure failed.\n");
 
 	/*!
-	Enable/disable the auto suspend power policy.
+	Get the auto suspend power policy.
 	*/
+	polLength = 1;
+	success = Usb.GetPowerPolicy(usbHandle, AUTO_SUSPEND, &polLength, &polAutoSuspend);
+	if (!success)
+	{
+		errorCode = GetLastError();
+		printf("GetPowerPolicy AUTO_SUSPEND failed. ErrorCode: %08Xh\n", errorCode);
+		goto Done;
+	}
+	printf("AUTO_SUSPEND  is currently %s.\n", (polAutoSuspend ? "enabled" : "disabled"));
+
+	/*!
+	Get the suspend delay power policy.
+	*/
+	polLength = 4;
+	success = Usb.GetPowerPolicy(usbHandle, SUSPEND_DELAY, &polLength, &polSuspendDelay);
+	if (!success)
+	{
+		errorCode = GetLastError();
+		printf("GetPowerPolicy SUSPEND_DELAY failed. ErrorCode: %08Xh\n", errorCode);
+		goto Done;
+	}
+	if (polAutoSuspend)
+	{
+		printf("SUSPEND_DELAY is set to %d ms\n", polSuspendDelay);
+	}
+
+	/*!
+	Toggle the auto suspend power policy.
+	*/
+	polAutoSuspend = polAutoSuspend ? 0 : 1;
 	polLength = 1;
 	success = Usb.SetPowerPolicy(usbHandle, AUTO_SUSPEND, polLength, &polAutoSuspend);
 	if (!success)
@@ -92,43 +127,27 @@ DWORD __cdecl main(int argc, char* argv[])
 		printf("SetPowerPolicy AUTO_SUSPEND=%u failed. ErrorCode: %08Xh\n", polAutoSuspend, errorCode);
 		goto Done;
 	}
+	printf("Set AUTO_SUSPEND = %s.\n", (polAutoSuspend ? "On" : "Off"));
 
 	/*!
-	Set the suspend delay power policy.
+	If the auto suspend policy is now enabled, change the suspend delay power policy value.
 	*/
-	polLength = 4;
-	success = Usb.SetPowerPolicy(usbHandle, SUSPEND_DELAY, polLength, &polSuspendDelay);
-	if (!success)
+	if (polAutoSuspend)
 	{
-		errorCode = GetLastError();
-		printf("SetPowerPolicy SUSPEND_DELAY=%u failed. ErrorCode: %08Xh\n", polSuspendDelay, errorCode);
-		goto Done;
-	}
+		polSuspendDelay *= 2;
+		if (!polSuspendDelay || polSuspendDelay > 12800)
+			polSuspendDelay = 100;
 
-	/*
-	Submit and complete SYNC_TRANSFER_COUNT number of transfers.
-	*/
-	transferIndex = (DWORD) - 1;
-	while (++transferIndex < SYNC_TRANSFER_COUNT)
-	{
-		// This examples works the same fo reading and writing.  The endpoint address is used to
-		// determine which.
-		if (USB_ENDPOINT_DIRECTION_IN(EP_ADDRESS))
-			success = Usb.ReadPipe(usbHandle, EP_ADDRESS, myBuffer, sizeof(myBuffer), &transferredLength, NULL);
-		else
-			success = Usb.WritePipe(usbHandle, EP_ADDRESS, myBuffer, sizeof(myBuffer), &transferredLength, NULL);
-
+		polLength = 4;
+		success = Usb.SetPowerPolicy(usbHandle, SUSPEND_DELAY, polLength, &polSuspendDelay);
 		if (!success)
 		{
 			errorCode = GetLastError();
-			break;
+			printf("SetPowerPolicy SUSPEND_DELAY=%u failed. ErrorCode: %08Xh\n", polSuspendDelay, errorCode);
+			goto Done;
 		}
-
-		totalLength += transferredLength;
-		printf("Transfer #%u completed with %u bytes.\n", transferIndex, transferredLength);
+		printf("Set SUSPEND_DELAY = %d ms\n", polSuspendDelay);
 	}
-
-	printf("Transferred %u bytes in %u transfers. errorCode=%08Xh\n", totalLength, transferIndex, errorCode);
 
 Done:
 
@@ -144,11 +163,43 @@ Done:
 	return errorCode;
 }
 /*!
+RUN #1
 Looking for device vid/pid 04D8/FA2E..
 Using 04D8:FA2E (LUSBW1): Benchmark Device - Microchip Technology, Inc.
+[NOTE] If the DeviceIdleEnabled policy is not set in the .inf file when
+       the device is installed, the AUTO_SUSPEND policy will be ignored.
 Device opened successfully!
-Transfer #0 completed with 4096 bytes.
-Transfer #1 completed with 4096 bytes.
-Transfer #2 completed with 4096 bytes.
-Transferred 12288 bytes in 3 transfers. errorCode=00000000h
+AUTO_SUSPEND  is currently enabled.
+SUSPEND_DELAY is set to 5000 ms
+Set AUTO_SUSPEND = Off.
+
+RUN #2
+Looking for device vid/pid 04D8/FA2E..
+Using 04D8:FA2E (LUSBW1): Benchmark Device - Microchip Technology, Inc.
+[NOTE] If the DeviceIdleEnabled policy is not set in the .inf file when
+       the device is installed, the AUTO_SUSPEND policy will be ignored.
+Device opened successfully!
+AUTO_SUSPEND  is currently disabled.
+Set AUTO_SUSPEND = On.
+Set SUSPEND_DELAY = 10000 ms
+
+RUN #3
+Looking for device vid/pid 04D8/FA2E..
+Using 04D8:FA2E (LUSBW1): Benchmark Device - Microchip Technology, Inc.
+[NOTE] If the DeviceIdleEnabled policy is not set in the .inf file when
+       the device is installed, the AUTO_SUSPEND policy will be ignored.
+Device opened successfully!
+AUTO_SUSPEND  is currently enabled.
+SUSPEND_DELAY is set to 10000 ms
+Set AUTO_SUSPEND = Off.
+
+RUN #4
+Looking for device vid/pid 04D8/FA2E..
+Using 04D8:FA2E (LUSBW1): Benchmark Device - Microchip Technology, Inc.
+[NOTE] If the DeviceIdleEnabled policy is not set in the .inf file when
+       the device is installed, the AUTO_SUSPEND policy will be ignored.
+Device opened successfully!
+AUTO_SUSPEND  is currently disabled.
+Set AUTO_SUSPEND = On.
+Set SUSPEND_DELAY = 100 ms
 */
