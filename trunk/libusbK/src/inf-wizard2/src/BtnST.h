@@ -139,7 +139,13 @@ public:
 
 	DWORD SetBtnCursor(int nCursorId = NULL, BOOL bRepaint = TRUE);
 
-	DWORD SetFlat(BOOL bFlat = TRUE, BOOL bRepaint = TRUE);
+	enum
+	{
+	    DISP_FLAT,
+	    DISP_RAISED,
+	    DISP_VERT_GRADIENT,
+	};
+	DWORD SetDisplayStyle(BYTE byDispStyle = 0, BOOL bRepaint = TRUE);
 	DWORD SetAlign(BYTE byAlign, BOOL bRepaint = TRUE);
 	DWORD SetPressedStyle(BYTE byStyle, BOOL bRepaint = TRUE);
 
@@ -203,18 +209,10 @@ protected:
 	HBITMAP CreateGrayscaleBitmap(HBITMAP hBitmap, DWORD dwWidth, DWORD dwHeight, COLORREF crTrans);
 	HBITMAP CreateDarkerBitmap(HBITMAP hBitmap, DWORD dwWidth, DWORD dwHeight, COLORREF crTrans);
 	COLORREF DarkenColor(COLORREF crColor, double dFactor);
-
-	void DrawGradientRect(
-	    CDC* pDC,
-	    CRect r,
-	    COLORREF cLeft,
-	    COLORREF cRight,
-	    BOOL bVertical);
-
 	virtual DWORD OnDrawBackground(CDC* pDC, CRect* pRect);
 	virtual DWORD OnDrawBorder(CDC* pDC, CRect* pRect);
 
-	BOOL		m_bIsFlat;			// Is a flat button?
+	BYTE		m_byDisplayStyle;	// visual display style
 	BOOL		m_bMouseOnButton;	// Is mouse over the button?
 	BOOL		m_bDrawTransparent;	// Draw transparent?
 	BOOL		m_bIsPressed;		// Is button pressed?
@@ -251,6 +249,13 @@ private:
 	void PaintBk(CDC* pDC);
 
 	void InitToolTip();
+
+	void DrawGradientRect(
+	    CDC* pDC,
+	    CRect r,
+	    COLORREF cLeft,
+	    COLORREF cRight,
+	    BOOL bVertical);
 
 	HCURSOR		m_hCursor;			// Handle to cursor
 	CToolTipCtrl m_ToolTip;			// Tooltip

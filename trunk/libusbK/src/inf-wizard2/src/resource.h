@@ -76,6 +76,14 @@
 #define IDSE_CREATE_USER_INSTALLER      67
 #define IDSE_UNKNOWN                    68
 #define IDSE_STATUS_PACKAGE             69
+#define IDS_PAGE_POWER_MANAGEMENT_TITLE 70
+#define IDS_PAGE_POWER_MANAGEMENT_SUBTITLE 71
+#define IDS_TIP_DEVICE_IDLE_ENABLED     72
+#define IDS_TIP_DEFAULT_IDLE_STATE      73
+#define IDS_TIP_DEFAULT_IDLE_TIMEOUT    74
+#define IDS_TIP_USER_SET_DEVICE_IDLE_ENABLED 75
+#define IDS_TIP_DEVICE_IDLE_IGNORE_WAKE_ENABLE 76
+#define IDS_TIP_SYSTEM_WAKE_ENABLED     77
 #define IDS_ABOUTBOX                    101
 #define IDC_BIGBOLDTITLE                102
 #define IDC_BOLDTITLE                   103
@@ -83,7 +91,6 @@
 #define IDC_LBL_FINISHED_TEXT           105
 #define IDC_TRANSPARENT3                106
 #define IDC_DRIVER_LIST                 107
-#define IDC_DRIVER1_TEXT                108
 #define IDC_DEV_LIST                    109
 #define IDC_BTN_SAVE_BASE_FOLDER        110
 #define IDC_BTN_OPEN_PACKAGE_FOLDER     110
@@ -96,7 +103,8 @@
 #define IDR_MAINFRAME                   200
 #define IDB_BANNER                      201
 #define IDB_WATERMARK                   202
-#define IDC_INTRO_TEXT2                 203
+#define IDC_INTRO_TEXT1                 203
+#define IDC_INTRO_TEXT2                 204
 #define IDC_EDIT1                       1000
 #define IDC_TXT_SAVE_BASE_FOLDER        1000
 #define IDS_PAGE_INTRO_TITLE            1001
@@ -104,8 +112,7 @@
 #define IDC_TXT_SAVE_NAME               1001
 #define IDC_GROUP1                      1002
 #define IDC_STATIC_TITLE                1003
-#define IDC_INTRO_TEXT1                 1004
-#define IDI_ICON1                       2001
+#define IDC_LBL_DEFAULT_IDLE_TIMEOUT            1003
 #define IDI_BMPOK                       2001
 #define IDI_ICON_OK                     2001
 #define IDI_BMPSTOP                     2002
@@ -118,13 +125,14 @@
 #define IDI_ICON_OPEN_FOLDER            2031
 #define IDI_ICON_INFO                   2032
 #define IDI_ICON_INFORMATION            2032
-#define IDB_PAYPAL                      2038
 #define IDI_ICON_NAV_BACK               2044
 #define IDI_ICON_NAV_NEXT               2045
 #define IDI_ICON_NAV_CANCEL             2046
 #define IDI_ICON_NAV_FINISH             2047
 #define IDD_DIALOG1                     2048
 #define IDD_DIALOG_PROGRESS             2048
+#define IDD_PAGE_POWER_MANAGEMENT       2049
+#define IDI_ICON_DONATE                 2051
 #define IDC_SHOW_NEW_DEVICES            3002
 #define IDC_SHOW_ALL_DEVICES            3003
 #define IDC_BTN_LEGACY_PACKAGE          3003
@@ -140,6 +148,7 @@
 #define IDC_LINK_SAVE_SESSION           3011
 #define IDC_LINK_EXPLORE_PACKAGE_FOLDER 3012
 #define IDC_LINK_EXPLORE_BASE_FOLDER    3013
+#define IDC_LINK_INSTALL_DRIVER_NOW     3013
 #define IDC_PIC_FINISHED_TEXT           3014
 #define IDC_GRP_ADDITIONAL_TASKS        3016
 #define IDC_BTN_EXPLORE_PACKAGE_FOLDER  3017
@@ -149,20 +158,25 @@
 #define IDC_LINK_SELECT_DRIVER          3021
 #define IDC_LBL_TEXT_BACK               3022
 #define IDC_PIC_TEXT_BACK               3024
-#define IDC_DONATE                      3025
-#define IDC_LBL_DONATE                  3026
-#define IDC_BUTTON1                     3027
 #define ID_PIC_PROGRESS                 3028
 #define IDC_CTL_PROGRESS                3029
 #define IDC_TXT_PROGRESS                3030
+#define IDC_SYSLINK_POWER_MANAGEMENT    3031
+#define IDC_CHK_DEVICE_IDLE_ENABLED     3033
+#define IDC_GRP_POWER                   3034
+#define IDC_CHK_DEFAULT_IDLE_STATE      3035
+#define IDC_CBO_DEFAULT_IDLE_TIMEOUT    3036
+#define IDC_CHK_USER_SET_DEVICE_IDLE_ENABLED 3037
+#define IDC_CHK_DEVICE_IDLE_IGNORE_WAKE_ENABLE 3038
+#define IDC_CHK_SYSTEM_WAKE_ENABLED     3039
 
 // Next default values for new objects
 //
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        2050
+#define _APS_NEXT_RESOURCE_VALUE        2052
 #define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         3031
+#define _APS_NEXT_CONTROL_VALUE         3037
 #define _APS_NEXT_SYMED_VALUE           4000
 #endif
 #endif

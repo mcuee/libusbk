@@ -16,6 +16,7 @@
 #include "ViewConfigSection.h"
 #include "GridDevCfgListCtrl.h"
 #include "PageConfigDevice.h"
+#include "InfWizardDlg.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -52,6 +53,7 @@ void CPageConfigDevice::DoDataExchange(CDataExchange* pDX)
 	// NOTE: the ClassWizard will add DDX and DDV calls here
 	//}}AFX_DATA_MAP
 	DDX_Control(pDX, IDC_DEV_LIST, m_DevCfgList);
+	DDX_Control(pDX, IDC_SYSLINK_POWER_MANAGEMENT, m_LinkPowerPage);
 }
 
 
@@ -63,6 +65,7 @@ BEGIN_MESSAGE_MAP(CPageConfigDevice, CResizablePageEx)
 	ON_NOTIFY(NM_CLICK, IDC_DEV_LIST, OnNMClickDevList)
 	ON_NOTIFY(LVN_KEYDOWN, IDC_DEV_LIST, OnLvnKeydownDevList)
 	ON_NOTIFY(LVN_ENDLABELEDIT, IDC_DEV_LIST, OnLvnEndlabeleditDevList)
+	ON_NOTIFY(NM_CLICK, IDC_SYSLINK_POWER_MANAGEMENT, &CPageConfigDevice::OnNMClickSyslinkPowerManagement)
 END_MESSAGE_MAP()
 
 /////////////////////////////////////////////////////////////////////////////
@@ -81,6 +84,16 @@ BOOL CPageConfigDevice::OnSetActive()
 	else
 		pSheet->SetWizardButtons(PSWIZB_BACK);
 
+	if (g_App->Wdi.Session()->GetDriverType() == WDI_LIBUSB0)
+	{
+		m_LinkPowerPage.SetItemState(0, 0);
+		m_LinkPowerPage.EnableWindow(FALSE);
+	}
+	else
+	{
+		m_LinkPowerPage.EnableWindow(TRUE);
+		m_LinkPowerPage.SetItemState(0, LIS_ENABLED);
+	}
 	return CResizablePageEx::OnSetActive();
 }
 
@@ -88,6 +101,7 @@ BOOL CPageConfigDevice::OnInitDialog()
 {
 	CResizablePageEx::OnInitDialog();
 	AddAnchor(IDC_DEV_LIST, TOP_LEFT, BOTTOM_RIGHT);
+	AddAnchor(IDC_SYSLINK_POWER_MANAGEMENT, BOTTOM_LEFT);
 
 	m_DevCfgList.InitDevCfgList(m_DevCfgListImages);
 
@@ -243,4 +257,17 @@ void CPageConfigDevice::OnLvnEndlabeleditDevList(NMHDR* pNMHDR, LRESULT* pResult
 	pSheet->SetWizardButtons(PSWIZB_BACK);
 
 	*pResult = TRUE;
+}
+
+void CPageConfigDevice::OnNMClickSyslinkPowerManagement(NMHDR* pNMHDR, LRESULT* pResult)
+{
+	InfWizardDlg* pSheet = (InfWizardDlg*)GetParent();
+	ASSERT_KINDOF(InfWizardDlg, pSheet);
+
+
+	pSheet->m_BackDlgID = IDD_PAGE_CONFIG_DEVICE;
+	pSheet->m_NextDlgID = IDD_PAGE_INSTALL;
+	pSheet->SetActivePage(pSheet->GetPageIndex(&pSheet->m_PagePowerManagment));
+	*pResult = 0;
+
 }

@@ -43,6 +43,7 @@ InfWizardDlg::InfWizardDlg()
 	AddPage(&m_PageConfigDevice);
 	AddPage(&m_PageInstall);
 	AddPage(&m_PageFinished);
+	AddPage(&m_PagePowerManagment);
 
 	// use the right flag for InfWizardApp style
 	//	m_psh.dwFlags |= bOldStyle ? PSH_IE4WIZARD97|PSH_STRETCHWATERMARK : PSH_IE5WIZARD97;

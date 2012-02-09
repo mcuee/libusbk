@@ -41,6 +41,13 @@ CLibWdiSession::CLibWdiSession(void)
 	, pid(0)
 	, is_composite(FALSE)
 	, mi(0)
+	, pwr_device_idle_enabled(1)
+	, pwr_default_idle_state(0)
+	, pwr_default_idle_timeout(5000)
+	, pwr_user_set_device_idle_enabled(0)
+	, pwr_device_idle_ignore_wake_enable(0)
+	, pwr_system_wake_enabled(0)
+	, m_PackageStatus(0)
 {
 }
 
@@ -138,7 +145,14 @@ void CLibWdiSession::Serialize(CArchive& archive)
 		        << driver_version
 		        << m_InfClassGuid
 		        << m_InfClassName
-		        << m_InfProvider;
+		        << m_InfProvider
+		        << pwr_device_idle_enabled
+		        << pwr_default_idle_state
+		        << pwr_default_idle_timeout
+		        << pwr_user_set_device_idle_enabled
+		        << pwr_device_idle_ignore_wake_enable
+		        << pwr_system_wake_enabled;
+
 	}
 	else
 	{
@@ -156,8 +170,13 @@ void CLibWdiSession::Serialize(CArchive& archive)
 		        >> driver_version
 		        >> m_InfClassGuid
 		        >> m_InfClassName
-		        >> m_InfProvider;
-
+		        >> m_InfProvider
+		        >> pwr_device_idle_enabled
+		        >> pwr_default_idle_state
+		        >> pwr_default_idle_timeout
+		        >> pwr_user_set_device_idle_enabled
+		        >> pwr_device_idle_ignore_wake_enable
+		        >> pwr_system_wake_enabled;
 	}
 }
 

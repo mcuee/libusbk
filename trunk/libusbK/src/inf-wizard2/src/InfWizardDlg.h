@@ -21,6 +21,7 @@
 #include "PageConfigDevice.h"
 #include "PageInstall.h"
 #include "PageFinished.h"
+#include "PagePowerManagement.h"
 
 #if _MSC_VER > 1000
 #pragma once
@@ -44,6 +45,10 @@ public:
 	CPageConfigDevice m_PageConfigDevice;
 	CPageInstall m_PageInstall;
 	CPageFinished m_PageFinished;
+	CPagePowerManagement m_PagePowerManagment;
+
+	int m_BackDlgID;
+	int m_NextDlgID;
 
 	CBitmap m_bmpWatermark;
 	CBitmap m_bmpHeader;

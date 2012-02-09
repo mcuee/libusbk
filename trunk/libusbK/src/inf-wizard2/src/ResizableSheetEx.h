@@ -28,6 +28,8 @@
 #include "ResizableSheetState.h"
 #include "BtnST.h"
 
+#define ID_WIZDONATE 4001
+
 /////////////////////////////////////////////////////////////////////////////
 // ResizableSheetEx.h : header file
 //
@@ -110,6 +112,7 @@ protected:
 	};
 
 protected:
+	CButtonST m_BtnDonate;
 	CButtonST m_BtnNavBack;
 	CButtonST m_BtnNavNext;
 	CButtonST m_BtnNavCancel;
@@ -130,6 +133,9 @@ protected:
 	//}}AFX_MSG
 	afx_msg BOOL OnPageChanging(NMHDR* pNotifyStruct, LRESULT* pResult);
 	afx_msg LRESULT OnResizeSupport(WPARAM wParam, LPARAM lParam);
+
+	afx_msg void OnBtnCLickWizDonate();
+
 	DECLARE_MESSAGE_MAP()
 };
 

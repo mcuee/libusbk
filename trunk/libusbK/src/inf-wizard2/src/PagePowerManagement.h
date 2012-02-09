@@ -1,4 +1,4 @@
-// CompletionNew.h : header file
+// Interior1.h : header file
 //
 // This is a part of the Microsoft Foundation Classes C++ library.
 // Copyright (C) 1992-1998 Microsoft Corporation
@@ -10,35 +10,32 @@
 // See these sources for detailed information regarding the
 // Microsoft Foundation Classes product.
 
-#if !defined(AFX_COMPLETION_H__19E7B195_4A5C_11D1_BF2C_00C04FC99F83__INCLUDED_)
-#define AFX_COMPLETION_H__19E7B195_4A5C_11D1_BF2C_00C04FC99F83__INCLUDED_
+#if !defined(__PAGE_POWER_MANAGEMENT_H)
+#define __PAGE_POWER_MANAGEMENT_H
 
 #include "ResizablePageEx.h"
-#include "afxwin.h"
 #include "afxcmn.h"
+#include "afxwin.h"
 
 #if _MSC_VER > 1000
 #pragma once
 #endif // _MSC_VER > 1000
 
 /////////////////////////////////////////////////////////////////////////////
-// CPageFinished dialog
+// CPagePowerManagement dialog
 
-class CPageFinished : public CResizablePageEx
+class CPagePowerManagement : public CResizablePageEx
 {
-	DECLARE_DYNCREATE(CPageFinished)
-
-	CFont m_FontTitle;
-	CFont m_FontBig;
+	DECLARE_DYNCREATE(CPagePowerManagement)
 
 	// Construction
 public:
-	CPageFinished();
-	~CPageFinished();
+	CPagePowerManagement();
+	~CPagePowerManagement();
 
 	// Dialog Data
-	//{{AFX_DATA(CPageFinished)
-	enum { IDD = IDD_PAGE_FINISHED };
+	//{{AFX_DATA(CPagePowerManagement)
+	enum { IDD = IDD_PAGE_POWER_MANAGEMENT };
 	// NOTE - ClassWizard will add data members here.
 	//    DO NOT EDIT what you see in these blocks of generated code !
 	//}}AFX_DATA
@@ -46,38 +43,47 @@ public:
 
 	// Overrides
 	// ClassWizard generate virtual function overrides
-	//{{AFX_VIRTUAL(CPageFinished)
+	//{{AFX_VIRTUAL(CPagePowerManagement)
 public:
 	virtual BOOL OnSetActive();
-	virtual BOOL OnKillActive();
+	virtual LRESULT OnWizardBack();
+	virtual LRESULT OnWizardNext();
+
 protected:
 	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
 	//}}AFX_VIRTUAL
 
 	// Implementation
 protected:
-	afx_msg BOOL OnToolTipNotify(UINT id, NMHDR* pNMHDR, LRESULT* pResult);
+
 	// Generated message map functions
-	//{{AFX_MSG(CPageFinished)
+	//{{AFX_MSG(CPagePowerManagement)
+	afx_msg void OnSize(UINT nType, int cx, int cy);
+	afx_msg BOOL OnToolTipNotify(UINT id, NMHDR* pNMHDR, LRESULT* pResult);
+	virtual BOOL PreTranslateMessage(MSG* pMsg);
 	virtual BOOL OnInitDialog();
 	//}}AFX_MSG
-	virtual BOOL PreTranslateMessage(MSG* pMsg);
 	DECLARE_MESSAGE_MAP()
-
-public:
-	afx_msg void OnNMClickLinkSaveSession(NMHDR* pNMHDR, LRESULT* pResult);
 
 private:
 	CToolTipCtrl m_ToolTip;
+
+	BOOL FillForm();
+	BOOL SaveForm();
+
+	void EnableWindowGroup(WORD nID, BOOL bEnabled);
+
 public:
-	afx_msg void OnNMClickLinkExplorePackageFolder(NMHDR* pNMHDR, LRESULT* pResult);
-	CStatic m_PicTextBack;
-	afx_msg void OnNMClickLinkInstallDriverNow(NMHDR* pNMHDR, LRESULT* pResult);
-	CLinkCtrl m_LinkExplore;
-	CLinkCtrl m_LinkInstall;
+	CButton m_ChkDeviceIdleEnabled;
+	CButton m_ChkDefaultIdleState;
+	CComboBox m_CboIdleTimeout;
+	CButton m_ChkUserSetDeviceIdleEnabled;
+	CButton m_ChkDeviceIdleIgnoreWakeEnable;
+	CButton m_ChkSystemWakeEnabled;
+	afx_msg void OnBnClickedChkEnablePower();
 };
 
 //{{AFX_INSERT_LOCATION}}
 // Microsoft Developer Studio will insert additional declarations immediately before the previous line.
 
-#endif // !defined(AFX_COMPLETION_H__19E7B195_4A5C_11D1_BF2C_00C04FC99F83__INCLUDED_)
+#endif // !defined(__PAGE_POWER_MANAGEMENT_H)

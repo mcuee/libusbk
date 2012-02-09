@@ -49,7 +49,8 @@ void CPageFinished::DoDataExchange(CDataExchange* pDX)
 	// NOTE: the ClassWizard will add DDX and DDV calls here
 	//}}AFX_DATA_MAP
 	DDX_Control(pDX, IDC_PIC_TEXT_BACK, m_PicTextBack);
-	DDX_Control(pDX, IDC_DONATE, m_BtnDonate);
+	DDX_Control(pDX, IDC_LINK_EXPLORE_PACKAGE_FOLDER, m_LinkExplore);
+	DDX_Control(pDX, IDC_LINK_INSTALL_DRIVER_NOW, m_LinkInstall);
 }
 
 
@@ -59,7 +60,7 @@ BEGIN_MESSAGE_MAP(CPageFinished, CResizablePageEx)
 	ON_NOTIFY_EX(TTN_NEEDTEXT, 0, OnToolTipNotify)
 	ON_NOTIFY(NM_CLICK, IDC_LINK_SAVE_SESSION, OnNMClickLinkSaveSession)
 	ON_NOTIFY(NM_CLICK, IDC_LINK_EXPLORE_PACKAGE_FOLDER, &CPageFinished::OnNMClickLinkExplorePackageFolder)
-	ON_BN_CLICKED(IDC_DONATE, &CPageFinished::OnBnClickedDonate)
+	ON_NOTIFY(NM_CLICK, IDC_LINK_INSTALL_DRIVER_NOW, &CPageFinished::OnNMClickLinkInstallDriverNow)
 END_MESSAGE_MAP()
 
 /////////////////////////////////////////////////////////////////////////////
@@ -74,6 +75,33 @@ BOOL CPageFinished::OnSetActive()
 	CWnd* pWndCancel = pSheet->GetDlgItem(IDCANCEL);
 	ASSERT_KINDOF(CWnd, pWndCancel);
 	pWndCancel->ShowWindow(SW_HIDE);
+
+	if (g_App->Wdi.Session()->m_PackageStatus & CLibWdiSession::PACKAGE_TYPE_CLIENT_INSTALLER)
+	{
+		m_LinkInstall.EnableWindow(TRUE);
+		m_LinkInstall.SetItemState(0, LIS_ENABLED);
+
+		m_LinkExplore.EnableWindow(TRUE);
+		m_LinkExplore.SetItemState(0, LIS_ENABLED);
+
+	}
+	else if (g_App->Wdi.Session()->m_PackageStatus & CLibWdiSession::PACKAGE_TYPE_LEGACY)
+	{
+		m_LinkInstall.SetItemState(0, 0);
+		m_LinkInstall.EnableWindow(FALSE);
+
+		m_LinkExplore.SetItemState(0, LIS_ENABLED);
+		m_LinkExplore.EnableWindow(TRUE);
+
+	}
+	else
+	{
+		m_LinkInstall.SetItemState(0, 0);
+		m_LinkInstall.EnableWindow(FALSE);
+
+		m_LinkExplore.SetItemState(0, 0);
+		m_LinkExplore.EnableWindow(FALSE);
+	}
 
 	return CResizablePageEx::OnSetActive();
 }
@@ -99,9 +127,8 @@ BOOL CPageFinished::OnInitDialog()
 	AddAnchor(IDC_LBL_TEXT_BACK, TOP_LEFT, TOP_RIGHT);
 	AddAnchor(IDC_LBL_TEXT_FINISH, TOP_LEFT, TOP_RIGHT);
 	AddAnchor(IDC_LINK_EXPLORE_PACKAGE_FOLDER, TOP_LEFT, TOP_RIGHT);
-	AddAnchor(IDC_LINK_SAVE_SESSION, TOP_LEFT, TOP_RIGHT);
-	AddAnchor(IDC_LBL_DONATE, BOTTOM_LEFT, BOTTOM_RIGHT);
-	AddAnchor(IDC_DONATE, BOTTOM_RIGHT);
+	AddAnchor(IDC_LINK_INSTALL_DRIVER_NOW, TOP_LEFT, TOP_RIGHT);
+	AddAnchor(IDC_LINK_SAVE_SESSION, BOTTOM_RIGHT);
 
 	LOGFONT lfTitle, lfBig;
 	GetDlgItem(IDC_BIGBOLDTITLE)->GetFont()->GetLogFont(&lfTitle);
@@ -117,16 +144,12 @@ BOOL CPageFinished::OnInitDialog()
 	HICON hImgInfo = (HICON)LoadImage(g_App->m_hInstance, MAKEINTRESOURCE(IDI_ICON_INFORMATION), IMAGE_ICON, 16, 16, LR_SHARED);
 	m_PicTextBack.SetIcon(hImgInfo);
 
-	HBITMAP hBmpDonate = (HBITMAP)LoadImage(g_App->m_hInstance, MAKEINTRESOURCE(IDB_PAYPAL), IMAGE_BITMAP, 0, 0, LR_SHARED);
-	m_BtnDonate.SetBitmap(hBmpDonate);
-
 	lfBig.lfWeight	= FW_BOLD;
 	lfBig.lfHeight	= 80;
 	lfBig.lfWidth	= 0;
 	lfBig.lfQuality	= CLEARTYPE_QUALITY;
 	m_FontBig.CreatePointFontIndirect(&lfBig);
 
-	GetDlgItem(IDC_LBL_DONATE)->SetFont(&m_FontBig);
 	GetDlgItem(IDC_BIGBOLDTITLE)->SetFont(&m_FontTitle);
 
 	if(!m_ToolTip.Create(this))
@@ -174,12 +197,46 @@ void CPageFinished::OnNMClickLinkExplorePackageFolder(NMHDR* pNMHDR, LRESULT* pR
 	if (!PathIsDirectory(packagePath.GetBuffer(4096)))
 		packagePath =  g_App->Wdi.Session()->GetPackageBaseDir();
 
-	ShellExecute(NULL, _T("explore"), packagePath.GetBuffer(4096), NULL, NULL, SW_SHOW);
+	HINSTANCE hInst = ShellExecute(NULL, _T("explore"), packagePath.GetBuffer(4096), NULL, NULL, SW_SHOWNORMAL);
+	if ((DWORD)hInst > 32)
+	{
+		*pResult = 0;
 
+		CPropertySheet* pSheet = (CPropertySheet*)GetParent();
+		ASSERT_KINDOF(CPropertySheet, pSheet);
+		pSheet->EndDialog(ID_WIZFINISH);
+		return;
+	}
 	*pResult = 0;
 }
 
-void CPageFinished::OnBnClickedDonate()
+
+void CPageFinished::OnNMClickLinkInstallDriverNow(NMHDR* pNMHDR, LRESULT* pResult)
 {
-	ShellExecute(NULL, NULL, _T("http://sourceforge.net/donate/index.php?group_id=78138"), NULL, NULL, SW_SHOWNORMAL);
+	CString exeName = _T("InstallDriver.exe");
+	CString packagePath = g_App->Wdi.Session()->GetPackageBaseDir();
+	CString packageName = g_App->Wdi.Session()->GetPackageName();
+
+	PathAppend(packagePath.GetBufferSetLength(4096), packageName.GetBuffer(0));
+	packagePath.ReleaseBuffer();
+
+	if (PathIsDirectory(packagePath.GetBuffer(4096)))
+	{
+		PathAppend(packagePath.GetBufferSetLength(4096), exeName.GetBuffer(0));
+		packagePath.ReleaseBuffer();
+		if (PathFileExists(packagePath))
+		{
+			HINSTANCE hInst = ShellExecute(NULL, _T("open"), packagePath.GetBuffer(0), NULL, NULL, SW_SHOWNORMAL);
+			if ((DWORD)hInst > 32)
+			{
+				*pResult = 0;
+
+				CPropertySheet* pSheet = (CPropertySheet*)GetParent();
+				ASSERT_KINDOF(CPropertySheet, pSheet);
+				pSheet->EndDialog(ID_WIZFINISH);
+				return;
+			}
+		}
+	}
+	*pResult = 0;
 }

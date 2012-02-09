@@ -69,6 +69,8 @@ public:
 	afx_msg void OnNMClickDevList(NMHDR* pNMHDR, LRESULT* pResult);
 	afx_msg void OnLvnKeydownDevList(NMHDR* pNMHDR, LRESULT* pResult);
 	afx_msg void OnLvnEndlabeleditDevList(NMHDR* pNMHDR, LRESULT* pResult);
+	afx_msg void OnNMClickSyslinkPowerManagement(NMHDR* pNMHDR, LRESULT* pResult);
+	CLinkCtrl m_LinkPowerPage;
 };
 
 //{{AFX_INSERT_LOCATION}}

@@ -66,17 +66,17 @@ extern "C" {
 
 	typedef struct _WDI_DEF_INF_ENTITY
 	{
-		const TCHAR* ClassGuid;
-		const TCHAR* ClassName;
-		const TCHAR* Provider;
+		const WCHAR* ClassGuid;
+		const WCHAR* ClassName;
+		const WCHAR* Provider;
 	} WDI_DEF_INF_ENTITY;
 
 	static WDI_DEF_INF_ENTITY DefaultInfTags[WDI_NB_DRIVERS + 1] =
 	{
-		{_T("{88BAE032-5A81-49F0-BC3D-A4FF138216D6}"),	_T("Universal Serial Bus devices"),	_T("Microsoft")},
-		{_T("{EB781AAF-9C70-4523-A5DF-642A87ECA567}"),	_T("libusb-win32 Usb Devices"),		_T("libusb-win32")},
-		{_T("{ECFB0CFD-74C4-4f52-BBF7-343461CD72AC}"),	_T("libusbK Usb Devices"),			_T("libusbK")},
-		{_T("{D9173AB3-4838-4a86-9BAD-E664C7A95927}"),	_T("Custom Usb Devices"),			_T("libusb.org")},
+		{L"{88BAE032-5A81-49F0-BC3D-A4FF138216D6}",	L"Universal Serial Bus devices",	L"Microsoft"},
+		{L"{EB781AAF-9C70-4523-A5DF-642A87ECA567}",	L"libusb-win32 Usb Devices",		L"libusb-win32"},
+		{L"{ECFB0CFD-74C4-4f52-BBF7-343461CD72AC}",	L"libusbK Usb Devices",			L"libusbK"},
+		{L"{D9173AB3-4838-4a86-9BAD-E664C7A95927}",	L"Custom Usb Devices",			L"libusb.org"},
 		{NULL, NULL, NULL}
 	};
 
@@ -222,6 +222,13 @@ extern "C" {
 		bool trim_whitespaces;
 	};
 
+	enum wdi_power_flag
+	{
+	    WDI_POWER_FLAG_DEFAULT	= 0,
+	    WDI_POWER_FLAG_ON		= (1 << 0),
+	    WDI_POWER_FLAG_OFF	= (1 << 1),
+	};
+
 // wdi_prepare_driver options:
 	struct wdi_options_prepare_driver
 	{
@@ -246,6 +253,14 @@ extern "C" {
 		char* inf_class_guid;
 		/** (Optional) Provider name used in inf file. 0 if unused */
 		char* inf_provider;
+
+		unsigned int pwr_device_idle_enabled;
+		unsigned int pwr_default_idle_state;
+		unsigned int pwr_default_idle_timeout;
+		unsigned int pwr_user_set_device_idle_enabled;
+		unsigned int pwr_device_idle_ignore_wake_enable;
+		unsigned int pwr_system_wake_enabled;
+
 
 	};
 

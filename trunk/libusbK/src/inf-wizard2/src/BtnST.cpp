@@ -16,6 +16,9 @@ static char THIS_FILE[] = __FILE__;
 // CButtonST
 
 // Mask for control's type
+#ifdef BS_TYPEMASK
+#undef BS_TYPEMASK
+#endif
 #define BS_TYPEMASK SS_TYPEMASK
 
 #ifndef	TTM_SETTITLE
@@ -42,7 +45,7 @@ CButtonST::CButtonST()
 	FreeResources(FALSE);
 
 	// Default type is "flat" button
-	m_bIsFlat = TRUE;
+	m_byDisplayStyle = DISP_VERT_GRADIENT;
 	// Button will be tracked also if when the window is inactive (like Internet Explorer)
 	m_bAlwaysTrack = TRUE;
 
@@ -364,15 +367,17 @@ BOOL CButtonST::OnSetCursor(CWnd* pWnd, UINT nHitTest, UINT message)
 
 void CButtonST::CancelHover()
 {
-	// Only for flat buttons
-	if (m_bIsFlat)
+	switch(m_byDisplayStyle)
 	{
+	case DISP_FLAT:
+	case DISP_VERT_GRADIENT:
 		if (m_bMouseOnButton)
 		{
 			m_bMouseOnButton = FALSE;
 			Invalidate();
 		} // if
-	} // if
+	}
+
 } // End of CancelHover
 
 void CButtonST::OnMouseMove(UINT nFlags, CPoint point)
@@ -389,8 +394,12 @@ void CButtonST::OnMouseMove(UINT nFlags, CPoint point)
 	// If the mouse enter the button with the left button pressed then do nothing
 	if (nFlags& MK_LBUTTON && m_bMouseOnButton == FALSE) return;
 
-	// If our button is not flat then do nothing
-	if (m_bIsFlat == FALSE) return;
+	switch(m_byDisplayStyle)
+	{
+		// If our button is a raised button then do nothing
+	case DISP_RAISED:
+		return;
+	}
 
 	if (m_bAlwaysTrack == FALSE)	wndActive = GetActiveWindow();
 
@@ -556,13 +565,13 @@ void CButtonST::DrawItem(LPDRAWITEMSTRUCT lpDIS)
 		DrawTheText(pDC, (LPCTSTR)sTitle, &lpDIS->rcItem, &captionRect, m_bIsPressed, m_bIsDisabled);
 	} // if
 
-	if (m_bIsFlat == FALSE || (m_bIsFlat && m_bDrawFlatFocus))
+	if (m_byDisplayStyle == DISP_RAISED || (m_byDisplayStyle != DISP_RAISED && m_bDrawFlatFocus))
 	{
 		// Draw the focus rect
 		if (m_bIsFocused)
 		{
 			CRect focusRect = itemRect;
-			focusRect.DeflateRect(2, 2);
+			focusRect.DeflateRect(3, 3);
 			pDC->DrawFocusRect(&focusRect);
 		} // if
 	} // if
@@ -589,6 +598,7 @@ void CButtonST::PaintBk(CDC* pDC)
 
 	pDC->BitBlt(0, 0, rect.Width(), rect.Height(), &m_dcBk, 0, 0, SRCCOPY);
 } // End of PaintBk
+
 
 HBITMAP CButtonST::CreateBitmapMask(HBITMAP hSourceBitmap, DWORD dwWidth, DWORD dwHeight, COLORREF crTransColor)
 {
@@ -1533,9 +1543,9 @@ DWORD CButtonST::SetBitmaps(HBITMAP hBitmapIn, COLORREF crTransColorIn, HBITMAP 
 //		BTNST_OK
 //			Function executed successfully.
 //
-DWORD CButtonST::SetFlat(BOOL bFlat, BOOL bRepaint)
+DWORD CButtonST::SetDisplayStyle(BYTE byDispStyle, BOOL bRepaint)
 {
-	m_bIsFlat = bFlat;
+	m_byDisplayStyle = byDispStyle;
 	if (bRepaint)	Invalidate();
 
 	return BTNST_OK;
@@ -2356,7 +2366,7 @@ DWORD CButtonST::OnDrawBackground(CDC* pDC, CRect* pRect)
 	COLORREF cLT = RGB(255, 255, 255);
 	COLORREF cBR = GetSysColor(COLOR_BTNSHADOW);
 
-	if (m_bIsFlat == FALSE)
+	if (m_byDisplayStyle == DISP_RAISED)
 	{
 		if (m_bIsFocused || m_bIsDefault)
 		{
@@ -2366,20 +2376,35 @@ DWORD CButtonST::OnDrawBackground(CDC* pDC, CRect* pRect)
 		} // if
 	} // if
 
-	if (m_bMouseOnButton || m_bIsPressed)
-		cBR = GetSysColor(COLOR_GRADIENTACTIVECAPTION);//m_crColors[BTNST_COLOR_BK_IN];
-	else
+	CBrush brBackground;
+	switch(m_byDisplayStyle)
 	{
-		if (m_bIsFocused || m_bIsDefault)
-			cBR = GetSysColor(COLOR_GRADIENTINACTIVECAPTION);//m_crColors[BTNST_COLOR_BK_FOCUS];
+	case DISP_VERT_GRADIENT:
+		if (m_bMouseOnButton || m_bIsPressed)
+			cBR = GetSysColor(COLOR_GRADIENTACTIVECAPTION);//m_crColors[BTNST_COLOR_BK_IN];
 		else
-			cBR = GetSysColor(COLOR_BTNSHADOW);//m_crColors[BTNST_COLOR_BK_OUT];
-	} // else
-
-//	CBrush		brBackground(crColor);
-
-	DrawGradientRect(pDC, *pRect, cLT, cBR, TRUE);
-	//pDC->FillRect(pRect, &brBackground);
+		{
+			if (m_bIsFocused || m_bIsDefault)
+				cBR = GetSysColor(COLOR_GRADIENTINACTIVECAPTION);//m_crColors[BTNST_COLOR_BK_FOCUS];
+			else
+				cBR = GetSysColor(COLOR_BTNSHADOW);//m_crColors[BTNST_COLOR_BK_OUT];
+		} // else
+		DrawGradientRect(pDC, *pRect, cLT, cBR, TRUE);
+		break;
+	default:
+		if (m_bMouseOnButton || m_bIsPressed)
+			cLT = m_crColors[BTNST_COLOR_BK_IN];
+		else
+		{
+			if (m_bIsFocused)
+				cLT = m_crColors[BTNST_COLOR_BK_FOCUS];
+			else
+				cLT = m_crColors[BTNST_COLOR_BK_OUT];
+		} // else
+		brBackground.CreateSolidBrush(cLT);
+		pDC->FillRect(pRect, &brBackground);
+		break;
+	}
 
 	return BTNST_OK;
 } // End of OnDrawBackground
@@ -2404,15 +2429,22 @@ DWORD CButtonST::OnDrawBorder(CDC* pDC, CRect* pRect)
 	// Draw pressed button
 	if (m_bIsPressed)
 	{
-		if (m_bIsFlat)
+		CBrush brBtnShadow;
+		switch(m_byDisplayStyle)
 		{
+		case DISP_RAISED:
+			brBtnShadow.CreateSolidBrush(GetSysColor(COLOR_BTNSHADOW));
+			pDC->FrameRect(pRect, &brBtnShadow);
+			break;
+		case DISP_VERT_GRADIENT:
 			if (m_bDrawBorder)
 				pDC->Draw3dRect(pRect, ::GetSysColor(COLOR_3DDKSHADOW), ::GetSysColor(COLOR_GRADIENTACTIVECAPTION));
-		}
-		else
-		{
-			CBrush brBtnShadow(GetSysColor(COLOR_BTNSHADOW));
-			pDC->FrameRect(pRect, &brBtnShadow);
+			break;
+		case DISP_FLAT:
+			if (m_bDrawBorder)
+				pDC->Draw3dRect(pRect, ::GetSysColor(COLOR_BTNSHADOW), ::GetSysColor(COLOR_BTNHILIGHT));
+			break;
+
 		}
 	}
 	else // ...else draw non pressed button
@@ -2422,12 +2454,16 @@ DWORD CButtonST::OnDrawBorder(CDC* pDC, CRect* pRect)
 		CPen penBtnShadow(PS_SOLID, 0, GetSysColor(COLOR_BTNSHADOW));   // Dark gray
 		CPen pen3DDKShadow(PS_SOLID, 0, GetSysColor(COLOR_3DDKSHADOW)); // Black
 
-		if (m_bIsFlat)
+		if (m_byDisplayStyle == DISP_FLAT)
 		{
-			//if (m_bMouseOnButton && m_bDrawBorder)
-			//	pDC->Draw3dRect(pRect, ::GetSysColor(COLOR_BTNHILIGHT), ::GetSysColor(COLOR_GRADIENTACTIVECAPTION));
+			if (m_bMouseOnButton && m_bDrawBorder)
+				pDC->Draw3dRect(pRect, ::GetSysColor(COLOR_BTNHILIGHT), ::GetSysColor(COLOR_BTNSHADOW));
+		}
+		else if (m_byDisplayStyle == DISP_VERT_GRADIENT)
+		{
 			if (m_bDrawBorder)
 				pDC->Draw3dRect(pRect, ::GetSysColor(COLOR_3DDKSHADOW), RGB(0, 0, 0));
+
 		}
 		else
 		{
