@@ -10,8 +10,7 @@
 * - Packaged in a modified LZMA sfx module. See: http://7zsfx.info/en. This module is highly configurable
 *   with installer-like options.
 * - Uses dpinst.exe, by Microsoft. Dpinst.exe is a robust multi-language driver installation utility. This
-*   utility has it's own small set of configurable wizard screens to ease end-user installations. It's
-*   features also include:
+*   utility has a set of configurable wizard screens to ease end-user installations. Features also include:
 *   - Install multiple .inf files at once, each can contain multiple devices with multiple hardware
 *     identifiers.
 *   - Uninstall via add/remove programs. (removes from driver-store)
@@ -59,9 +58,8 @@
 * - Other customization:
 *   - .inf file can be hand modified as needed.
 *   - Files can be added or removed as needed.
-*   - Icon and resource text can be changed with a standard resource editor. (Such as the Visual Studios rc
-*     editor) "7ZDP_LZMA.sfx" is a 32 bit PE. (.exe file) It is advisable to change the "CommpanyName" in the
-*     VS_VERSIONINFO. This field is often displayed by the windows file explorer in various view modes.
+*   - Icon and resource text can be changed with a standard resource editor such as ResourcHacker:
+*     http://www.angusj.com/resourcehacker/
 *
 */
 

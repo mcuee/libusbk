@@ -620,21 +620,53 @@ Transferred 12288 bytes in 3 transfers. errorCode=00000000h
 * \par power-policy-suspend example:
 * -# Finds a device by vid/pid (use vid=hhhh, pid=hhhhh and the command line).
 * -# Initializes a new UsbK (usb device) handle.
-* -# Enables auto suspend and sets the suspend delay power policy.
-* -# Configures the benchmark test device to not accept/send data.
-* -# Submits/Completes \c SYNC_TRANSFER_COUNT number of I/O request one at a time.
+* -# Gets the \b AUTO_SUSPEND and the \b SUSPEND_DELAY power policy values.
+* -# Toggles the \b AUTO_SUSPEND power policy value.
+* -# If \b AUTO_SUSPEND was enabled in the previous step, the \b SUSPEND_DELAY power policy is changed to a different value.
 * -# Frees the UsbK (usb device) handle.
 * -# Frees the LstK (device list) handle created in step #1.
 *
 * \par Console Output
 * \verbatim
+RUN #1
 Looking for device vid/pid 04D8/FA2E..
 Using 04D8:FA2E (LUSBW1): Benchmark Device - Microchip Technology, Inc.
+[NOTE] If the DeviceIdleEnabled policy is not set in the .inf file when
+       the device is installed, the AUTO_SUSPEND policy will be ignored.
 Device opened successfully!
-Transfer #0 completed with 4096 bytes.
-Transfer #1 completed with 4096 bytes.
-Transfer #2 completed with 4096 bytes.
-Transferred 12288 bytes in 3 transfers. errorCode=00000000h
+AUTO_SUSPEND  is currently enabled.
+SUSPEND_DELAY is set to 5000 ms
+Set AUTO_SUSPEND = Off.
+
+RUN #2
+Looking for device vid/pid 04D8/FA2E..
+Using 04D8:FA2E (LUSBW1): Benchmark Device - Microchip Technology, Inc.
+[NOTE] If the DeviceIdleEnabled policy is not set in the .inf file when
+       the device is installed, the AUTO_SUSPEND policy will be ignored.
+Device opened successfully!
+AUTO_SUSPEND  is currently disabled.
+Set AUTO_SUSPEND = On.
+Set SUSPEND_DELAY = 10000 ms
+
+RUN #3
+Looking for device vid/pid 04D8/FA2E..
+Using 04D8:FA2E (LUSBW1): Benchmark Device - Microchip Technology, Inc.
+[NOTE] If the DeviceIdleEnabled policy is not set in the .inf file when
+       the device is installed, the AUTO_SUSPEND policy will be ignored.
+Device opened successfully!
+AUTO_SUSPEND  is currently enabled.
+SUSPEND_DELAY is set to 10000 ms
+Set AUTO_SUSPEND = Off.
+
+RUN #4
+Looking for device vid/pid 04D8/FA2E..
+Using 04D8:FA2E (LUSBW1): Benchmark Device - Microchip Technology, Inc.
+[NOTE] If the DeviceIdleEnabled policy is not set in the .inf file when
+       the device is installed, the AUTO_SUSPEND policy will be ignored.
+Device opened successfully!
+AUTO_SUSPEND  is currently disabled.
+Set AUTO_SUSPEND = On.
+Set SUSPEND_DELAY = 100 ms
 \endverbatim
 */
 

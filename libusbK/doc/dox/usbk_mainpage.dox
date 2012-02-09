@@ -33,6 +33,7 @@ The main libusbK library is written in standard C, but official bindings for the
 standard C library are provided for the folllowing languages:
 -# C#
 -# VB.NET
+-# Pascal (Compliments of Ekkehard Domning) 
 -# BOO (http://boo.codehaus.org/)
 \note See the \b bindings folder in the source package.
 
