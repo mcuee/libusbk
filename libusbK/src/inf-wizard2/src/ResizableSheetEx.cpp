@@ -91,7 +91,14 @@ BEGIN_MESSAGE_MAP(CResizableSheetEx, CPropertySheetEx)
 	//}}AFX_MSG_MAP
 	ON_NOTIFY_REFLECT_EX(PSN_SETACTIVE, OnPageChanging)
 	ON_REGISTERED_MESSAGE(WMU_RESIZESUPPORT, OnResizeSupport)
+	ON_BN_CLICKED(ID_WIZDONATE, OnBtnCLickWizDonate)
 END_MESSAGE_MAP()
+
+VOID CResizableSheetEx::OnBtnCLickWizDonate()
+{
+	ShellExecute(NULL, NULL, _T("http://sourceforge.net/donate/index.php?group_id=78138"), NULL, NULL, SW_SHOWNORMAL);
+}
+
 
 
 void CResizableSheetEx::DoDataExchange(CDataExchange* pDX)
@@ -254,6 +261,19 @@ void CResizableSheetEx::PresetLayout()
 				dlgBtn->SetWindowText(sBtn);
 				m_BtnNavBack.SubclassDlgItem(_propButtons[i], this);
 				m_BtnNavBack.SetIcon(IDI_ICON_NAV_BACK);
+
+				rcBtn.right = rcBtn.Width() * 2 + 10;
+				rcBtn.left = 5;
+				rcBtn.top -= 10;
+				rcBtn.bottom -= 3;
+
+				m_BtnDonate.Create(_T("Help keep us strong!"), WS_CHILD | WS_VISIBLE | WS_GROUP, rcBtn, this, ID_WIZDONATE);
+				m_BtnDonate.SetIcon(IDI_ICON_DONATE);
+				m_BtnDonate.SetAlign(CButtonST::ST_ALIGN_HORIZ);
+				m_BtnDonate.SetDisplayStyle(CButtonST::DISP_FLAT);
+				m_BtnDonate.SetFont(GetFont(), FALSE);
+
+				AddAnchor(ID_WIZDONATE, BOTTOM_LEFT);
 				AddAnchor(_propButtons[i], BOTTOM_RIGHT);
 				break;
 			case ID_WIZNEXT:

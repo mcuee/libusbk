@@ -75,6 +75,13 @@ public:
 	/** (Optional) Driver version (four WORDS). 0 if unused */
 	UINT64 driver_version;
 
+	unsigned int pwr_device_idle_enabled;
+	unsigned int pwr_default_idle_state;
+	unsigned int pwr_default_idle_timeout;
+	unsigned int pwr_user_set_device_idle_enabled;
+	unsigned int pwr_device_idle_ignore_wake_enable;
+	unsigned int pwr_system_wake_enabled;
+
 
 public:
 	CString m_VendorName;
@@ -89,7 +96,18 @@ public:
 	CHAR chInfClassGuid[512];
 	CHAR chInfProvider[512];
 
+	DWORD m_PackageStatus;
+
 public:
+	enum
+	{
+	    PACKAGE_STATUS_SUCCESS = (1 << 0),
+	    PACKAGE_STATUS_FAIL = (1 << 1),
+	    PACKAGE_TYPE_CLIENT_INSTALLER = (1 << 2),
+	    PACKAGE_TYPE_INSTALL_ONLY = (1 << 3),
+	    PACKAGE_TYPE_LEGACY = (1 << 4),
+	};
+
 	CString m_PackageBaseDir;
 	CString m_PackageName;
 

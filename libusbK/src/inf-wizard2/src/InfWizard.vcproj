@@ -258,6 +258,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\PagePowerManagement.cpp"
+				>
+			</File>
+			<File
 				RelativePath="PageSelectDevice.cpp"
 				>
 			</File>
@@ -344,6 +348,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\PagePowerManagement.h"
+				>
+			</File>
+			<File
 				RelativePath="PageSelectDevice.h"
 				>
 			</File>
@@ -362,23 +370,7 @@
 			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
 			>
 			<File
-				RelativePath=".\res\cancel-1.bmp"
-				>
-			</File>
-			<File
-				RelativePath=".\res\cancel.bmp"
-				>
-			</File>
-			<File
-				RelativePath=".\res\finish.bmp"
-				>
-			</File>
-			<File
-				RelativePath=".\res\Icons.16x16.Information.ico"
-				>
-			</File>
-			<File
-				RelativePath=".\res\Icons.16x16.Information.png"
+				RelativePath=".\res\donate-logo.ico"
 				>
 			</File>
 			<File
@@ -390,43 +382,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\res\nav-back.bmp"
-				>
-			</File>
-			<File
-				RelativePath=".\res\nav-back.ico"
-				>
-			</File>
-			<File
-				RelativePath=".\res\nav-cancel.ico"
-				>
-			</File>
-			<File
-				RelativePath=".\res\nav-finsh.ico"
-				>
-			</File>
-			<File
-				RelativePath=".\res\nav-next-1.bmp"
-				>
-			</File>
-			<File
-				RelativePath=".\res\nav-next.bmp"
-				>
-			</File>
-			<File
-				RelativePath=".\res\nav-next.ico"
-				>
-			</File>
-			<File
-				RelativePath=".\res\PayPal.Donate.bmp"
-				>
-			</File>
-			<File
 				RelativePath=".\Resource.h"
-				>
-			</File>
-			<File
-				RelativePath=".\res\usb-logo.bmp"
 				>
 			</File>
 			<Filter
@@ -457,6 +413,14 @@
 					>
 				</File>
 				<File
+					RelativePath=".\res\Icons.16x16.Information.ico"
+					>
+				</File>
+				<File
+					RelativePath=".\res\Icons.16x16.Information.png"
+					>
+				</File>
+				<File
 					RelativePath=".\res\Icons.16x16.OK.ico"
 					>
 				</File>
@@ -466,6 +430,22 @@
 				</File>
 				<File
 					RelativePath=".\res\information.bmp"
+					>
+				</File>
+				<File
+					RelativePath=".\res\nav-back.ico"
+					>
+				</File>
+				<File
+					RelativePath=".\res\nav-cancel.ico"
+					>
+				</File>
+				<File
+					RelativePath=".\res\nav-finsh.ico"
+					>
+				</File>
+				<File
+					RelativePath=".\res\nav-next.ico"
 					>
 				</File>
 				<File

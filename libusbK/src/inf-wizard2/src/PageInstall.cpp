@@ -119,8 +119,9 @@ LRESULT CPageInstall::OnWizardNext()
 	int errorCode = ERROR_SUCCESS;
 
 	if (!bClientInstaller && !bLegacyPackage && !bInstallOnly)
+	{
 		return CResizablePageEx::OnWizardNext();
-
+	}
 	CLibWdiDynamicAPI& API = g_App->Wdi;
 
 	m_TxtStatus.SetWindowText(_T(""));
@@ -158,6 +159,13 @@ LRESULT CPageInstall::OnWizardNext()
 
 	if (g_App->Wdi.Session()->m_InfProvider.GetLength() > 0)
 		prepareOptions.inf_provider = g_App->Wdi.Session()->chInfProvider;
+
+	prepareOptions.pwr_default_idle_state = g_App->Wdi.Session()->pwr_default_idle_state;
+	prepareOptions.pwr_default_idle_timeout = g_App->Wdi.Session()->pwr_default_idle_timeout;
+	prepareOptions.pwr_device_idle_enabled = g_App->Wdi.Session()->pwr_device_idle_enabled;
+	prepareOptions.pwr_device_idle_ignore_wake_enable = g_App->Wdi.Session()->pwr_device_idle_ignore_wake_enable;
+	prepareOptions.pwr_system_wake_enabled = g_App->Wdi.Session()->pwr_system_wake_enabled;
+	prepareOptions.pwr_user_set_device_idle_enabled = g_App->Wdi.Session()->pwr_user_set_device_idle_enabled;
 
 	wdi_options_install_driver installOptions;
 	memset(&installOptions, 0, sizeof(installOptions));
@@ -273,6 +281,8 @@ Done:
 	g_App->Wdi.Session()->Destroy(&deviceInfo);
 	if (errorCode == ERROR_SUCCESS)
 	{
+		g_App->Wdi.Session()->m_PackageStatus |= CLibWdiSession::PACKAGE_STATUS_SUCCESS;
+
 		if (bLegacyPackage)
 		{
 			RemoveDirectory(infPath);
@@ -307,6 +317,7 @@ Done:
 	}
 	else
 	{
+		g_App->Wdi.Session()->m_PackageStatus |= CLibWdiSession::PACKAGE_STATUS_FAIL;
 		CString* pTxtPackageError = CInfWizardDisplay::GetTipString(IDSE_STATUS_PACKAGE);
 		fmtRtf.Format(_T("%s\n"), pTxtPackageError->GetBuffer(0));
 		SetStatusFont(TRUE, CInfWizardDisplay::ColorError, NULL, TwipsPerPixelY() * 11);
@@ -504,18 +515,21 @@ void CPageInstall::EnableWindowGroup(WORD nID, BOOL bEnabled)
 
 void CPageInstall::OnBnClickedBtnClientInstaller()
 {
+	g_App->Wdi.Session()->m_PackageStatus = CLibWdiSession::PACKAGE_TYPE_CLIENT_INSTALLER;
 	WritePackageStatus();
 	EnableWindowGroup(IDC_GRP_SAVE_INFORMATION, TRUE);
 }
 
 void CPageInstall::OnBnClickedBtnLegacyPackage()
 {
+	g_App->Wdi.Session()->m_PackageStatus = CLibWdiSession::PACKAGE_TYPE_LEGACY;
 	WritePackageStatus();
 	EnableWindowGroup(IDC_GRP_SAVE_INFORMATION, TRUE);
 }
 
 void CPageInstall::OnBnClickedBtnInstallOnly()
 {
+	g_App->Wdi.Session()->m_PackageStatus = CLibWdiSession::PACKAGE_TYPE_INSTALL_ONLY;
 	WritePackageStatus();
 	EnableWindowGroup(IDC_GRP_SAVE_INFORMATION, FALSE);
 }
@@ -601,6 +615,8 @@ BOOL CPageInstall::FinalizePrepareDriver(
 				fileName.ReleaseBuffer();
 				outFileName = NULL;
 				SetEnvironmentVariable(_T("7ZA_EXE"), fileName);
+				SetEnvironmentVariable(_T("NO_REPACK_ERROR_WAIT"), _T("1"));
+
 				bOverwrite = FALSE;
 				break;
 			default:

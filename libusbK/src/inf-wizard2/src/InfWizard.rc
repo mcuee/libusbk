@@ -74,6 +74,7 @@ IDI_ICON_NAV_BACK       ICON                    "res\\nav-back.ico"
 IDI_ICON_NAV_NEXT       ICON                    "res\\nav-next.ico"
 IDI_ICON_NAV_CANCEL     ICON                    "res\\nav-cancel.ico"
 IDI_ICON_NAV_FINISH     ICON                    "res\\nav-finsh.ico"
+IDI_ICON_DONATE         ICON                    "res\\donate-logo.ico"
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -100,17 +101,19 @@ STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSME
 CAPTION "Sample Wizard"
 FONT 8, "Tahoma", 400, 0, 0x0
 BEGIN
-    CONTROL         "",IDC_DEV_LIST,"SysListView32",LVS_REPORT | LVS_SINGLESEL | LVS_ALIGNLEFT | WS_BORDER | WS_TABSTOP,7,27,279,106
     CONTROL         "Show &New Devices",IDC_SHOW_NEW_DEVICES,"Button",BS_AUTORADIOBUTTON | BS_NOTIFY | WS_GROUP,7,7,76,13
     CONTROL         "Show All Devices",IDC_SHOW_ALL_DEVICES,"Button",BS_AUTORADIOBUTTON | BS_NOTIFY,100,7,69,13
+    CONTROL         "",IDC_DEV_LIST,"SysListView32",LVS_REPORT | LVS_SINGLESEL | LVS_ALIGNLEFT | WS_BORDER | WS_TABSTOP,7,27,279,106
 END
 
-IDD_PAGE_CONFIG_DEVICE DIALOGEX 0, 0, 291, 146
+IDD_PAGE_CONFIG_DEVICE DIALOGEX 0, 0, 291, 167
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
 CAPTION "Sample Wizard"
 FONT 8, "Tahoma", 400, 0, 0x0
 BEGIN
-    CONTROL         "",IDC_DEV_LIST,"SysListView32",LVS_REPORT | LVS_SINGLESEL | LVS_EDITLABELS | LVS_ALIGNLEFT | LVS_NOSCROLL | LVS_NOCOLUMNHEADER | LVS_NOSORTHEADER | WS_BORDER | WS_TABSTOP,7,7,277,132,WS_EX_TRANSPARENT
+    CONTROL         "",IDC_DEV_LIST,"SysListView32",LVS_REPORT | LVS_SINGLESEL | LVS_EDITLABELS | LVS_ALIGNLEFT | LVS_NOSCROLL | LVS_NOCOLUMNHEADER | LVS_NOSORTHEADER | WS_BORDER | WS_TABSTOP,7,7,277,135,WS_EX_TRANSPARENT
+    CONTROL         "<a>Power Management Options..</a>",IDC_SYSLINK_POWER_MANAGEMENT,
+                    "SysLink",WS_TABSTOP,7,146,124,14
 END
 
 IDD_PAGE_INSTALL DIALOGEX 0, 0, 291, 132
@@ -140,11 +143,11 @@ BEGIN
     ICON            "",IDC_PIC_TEXT_BACK,121,43,20,20,SS_CENTERIMAGE,WS_EX_TRANSPARENT
     LTEXT           "Click Back to review package create/install status.",IDC_LBL_TEXT_BACK,146,46,175,13,SS_CENTERIMAGE,WS_EX_TRANSPARENT
     LTEXT           "Click Finish to exit InfWizard.",IDC_LBL_TEXT_FINISH,146,59,176,13,SS_CENTERIMAGE,WS_EX_TRANSPARENT
-    CONTROL         "<a>Explore Package Folder..</a>",IDC_LINK_EXPLORE_PACKAGE_FOLDER,
+    CONTROL         "<a>Finish && Explore Package Folder</a>",IDC_LINK_EXPLORE_PACKAGE_FOLDER,
                     "SysLink",WS_TABSTOP,132,89,190,14
-    CONTROL         "<a>Save Session..</a>",IDC_LINK_SAVE_SESSION,"SysLink",WS_TABSTOP,132,104,90,14
-    RTEXT           "Help us keep libusb-win32 && libusbK alive!",IDC_LBL_DONATE,121,126,201,12,0,WS_EX_TRANSPARENT
-    PUSHBUTTON      "",IDC_DONATE,274,139,48,20,BS_BITMAP
+    CONTROL         "<a>Save Session..</a>",IDC_LINK_SAVE_SESSION,"SysLink",WS_TABSTOP,264,145,58,14
+    CONTROL         "<a>Finish && Install Driver Now</a>",IDC_LINK_INSTALL_DRIVER_NOW,
+                    "SysLink",WS_TABSTOP,132,105,190,14
 END
 
 IDD_DIALOG_PROGRESS DIALOGEX 0, 0, 213, 81
@@ -156,6 +159,25 @@ BEGIN
     CONTROL         2049,ID_PIC_PROGRESS,"Static",SS_BITMAP,7,7,44,41
     CONTROL         "",IDC_CTL_PROGRESS,"msctls_progress32",WS_BORDER,7,60,199,14
     CTEXT           "Please wait..",IDC_TXT_PROGRESS,58,7,148,40,SS_CENTERIMAGE
+END
+
+IDD_PAGE_POWER_MANAGEMENT DIALOGEX 0, 0, 293, 140
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "Sample Wizard"
+FONT 8, "Tahoma", 400, 0, 0x0
+BEGIN
+    GROUPBOX        "",IDC_GRP_POWER,7,7,279,68
+    CONTROL         "Enable Device Idle Power Management Capabilites",IDC_CHK_DEVICE_IDLE_ENABLED,
+                    "Button",BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,14,7,177,10
+    CONTROL         "Suspend When Idle",IDC_CHK_DEFAULT_IDLE_STATE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,22,23,106,10
+    LTEXT           "Idle Timeout(ms):",IDC_LBL_DEFAULT_IDLE_TIMEOUT,146,24,61,8,NOT WS_GROUP,WS_EX_RIGHT
+    COMBOBOX        IDC_CBO_DEFAULT_IDLE_TIMEOUT,214,22,72,71,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    CONTROL         "Allow User Idle Control",IDC_CHK_USER_SET_DEVICE_IDLE_ENABLED,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,22,39,106,10
+    CONTROL         "Ignore Wake Enable On Idle",IDC_CHK_DEVICE_IDLE_IGNORE_WAKE_ENABLE,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,22,55,106,10
+    CONTROL         "Enable System Wake Capabilites",IDC_CHK_SYSTEM_WAKE_ENABLED,
+                    "Button",BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,14,84,119,10
 END
 
 
@@ -221,8 +243,6 @@ BEGIN
         RIGHTMARGIN, 286
         TOPMARGIN, 7
         BOTTOMMARGIN, 133
-        HORZGUIDE, 20
-        HORZGUIDE, 27
     END
 
     IDD_PAGE_CONFIG_DEVICE, DIALOG
@@ -230,7 +250,7 @@ BEGIN
         LEFTMARGIN, 7
         RIGHTMARGIN, 284
         TOPMARGIN, 7
-        BOTTOMMARGIN, 139
+        BOTTOMMARGIN, 160
     END
 
     IDD_PAGE_INSTALL, DIALOG
@@ -271,6 +291,18 @@ BEGIN
         TOPMARGIN, 7
         BOTTOMMARGIN, 74
     END
+
+    IDD_PAGE_POWER_MANAGEMENT, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 286
+        VERTGUIDE, 14
+        VERTGUIDE, 22
+        VERTGUIDE, 146
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 133
+        HORZGUIDE, 7
+    END
 END
 #endif    // APSTUDIO_INVOKED
 
@@ -285,7 +317,6 @@ IDB_WATERMARK           BITMAP                  "res\\Water16.bmp"
 IDB_BAR_BLUE            BITMAP                  "res\\Bar.Blue.bmp"
 IDB_BAR_GREEN           BITMAP                  "res\\Bar.Green.bmp"
 IDB_BAR_ORANGE          BITMAP                  "res\\Bar.Orange.bmp"
-IDB_PAYPAL              BITMAP                  "res\\PayPal.Donate.bmp"
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -402,6 +433,21 @@ BEGIN
     IDSE_CREATE_USER_INSTALLER "Failed creating client installer"
     IDSE_UNKNOWN            "An unknown error occured"
     IDSE_STATUS_PACKAGE     "Operation failed."
+    IDS_PAGE_POWER_MANAGEMENT_TITLE "Power Management"
+    IDS_PAGE_POWER_MANAGEMENT_SUBTITLE 
+                            "Configure your USB device auto-suspend and remote-wake capabilites."
+    IDS_TIP_DEVICE_IDLE_ENABLED 
+                            "Indicates whether the device is capable of being powered down when idle (Selective Suspend).\n\nIf unchecked, indicates that the device does not support being powered down when idle and the value of the AUTO_SUSPEND power policy setting is always ignored.\n\nIf checked, indicates that the device supports being powered down when idle."
+    IDS_TIP_DEFAULT_IDLE_STATE 
+                            "Sets the default value of the AUTO_SUSPEND power policy setting.\n\nIf unchecked, indicates that by default, the device is not suspended when idle. The device will be allowed to suspend when idle only when the AUTO_SUSPEND power policy is enabled from your usb application.\n\nIf checked, indicates that by default the device is allowed to be suspended when idle. The device will be allowed to suspend immediately after it is connected."
+    IDS_TIP_DEFAULT_IDLE_TIMEOUT 
+                            "The value indicates the amount of time in milliseconds to wait before determining that a device is idle."
+    IDS_TIP_USER_SET_DEVICE_IDLE_ENABLED 
+                            "Indicates whether a check box should be enabled in the device Properties page that allows a user to override the idle defaults."
+    IDS_TIP_DEVICE_IDLE_IGNORE_WAKE_ENABLE 
+                            "When checked, it suspends the device even if it does not support RemoteWake."
+    IDS_TIP_SYSTEM_WAKE_ENABLED 
+                            "This value indicates whether the device should be allowed to wake the system from a low power state. "
 END
 
 #endif    // English (U.S.) resources
