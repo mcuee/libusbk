@@ -1,0 +1,65 @@
+LIBUSBK RELEASE NOTES
+
+V3.0.5.5 RC5 (02/09/2012)
+==============================================
+- Fixed driver memory access violation when setting power policies.
+
+- Fixed driver error handling for failed pipe policy requests.
+
+- Added power management options page to InfWizard. This page allows 
+  developers to easily configure default power management options for a 
+  usb device. Options include the ability to suspend a device after it 
+  idles for a specified amount of time or allow a device to wake the 
+  system from a sleeping state. 
+
+- Re-designed power-policy-suspend example.
+
+
+V3.0.5.4 RC4 (02/04/2012)
+==============================================
+- Fixed kBench msvcrt issue on Windows XP.
+
+- Fixed replace file warning prompt in client installers.
+
+- Fixed an issue with dev-kit setup which prevented it from updating
+  libusbK-inf-wizard.exe
+ 
+V3.0.5.3 RC3 (02/03/2012)
+==============================================
+- New! Client install creator feature for InfWizard.
+
+- Fixed an issue with the libusbK .inf template that prevented it from
+  updating the WDF runtimes on amd64 platforms.  If this happens the
+  installation will fail with a Code 39.
+
+- Added LstK_InitEx() function with device filtering options.
+
+- Changed structure name KHOT_PATTERN_MATCH to KLST_PATTERN_MATCH.
+
+- Added Pascal binding created by Ekkehard Domning.
+
+- Added additional constants, enums, and class function overloads to 
+  .NET bindings. 
+
+- Added InfWizard elevated permissions mainfest.
+
+- Updated InfWizard libwdi components. (v1.2.1 modified) The modified
+  lidwdi source code is available in the src package.
+
+- Fixed OvlK_Wait dead-lock issue when waiting on IO that was never 
+  submitted and the cancel on timeout wait flag is set. 
+
+- Fixed driver issue causing the system to become unstable after 
+  receiving an IO request to an invalid endpoint.
+
+
+V3.0.5.1 RC1 (12/03/2011)
+==============================================
+- Fixed ISO packet USBD status; High word is ORed with low word to 
+  create the 16bit packet status. 
+
+- Added BeforeComplete() stream (StmK) callback function. BeforeComplete() 
+  is executed after a transfer completes but before it is accepted by the 
+  stream. 
+
+- New! MFC based InfWizard.
