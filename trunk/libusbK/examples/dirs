@@ -3,7 +3,7 @@ DIRS= \
      hot-plug-monitor \
      load-driver-api \
      open-device \
-     pipe-polcy-other \
+     pipe-policy-other \
      pipe-policy-timeout \
      power-policy-suspend \
      show-device \
