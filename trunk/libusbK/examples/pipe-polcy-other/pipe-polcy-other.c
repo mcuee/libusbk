@@ -25,14 +25,9 @@
 #include "examples.h"
 
 // Example configuration:
-#define EP_ADDRESS				0x02
-#define EP_PACKET_SIZE			512
+#define EP_ADDRESS				0x81
 #define SYNC_TRANSFER_COUNT		128
-#define SYNC_TRANSFER_SIZE		((EP_PACKET_SIZE*4096))
-
-#define USE_IGNORE_SHORT_PACKETS
-#define USE_RAW_IO
-#define USE_SHORT_PACKET_TERMINATE
+#define SYNC_TRANSFER_SIZE		(8*1024)
 
 // Globals:
 KUSB_DRIVER_API Usb;
@@ -52,8 +47,9 @@ DWORD __cdecl main(int argc, char* argv[])
 	ULONG transferIndex;
 	ULONG polLength, polValue;
 
-	BYTE polIgnoreShortPackets = 1;
+	// The pipe policy values here will be assigned to the device.
 	BYTE polRawIO = 0;
+	BYTE polIgnoreShortPackets = 1;
 	BYTE polShortPacketTerminate = 1;
 
 	/*
@@ -62,6 +58,13 @@ DWORD __cdecl main(int argc, char* argv[])
 	*/
 	if (!Examples_GetTestDevice(&deviceList, &deviceInfo, argc, argv))
 		return GetLastError();
+
+	if (deviceInfo->DriverID != KUSB_DRVID_LIBUSBK && deviceInfo->DriverID != KUSB_DRVID_WINUSB)
+	{
+		printf(
+			"[Warning] libusb-win32 driver (libusb0.sys) does not support any pipe\n"
+			"          policies other than PIPE_TIMEOUT.\n");
+	}
 
 	/*
 	This example will use the dynamic driver api so that it can be used
@@ -94,7 +97,21 @@ DWORD __cdecl main(int argc, char* argv[])
 
 	printf("MAXIMUM_TRANSFER_SIZE=%u\n", polValue);
 
-#ifdef USE_IGNORE_SHORT_PACKETS
+	if (polRawIO && (polIgnoreShortPackets || polShortPacketTerminate))
+	{
+		printf(
+			"[Note] When using RAWIO, most other pipe policies are ignored. See\n"
+			"       documentation for more information.\n");
+
+	}
+	success = Usb.SetPipePolicy(usbHandle, EP_ADDRESS, RAW_IO, 1, &polRawIO);
+	if (!success)
+	{
+		errorCode = GetLastError();
+		printf("SetPipePolicy failed. ErrorCode: %08Xh\n",  errorCode);
+		goto Done;
+	}
+
 	if (USB_ENDPOINT_DIRECTION_IN(EP_ADDRESS))
 	{
 		success = Usb.SetPipePolicy(usbHandle, EP_ADDRESS, IGNORE_SHORT_PACKETS, 1, &polIgnoreShortPackets);
@@ -105,19 +122,7 @@ DWORD __cdecl main(int argc, char* argv[])
 			goto Done;
 		}
 	}
-#endif
 
-#ifdef USE_RAW_IO
-	success = Usb.SetPipePolicy(usbHandle, EP_ADDRESS, RAW_IO, 1, &polRawIO);
-	if (!success)
-	{
-		errorCode = GetLastError();
-		printf("SetPipePolicy failed. ErrorCode: %08Xh\n",  errorCode);
-		goto Done;
-	}
-#endif
-
-#ifdef USE_SHORT_PACKET_TERMINATE
 	if (USB_ENDPOINT_DIRECTION_OUT(EP_ADDRESS))
 	{
 		success = Usb.SetPipePolicy(usbHandle, EP_ADDRESS, SHORT_PACKET_TERMINATE, 1, &polShortPacketTerminate);
@@ -128,7 +133,6 @@ DWORD __cdecl main(int argc, char* argv[])
 			goto Done;
 		}
 	}
-#endif
 
 	/*
 	Submit and complete SYNC_TRANSFER_COUNT number of transfers.
