@@ -51,7 +51,7 @@ all: xfer-stream
 all: xfer-iso
 all: xfer-async-loop
 all: power-policy-suspend
-all: pipe-polcy-other
+all: pipe-policy-other
 all: xfer-iso-read
 all: xfer-control
 
@@ -115,11 +115,11 @@ xfer-async-loop:
 .PHONY: power-policy-suspend
 power-policy-suspend:
 	$(MAKE) --no-print-directory --directory=./power-policy-suspend $(subst w -- ,,$(MAKEFLAGS)) all
-# make the pipe-polcy-other example for the specified "arch" (default is x86)
+# make the pipe-policy-other example for the specified "arch" (default is x86)
 #
-.PHONY: pipe-polcy-other
-pipe-polcy-other:
-	$(MAKE) --no-print-directory --directory=./pipe-polcy-other $(subst w -- ,,$(MAKEFLAGS)) all
+.PHONY: pipe-policy-other
+pipe-policy-other:
+	$(MAKE) --no-print-directory --directory=./pipe-policy-other $(subst w -- ,,$(MAKEFLAGS)) all
 # make the xfer-iso-read example for the specified "arch" (default is x86)
 #
 .PHONY: xfer-iso-read
@@ -154,7 +154,7 @@ clean:
 	$(MAKE) --directory=./xfer-iso $(MAKEFLAGS) clean
 	$(MAKE) --directory=./xfer-async-loop $(MAKEFLAGS) clean
 	$(MAKE) --directory=./power-policy-suspend $(MAKEFLAGS) clean
-	$(MAKE) --directory=./pipe-polcy-other $(MAKEFLAGS) clean
+	$(MAKE) --directory=./pipe-policy-other $(MAKEFLAGS) clean
 	$(MAKE) --directory=./xfer-iso-read $(MAKEFLAGS) clean
 	$(MAKE) --directory=./xfer-control $(MAKEFLAGS) clean
 	$(RM) ./_ReSharper*

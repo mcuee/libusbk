@@ -1,4 +1,4 @@
-# pipe-polcy-other WINDDK build "sources" file
+# pipe-policy-other WINDDK build "sources" file
 #
 #
 # Copyright (c) 2011 Travis Robinson <libusbdotnet@gmail.com>
@@ -23,7 +23,7 @@
 # THE POSSIBILITY OF SUCH DAMAGE. 
 #
 
-TARGETNAME = pipe-polcy-other
+TARGETNAME = pipe-policy-other
 TARGETTYPE = PROGRAM
 USE_MSVCRT = 1
 UMTYPE     = console
@@ -44,7 +44,7 @@ USBK_LIB_FILE = $(USBK_BIN_DIR)\lib\$(_BUILDARCH)\libusbK.lib
 
 # Project specific resource file.
 #
-PRJ_RC_FILE   = pipe-polcy-other_rc.rc
+PRJ_RC_FILE   = pipe-policy-other_rc.rc
 
 # Project specific include directories.
 #
@@ -52,7 +52,7 @@ INCLUDES      = .\;..\;..\..\includes\;
 
 # Project specific source files.
 #
-SOURCES       = $(PRJ_RC_FILE) pipe-polcy-other.c ..\examples.c
+SOURCES       = $(PRJ_RC_FILE) pipe-policy-other.c ..\examples.c
 
 # Project specific pre-processor defines.
 #

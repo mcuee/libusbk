@@ -35,14 +35,14 @@
 #
 include ../examples-project.mkinc
 
-$(info [K] Running pipe-polcy-other PROJECT makefile..)
+$(info [K] Running pipe-policy-other PROJECT makefile..)
 
 # all -----------------------------------------------------------------
 # Build all targets.
 # NOTE: Only one target exists in this makefile.
 #
 .PHONY: all
-all: pipe-polcy-other
+all: pipe-policy-other
 # ---------------------------------------------------------------------
 
 # multi-all -----------------------------------------------------------
@@ -55,13 +55,13 @@ multi-all:
 # ---------------------------------------------------------------------
 
 # ---------------------------------------------------------------------
-# pipe-polcy-other
-# Compile, assemble and link pipe-polcy-other.
+# pipe-policy-other
+# Compile, assemble and link pipe-policy-other.
 #
-.PHONY: pipe-polcy-other
-pipe-polcy-other: compile-and-assemble-examples
-pipe-polcy-other: pipe-polcy-other.exe
-pipe-polcy-other.exe: $(INT_DIR)/pipe-polcy-other_rc.o $(INT_DIR)/pipe-polcy-other.o $(INT_DIR)/examples.o
+.PHONY: pipe-policy-other
+pipe-policy-other: compile-and-assemble-examples
+pipe-policy-other: pipe-policy-other.exe
+pipe-policy-other.exe: $(INT_DIR)/pipe-policy-other_rc.o $(INT_DIR)/pipe-policy-other.o $(INT_DIR)/examples.o
 	$(CC) $(CFLAGS) -o $(OUT_DIR)/$@ $^ $(LIB_SEARCH) $(LDFLAGS)
 
 .PHONY: compile-and-assemble-examples
@@ -72,7 +72,7 @@ $(INT_DIR)/%.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 $(INT_DIR)/examples.o: ../examples.c
 	$(CC) $(CFLAGS) -c $< -o $@
-$(INT_DIR)/pipe-polcy-other_rc.o: ./pipe-polcy-other_rc.rc
+$(INT_DIR)/pipe-policy-other_rc.o: ./pipe-policy-other_rc.rc
 	$(RC) $(RCFLAGS) $< -o $@
 # ---------------------------------------------------------------------
 

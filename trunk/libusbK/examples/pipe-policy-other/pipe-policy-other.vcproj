@@ -2,7 +2,7 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9.00"
-	Name="pipe-polcy-other"
+	Name="pipe-policy-other"
 	ProjectGUID="{0C9F7065-688B-0887-B59F-D60B057EA259}"
 	RootNamespace="pipe_polcy_other"
 	Keyword="Win32Proj"
@@ -325,7 +325,7 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\pipe-polcy-other.c"
+				RelativePath=".\pipe-policy-other.c"
 				>
 			</File>
 			<File
@@ -361,7 +361,7 @@
 			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
 			>
 			<File
-				RelativePath=".\pipe-polcy-other_rc.rc"
+				RelativePath=".\pipe-policy-other_rc.rc"
 				>
 			</File>
 		</Filter>
