@@ -51,18 +51,20 @@ DWORD __cdecl main(int argc, char* argv[])
 
 	if (deviceInfo->DriverID != KUSB_DRVID_LIBUSBK && deviceInfo->DriverID != KUSB_DRVID_WINUSB)
 	{
-		printf("[WARNING] libusb-win32 does not support power management.\n");
+		printf(
+			"[Warning] libusb-win32 driver (libusb0.sys) does not support power\n"
+			"          management.\n");
 	}
 	else
 	{
 		printf(
-		    "[NOTE] If the DeviceIdleEnabled policy is not set in the .inf file when\n"
+		    "[Note] If the DeviceIdleEnabled policy is not set in the .inf file when\n"
 		    "       the device is installed, the AUTO_SUSPEND policy will be ignored.\n");
 
 		if (deviceInfo->DriverID == KUSB_DRVID_WINUSB)
 		{
 			printf(
-			    "[NOTE] WinUSB behaves slightly different then libusbK because it reset\n"
+			    "[Note] WinUSB behaves slightly different then libusbK because it reset\n"
 			    "       power policies back to their default values when the usb handle\n"
 			    "       is closed.\n");
 		}
@@ -166,7 +168,7 @@ Done:
 RUN #1
 Looking for device vid/pid 04D8/FA2E..
 Using 04D8:FA2E (LUSBW1): Benchmark Device - Microchip Technology, Inc.
-[NOTE] If the DeviceIdleEnabled policy is not set in the .inf file when
+[Note] If the DeviceIdleEnabled policy is not set in the .inf file when
        the device is installed, the AUTO_SUSPEND policy will be ignored.
 Device opened successfully!
 AUTO_SUSPEND  is currently enabled.
@@ -176,7 +178,7 @@ Set AUTO_SUSPEND = Off.
 RUN #2
 Looking for device vid/pid 04D8/FA2E..
 Using 04D8:FA2E (LUSBW1): Benchmark Device - Microchip Technology, Inc.
-[NOTE] If the DeviceIdleEnabled policy is not set in the .inf file when
+[Note] If the DeviceIdleEnabled policy is not set in the .inf file when
        the device is installed, the AUTO_SUSPEND policy will be ignored.
 Device opened successfully!
 AUTO_SUSPEND  is currently disabled.
@@ -186,7 +188,7 @@ Set SUSPEND_DELAY = 10000 ms
 RUN #3
 Looking for device vid/pid 04D8/FA2E..
 Using 04D8:FA2E (LUSBW1): Benchmark Device - Microchip Technology, Inc.
-[NOTE] If the DeviceIdleEnabled policy is not set in the .inf file when
+[Note] If the DeviceIdleEnabled policy is not set in the .inf file when
        the device is installed, the AUTO_SUSPEND policy will be ignored.
 Device opened successfully!
 AUTO_SUSPEND  is currently enabled.
@@ -196,7 +198,7 @@ Set AUTO_SUSPEND = Off.
 RUN #4
 Looking for device vid/pid 04D8/FA2E..
 Using 04D8:FA2E (LUSBW1): Benchmark Device - Microchip Technology, Inc.
-[NOTE] If the DeviceIdleEnabled policy is not set in the .inf file when
+[Note] If the DeviceIdleEnabled policy is not set in the .inf file when
        the device is installed, the AUTO_SUSPEND policy will be ignored.
 Device opened successfully!
 AUTO_SUSPEND  is currently disabled.
