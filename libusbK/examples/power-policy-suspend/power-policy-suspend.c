@@ -52,8 +52,8 @@ DWORD __cdecl main(int argc, char* argv[])
 	if (deviceInfo->DriverID != KUSB_DRVID_LIBUSBK && deviceInfo->DriverID != KUSB_DRVID_WINUSB)
 	{
 		printf(
-			"[Warning] libusb-win32 driver (libusb0.sys) does not support power\n"
-			"          management.\n");
+		    "[Warning] libusb-win32 driver (libusb0.sys) does not support power\n"
+		    "          management.\n");
 	}
 	else
 	{

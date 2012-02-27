@@ -2,9 +2,9 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9.00"
-	Name="pipe-policy-other"
-	ProjectGUID="{0C9F7065-212D-1711-B59F-D60B6EA3538C}"
-	RootNamespace="pipe_policy_other"
+	Name="enum_descriptors"
+	ProjectGUID="{0C9F7065-2572-D6CA-B59F-D60BB88D964B}"
+	RootNamespace="enum_descriptors"
 	Keyword="Win32Proj"
 	TargetFrameworkVersion="196613"
 	>
@@ -325,7 +325,7 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\pipe-policy-other.c"
+				RelativePath=".\enum_descriptors.c"
 				>
 			</File>
 			<File
@@ -361,7 +361,7 @@
 			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
 			>
 			<File
-				RelativePath=".\pipe-policy-other_rc.rc"
+				RelativePath=".\enum_descriptors_rc.rc"
 				>
 			</File>
 		</Filter>

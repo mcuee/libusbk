@@ -1,5 +1,6 @@
 DIRS= \
      config-interface \
+     enum_descriptors \
      hot-plug-monitor \
      load-driver-api \
      open-device \

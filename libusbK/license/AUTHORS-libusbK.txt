@@ -5,9 +5,16 @@ Testing     : Xiaofan Chen          (xiaofanc@gmail.com)
 
 LICENSE
 -----------------------------------------------------------------------
-Applicable for all libusbK binaries and source code:
- - Copyright (c) 2011, Travis Lee Robinson
- - All rights reserved.
+Copyright (c) 2011-2012 Travis Lee Robinson. All rights reserved.
+
+APPLICABLE FOR ALL LIBUSBK BINARIES AND SOURCE CODE UNLESS OTHERWISE
+SPECIFIED.
+
+NOTE: Portions of dpscat use source code from libwdi which is licensed 
+for LGPL use only. (See dpscat.c) 
+
+NOTE: libusbK-inf-wizard.exe is linked to libwdi which is licensed for 
+LGPL use only. 
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:

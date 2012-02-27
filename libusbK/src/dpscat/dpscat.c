@@ -1,6 +1,6 @@
 /*!********************************************************************
-libusbK - dpscat descriptor diagnostic tool.
-Copyright (C) 2011 All Rights Reserved.
+libusbK - [DPSCAT] Inf catalog and signing tool.
+Copyright (C) 2012 Travis Lee Robinson. All Rights Reserved.
 libusb-win32.sourceforge.net
 
 Development : Travis Lee Robinson  (libusbdotnet@gmail.com)
@@ -11,6 +11,10 @@ licensed under the terms of the GNU Public License v3 or a BSD-Style
 license as outlined in the following files:
 * LICENSE-gpl3.txt
 * LICENSE-bsd.txt
+
+NOTE: The following source files of dpscat cannot be placed under a BSD
+license without also adhering to the LGPL license:
+  - pki.c
 
 License files are located in a license folder at the root of source and
 binary distributions.
@@ -86,12 +90,11 @@ VOID WriteInfStatus(CONST CHAR* fmt, ...)
 
 	if (g_ConsoleAttached && HANDLE_IS_VALID(g_hConsoleOutput))
 	{
-		if (!WriteConA(buf, len, (LPDWORD)&len))
-			OutputDebugStringA(buf);
+		if (WriteConA(buf, len, (LPDWORD)&len))
+			return;
 
 	}
-	else
-		OutputDebugStringA(buf);
+	OutputDebugStringA(buf);
 }
 
 int APIENTRY _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdLine, int nCmdShow)
@@ -183,11 +186,7 @@ int RunProgram(int argc, LPWSTR* argv)
 
 	// startup initialization
 	memset(searchPath, 0, sizeof(searchPath));
-	USBMSGN("");
-	USBMSGN("%s v%s (%s)",
-	        RC_FILENAME_STR,
-	        RC_VERSION_STR,
-	        DEFINE_TO_STR(VERSION_DATE));
+	ShowCopyright();
 
 #if _WIN32_WINNT >= 0x0501
 	GetNativeSystemInfo(&g_SystemInfo);
@@ -289,8 +288,8 @@ Error:
 //////////////////////////////////////////////////////////////////////////////
 void ShowCopyright(void)
 {
-	USBMSGN("Copyright (c) 2012 Travis Lee Robinson. <libusbdotnet@gmail.com>");
-	USBMSGN("");
+	USBMSGN("Copyright(c) 2012 Travis Lee Robinson. (DUAL BSD/GPL)");
+	USBMSGN("Portions Copyright(c) Pete Batard. (LGPL)");
 }
 
 void ShowHelp(void)
@@ -300,7 +299,7 @@ void ShowHelp(void)
 	HGLOBAL res_data;
 	HRSRC hSrc;
 
-	ShowCopyright();
+	USBMSGN("");
 
 	hSrc = FindResourceA(NULL, MAKEINTRESOURCEA(ID_HELP_TEXT), MAKEINTRESOURCEA(ID_DOS_TEXT));
 	if (!hSrc)	return;

@@ -1,6 +1,6 @@
 /*!********************************************************************
 libusbK - dpscat descriptor diagnostic tool.
-Copyright (C) 2011 All Rights Reserved.
+Copyright (C) 2012 Travis Lee Robinson. All Rights Reserved.
 libusb-win32.sourceforge.net
 
 Development : Travis Lee Robinson  (libusbdotnet@gmail.com)
@@ -23,7 +23,7 @@ binary distributions.
 #ifndef _DPSCAT_VER_ONLY
 
 #define VER_COMPANYNAME_STR         "http://libusb-win32.sourceforge.net"
-#define VER_FILEDESCRIPTION_STR     "Driver Catalog Tool"
+#define VER_FILEDESCRIPTION_STR     "Inf catalog and signing tool"
 #define VER_PRODUCTNAME_STR			RC_FILENAME_STR
 #define VER_INTERNALNAME_STR        RC_FILENAME_STR
 #define VER_LEGALCOPYRIGHT_YEARS	"2010-2012"
