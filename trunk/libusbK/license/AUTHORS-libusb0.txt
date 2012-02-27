@@ -1,3 +1,8 @@
+This software is distributed under the following licenses:
+Driver:           GNU General Public License (GPL)
+Library:          GNU Lesser General Public (LGPL)
+Test Files:       GNU Lesser General Public (LGPL)
+Filter Installer: GNU Lesser General Public (LGPL) 
 
 Library, Test Programs:
 
@@ -13,4 +18,3 @@ Travis Robinson, <libusbdotnet@gmail.com>
 Testing, Technical support:
 
 Xiaofan Chen, <xiaofanc@gmail.com>
-

@@ -62,8 +62,8 @@ DWORD __cdecl main(int argc, char* argv[])
 	if (deviceInfo->DriverID != KUSB_DRVID_LIBUSBK && deviceInfo->DriverID != KUSB_DRVID_WINUSB)
 	{
 		printf(
-			"[Warning] libusb-win32 driver (libusb0.sys) does not support any pipe\n"
-			"          policies other than PIPE_TIMEOUT.\n");
+		    "[Warning] libusb-win32 driver (libusb0.sys) does not support any pipe\n"
+		    "          policies other than PIPE_TIMEOUT.\n");
 	}
 
 	/*
@@ -100,8 +100,8 @@ DWORD __cdecl main(int argc, char* argv[])
 	if (polRawIO && (polIgnoreShortPackets || polShortPacketTerminate))
 	{
 		printf(
-			"[Note] When using RAWIO, most other pipe policies are ignored. See\n"
-			"       documentation for more information.\n");
+		    "[Note] When using RAWIO, most other pipe policies are ignored. See\n"
+		    "       documentation for more information.\n");
 
 	}
 	success = Usb.SetPipePolicy(usbHandle, EP_ADDRESS, RAW_IO, 1, &polRawIO);

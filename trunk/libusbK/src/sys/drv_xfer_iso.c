@@ -1,6 +1,6 @@
 /*!********************************************************************
 libusbK - WDF USB driver.
-Copyright (C) 2011 All Rights Reserved.
+Copyright (C) 2012 Travis Lee Robinson. All Rights Reserved.
 libusb-win32.sourceforge.net
 
 Development : Travis Lee Robinson  (libusbdotnet@gmail.com)
@@ -67,15 +67,6 @@ const USHORT Frames_Per_bInterval_FullSpeed[32] =
 		}  																									\
 	}while(0)
 
-
-#define mXfer_IsoReadPacketsFromUrb(mIsoPacketArray,mUrb,mNumberOfPackets) do {										\
-		LONG mPos;																										\
-		for (mPos = 0; mPos < (mNumberOfPackets); mPos++)																\
-		{																												\
-			mIsoPacketArray[mPos].Length = (USHORT)(mUrb)->UrbIsochronousTransfer.IsoPacket[mPos].Length;				\
-			mIsoPacketArray[mPos].Status = (USHORT)(((mUrb)->UrbIsochronousTransfer.IsoPacket[mPos].Status & 0xFFFF)|((mUrb)->UrbIsochronousTransfer.IsoPacket[mPos].Status >> 15));	\
-		}																												\
-	}while(0)
 
 #define mXfer_IsoCheckInitNextFrameNumber(mStatus, mWdfUsbTargetDevice, mRequestContext, mIsHS, mOut_UseNextStartFrame) do { 				\
 		if (mRequestContext->QueueContext->IsFreshPipeReset) 																					\
@@ -337,14 +328,21 @@ VOID XferIsoExComplete(
 	NTSTATUS status;
 	PREQUEST_CONTEXT requestContext;
 	ULONG transferred = 0;
+	LONG posPacket;
+
 	UNREFERENCED_PARAMETER(Target);
 
 	requestContext = GetRequestContext(Request);
 	status = CompletionParams->IoStatus.Status;
-
 	Xfer_CheckPipeStatus(status, requestContext->QueueContext->Info.EndpointAddress);
 
 	urb = WdfMemoryGetBuffer(requestContext->IsoEx.UrbMemory, NULL);
+	if (!NT_SUCCESS(status))
+	{
+		USBERRN("[Failure] PipeID=%02Xh Status=%08Xh USBD-Status=%08Xh ErrorCount=%u",
+		        requestContext->QueueContext->Info.EndpointAddress, status, urb->UrbHeader.Status, urb->UrbIsochronousTransfer.ErrorCount);
+		\
+	}
 
 	mXfer_HandlePipeResetScenariosForComplete(status, requestContext->QueueContext, requestContext);
 
@@ -353,7 +351,16 @@ VOID XferIsoExComplete(
 	IsoContext->StartFrame = urb->UrbIsochronousTransfer.StartFrame;
 
 	// update the iso packet status & lengths
-	mXfer_IsoReadPacketsFromUrb(IsoContext->IsoPackets, urb, IsoContext->NumberOfPackets);
+	for (posPacket = 0; posPacket < IsoContext->NumberOfPackets; posPacket++)
+	{
+		IsoContext->IsoPackets[posPacket].Length = (USHORT)urb->UrbIsochronousTransfer.IsoPacket[posPacket].Length;
+		IsoContext->IsoPackets[posPacket].Status = (USHORT)((urb->UrbIsochronousTransfer.IsoPacket[posPacket].Status & 0xFFFF) | (urb->UrbIsochronousTransfer.IsoPacket[posPacket].Status >> 16));
+		if (urb->UrbIsochronousTransfer.IsoPacket[posPacket].Status)
+		{
+			USBWRNN("IsoPacket[%u].Status=%08Xh",
+			        posPacket, urb->UrbIsochronousTransfer.IsoPacket[posPacket].Status);
+		}
+	}
 
 	if (NT_SUCCESS(status))
 	{

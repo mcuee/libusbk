@@ -40,7 +40,7 @@
 #define VERSION_MICRO 8
 #define VERSION_NANO 2
 #define VERSION_DATE 02/15/2012
-#define RC_FILENAME_STR "hot-plug-monitor.exe"
+#define RC_FILENAME_STR "enum_descriptors.exe"
 
 #define RC_VERSION VERSION_MAJOR,VERSION_MINOR,VERSION_MICRO,VERSION_NANO
 #define VERSION VERSION_MAJOR.VERSION_MINOR.VERSION_MICRO.VERSION_NANO
@@ -48,7 +48,7 @@
 #define VERSION_DATE_STR DEFINE_TO_STR(VERSION_DATE)
 
 #define VER_COMPANYNAME_STR         "http://libusb-win32.sourceforge.net"
-#define VER_FILEDESCRIPTION_STR     "libusbK hot-plug-monitor example"
+#define VER_FILEDESCRIPTION_STR     "libusbK enum_descriptors example"
 #define VER_PRODUCTNAME_STR			RC_FILENAME_STR
 #define VER_INTERNALNAME_STR        RC_FILENAME_STR
 #define VER_LEGALCOPYRIGHT_YEARS	"2010-2012"
