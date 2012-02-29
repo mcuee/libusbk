@@ -1676,21 +1676,28 @@ typedef struct _KSTM_INFO
 
 	//! Populated with the device file handle for the specified \c UsbHandle.
 	HANDLE DeviceHandle;
+
+	//! Stream handle.
+	KSTM_HANDLE StreamHandle;
+
+	//! Stream info user defined state.
+	PVOID UserState;
+
 } KSTM_INFO;
 //! Pointer to a \ref KSTM_INFO structure.
 typedef KSTM_INFO* PKSTM_INFO;
 
 //! Function definition for an optional user-defined callback; executed when a transfer error occurs.
-/*! \fn LONG KUSB_API KSTM_ERROR_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LONG ErrorCode)
+/*! \fn LONG KUSB_API KSTM_ERROR_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LONG XferContextIndex, _in LONG ErrorCode)
 * \memberof KSTM_CALLBACK
 */
-typedef LONG KUSB_API KSTM_ERROR_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LONG ErrorCode);
+typedef LONG KUSB_API KSTM_ERROR_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LONG XferContextIndex, _in LONG ErrorCode);
 
 //! Function definition for an optional user-defined callback; executed to submit a transfer.
-/*! \fn LONG KUSB_API KSTM_SUBMIT_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LPOVERLAPPED Overlapped)
+/*! \fn LONG KUSB_API KSTM_SUBMIT_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LONG XferContextIndex, _in LPOVERLAPPED Overlapped)
 * \memberof KSTM_CALLBACK
 */
-typedef LONG KUSB_API KSTM_SUBMIT_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LPOVERLAPPED Overlapped);
+typedef LONG KUSB_API KSTM_SUBMIT_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LONG XferContextIndex, _in LPOVERLAPPED Overlapped);
 
 //! Function definition for an optional user-defined callback; executed for each transfer context when the stream is started with \ref StmK_Start.
 /*! \fn LONG KUSB_API KSTM_STARTED_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LONG XferContextIndex)
@@ -1705,13 +1712,13 @@ typedef LONG KUSB_API KSTM_STARTED_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_
 typedef LONG KUSB_API KSTM_STOPPED_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LONG XferContextIndex);
 
 //! Function definition for an optional user-defined callback; executed when a valid transfer completes.
-/*! \fn LONG KUSB_API KSTM_COMPLETE_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LONG ErrorCode)
+/*! \fn LONG KUSB_API KSTM_COMPLETE_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LONG XferContextIndex, _in LONG ErrorCode)
 * \memberof KSTM_CALLBACK
 */
-typedef LONG KUSB_API KSTM_COMPLETE_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LONG ErrorCode);
+typedef LONG KUSB_API KSTM_COMPLETE_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LONG XferContextIndex, _in LONG ErrorCode);
 
 //! Function definition for an optional user-defined callback; executed immediately after a transfer completes.
-/*! \fn KSTM_COMPLETE_RESULT KUSB_API KSTM_BEFORE_COMPLETE_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _ref PLONG ErrorCode)
+/*! \fn KSTM_COMPLETE_RESULT KUSB_API KSTM_BEFORE_COMPLETE_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LONG XferContextIndex, _ref PLONG ErrorCode)
 * \memberof KSTM_CALLBACK
 *
 * This callback function allows the user to accept or reject the transfer:
@@ -1727,7 +1734,7 @@ typedef LONG KUSB_API KSTM_COMPLETE_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER
 *     Return this transfer to the internal queued list for automatic resubmission to the device.
 *
 */
-typedef KSTM_COMPLETE_RESULT KUSB_API KSTM_BEFORE_COMPLETE_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in PLONG ErrorCode);
+typedef KSTM_COMPLETE_RESULT KUSB_API KSTM_BEFORE_COMPLETE_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LONG XferContextIndex, _in PLONG ErrorCode);
 
 //! Stream callback structure.
 /*!

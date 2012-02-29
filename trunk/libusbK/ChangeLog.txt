@@ -1,5 +1,40 @@
 LIBUSBK RELEASE NOTES
 
+V3.0.5.9 RC9 (02/29/2012)
+==============================================
+- PULIC _KISO_CONTEXT typedef changed.
+  Inserted:
+  - ULONG UrbHdrStatus;
+  
+- PULIC KSTM_INFO typedef changed.
+  Added:
+  - KSTM_HANDLE StreamHandle;
+  - PVOID UserState;
+  
+- PULIC KSTM_ERROR_CB signature changed.
+  Old:
+  - typedef LONG KUSB_API KSTM_ERROR_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LONG ErrorCode);
+  New:
+  - typedef LONG KUSB_API KSTM_ERROR_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LONG XferContextIndex, _in LONG ErrorCode);
+
+- PULIC KSTM_SUBMIT_CB signature changed.
+  Old:
+  - typedef LONG KUSB_API KSTM_SUBMIT_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LPOVERLAPPED Overlapped);
+  New:
+  - typedef LONG KUSB_API KSTM_SUBMIT_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LONG XferContextIndex, _in LPOVERLAPPED Overlapped);
+
+- PULIC KSTM_COMPLETE_CB signature changed.
+  Old:
+  - typedef LONG KUSB_API KSTM_COMPLETE_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LONG ErrorCode);
+  New:
+  - typedef LONG KUSB_API KSTM_COMPLETE_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LONG XferContextIndex, _in LONG ErrorCode);
+
+- PULIC KSTM_BEFORE_COMPLETE_CB signature changed.
+  Old:
+  - typedef KSTM_COMPLETE_RESULT KUSB_API KSTM_BEFORE_COMPLETE_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in PLONG ErrorCode);
+  New:  
+  - typedef KSTM_COMPLETE_RESULT KUSB_API KSTM_BEFORE_COMPLETE_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LONG XferContextIndex, _in PLONG ErrorCode);
+
 V3.0.5.5 RC5 (02/09/2012)
 ==============================================
 - Fixed driver memory access violation when setting power policies.
@@ -13,7 +48,6 @@ V3.0.5.5 RC5 (02/09/2012)
   system from a sleeping state. 
 
 - Re-designed power-policy-suspend example.
-
 
 V3.0.5.4 RC4 (02/04/2012)
 ==============================================
