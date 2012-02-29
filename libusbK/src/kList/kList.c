@@ -84,7 +84,7 @@ BOOL GetDescriptorReport(__in KLST_DEVINFO_HANDLE deviceElement,
 BOOL GetRealConfigDescriptor(__in UCHAR Index,
                              __out_opt PUCHAR Buffer,
                              __in ULONG BufferLength,
-                             __out PULONG LengthTransferred);
+                             __out PUINT LengthTransferred);
 
 LPCSTR LoadResourceUsbIds(void);
 
@@ -287,7 +287,7 @@ int __cdecl main(int argc, char** argv)
 	KLST_DEVINFO_HANDLE deviceElement;
 	LONG devicePos = 0;
 	LONG_PTR selection;
-	ULONG count = 0;
+	UINT count = 0;
 	KLST_FLAG lstFlags = KLST_FLAG_NONE;
 
 	UNREFERENCED_PARAMETER(argc);
@@ -385,7 +385,7 @@ Done:
 BOOL GetRealConfigDescriptor(__in UCHAR Index,
                              __out_opt PUCHAR Buffer,
                              __in ULONG BufferLength,
-                             __out PULONG LengthTransferred)
+                             __out PUINT LengthTransferred)
 {
 	WINUSB_SETUP_PACKET Pkt;
 	KUSB_SETUP_PACKET* defPkt = (KUSB_SETUP_PACKET*)&Pkt;
@@ -423,7 +423,7 @@ BOOL OpenDeviceFileHandle(__in LPCSTR deviceFileName, __out HANDLE* fileHandle)
 BOOL GetDescriptorReport(__in KLST_DEVINFO_HANDLE deviceElement, __in BOOL detailed)
 {
 	HANDLE fileHandle = NULL;
-	ULONG length;
+	UINT length;
 	USB_DEVICE_DESCRIPTOR deviceDescriptor;
 	BOOL success = FALSE;
 	PUSB_CONFIGURATION_DESCRIPTOR configDescriptor = NULL;
@@ -521,7 +521,7 @@ CONST PCHAR GetDescriptorString(USHORT stringIndex)
 	static CHAR rtn[128];
 
 	BOOL success;
-	DWORD length;
+	UINT length;
 	DWORD size = sizeof(USB_STRING_DESCRIPTOR) + sizeof(rtn) * 2;
 	PUSB_STRING_DESCRIPTOR stringDesc = NULL;
 
@@ -788,7 +788,7 @@ BOOL DumpDescriptorHidReport(__in PHID_DESCRIPTOR desc,
 
 	static const LPCSTR collectionNames[] = {"Physical", "Application", "Logical", "Vendor Defined"};
 	BOOL success = TRUE;
-	LONG transferred;
+	INT transferred;
 	FIND_USBIDS_CONTEXT idContext;
 	UCHAR reportType = desc->DescriptorList[descriptorPos].bReportType;
 	USHORT reportLength = desc->DescriptorList[descriptorPos].wReportLength;
@@ -811,7 +811,7 @@ BOOL DumpDescriptorHidReport(__in PHID_DESCRIPTOR desc,
 	defPkt->IndexLo = currentInterface->bInterfaceNumber;
 	defPkt->Length = reportLength;
 
-	success = K.ControlTransfer(InterfaceHandle, Pkt, reportBuffer, reportLength, (PULONG)&transferred, NULL);
+	success = K.ControlTransfer(InterfaceHandle, Pkt, reportBuffer, reportLength, (PUINT)&transferred, NULL);
 	if (success)
 	{
 		PUCHAR data = reportBuffer;

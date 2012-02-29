@@ -48,7 +48,7 @@ BOOL Ioctl_Sync(__in HANDLE dev,
                 __in DWORD in_size,
                 __inout_opt PVOID out,
                 __in DWORD out_size,
-                __out_opt PDWORD ret)
+                __out_opt PUINT ret)
 {
 	OVERLAPPED ol;
 	DWORD _ret;
@@ -98,7 +98,7 @@ BOOL Ioctl_SyncWithTimeout(__in HANDLE DeviceHandle,
                            __in DWORD out_size,
                            __in INT timeout,
                            __in UCHAR PipeID,
-                           __out_opt PDWORD ret)
+                           __out_opt PUINT ret)
 {
 	OVERLAPPED ol;
 	DWORD _ret;

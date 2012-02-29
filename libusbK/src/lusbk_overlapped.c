@@ -139,7 +139,7 @@ Done:
 KUSB_EXP BOOL KUSB_API OvlK_Init(
     _out KOVL_POOL_HANDLE* PoolHandle,
     _in KUSB_HANDLE UsbHandle,
-    _in LONG MaxOverlappedCount,
+    _in INT MaxOverlappedCount,
     _inopt KOVL_POOL_FLAG Flags)
 {
 	PKOVL_POOL_HANDLE_INTERNAL handle = NULL;
@@ -203,9 +203,9 @@ Error:
 
 KUSB_EXP BOOL KUSB_API OvlK_Wait(
     _in KOVL_HANDLE OverlappedK,
-    _inopt LONG TimeoutMS,
+    _inopt INT TimeoutMS,
     _inopt KOVL_WAIT_FLAG WaitFlags,
-    _out PULONG TransferredLength)
+    _out PUINT TransferredLength)
 {
 	PKOVL_HANDLE_INTERNAL overlapped;
 	DWORD errorCode;
@@ -234,7 +234,7 @@ CancelIoRetry:
 	if (errorCode == WAIT_OBJECT_0)
 	{
 		// check for an overlapped result regardless of the WaitForSingleObject return value
-		success = GetOverlappedResult(overlapped->Pool->UsbHandle->Device->MasterDeviceHandle, &overlapped->Overlapped, TransferredLength, FALSE);
+		success = GetOverlappedResult(overlapped->Pool->UsbHandle->Device->MasterDeviceHandle, &overlapped->Overlapped, (LPDWORD)TransferredLength, FALSE);
 		if (!success) errorCode = GetLastError();
 	}
 	else if (errorCode == WAIT_TIMEOUT)
@@ -308,16 +308,16 @@ Done:
 
 KUSB_EXP BOOL KUSB_API OvlK_WaitOrCancel(
     _in KOVL_HANDLE OverlappedK,
-    _inopt LONG TimeoutMS,
-    _out PULONG TransferredLength)
+    _inopt INT TimeoutMS,
+    _out PUINT TransferredLength)
 {
 	return OvlK_Wait(OverlappedK, TimeoutMS, KOVL_WAIT_FLAG_CANCEL_ON_TIMEOUT, TransferredLength);
 }
 
 KUSB_EXP BOOL KUSB_API OvlK_WaitAndRelease(
     _in KOVL_HANDLE OverlappedK,
-    _inopt LONG TimeoutMS,
-    _out PULONG TransferredLength)
+    _inopt INT TimeoutMS,
+    _out PUINT TransferredLength)
 {
 	return OvlK_Wait(OverlappedK, TimeoutMS, KOVL_WAIT_FLAG_RELEASE_ALWAYS, TransferredLength);
 }

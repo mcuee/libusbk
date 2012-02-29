@@ -386,7 +386,7 @@ typedef struct _KSTM_XFER_INTERNAL
 
 	KSTM_XFER_LINK_EL MasterLink;
 
-	LONG Index;
+	INT Index;
 
 	struct _KSTM_HANDLE_INTERNAL* StreamHandle;
 

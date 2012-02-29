@@ -37,13 +37,13 @@ KUSB_EXP BOOL KUSB_API Unsupported_GetDescriptor(
     _in UCHAR Index,
     _in USHORT LanguageID,
     _out PUCHAR Buffer,
-    _in ULONG BufferLength,
-    _outopt PULONG LengthTransferred);
+    _in UINT BufferLength,
+    _outopt PUINT LengthTransferred);
 
 KUSB_EXP BOOL KUSB_API Unsupported_QueryDeviceInformation(
     _in KUSB_HANDLE InterfaceHandle,
-    _in ULONG InformationType,
-    _ref PULONG BufferLength,
+    _in UINT InformationType,
+    _ref PUINT BufferLength,
     _ref PVOID Buffer);
 
 KUSB_EXP BOOL KUSB_API Unsupported_SetCurrentAlternateSetting(
@@ -57,39 +57,39 @@ KUSB_EXP BOOL KUSB_API Unsupported_GetCurrentAlternateSetting(
 KUSB_EXP BOOL KUSB_API Unsupported_SetPipePolicy(
     _in KUSB_HANDLE InterfaceHandle,
     _in UCHAR PipeID,
-    _in ULONG PolicyType,
-    _in ULONG ValueLength,
+    _in UINT PolicyType,
+    _in UINT ValueLength,
     _in PVOID Value);
 
 KUSB_EXP BOOL KUSB_API Unsupported_GetPipePolicy(
     _in KUSB_HANDLE InterfaceHandle,
     _in UCHAR PipeID,
-    _in ULONG PolicyType,
-    _ref PULONG ValueLength,
+    _in UINT PolicyType,
+    _ref PUINT ValueLength,
     _out PVOID Value);
 
 KUSB_EXP BOOL KUSB_API Unsupported_ReadPipe(
     _in KUSB_HANDLE InterfaceHandle,
     _in UCHAR PipeID,
     _out PUCHAR Buffer,
-    _in ULONG BufferLength,
-    _outopt PULONG LengthTransferred,
+    _in UINT BufferLength,
+    _outopt PUINT LengthTransferred,
     _inopt LPOVERLAPPED Overlapped);
 
 KUSB_EXP BOOL KUSB_API Unsupported_WritePipe(
     _in KUSB_HANDLE InterfaceHandle,
     _in UCHAR PipeID,
     _in PUCHAR Buffer,
-    _in ULONG BufferLength,
-    _outopt PULONG LengthTransferred,
+    _in UINT BufferLength,
+    _outopt PUINT LengthTransferred,
     _inopt LPOVERLAPPED Overlapped);
 
 KUSB_EXP BOOL KUSB_API Unsupported_ControlTransfer(
     _in KUSB_HANDLE InterfaceHandle,
     _in WINUSB_SETUP_PACKET SetupPacket,
     _refopt PUCHAR Buffer,
-    _in ULONG BufferLength,
-    _outopt PULONG LengthTransferred,
+    _in UINT BufferLength,
+    _outopt PUINT LengthTransferred,
     _inopt LPOVERLAPPED Overlapped);
 
 KUSB_EXP BOOL KUSB_API Unsupported_ResetPipe(
@@ -106,20 +106,20 @@ KUSB_EXP BOOL KUSB_API Unsupported_FlushPipe(
 
 KUSB_EXP BOOL KUSB_API Unsupported_SetPowerPolicy(
     _in KUSB_HANDLE InterfaceHandle,
-    _in ULONG PolicyType,
-    _in ULONG ValueLength,
+    _in UINT PolicyType,
+    _in UINT ValueLength,
     _in PVOID Value);
 
 KUSB_EXP BOOL KUSB_API Unsupported_GetPowerPolicy(
     _in KUSB_HANDLE InterfaceHandle,
-    _in ULONG PolicyType,
-    _ref PULONG ValueLength,
+    _in UINT PolicyType,
+    _ref PUINT ValueLength,
     _out PVOID Value);
 
 KUSB_EXP BOOL KUSB_API Unsupported_GetOverlappedResult(
     _in KUSB_HANDLE InterfaceHandle,
     _in LPOVERLAPPED Overlapped,
-    _out LPDWORD lpNumberOfBytesTransferred,
+    _out PUINT lpNumberOfBytesTransferred,
     _in BOOL bWait);
 
 KUSB_EXP BOOL KUSB_API Unsupported_ResetDevice(
@@ -163,7 +163,7 @@ KUSB_EXP BOOL KUSB_API Unsupported_IsoReadPipe(
     _in KUSB_HANDLE InterfaceHandle,
     _in UCHAR PipeID,
     _out PUCHAR Buffer,
-    _in ULONG BufferLength,
+    _in UINT BufferLength,
     _in LPOVERLAPPED Overlapped,
     _refopt PKISO_CONTEXT IsoContext);
 
@@ -171,13 +171,13 @@ KUSB_EXP BOOL KUSB_API Unsupported_IsoWritePipe(
     _in KUSB_HANDLE InterfaceHandle,
     _in UCHAR PipeID,
     _in PUCHAR Buffer,
-    _in ULONG BufferLength,
+    _in UINT BufferLength,
     _in LPOVERLAPPED Overlapped,
     _refopt PKISO_CONTEXT IsoContext);
 
 KUSB_EXP BOOL KUSB_API Unsupported_GetCurrentFrameNumber(
     _in KUSB_HANDLE InterfaceHandle,
-    _out PULONG FrameNumber);
+    _out PUINT FrameNumber);
 
 KUSB_EXP BOOL KUSB_API Unsupported_Free(
     _in KUSB_HANDLE InterfaceHandle);

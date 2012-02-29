@@ -333,7 +333,7 @@ BOOL Bench_Open(__in PBENCHMARK_TEST_PARAM test)
 {
 	UCHAR altSetting;
 	KUSB_HANDLE associatedHandle;
-	ULONG transferred;
+	UINT transferred;
 	KLST_DEVINFO_HANDLE deviceInfo;
 
 	test->SelectedDeviceProfile = NULL;
@@ -503,7 +503,7 @@ BOOL Bench_Configure(__in KUSB_HANDLE handle,
                      __deref_inout PBENCHMARK_DEVICE_TEST_TYPE testType)
 {
 	UCHAR buffer[1];
-	DWORD transferred = 0;
+	UINT transferred = 0;
 	WINUSB_SETUP_PACKET Pkt;
 	KUSB_SETUP_PACKET* defPkt = (KUSB_SETUP_PACKET*)&Pkt;
 
@@ -597,7 +597,7 @@ INT VerifyData(PBENCHMARK_TRANSFER_PARAM transferParam, BYTE* data, INT dataLeng
 
 int TransferSync(PBENCHMARK_TRANSFER_PARAM transferParam)
 {
-	ULONG transferred;
+	UINT transferred;
 	BOOL success;
 	if (transferParam->Ep.PipeId & USB_ENDPOINT_DIRECTION_MASK)
 	{
@@ -710,7 +710,7 @@ int TransferAsync(PBENCHMARK_TRANSFER_PARAM transferParam, PBENCHMARK_TRANSFER_H
 	//
 	if (transferParam->OutstandingTransferCount == transferParam->Test->BufferCount)
 	{
-		DWORD transferred;
+		UINT transferred;
 		// TransferHandleWaitIndex is the index of the oldest outstanding transfer.
 		*handleRef = handle = &transferParam->TransferHandles[transferParam->TransferHandleWaitIndex];
 
@@ -1679,7 +1679,7 @@ int __cdecl main(int argc, char** argv)
 	PBENCHMARK_TRANSFER_PARAM WriteTest	= NULL;
 	int key;
 	LONG ec;
-	ULONG count, length;
+	UINT count, length;
 
 
 	if (argc == 1)
