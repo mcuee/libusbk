@@ -59,8 +59,11 @@ static void CALLBACK Stm_StopAPC(__in ULONG_PTR dwParam)
 static LONG KUSB_API Stm_SubmitRead(
     __in PKSTM_INFO StreamInfo,
     __in PKSTM_XFER_CONTEXT XferContext,
+	__in LONG XferContextIndex,
     __in LPOVERLAPPED Overlapped)
 {
+	UNREFERENCED_PARAMETER(XferContextIndex);
+	
 	StreamInfo->DriverAPI.ReadPipe(StreamInfo->UsbHandle, StreamInfo->PipeID, XferContext->Buffer, XferContext->BufferSize, NULL, Overlapped);
 	return (LONG)GetLastError();
 }
@@ -68,8 +71,11 @@ static LONG KUSB_API Stm_SubmitRead(
 static LONG KUSB_API Stm_SubmitWrite(
     __in PKSTM_INFO StreamInfo,
     __in PKSTM_XFER_CONTEXT XferContext,
-    __in LPOVERLAPPED Overlapped)
+ 	__in LONG XferContextIndex,
+   __in LPOVERLAPPED Overlapped)
 {
+	UNREFERENCED_PARAMETER(XferContextIndex);
+
 	StreamInfo->DriverAPI.WritePipe(StreamInfo->UsbHandle, StreamInfo->PipeID, XferContext->Buffer, XferContext->TransferLength, NULL, Overlapped);
 	return (LONG)GetLastError();
 }
@@ -163,7 +169,7 @@ static BOOL Stm_Thread_ProcessQueued(PKSTM_THREAD_INTERNAL stm)
 		stm->xferNext->Xfer->Public.Buffer		= stm->xferNext->Xfer->Buffer;
 		stm->xferNext->Xfer->Public.BufferSize	= stm->xferNext->Xfer->BufferSize;
 
-		stm->errorCode = stm->handle->UserCB->Submit(stm->handle->Info, &stm->xferNext->Xfer->Public, stm->xferNext->Xfer->Overlapped);
+		stm->errorCode = stm->handle->UserCB->Submit(stm->handle->Info, &stm->xferNext->Xfer->Public, stm->xferNext->Xfer->Index, stm->xferNext->Xfer->Overlapped);
 
 		if (stm->errorCode != ERROR_IO_PENDING  && stm->errorCode != ERROR_SUCCESS)
 		{
@@ -250,9 +256,17 @@ static BOOL Stm_Thread_ProcessPending(PKSTM_THREAD_INTERNAL stm, DWORD timeoutOv
 
 	completeResult = KSTM_COMPLETE_RESULT_VALID;
 
+	if (!stm->success && stm->handle->UserCB->Error)
+	{
+		stm->errorCode = stm->handle->UserCB->Error(stm->handle->Info, &stm->xferNext->Xfer->Public, stm->xferNext->Xfer->Index, stm->errorCode);
+		stm->success = (stm->errorCode == ERROR_SUCCESS);
+	}
+
 	if (stm->handle->UserCB->BeforeComplete)
 	{
-		completeResult = stm->handle->UserCB->BeforeComplete(stm->handle->Info, &stm->xferNext->Xfer->Public, (PLONG)&stm->errorCode);
+		completeResult = stm->handle->UserCB->BeforeComplete(stm->handle->Info, &stm->xferNext->Xfer->Public, stm->xferNext->Xfer->Index, (PLONG)&stm->errorCode);
+		if (completeResult == KSTM_COMPLETE_RESULT_INVALID)
+			stm->success = FALSE;
 	}
 
 	if (completeResult == KSTM_COMPLETE_RESULT_INVALID)
@@ -268,19 +282,14 @@ static BOOL Stm_Thread_ProcessPending(PKSTM_THREAD_INTERNAL stm, DWORD timeoutOv
 			IncLock(stm->handle->PendingTransfers);
 		else
 			DecLock(stm->handle->PendingTransfers);
-	}
 
-
-	if (stm->handle->UserCB->Complete && completeResult == KSTM_COMPLETE_RESULT_VALID)
-	{
-		LONG ec;
-		ec = stm->handle->UserCB->Complete(stm->handle->Info, &stm->xferNext->Xfer->Public, stm->errorCode);
-		if (ec != ERROR_SUCCESS && ec != (LONG)stm->errorCode && stm->success)
+		if (stm->handle->UserCB->Complete)
 		{
-			stm->errorCode = ec;
-			stm->success = FALSE;
+			stm->errorCode = stm->handle->UserCB->Complete(stm->handle->Info, &stm->xferNext->Xfer->Public, stm->xferNext->Xfer->Index, stm->errorCode);
+			stm->success = (stm->errorCode == ERROR_SUCCESS);
 		}
 	}
+
 	return stm->success;
 }
 
@@ -500,6 +509,7 @@ KUSB_EXP BOOL KUSB_API StmK_Init(
 	handle->Info->MaxPendingTransfers	= MaxPendingTransfers;
 	handle->Info->MaxTransferSize		= MaxTransferSize;
 	handle->Info->PipeID				= PipeID;
+	handle->Info->StreamHandle          = handle;
 
 	if (Callbacks)
 		memcpy(handle->UserCB, Callbacks, sizeof(*handle->UserCB));
@@ -644,7 +654,6 @@ KUSB_EXP BOOL KUSB_API StmK_Read(
 	ErrorSetAction(!PoolHandle_Inc_StmK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_StmK");
 	ErrorSet(!USB_ENDPOINT_DIRECTION_IN(handle->Info->PipeID), Error, ERROR_ACCESS_DENIED, "cannot read from a write stream");
 	ErrorParam((Length % handle->Info->MaxTransferSize) > 0, Error, "Length not an interval of MaxTransferSize");
-	ErrorSet(handle->Thread.State != KSTM_THREADSTATE_STARTED, Error, ERROR_THREAD_WAS_SUSPENDED, "stream is stopped");
 
 	while(Length > 0)
 	{
@@ -672,8 +681,15 @@ KUSB_EXP BOOL KUSB_API StmK_Read(
 		memcpy(Buffer + Offset, xferEL->Xfer->Buffer, stageSize);
 		Offset += stageSize;
 
-		PoolHandle_Inc_StmK(handle);
-		QueueUserAPC(Stm_ReadAPC, handle->Thread.Handle, (ULONG_PTR)xferEL);
+		if (handle->Thread.State == KSTM_THREADSTATE_STARTED)
+		{
+			PoolHandle_Inc_StmK(handle);
+			QueueUserAPC(Stm_ReadAPC, handle->Thread.Handle, (ULONG_PTR)xferEL);
+		}
+		else
+		{
+			DL_APPEND(handle->List.Queued, xferEL);
+		}
 	}
 
 PartialTransfer:
@@ -705,7 +721,6 @@ KUSB_EXP BOOL KUSB_API StmK_Write(
 
 	ErrorSetAction(!PoolHandle_Inc_StmK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_StmK");
 	ErrorSet(USB_ENDPOINT_DIRECTION_IN(handle->Info->PipeID), Error, ERROR_ACCESS_DENIED, "cannot write to a read stream");
-	ErrorSet(handle->Thread.State != KSTM_THREADSTATE_STARTED, Error, ERROR_THREAD_WAS_SUSPENDED, "stream is stopped");
 
 	while(Length > 0)
 	{
@@ -734,8 +749,15 @@ KUSB_EXP BOOL KUSB_API StmK_Write(
 		memcpy(xferEL->Xfer->Buffer, Buffer + Offset, stageSize);
 		Offset += stageSize;
 
-		PoolHandle_Inc_StmK(handle);
-		QueueUserAPC(Stm_WriteAPC, handle->Thread.Handle, (ULONG_PTR)xferEL);
+		if (handle->Thread.State == KSTM_THREADSTATE_STARTED)
+		{
+			PoolHandle_Inc_StmK(handle);
+			QueueUserAPC(Stm_WriteAPC, handle->Thread.Handle, (ULONG_PTR)xferEL);
+		}
+		else
+		{
+			DL_APPEND(handle->List.Queued, xferEL);
+		}
 	}
 
 PartialTransfer:

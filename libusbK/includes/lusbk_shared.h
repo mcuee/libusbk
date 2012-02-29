@@ -264,8 +264,27 @@ typedef struct _KISO_CONTEXT
 	*/
 	SHORT NumberOfPackets;
 
-	//! fixed structure padding.
-	UCHAR z_F_i_x_e_d[16 - sizeof(ULONG) * 2 - sizeof(SHORT) * 2];
+	//! Contains the URB Hdr.Status value on return from the host controller driver.
+	/*!
+	* \note This field is is not user assignable and is updated by the driver upon transfer completion.
+	*
+	* The USB bus driver always returns a value of USBD_STATUS_SUCCESS in 
+	* Hdr.Status, unless every packet in the transfer generated an error or 
+	* the request was not well-formed and could not be executed at all. The 
+	* following table includes possible error codes returned in Hdr.Status:
+	* - USBD_STATUS_ISOCH_REQUEST_FAILED
+	*   Indicates that every packet of an isochronous request was completed with 
+	*   errors. 
+	* - USBD_STATUS_BAD_START_FRAME
+	*   Indicates that the requested start frame is not within 
+	*   USBD_ISO_START_FRAME_RANGE of the current USB frame. 
+	* - USBD_ISO_NOT_ACCESSED_LATE
+	*   Indicates that every packet was submitted too late for the packet to be 
+	*   sent, based on the requested start frame. 
+	* - USBD_STATUS_INVALID_PARAMETER
+	*   Indicates that one of the URB parameters was incorrect. 
+	*/
+	ULONG UrbHdrStatus;
 
 	//! Contains a variable-length array of \c KISO_PACKET structures that describe the isochronous transfer packets to be transferred on the USB bus.
 	/*

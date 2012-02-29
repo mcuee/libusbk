@@ -349,6 +349,7 @@ VOID XferIsoExComplete(
 	// update the iso context
 	IsoContext->ErrorCount = (SHORT)urb->UrbIsochronousTransfer.ErrorCount;
 	IsoContext->StartFrame = urb->UrbIsochronousTransfer.StartFrame;
+	IsoContext->UrbHdrStatus = urb->UrbHeader.Status;
 
 	// update the iso packet status & lengths
 	for (posPacket = 0; posPacket < IsoContext->NumberOfPackets; posPacket++)
