@@ -68,12 +68,9 @@ BOOL InitDescriptorIterator(PDESCRIPTOR_ITERATOR descIterator, BYTE* configDescr
 	{
 		if ( descIterator->Ptr.Config->wTotalLength >= sizeof(USB_CONFIGURATION_DESCRIPTOR) + sizeof(USB_INTERFACE_DESCRIPTOR))
 			return TRUE;
-		else
-			SetLastError(ERROR_INVALID_ADDRESS);
 	}
-	else
-		SetLastError(ERROR_BAD_LENGTH);
 
+	SetLastError(ERROR_BAD_LENGTH);
 	descIterator->Remaining = 0;
 	return FALSE;
 }
@@ -163,7 +160,7 @@ DWORD __cdecl main(int argc, char* argv[])
 	PrintConfigDescriptor(descIterator.Ptr.Config);
 
 	/*
-	Continue advancing the iterator while it return true.
+	Continue advancing the iterator while it returns true.
 	*/
 	while(NextDescriptor(&descIterator))
 	{
