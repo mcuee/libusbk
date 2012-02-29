@@ -7,8 +7,8 @@ LICENSE
 -----------------------------------------------------------------------
 Copyright (c) 2011-2012 Travis Lee Robinson. All rights reserved.
 
-APPLICABLE FOR ALL LIBUSBK BINARIES AND SOURCE CODE UNLESS OTHERWISE
-SPECIFIED.
+APPLICABLE FOR ALL LIBUSBK BINARIES AND SOURCE CODE UNLESS OTHERWISE 
+SPECIFIED. PLEASE SEE INDIVIDUAL COMPONENTS LICENSING TERMS FOR DETAILS. 
 
 NOTE: Portions of dpscat use source code from libwdi which is licensed 
 for LGPL use only. (See dpscat.c) 
