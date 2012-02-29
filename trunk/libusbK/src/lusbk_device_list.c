@@ -755,7 +755,7 @@ static BOOL l_EnumKey_Guids(LPCSTR Name, KUSB_ENUM_REGKEY_PARAMS* RegEnumParams)
 
 KUSB_EXP BOOL KUSB_API LstK_Count(
     _in KLST_HANDLE DeviceList,
-    _ref PULONG Count)
+    _ref PUINT Count)
 {
 	PKLST_HANDLE_INTERNAL handle;
 	PKLST_DEVINFO_EL nextItem = NULL;
@@ -950,8 +950,8 @@ Error:
 
 KUSB_EXP BOOL KUSB_API LstK_FindByVidPid(
     _in KLST_HANDLE DeviceList,
-    _in LONG Vid,
-    _in LONG Pid,
+    _in INT Vid,
+    _in INT Pid,
     _out KLST_DEVINFO_HANDLE* DeviceInfo)
 {
 	PKLST_DEVINFO_EL check = NULL;

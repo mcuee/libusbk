@@ -2,6 +2,10 @@ LIBUSBK RELEASE NOTES
 
 V3.0.5.9 RC9 (02/29/2012)
 ==============================================
+- GLOBAL HEADER TYPE CHANGE: LONGs to INTs
+  - All LONG, PLONG, ULONG, PULONG, and LPDWORD data types were changed 
+    to the equivalent INT representation. 
+
 - PULIC _KISO_CONTEXT typedef changed.
   Inserted:
   - ULONG UrbHdrStatus;

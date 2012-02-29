@@ -47,8 +47,8 @@ KUSB_EXP BOOL KUSB_API WinUsb_GetDescriptor(
     _in UCHAR Index,
     _in USHORT LanguageID,
     _out PUCHAR Buffer,
-    _in ULONG BufferLength,
-    _outopt PULONG LengthTransferred)
+    _in UINT BufferLength,
+    _outopt PUINT LengthTransferred)
 {
 	return UsbK_GetDescriptor (InterfaceHandle, DescriptorType, Index, LanguageID, Buffer, BufferLength, LengthTransferred);
 }
@@ -63,8 +63,8 @@ KUSB_EXP BOOL KUSB_API WinUsb_QueryInterfaceSettings(
 
 KUSB_EXP BOOL KUSB_API WinUsb_QueryDeviceInformation(
     _in KUSB_HANDLE InterfaceHandle,
-    _in ULONG InformationType,
-    _ref PULONG BufferLength,
+    _in UINT InformationType,
+    _ref PUINT BufferLength,
     _ref PVOID Buffer)
 {
 	return UsbK_QueryDeviceInformation (InterfaceHandle, InformationType, BufferLength, Buffer);
@@ -96,8 +96,8 @@ KUSB_EXP BOOL KUSB_API WinUsb_QueryPipe(
 KUSB_EXP BOOL KUSB_API WinUsb_SetPipePolicy(
     _in KUSB_HANDLE InterfaceHandle,
     _in UCHAR PipeID,
-    _in ULONG PolicyType,
-    _in ULONG ValueLength,
+    _in UINT PolicyType,
+    _in UINT ValueLength,
     _in PVOID Value)
 {
 	return UsbK_SetPipePolicy (InterfaceHandle, PipeID, PolicyType, ValueLength, Value);
@@ -106,8 +106,8 @@ KUSB_EXP BOOL KUSB_API WinUsb_SetPipePolicy(
 KUSB_EXP BOOL KUSB_API WinUsb_GetPipePolicy(
     _in KUSB_HANDLE InterfaceHandle,
     _in UCHAR PipeID,
-    _in ULONG PolicyType,
-    _ref PULONG ValueLength,
+    _in UINT PolicyType,
+    _ref PUINT ValueLength,
     _out PVOID Value)
 {
 	return UsbK_GetPipePolicy (InterfaceHandle, PipeID, PolicyType, ValueLength, Value);
@@ -117,8 +117,8 @@ KUSB_EXP BOOL KUSB_API WinUsb_ReadPipe(
     _in KUSB_HANDLE InterfaceHandle,
     _in UCHAR PipeID,
     _out PUCHAR Buffer,
-    _in ULONG BufferLength,
-    _outopt PULONG LengthTransferred,
+    _in UINT BufferLength,
+    _outopt PUINT LengthTransferred,
     _inopt LPOVERLAPPED Overlapped)
 {
 	return UsbK_ReadPipe (InterfaceHandle, PipeID, Buffer, BufferLength, LengthTransferred, Overlapped);
@@ -128,8 +128,8 @@ KUSB_EXP BOOL KUSB_API WinUsb_WritePipe(
     _in KUSB_HANDLE InterfaceHandle,
     _in UCHAR PipeID,
     _in PUCHAR Buffer,
-    _in ULONG BufferLength,
-    _outopt PULONG LengthTransferred,
+    _in UINT BufferLength,
+    _outopt PUINT LengthTransferred,
     _inopt LPOVERLAPPED Overlapped)
 {
 	return UsbK_WritePipe (InterfaceHandle, PipeID, Buffer, BufferLength, LengthTransferred, Overlapped);
@@ -139,8 +139,8 @@ KUSB_EXP BOOL KUSB_API WinUsb_ControlTransfer(
     _in KUSB_HANDLE InterfaceHandle,
     _in WINUSB_SETUP_PACKET SetupPacket,
     _refopt PUCHAR Buffer,
-    _in ULONG BufferLength,
-    _outopt PULONG LengthTransferred,
+    _in UINT BufferLength,
+    _outopt PUINT LengthTransferred,
     _inopt LPOVERLAPPED Overlapped)
 {
 	return UsbK_ControlTransfer (InterfaceHandle, SetupPacket, Buffer, BufferLength, LengthTransferred, Overlapped);
@@ -169,8 +169,8 @@ KUSB_EXP BOOL KUSB_API WinUsb_FlushPipe(
 
 KUSB_EXP BOOL KUSB_API WinUsb_SetPowerPolicy(
     _in KUSB_HANDLE InterfaceHandle,
-    _in ULONG PolicyType,
-    _in ULONG ValueLength,
+    _in UINT PolicyType,
+    _in UINT ValueLength,
     _in PVOID Value)
 {
 	return UsbK_SetPowerPolicy (InterfaceHandle, PolicyType, ValueLength, Value);
@@ -178,8 +178,8 @@ KUSB_EXP BOOL KUSB_API WinUsb_SetPowerPolicy(
 
 KUSB_EXP BOOL KUSB_API WinUsb_GetPowerPolicy(
     _in KUSB_HANDLE InterfaceHandle,
-    _in ULONG PolicyType,
-    _ref PULONG ValueLength,
+    _in UINT PolicyType,
+    _ref PUINT ValueLength,
     _out PVOID Value)
 {
 	return UsbK_GetPowerPolicy (InterfaceHandle, PolicyType, ValueLength, Value);
@@ -188,7 +188,7 @@ KUSB_EXP BOOL KUSB_API WinUsb_GetPowerPolicy(
 KUSB_EXP BOOL KUSB_API WinUsb_GetOverlappedResult(
     _in KUSB_HANDLE InterfaceHandle,
     _in LPOVERLAPPED Overlapped,
-    _out LPDWORD lpNumberOfBytesTransferred,
+    _out PUINT lpNumberOfBytesTransferred,
     _in BOOL bWait)
 {
 	return UsbK_GetOverlappedResult (InterfaceHandle, Overlapped, lpNumberOfBytesTransferred, bWait);

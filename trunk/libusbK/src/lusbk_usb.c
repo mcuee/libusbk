@@ -182,8 +182,8 @@ BOOL GetProcAddress_LUsb0(__out KPROC* ProcAddress, __in LONG FunctionID)
 
 KUSB_EXP BOOL KUSB_API LibK_GetProcAddress(
     _out KPROC* ProcAddress,
-    _in LONG DriverID,
-    _in LONG FunctionID)
+    _in INT DriverID,
+    _in INT FunctionID)
 {
 	CheckLibInit();
 
@@ -229,7 +229,7 @@ KUSB_EXP BOOL KUSB_API LibK_CopyDriverAPI(
 
 KUSB_EXP BOOL KUSB_API LibK_LoadDriverAPI(
     _out PKUSB_DRIVER_API DriverAPI,
-    _in LONG DriverID)
+    _in INT DriverID)
 {
 	int fnIdIndex;
 	int fnIdCount = 0;

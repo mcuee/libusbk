@@ -132,7 +132,7 @@ typedef struct _KISO_PACKET
 	*
 	* \note This field is assigned by the user application only and used by the driver upon transfer submission and completion.
 	*/
-	ULONG Offset;
+	UINT Offset;
 
 	//! Set by the host controller to indicate the actual number of bytes received by the device for isochronous IN transfers. Length not used for isochronous OUT transfers.
 	/*!
@@ -249,7 +249,7 @@ typedef struct _KISO_CONTEXT
 	* \note This field may be assigned by the user application and is updated by the driver upon transfer
 	* completion.
 	*/
-	ULONG StartFrame;
+	UINT StartFrame;
 
 	//! Contains the number of packets that completed with an error condition on return from the host controller driver.
 	/*!
@@ -268,23 +268,23 @@ typedef struct _KISO_CONTEXT
 	/*!
 	* \note This field is is not user assignable and is updated by the driver upon transfer completion.
 	*
-	* The USB bus driver always returns a value of USBD_STATUS_SUCCESS in 
-	* Hdr.Status, unless every packet in the transfer generated an error or 
-	* the request was not well-formed and could not be executed at all. The 
+	* The USB bus driver always returns a value of USBD_STATUS_SUCCESS in
+	* Hdr.Status, unless every packet in the transfer generated an error or
+	* the request was not well-formed and could not be executed at all. The
 	* following table includes possible error codes returned in Hdr.Status:
 	* - USBD_STATUS_ISOCH_REQUEST_FAILED
-	*   Indicates that every packet of an isochronous request was completed with 
-	*   errors. 
+	*   Indicates that every packet of an isochronous request was completed with
+	*   errors.
 	* - USBD_STATUS_BAD_START_FRAME
-	*   Indicates that the requested start frame is not within 
-	*   USBD_ISO_START_FRAME_RANGE of the current USB frame. 
+	*   Indicates that the requested start frame is not within
+	*   USBD_ISO_START_FRAME_RANGE of the current USB frame.
 	* - USBD_ISO_NOT_ACCESSED_LATE
-	*   Indicates that every packet was submitted too late for the packet to be 
-	*   sent, based on the requested start frame. 
+	*   Indicates that every packet was submitted too late for the packet to be
+	*   sent, based on the requested start frame.
 	* - USBD_STATUS_INVALID_PARAMETER
-	*   Indicates that one of the URB parameters was incorrect. 
+	*   Indicates that one of the URB parameters was incorrect.
 	*/
-	ULONG UrbHdrStatus;
+	UINT UrbHdrStatus;
 
 	//! Contains a variable-length array of \c KISO_PACKET structures that describe the isochronous transfer packets to be transferred on the USB bus.
 	/*
