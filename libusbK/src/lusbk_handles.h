@@ -506,14 +506,22 @@ typedef struct _KOVL_HANDLE_INTERNAL
 
 	volatile long IsAcquired;
 
+	struct _KOVL_EL* MasterLink;
+
 	KOBJ_BASE Base;
 } KOVL_HANDLE_INTERNAL, *PKOVL_HANDLE_INTERNAL;
 typedef KOVL_HANDLE_INTERNAL KOVL_ITEM, *PKOVL_ITEM;
-ALDEF_LIST_HDR(KOVL, Ovl);
 
+typedef struct _KOVL_EL
+{
+	PKOVL_HANDLE_INTERNAL Handle;
+
+	struct _KOVL_EL* next;
+	struct _KOVL_EL* prev;
+
+} KOVL_EL, *PKOVL_EL;
 
 #define Init_Handle_OvlPoolK(HandlePtr) do {	\
-		(HandlePtr)->List = NULL; 					\
 		(HandlePtr)->Flags = 0; 					\
 		(HandlePtr)->UsbHandle = NULL; 				\
 	}while(0)
@@ -521,8 +529,11 @@ typedef struct _KOVL_POOL_HANDLE_INTERNAL
 {
 	KOBJ_BASE Base;
 
-	PKOVL_LIST MasterList;
-	PKOVL_LIST List;
+	volatile long MasterListCount;
+
+	PKOVL_EL MasterArray;
+	PKOVL_EL AcquiredList;
+	PKOVL_EL ReleasedList;
 
 	KOVL_POOL_FLAG Flags;
 	PKUSB_HANDLE_INTERNAL UsbHandle;
@@ -600,9 +611,9 @@ typedef struct _KSTM_HANDLE_INTERNAL
 	volatile long PendingTransfers;
 	volatile long PendingIO;
 
-	HANDLE IoPendingEvent;
-
 	ULONG TimeoutCancelMS;
+	HANDLE SemReady;
+	INT WaitTimeout;
 
 	struct
 	{

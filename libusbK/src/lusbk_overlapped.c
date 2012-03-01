@@ -27,38 +27,42 @@ binary distributions.
 #define mOvlK_IsComplete(mOverlappedK)	\
 	(WaitForSingleObject(((PKOVL_HANDLE_INTERNAL)mOverlappedK)->Overlapped.hEvent, 0) != WAIT_TIMEOUT)
 
-#define Ovl_MemAlloc(mStream,mSize)		HeapAlloc((mStream)->Heap,HEAP_ZERO_MEMORY|HEAP_NO_SERIALIZE,mSize)
-#define Ovl_SafeMemAlloc(mStream,mSize) HeapAlloc((mStream)->Heap,HEAP_ZERO_MEMORY,mSize)
+#define Ovl_SafeMemAlloc(mHeap,mSize) HeapAlloc(mHeap,HEAP_ZERO_MEMORY,mSize)
 
 static void KUSB_API Cleanup_OvlPoolK(PKOVL_POOL_HANDLE_INTERNAL handle)
 {
-	PKOVL_ITEM ovlItem;
+	int i;
+	int masterListCount;
 
 	PoolHandle_Dead_OvlPoolK(handle);
 
 	if (handle->UsbHandle) PoolHandle_Dec_UsbK(handle->UsbHandle);
 
-	while(AL_PopHead_Ovl(handle->MasterList, &ovlItem) == ERROR_SUCCESS)
+	masterListCount = (int)handle->MasterListCount;
+	for (i = 0; i < masterListCount; i++)
 	{
-		ovlItem->Pool = NULL;
-		while(ALLK_INUSE_HANDLE(ovlItem))
-		{
-			PoolHandle_Dec_OvlK(ovlItem);
-		}
+		if (handle->MasterArray[i].Handle)
+			PoolHandle_Dec_OvlK(handle->MasterArray[i].Handle);
 	}
 
-	AL_Destroy_Ovl(&handle->MasterList, AllK.Heap);
-	AL_Destroy_Ovl(&handle->List, AllK.Heap);
-
-	handle->MasterList = NULL;
-	handle->List = NULL;
 }
 
 static void KUSB_API Cleanup_OvlK(PKOVL_HANDLE_INTERNAL handle)
 {
 	PoolHandle_Dead_OvlK(handle);
 	SafeCloseEvent(handle->Overlapped.hEvent);
-	handle->Pool = NULL;
+	if (handle->Pool)
+	{
+		if (DecLock(handle->Pool->MasterListCount) == 0)
+		{
+			HeapFree(AllK.Heap, 0, handle->Pool->MasterArray);
+			handle->Pool->AcquiredList = NULL;
+			handle->Pool->ReleasedList = NULL;
+			handle->Pool->MasterListCount = 0;
+			handle->Pool->MasterArray = NULL;
+		}
+		handle->Pool = NULL;
+	}
 }
 
 static void o_Reuse(PKOVL_HANDLE_INTERNAL overlapped)
@@ -73,7 +77,7 @@ KUSB_EXP BOOL KUSB_API OvlK_Acquire(
     _out KOVL_HANDLE* OverlappedK,
     _in KOVL_POOL_HANDLE PoolHandle)
 {
-	PKOVL_HANDLE_INTERNAL overlapped = NULL;
+	PKOVL_EL overlappedEL = NULL;
 	PKOVL_POOL_HANDLE_INTERNAL handle;
 	BOOL isNewFromPool = FALSE;
 
@@ -83,33 +87,32 @@ KUSB_EXP BOOL KUSB_API OvlK_Acquire(
 	Pub_To_Priv_OvlPoolK(PoolHandle, handle, return FALSE);
 	ErrorSetAction(!PoolHandle_Inc_OvlPoolK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_OvlPoolK");
 
-	if (AL_PopHead_Ovl(handle->List, &overlapped) == ERROR_NO_MORE_ITEMS)
+	overlappedEL = handle->ReleasedList;
+	ErrorSetAction(!overlappedEL, ERROR_NO_MORE_ITEMS, PoolHandle_Dec_OvlPoolK(handle); return FALSE, "No more overlapped handles");
+
+	DL_DELETE(handle->ReleasedList, overlappedEL);
+	if (!overlappedEL->Handle)
 	{
-		if (handle->MasterList->Idx.Count >= handle->MasterList->MaxCount)
-		{
-			LusbwError(ERROR_NO_MORE_ITEMS);
-			goto Error;
-		}
-
-		// Get a new OverlappedK handle.
-		overlapped = PoolHandle_Acquire_OvlK(Cleanup_OvlK);
-		ErrorNoSet(!overlapped, Error, "->PoolHandle_Acquire_OvlK");
-
 		isNewFromPool = TRUE;
-		if (AL_PushTail_Ovl(handle->MasterList, overlapped) == ERROR_NO_MORE_ITEMS)
+		// Get a new OverlappedK handle.
+		overlappedEL->Handle = PoolHandle_Acquire_OvlK(Cleanup_OvlK);
+		if (!overlappedEL->Handle)
 		{
-			PoolHandle_Dec_OvlK(overlapped);
-			LusbwError(ERROR_NO_MORE_ITEMS);
-			goto Error;
+			DL_PREPEND(handle->ReleasedList, overlappedEL);
+			ErrorNoSet(!overlappedEL->Handle, Error, "->PoolHandle_Acquire_OvlK");
 		}
 	}
 
-	overlapped->Pool = handle;
-	overlapped->IsAcquired = 1;
-	o_Reuse(overlapped);
+	overlappedEL->Handle->MasterLink = overlappedEL;
+	overlappedEL->Handle->Pool = handle;
+	o_Reuse(overlappedEL->Handle);
 
-	*OverlappedK = (KOVL_HANDLE)overlapped;
-	if (isNewFromPool) PoolHandle_Live_OvlK(overlapped);
+	*OverlappedK = (KOVL_HANDLE)overlappedEL->Handle;
+	if (isNewFromPool) PoolHandle_Live_OvlK(overlappedEL->Handle);
+
+	overlappedEL->Handle->IsAcquired = 1;
+	DL_APPEND(handle->AcquiredList, overlappedEL);
+
 	PoolHandle_Dec_OvlPoolK(handle);
 	return TRUE;
 Error:
@@ -129,7 +132,8 @@ KUSB_EXP BOOL KUSB_API OvlK_Release(
 	success = overlapped->Pool ? (InterlockedExchange(&overlapped->IsAcquired, 0) != 0) : FALSE;
 	ErrorSet(!success, Done, ERROR_ACCESS_DENIED, "OverlappedK is not acquired.");
 
-	AL_PushTail_Ovl(overlapped->Pool->List, overlapped);
+	DL_DELETE(overlapped->Pool->AcquiredList, overlapped->MasterLink);
+	DL_PREPEND(overlapped->Pool->ReleasedList, overlapped->MasterLink);
 
 Done:
 	PoolHandle_Dec_OvlK(overlapped);
@@ -144,6 +148,7 @@ KUSB_EXP BOOL KUSB_API OvlK_Init(
 {
 	PKOVL_POOL_HANDLE_INTERNAL handle = NULL;
 	PKUSB_HANDLE_INTERNAL usbHandle;
+	int i;
 
 	*PoolHandle = NULL;
 
@@ -157,21 +162,27 @@ KUSB_EXP BOOL KUSB_API OvlK_Init(
 
 	handle->Flags		= Flags;
 
-	ErrorSet(!PoolHandle_Inc_UsbK(usbHandle), Error, ERROR_RESOURCE_NOT_AVAILABLE, "->PoolHandle_Inc_UsbK");
+	ErrorSet(!PoolHandle_Inc_UsbK(usbHandle), UsbHandleError, ERROR_RESOURCE_NOT_AVAILABLE, "->PoolHandle_Inc_UsbK");
 	handle->UsbHandle	= usbHandle;
 
-	AL_Create_Ovl(&handle->List, AllK.Heap, MaxOverlappedCount);
-	ErrorMemory(!handle->List, Error);
+	handle->MasterArray		= Ovl_SafeMemAlloc(AllK.Heap, MaxOverlappedCount * sizeof(KOVL_EL));
+	ErrorMemory(!handle->MasterArray, Error);
+	handle->MasterListCount = MaxOverlappedCount;
 
-	AL_Create_Ovl(&handle->MasterList, AllK.Heap, MaxOverlappedCount);
-	ErrorMemory(!handle->MasterList, Error);
+	for(i = 0; i < MaxOverlappedCount; i++)
+	{
+		DL_APPEND(handle->ReleasedList, &handle->MasterArray[i]);
+	}
 
 	handle->Flags		= Flags;
 
 	*PoolHandle = (KOVL_POOL_HANDLE)handle;
 	PoolHandle_Live_OvlPoolK(handle);
 	return TRUE;
+
 Error:
+	PoolHandle_Dec_UsbK(usbHandle);
+UsbHandleError:
 	if (handle) PoolHandle_Dec_OvlPoolK(handle);
 	return FALSE;
 }
@@ -199,6 +210,26 @@ KUSB_EXP HANDLE KUSB_API OvlK_GetEventHandle(
 	return overlapped->Overlapped.hEvent;
 Error:
 	return FALSE;
+}
+
+KUSB_EXP BOOL KUSB_API OvlK_WaitOldest(
+    _in KOVL_POOL_HANDLE PoolHandle,
+    _outopt KOVL_HANDLE* OverlappedK,
+    _inopt INT TimeoutMS,
+    _inopt KOVL_WAIT_FLAG WaitFlags,
+    _out PUINT TransferredLength)
+{
+	PKOVL_POOL_HANDLE_INTERNAL handle;
+	PKOVL_EL ovlEL;
+
+	if (OverlappedK) *OverlappedK = NULL;
+	Pub_To_Priv_OvlPoolK(PoolHandle, handle, return FALSE);
+
+	ovlEL = handle->AcquiredList;
+	ErrorSetAction(!ovlEL, ERROR_NO_MORE_ITEMS, return FALSE, "No more acquired OverlappedKs");
+	if (OverlappedK) *OverlappedK = (KOVL_HANDLE)ovlEL->Handle;
+
+	return OvlK_Wait(ovlEL->Handle, TimeoutMS, WaitFlags, TransferredLength);
 }
 
 KUSB_EXP BOOL KUSB_API OvlK_Wait(

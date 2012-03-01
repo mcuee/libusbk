@@ -283,6 +283,9 @@ static BOOL Stm_Thread_ProcessPending(PKSTM_THREAD_INTERNAL stm, DWORD timeoutOv
 		else
 			DecLock(stm->handle->PendingTransfers);
 
+		if (stm->handle->SemReady)
+			ReleaseSemaphore(stm->handle->SemReady,1,NULL);
+		
 		if (stm->handle->UserCB->Complete)
 		{
 			stm->errorCode = stm->handle->UserCB->Complete(stm->handle->Info, &stm->xferNext->Xfer->Public, stm->xferNext->Xfer->Index, stm->errorCode);
@@ -445,6 +448,7 @@ static void KUSB_API Stm_Cleanup(PKSTM_HANDLE_INTERNAL handle)
 	}
 	if (handle->Thread.StartedEvent) CloseHandle(handle->Thread.StartedEvent);
 	if (handle->Thread.StoppedEvent) CloseHandle(handle->Thread.StoppedEvent);
+	if (handle->SemReady) CloseHandle(handle->SemReady);
 
 	if (handle->Heap)
 	{
@@ -497,6 +501,14 @@ KUSB_EXP BOOL KUSB_API StmK_Init(
 	handle->UserCB = Stm_Alloc(handle, sizeof(*handle->UserCB));
 	ErrorMemory(!handle->UserCB, Error);
 
+	if (Flags & KSTM_FLAG_USE_TIMEOUT)
+	{
+		handle->SemReady = CreateSemaphoreA(NULL, USB_ENDPOINT_DIRECTION_IN(PipeID) ? 0 : MaxPendingTransfers, MaxPendingTransfers, NULL);
+		ErrorNoSetAction(!handle->SemReady, goto Error,"CreateSemaphoreA failed.");
+
+		handle->WaitTimeout = (Flags & KSTM_FLAG_TIMEOUT_MASK)==KSTM_FLAG_TIMEOUT_MASK ? INFINITE : Flags & KSTM_FLAG_TIMEOUT_MASK;
+	}
+	
 	handle->Flags = Flags;
 
 	ErrorSet(!PoolHandle_Inc_UsbK(usbHandle), Error, ERROR_RESOURCE_NOT_AVAILABLE, "->PoolHandle_Inc_UsbK");
@@ -657,9 +669,23 @@ KUSB_EXP BOOL KUSB_API StmK_Read(
 
 	while(Length > 0)
 	{
+		if (handle->SemReady) 
+		{
+			if (WaitForSingleObject(handle->SemReady, handle->WaitTimeout) != WAIT_OBJECT_0)
+			{
+				USBWRNN("No more transfer buffers. TotalTransferLength=%u", transferLength);
+				if (transferLength == 0)
+					goto Error;
+				else
+					goto PartialTransfer;
+			}
+		}
 
 		if (AL_PopHead_XferLink(handle->List.Finished, &xferEL) != ERROR_SUCCESS)
 		{
+			if (handle->SemReady)
+				ReleaseSemaphore(handle->SemReady,1,NULL);
+
 			if (transferLength == 0)
 			{
 				LusbwError(ERROR_NO_MORE_ITEMS);
@@ -724,10 +750,25 @@ KUSB_EXP BOOL KUSB_API StmK_Write(
 
 	while(Length > 0)
 	{
+		if (handle->SemReady) 
+		{
+			if (WaitForSingleObject(handle->SemReady, handle->WaitTimeout) != WAIT_OBJECT_0)
+			{
+				USBWRNN("No more transfer buffers. TotalTransferLength=%u", transferLength);
+				if (transferLength == 0)
+					goto Error;
+				else
+					goto PartialTransfer;
+			}
+		}
+
 		if (AL_PopHead_XferLink(handle->List.Idle, &xferEL) != ERROR_SUCCESS)
 		{
 			if (AL_PopHead_XferLink(handle->List.Finished, &xferEL) != ERROR_SUCCESS)
 			{
+				if (handle->SemReady)
+					ReleaseSemaphore(handle->SemReady,1,NULL);
+
 				if (transferLength == 0)
 				{
 					LusbwError(ERROR_NO_MORE_ITEMS);

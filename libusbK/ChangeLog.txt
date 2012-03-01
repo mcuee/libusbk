@@ -1,7 +1,18 @@
 LIBUSBK RELEASE NOTES
 
-V3.0.5.9 RC9 (02/29/2012)
+V3.0.5.9 RC9 (02/30/2012)
 ==============================================
+- Fixed missing 'HotK_FreeAll' function export.
+
+- Removed OvlK thread safe handlers to improve performance and increase
+  flexibility.
+  
+- New 'OvlK_WaitOldest' function.
+
+- Added KSTM_FLAG enum values:
+  - KSTM_FLAG_USE_TIMEOUT = 0x80000000
+  - KSTM_FLAG_TIMEOUT_MASK = 0x0001FFFF
+
 - GLOBAL HEADER TYPE CHANGE: LONGs to INTs
   - All LONG, PLONG, ULONG, PULONG, and LPDWORD data types were changed 
     to the equivalent INT representation. 
