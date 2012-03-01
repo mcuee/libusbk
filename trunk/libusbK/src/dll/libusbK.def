@@ -62,6 +62,7 @@ EXPORTS
     
     HotK_Init
     HotK_Free
+    HotK_FreeAll
     
     OvlK_Acquire
     OvlK_Release
@@ -69,6 +70,7 @@ EXPORTS
     OvlK_Free
     OvlK_GetEventHandle
     OvlK_Wait
+    OvlK_WaitOldest
     OvlK_WaitOrCancel
     OvlK_WaitAndRelease
     OvlK_IsComplete

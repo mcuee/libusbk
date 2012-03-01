@@ -1603,7 +1603,9 @@ typedef enum _KOVL_POOL_FLAG
 typedef enum _KSTM_FLAG
 {
     //! None
-    KSTM_FLAG_NONE		= 0L,
+    KSTM_FLAG_NONE			= 0L,
+    KSTM_FLAG_USE_TIMEOUT	= 0x80000000,
+	KSTM_FLAG_TIMEOUT_MASK	= 0x0001FFFF
 } KSTM_FLAG;
 
 //! Stream config flags.
@@ -3446,6 +3448,34 @@ extern "C" {
 	*/
 	KUSB_EXP BOOL KUSB_API OvlK_Wait(
 	    _in KOVL_HANDLE OverlappedK,
+	    _inopt INT TimeoutMS,
+	    _inopt KOVL_WAIT_FLAG WaitFlags,
+	    _out PUINT TransferredLength);
+
+//! Waits for overlapped I/O completion on the oldest acquired OverlappedK handle and performs actions specified in \c WaitFlags.
+	/*!
+	*
+	* \param[in] PoolHandle
+	* The pool handle containing one or more acuired OverlappedKs.
+	*
+	* \param[out] OverlappedK
+	* On success, set to the oldest overlappedK in the acquired list.
+	*
+	* \param[in] TimeoutMS
+	* See /ref OvlK_Wait
+	*
+	* \param[in] WaitFlags
+	* See /ref KOVL_WAIT_FLAG
+	*
+	* \param[out] TransferredLength
+	* See /ref OvlK_Wait
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information. See
+	* See /ref OvlK_Wait
+	*/
+	KUSB_EXP BOOL KUSB_API OvlK_WaitOldest(
+	    _in KOVL_POOL_HANDLE PoolHandle,
+	    _outopt KOVL_HANDLE* OverlappedK,
 	    _inopt INT TimeoutMS,
 	    _inopt KOVL_WAIT_FLAG WaitFlags,
 	    _out PUINT TransferredLength);
