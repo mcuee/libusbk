@@ -20,7 +20,6 @@ binary distributions.
 #define __LUSBK_HANDLES_H_
 
 #include "lusbk_private.h"
-#include "lusbk_lockedarray_list.h"
 
 #define KHOT_HANDLE_COUNT				8
 #define KLST_HANDLE_COUNT				64
@@ -365,7 +364,6 @@ typedef struct _KSTM_XFER_LINK_EL
 
 } KSTM_XFER_LINK_EL, *PKSTM_XFER_LINK_EL;
 typedef KSTM_XFER_LINK_EL KSTM_XFER_ITEM, *PKSTM_XFER_ITEM;
-ALDEF_LIST_HDR(KSTM_XFER, XferLink);
 
 typedef struct _KSTM_OVERLAPPED_EL
 {

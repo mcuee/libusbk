@@ -426,10 +426,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\lusbk_lockedarray_list.h"
-				>
-			</File>
-			<File
 				RelativePath="..\lusbk_private.h"
 				>
 			</File>
