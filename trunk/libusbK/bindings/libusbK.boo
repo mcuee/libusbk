@@ -1,26 +1,30 @@
-﻿#region Copyright (c) Travis Robinson
-// Copyright (c) 2011 Travis Robinson <libusbdotnet@gmail.com>
+﻿ERROR: Z:\Dev\libusbKTest\bindings\libusbK.cs(1223,9): BCE0000: enum member initializer must be integer value
+
+#region Copyright(c) Travis Robinson
+// Copyright (c) 2012 Travis Robinson <libusbdotnet@gmail.com>
 // All rights reserved.
-//
-// C# libusbK Bindings
-// Auto-generated on: 01.28.2012
-//
+// 
+// libusbK.cs
+// 
+// Created:      02.26.2012
+// Last Updated: 03.05.2012
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
-//
+// 
 //     * Redistributions of source code must retain the above copyright
 //       notice, this list of conditions and the following disclaimer.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
-// IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
-// TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
-// PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL TRAVIS LEE ROBINSON
-// BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+// 	  
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS 
+// IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED 
+// TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A 
+// PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL TRAVIS LEE ROBINSON 
+// BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF 
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN 
+// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF 
 // THE POSSIBILITY OF SUCH DAMAGE.
 #endregion
 
@@ -34,12 +38,19 @@
 namespace libusbK
 
 import System
-import System.Runtime.CompilerServices
+import System.Diagnostics
 import System.Runtime.InteropServices
-import Microsoft.Win32.SafeHandles
 
-public static class Constants:
+public static class AllKOptions:
 
+	#region Public Members
+	public static LIBUSBK_FULLPATH_TO_ALTERNATE_DLL as string
+	#endregion
+
+
+public static class AllKConstants:
+
+	#region Public Members
 	public static final KLST_STRING_MAX_LEN = 256
 
 	
@@ -49,10 +60,11 @@ public static class Constants:
 	public static final USB_CONFIG_POWERED_MASK as byte = 192
 
 	
-	public static final USB_ENDPOINT_DIRECTION_MASK as byte = 128
+	public static final USB_ENDPOINT_ADDRESS_MASK as byte = 15
 
 	
-	public static final USB_ENDPOINT_ADDRESS_MASK as byte = 15
+	public static final USB_ENDPOINT_DIRECTION_MASK as byte = 128
+	#endregion
 
 
 public enum PipePolicyType:
@@ -117,55 +129,11 @@ public enum EndpointType:
 
 public static class ErrorCodes:
 
-	public static final Success = 0
-
-	
+	#region Public Members
 	public static final AccessDenied = 5
 
 	
-	public static final InvalidHandle = 6
-
-	
-	public static final NotEnoughMemory = 8
-
-	
-	public static final NotSupported = 50
-
-	
-	public static final InvalidParameter = 87
-
-	
-	public static final SemTimeout = 121
-
-	
 	public static final Busy = 170
-
-	
-	public static final TooManyModules = 214
-
-	
-	public static final MoreData = 234
-
-	
-	public static final NoMoreItems = 259
-
-	
-	public static final ThreadNotInProcess = 566
-
-	
-	public static final ThreadWasSuspended = 699
-
-	
-	public static final OperationAborted = 995
-
-	
-	public static final IoIncomplete = 996
-
-	
-	public static final IoPending = 997
-
-	
-	public static final NotFound = 1168
 
 	
 	public static final Cancelled = 1223
@@ -174,742 +142,653 @@ public static class ErrorCodes:
 	public static final Empty = 4306
 
 	
+	public static final InvalidHandle = 6
+
+	
+	public static final InvalidParameter = 87
+
+	
+	public static final IoIncomplete = 996
+
+	
+	public static final IoPending = 997
+
+	
+	public static final MoreData = 234
+
+	
+	public static final NoMoreItems = 259
+
+	
+	public static final NotEnoughMemory = 8
+
+	
+	public static final NotFound = 1168
+
+	
+	public static final NotSupported = 50
+
+	
+	public static final OperationAborted = 995
+
+	
 	public static final ResourceNotAvailable = 5006
 
 	
 	public static final ResourceNotFound = 5007
 
-
-
-#region Base KLIB Handle
-public abstract class KLIB_HANDLE(SafeHandleZeroOrMinusOneIsInvalid, IKLIB_HANDLE):
-
-	protected def constructor(ownsHandle as bool):
-		super(ownsHandle)
+	
+	public static final SemTimeout = 121
 
 	
-	protected def constructor():
-		self(true)
+	public static final Success = 0
 
 	
-	protected def constructor(handlePtrToWrap as IntPtr):
-		super(false)
-		SetHandle(handlePtrToWrap)
+	public static final ThreadNotInProcess = 566
 
 	
-	
-	#region IKLIB_HANDLE Members
-	public abstract HandleType as KLIB_HANDLE_TYPE:
-		get:
-			pass
+	public static final ThreadWasSuspended = 699
 
 	
-	public def GetContext() as IntPtr:
-		return Functions.LibK_GetContext(handle, HandleType)
-
-	
-	public def SetContext(ContextValue as IntPtr) as bool:
-		return Functions.LibK_SetContext(handle, HandleType, ContextValue)
-
-	
-	public def SetCleanupCallback(CleanupCallback as KLIB_HANDLE_CLEANUP_CB) as bool:
-		return Functions.LibK_SetCleanupCallback(handle, HandleType, CleanupCallback)
-
+	public static final TooManyModules = 214
 	#endregion
-	
-	
-	protected override def ReleaseHandle() as bool:
-		pass
 
 
 public interface IKLIB_HANDLE:
 
+	#region Public Members
+	def GetContext() as IntPtr
+
 	HandleType as KLIB_HANDLE_TYPE:
 		get
 
-	def DangerousGetHandle() as IntPtr
-
-	def GetContext() as IntPtr
-
-	def SetContext(UserContext as IntPtr) as bool
+	Pointer as IntPtr:
+		get
 
 	def SetCleanupCallback(CleanupCallback as KLIB_HANDLE_CLEANUP_CB) as bool
 
-#endregion
-
-
-#region Class Handles
-public class KHOT_HANDLE(KLIB_HANDLE):
-
-	public static Empty as KHOT_HANDLE:
-		get:
-			return KHOT_HANDLE()
-
-	
-	public override HandleType as KLIB_HANDLE_TYPE:
-		get:
-			return KLIB_HANDLE_TYPE.HOTK
-
-	
-	protected override def ReleaseHandle() as bool:
-		return Functions.HotK_Free(handle)
-
-
-public class KUSB_HANDLE(KLIB_HANDLE):
-
-	public static Empty as KUSB_HANDLE:
-		get:
-			return KUSB_HANDLE()
-
-	
-	public override HandleType as KLIB_HANDLE_TYPE:
-		get:
-			return KLIB_HANDLE_TYPE.USBK
-
-	
-	protected override def ReleaseHandle() as bool:
-		return Functions.UsbK_Free(handle)
-
-	
-	
-	#region USB Shared Device Context
-	public def GetSharedContext() as IntPtr:
-		return Functions.LibK_GetContext(handle, KLIB_HANDLE_TYPE.USBSHAREDK)
-
-	
-	public def SetSharedContext(SharedUserContext as IntPtr) as bool:
-		return Functions.LibK_SetContext(handle, KLIB_HANDLE_TYPE.USBSHAREDK, SharedUserContext)
-
-	
-	public def SetSharedCleanupCallback(CleanupCallback as KLIB_HANDLE_CLEANUP_CB) as bool:
-		return Functions.LibK_SetCleanupCallback(handle, KLIB_HANDLE_TYPE.USBSHAREDK, CleanupCallback)
+	def SetContext(UserContext as IntPtr) as bool
 	#endregion
 
 
-public class KLST_HANDLE(KLIB_HANDLE):
 
-	public static Empty as KLST_HANDLE:
+#region Opaque library handles
+public struct KLST_HANDLE(IKLIB_HANDLE):
+
+	#region IKLIB_HANDLE Members
+	public Pointer as IntPtr:
 		get:
-			return KLST_HANDLE()
+			return mHandlePtr
 
 	
-	public override HandleType as KLIB_HANDLE_TYPE:
+	public HandleType as KLIB_HANDLE_TYPE:
 		get:
 			return KLIB_HANDLE_TYPE.LSTK
 
 	
-	protected override def ReleaseHandle() as bool:
-		return Functions.LstK_Free(handle)
-
-
-public class KOVL_POOL_HANDLE(KLIB_HANDLE):
-
-	public static Empty as KOVL_POOL_HANDLE:
-		get:
-			return KOVL_POOL_HANDLE()
+	public def GetContext() as IntPtr:
+		return AllKFunctions.LibK_GetContext(mHandlePtr, HandleType)
 
 	
-	public override HandleType as KLIB_HANDLE_TYPE:
+	public def SetContext(UserContext as IntPtr) as bool:
+		return AllKFunctions.LibK_SetContext(mHandlePtr, HandleType, UserContext)
+
+	
+	public def SetCleanupCallback(CleanupCallback as KLIB_HANDLE_CLEANUP_CB) as bool:
+		return AllKFunctions.LibK_SetCleanupCallback(mHandlePtr, HandleType, CleanupCallback)
+
+	#endregion
+	
+	
+	#region Public Members
+	public def constructor(Handle as IntPtr):
+		mHandlePtr = Handle
+
+	#endregion
+	
+	
+	#region Private Members
+	private final mHandlePtr as IntPtr
+	#endregion
+
+
+public struct KHOT_HANDLE(IKLIB_HANDLE):
+
+	#region IKLIB_HANDLE Members
+	public Pointer as IntPtr:
+		get:
+			return mHandlePtr
+
+	
+	public HandleType as KLIB_HANDLE_TYPE:
+		get:
+			return KLIB_HANDLE_TYPE.HOTK
+
+	
+	public def GetContext() as IntPtr:
+		return AllKFunctions.LibK_GetContext(mHandlePtr, HandleType)
+
+	
+	public def SetContext(UserContext as IntPtr) as bool:
+		return AllKFunctions.LibK_SetContext(mHandlePtr, HandleType, UserContext)
+
+	
+	public def SetCleanupCallback(CleanupCallback as KLIB_HANDLE_CLEANUP_CB) as bool:
+		return AllKFunctions.LibK_SetCleanupCallback(mHandlePtr, HandleType, CleanupCallback)
+
+	#endregion
+	
+	
+	#region Public Members
+	public def constructor(Handle as IntPtr):
+		mHandlePtr = Handle
+
+	#endregion
+	
+	
+	#region Private Members
+	private final mHandlePtr as IntPtr
+	#endregion
+
+
+public struct KUSB_HANDLE(IKLIB_HANDLE):
+
+	#region IKLIB_HANDLE Members
+	public Pointer as IntPtr:
+		get:
+			return mHandlePtr
+
+	
+	public HandleType as KLIB_HANDLE_TYPE:
+		get:
+			return KLIB_HANDLE_TYPE.USBK
+
+	
+	public def GetContext() as IntPtr:
+		return AllKFunctions.LibK_GetContext(mHandlePtr, HandleType)
+
+	
+	public def SetContext(UserContext as IntPtr) as bool:
+		return AllKFunctions.LibK_SetContext(mHandlePtr, HandleType, UserContext)
+
+	
+	public def SetCleanupCallback(CleanupCallback as KLIB_HANDLE_CLEANUP_CB) as bool:
+		return AllKFunctions.LibK_SetCleanupCallback(mHandlePtr, HandleType, CleanupCallback)
+
+	#endregion
+	
+	
+	#region USB Shared Device Context
+	public def GetSharedContext() as IntPtr:
+		return AllKFunctions.LibK_GetContext(mHandlePtr, KLIB_HANDLE_TYPE.USBSHAREDK)
+
+	
+	public def SetSharedCleanupCallback(CleanupCallback as KLIB_HANDLE_CLEANUP_CB) as bool:
+		return AllKFunctions.LibK_SetCleanupCallback(mHandlePtr, KLIB_HANDLE_TYPE.USBSHAREDK, CleanupCallback)
+
+	
+	public def SetSharedContext(UserContext as IntPtr) as bool:
+		return AllKFunctions.LibK_SetContext(mHandlePtr, KLIB_HANDLE_TYPE.USBSHAREDK, UserContext)
+
+	#endregion
+	
+	
+	#region Public Members
+	public def constructor(Handle as IntPtr):
+		mHandlePtr = Handle
+
+	#endregion
+	
+	
+	#region Private Members
+	private final mHandlePtr as IntPtr
+	#endregion
+
+
+public struct KOVL_POOL_HANDLE(IKLIB_HANDLE):
+
+	#region IKLIB_HANDLE Members
+	public Pointer as IntPtr:
+		get:
+			return mHandlePtr
+
+	
+	public HandleType as KLIB_HANDLE_TYPE:
 		get:
 			return KLIB_HANDLE_TYPE.OVLPOOLK
 
 	
-	protected override def ReleaseHandle() as bool:
-		return Functions.OvlK_Free(handle)
-
-
-public class KSTM_HANDLE(KLIB_HANDLE):
-
-	public static Empty as KSTM_HANDLE:
-		get:
-			return KSTM_HANDLE()
+	public def GetContext() as IntPtr:
+		return AllKFunctions.LibK_GetContext(mHandlePtr, HandleType)
 
 	
-	public override HandleType as KLIB_HANDLE_TYPE:
-		get:
-			return KLIB_HANDLE_TYPE.STMK
+	public def SetContext(UserContext as IntPtr) as bool:
+		return AllKFunctions.LibK_SetContext(mHandlePtr, HandleType, UserContext)
 
 	
-	protected override def ReleaseHandle() as bool:
-		return Functions.StmK_Free(handle)
+	public def SetCleanupCallback(CleanupCallback as KLIB_HANDLE_CLEANUP_CB) as bool:
+		return AllKFunctions.LibK_SetCleanupCallback(mHandlePtr, HandleType, CleanupCallback)
 
-
-public class KISO_CONTEXT(SafeHandleZeroOrMinusOneIsInvalid):
-
-	protected def constructor(ownsHandle as bool):
-		super(ownsHandle)
-
+	#endregion
 	
-	protected def constructor():
-		self(true)
-
 	
-	protected def constructor(handlePtrToWrap as IntPtr):
-		super(false)
-		SetHandle(handlePtrToWrap)
+	#region Public Members
+	public def constructor(Handle as IntPtr):
+		mHandlePtr = Handle
 
+	#endregion
 	
-	protected override def ReleaseHandle() as bool:
-		Functions.IsoK_Free(handle)
-		handle = IntPtr.Zero
-		return true
-
-#endregion
+	
+	#region Private Members
+	private final mHandlePtr as IntPtr
+	#endregion
 
 
-#region Struct Handles
 public struct KOVL_HANDLE(IKLIB_HANDLE):
 
-	private final handle as IntPtr
-
-	
-	public static Empty as KOVL_HANDLE:
-		get:
-			return KOVL_HANDLE()
-
-	
-	
 	#region IKLIB_HANDLE Members
+	public Pointer as IntPtr:
+		get:
+			return mHandlePtr
+
+	
 	public HandleType as KLIB_HANDLE_TYPE:
 		get:
 			return KLIB_HANDLE_TYPE.OVLK
 
 	
 	public def GetContext() as IntPtr:
-		return Functions.LibK_GetContext(handle, HandleType)
+		return AllKFunctions.LibK_GetContext(mHandlePtr, HandleType)
 
 	
-	public def SetContext(ContextValue as IntPtr) as bool:
-		return Functions.LibK_SetContext(handle, HandleType, ContextValue)
+	public def SetContext(UserContext as IntPtr) as bool:
+		return AllKFunctions.LibK_SetContext(mHandlePtr, HandleType, UserContext)
 
 	
 	public def SetCleanupCallback(CleanupCallback as KLIB_HANDLE_CLEANUP_CB) as bool:
-		return Functions.LibK_SetCleanupCallback(handle, HandleType, CleanupCallback)
+		return AllKFunctions.LibK_SetCleanupCallback(mHandlePtr, HandleType, CleanupCallback)
 
+	#endregion
 	
-	public def DangerousGetHandle() as IntPtr:
-		return handle
+	
+	#region Public Members
+	public def constructor(Handle as IntPtr):
+		mHandlePtr = Handle
+
+	#endregion
+	
+	
+	#region Private Members
+	private final mHandlePtr as IntPtr
 	#endregion
 
 
-public struct KLST_DEVINFO_HANDLE(IKLIB_HANDLE):
+public struct KSTM_HANDLE(IKLIB_HANDLE):
 
-	private static final ofsClassGUID as int = Marshal.OffsetOf(typeof(KLST_DEVINFO), 'ClassGUID').ToInt32()
-
-	private static final ofsCommon as int = Marshal.OffsetOf(typeof(KLST_DEVINFO), 'Common').ToInt32()
-
-	private static final ofsConnected as int = Marshal.OffsetOf(typeof(KLST_DEVINFO), 'Connected').ToInt32()
-
-	private static final ofsDeviceDesc as int = Marshal.OffsetOf(typeof(KLST_DEVINFO), 'DeviceDesc').ToInt32()
-
-	private static final ofsDeviceInterfaceGUID as int = Marshal.OffsetOf(typeof(KLST_DEVINFO), 'DeviceInterfaceGUID').ToInt32()
-
-	private static final ofsDevicePath as int = Marshal.OffsetOf(typeof(KLST_DEVINFO), 'DevicePath').ToInt32()
-
-	private static final ofsDriverID as int = Marshal.OffsetOf(typeof(KLST_DEVINFO), 'DriverID').ToInt32()
-
-	private static final ofsInstanceID as int = Marshal.OffsetOf(typeof(KLST_DEVINFO), 'InstanceID').ToInt32()
-
-	private static final ofsLUsb0FilterIndex as int = Marshal.OffsetOf(typeof(KLST_DEVINFO), 'LUsb0FilterIndex').ToInt32()
-
-	private static final ofsMfg as int = Marshal.OffsetOf(typeof(KLST_DEVINFO), 'Mfg').ToInt32()
-
-	private static final ofsService as int = Marshal.OffsetOf(typeof(KLST_DEVINFO), 'Service').ToInt32()
-
-	private static final ofsSymbolicLink as int = Marshal.OffsetOf(typeof(KLST_DEVINFO), 'SymbolicLink').ToInt32()
-
-	private static final ofsSyncFlags as int = Marshal.OffsetOf(typeof(KLST_DEVINFO), 'SyncFlags').ToInt32()
-
-	
-	private final handle as IntPtr
-
-	
-	public def constructor(HandleToWrap as IntPtr):
-		handle = HandleToWrap
-
-	
-	public static Empty as KLST_DEVINFO_HANDLE:
-		get:
-			return KLST_DEVINFO_HANDLE()
-
-	
-	public SyncFlags as KLST_SYNC_FLAG:
-		get:
-			return (Marshal.ReadInt32(handle, ofsSyncFlags) cast KLST_SYNC_FLAG)
-
-	
-	public Connected as bool:
-		get:
-			return (Marshal.ReadInt32(handle, ofsConnected) != 0)
-
-	
-	public LUsb0FilterIndex as int:
-		get:
-			return Marshal.ReadInt32(handle, ofsLUsb0FilterIndex)
-
-	
-	public DevicePath as string:
-		get:
-			return Marshal.PtrToStringAnsi(IntPtr((handle.ToInt64() + ofsDevicePath)))
-
-	
-	public SymbolicLink as string:
-		get:
-			return Marshal.PtrToStringAnsi(IntPtr((handle.ToInt64() + ofsSymbolicLink)))
-
-	
-	public Service as string:
-		get:
-			return Marshal.PtrToStringAnsi(IntPtr((handle.ToInt64() + ofsService)))
-
-	
-	public DeviceDesc as string:
-		get:
-			return Marshal.PtrToStringAnsi(IntPtr((handle.ToInt64() + ofsDeviceDesc)))
-
-	
-	public Mfg as string:
-		get:
-			return Marshal.PtrToStringAnsi(IntPtr((handle.ToInt64() + ofsMfg)))
-
-	
-	public ClassGUID as string:
-		get:
-			return Marshal.PtrToStringAnsi(IntPtr((handle.ToInt64() + ofsClassGUID)))
-
-	
-	public InstanceID as string:
-		get:
-			return Marshal.PtrToStringAnsi(IntPtr((handle.ToInt64() + ofsInstanceID)))
-
-	
-	public DeviceInterfaceGUID as string:
-		get:
-			return Marshal.PtrToStringAnsi(IntPtr((handle.ToInt64() + ofsDeviceInterfaceGUID)))
-
-	
-	public DriverID as int:
-		get:
-			return Marshal.ReadInt32(handle, ofsDriverID)
-
-	
-	public Common as KLST_DEV_COMMON_INFO:
-		get:
-			return (Marshal.PtrToStructure(IntPtr((handle.ToInt64() + ofsCommon)), typeof(KLST_DEV_COMMON_INFO)) cast KLST_DEV_COMMON_INFO)
-
-	
-	
 	#region IKLIB_HANDLE Members
+	public Pointer as IntPtr:
+		get:
+			return mHandlePtr
+
+	
 	public HandleType as KLIB_HANDLE_TYPE:
 		get:
-			return KLIB_HANDLE_TYPE.LSTINFOK
+			return KLIB_HANDLE_TYPE.STMK
 
 	
 	public def GetContext() as IntPtr:
-		return Functions.LibK_GetContext(handle, HandleType)
+		return AllKFunctions.LibK_GetContext(mHandlePtr, HandleType)
 
 	
-	public def SetContext(ContextValue as IntPtr) as bool:
-		return Functions.LibK_SetContext(handle, HandleType, ContextValue)
-
-	
-	public def DangerousGetHandle() as IntPtr:
-		return handle
+	public def SetContext(UserContext as IntPtr) as bool:
+		return AllKFunctions.LibK_SetContext(mHandlePtr, HandleType, UserContext)
 
 	
 	public def SetCleanupCallback(CleanupCallback as KLIB_HANDLE_CLEANUP_CB) as bool:
-		return Functions.LibK_SetCleanupCallback(handle, HandleType, CleanupCallback)
+		return AllKFunctions.LibK_SetCleanupCallback(mHandlePtr, HandleType, CleanupCallback)
 
 	#endregion
 	
 	
-	public override def ToString() as string:
-		return string.Format('{{Common: {0}, DriverID: {1}, DeviceInterfaceGuid: {2}, InstanceId: {3}, ClassGuid: {4}, Mfg: {5}, DeviceDesc: {6}, Service: {7}, SymbolicLink: {8}, DevicePath: {9}, LUsb0FilterIndex: {10}, Connected: {11}, SyncFlags: {12}}}', Common, DriverID, DeviceInterfaceGUID, InstanceID, ClassGUID, Mfg, DeviceDesc, Service, SymbolicLink, DevicePath, LUsb0FilterIndex, Connected, SyncFlags)
+	#region Public Members
+	public def constructor(Handle as IntPtr):
+		mHandlePtr = Handle
+
+	#endregion
+	
+	
+	#region Private Members
+	private final mHandlePtr as IntPtr
+	#endregion
 
 #endregion
 
 
 #region Internal Function Imports
-internal static class Functions:
+internal static class AllKFunctions:
 
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'LibK_GetVersion', SetLastError: true)]
-	public static def LibK_GetVersion([Out] ref Version as KLIB_VERSION):
-		pass
-
+	#region Delegates
+	[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+	public static callable HotK_FreeAllDelegate() as void
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'LibK_GetContext', SetLastError: true)]
-	public static def LibK_GetContext([In] Handle as IntPtr, HandleType as KLIB_HANDLE_TYPE) as IntPtr:
-		pass
-
+	[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+	public static callable HotK_FreeDelegate([In] Handle as KHOT_HANDLE) as bool
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'LibK_SetContext', SetLastError: true)]
-	public static def LibK_SetContext([In] Handle as IntPtr, HandleType as KLIB_HANDLE_TYPE, ContextValue as IntPtr) as bool:
-		pass
-
+	[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+	public static callable HotK_InitDelegate([Out] ref Handle as KHOT_HANDLE, [In] [Out] ref InitParams as KHOT_PARAMS) as bool
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'LibK_SetCleanupCallback', SetLastError: true)]
-	public static def LibK_SetCleanupCallback([In] Handle as IntPtr, HandleType as KLIB_HANDLE_TYPE, CleanupCB as KLIB_HANDLE_CLEANUP_CB) as bool:
-		pass
-
+	[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+	public static callable IsoK_EnumPacketsDelegate([In] IsoContext as KISO_CONTEXT, EnumPackets as KISO_ENUM_PACKETS_CB, StartPacketIndex as int, UserState as IntPtr) as bool
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'LibK_LoadDriverAPI', SetLastError: true)]
-	public static def LibK_LoadDriverAPI([Out] ref DriverAPI as KUSB_DRIVER_API, DriverID as int) as bool:
-		pass
-
+	[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+	public static callable IsoK_FreeDelegate([In] IsoContext as KISO_CONTEXT) as bool
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'LibK_CopyDriverAPI', SetLastError: true)]
-	public static def LibK_CopyDriverAPI([Out] ref DriverAPI as KUSB_DRIVER_API, [In] UsbHandle as KUSB_HANDLE) as bool:
-		pass
-
+	[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+	public static callable IsoK_GetPacketDelegate([In] IsoContext as KISO_CONTEXT, PacketIndex as int, [Out] ref IsoPacket as KISO_PACKET) as bool
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'LibK_GetProcAddress', SetLastError: true)]
-	public static def LibK_GetProcAddress(ProcAddress as IntPtr, DriverID as int, FunctionID as int) as bool:
-		pass
-
+	[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+	public static callable IsoK_InitDelegate([Out] ref IsoContext as KISO_CONTEXT, NumberOfPackets as int, StartFrame as int) as bool
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'UsbK_Init', SetLastError: true)]
-	public static def UsbK_Init([Out] ref InterfaceHandle as KUSB_HANDLE, [In] DevInfo as KLST_DEVINFO_HANDLE) as bool:
-		pass
-
+	[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+	public static callable IsoK_ReUseDelegate([In] IsoContext as KISO_CONTEXT) as bool
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'UsbK_Free', SetLastError: true)]
-	public static def UsbK_Free([In] InterfaceHandle as IntPtr) as bool:
-		pass
-
+	[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+	public static callable IsoK_SetPacketDelegate([In] IsoContext as KISO_CONTEXT, PacketIndex as int, [In] ref IsoPacket as KISO_PACKET) as bool
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'UsbK_ClaimInterface', SetLastError: true)]
-	public static def UsbK_ClaimInterface([In] InterfaceHandle as KUSB_HANDLE, NumberOrIndex as byte, IsIndex as bool) as bool:
-		pass
-
+	[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+	public static callable IsoK_SetPacketsDelegate([In] IsoContext as KISO_CONTEXT, PacketSize as int) as bool
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'UsbK_ReleaseInterface', SetLastError: true)]
-	public static def UsbK_ReleaseInterface([In] InterfaceHandle as KUSB_HANDLE, NumberOrIndex as byte, IsIndex as bool) as bool:
-		pass
-
+	[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+	public static callable LibK_CopyDriverAPIDelegate([Out] ref DriverAPI as KUSB_DRIVER_API, [In] UsbHandle as KUSB_HANDLE) as bool
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'UsbK_SetAltInterface', SetLastError: true)]
-	public static def UsbK_SetAltInterface([In] InterfaceHandle as KUSB_HANDLE, NumberOrIndex as byte, IsIndex as bool, AltSettingNumber as byte) as bool:
-		pass
-
+	[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+	public static callable LibK_GetContextDelegate([In] Handle as IntPtr, HandleType as KLIB_HANDLE_TYPE) as IntPtr
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'UsbK_GetAltInterface', SetLastError: true)]
-	public static def UsbK_GetAltInterface([In] InterfaceHandle as KUSB_HANDLE, NumberOrIndex as byte, IsIndex as bool, ref AltSettingNumber as byte) as bool:
-		pass
-
+	[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+	public static callable LibK_GetProcAddressDelegate(ProcAddress as IntPtr, DriverID as int, FunctionID as int) as bool
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'UsbK_GetDescriptor', SetLastError: true)]
-	public static def UsbK_GetDescriptor([In] InterfaceHandle as KUSB_HANDLE, DescriptorType as byte, Index as byte, LanguageID as ushort, Buffer as IntPtr, BufferLength as uint, ref LengthTransferred as uint) as bool:
-		pass
-
+	[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+	public static callable LibK_GetVersionDelegate([Out] ref Version as KLIB_VERSION) as void
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'UsbK_ControlTransfer', SetLastError: true)]
-	public static def UsbK_ControlTransfer([In] InterfaceHandle as KUSB_HANDLE, SetupPacket as WINUSB_SETUP_PACKET, Buffer as IntPtr, BufferLength as uint, ref LengthTransferred as uint, Overlapped as IntPtr) as bool:
-		pass
-
+	[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+	public static callable LibK_LoadDriverAPIDelegate([Out] ref DriverAPI as KUSB_DRIVER_API, DriverID as int) as bool
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'UsbK_SetPowerPolicy', SetLastError: true)]
-	public static def UsbK_SetPowerPolicy([In] InterfaceHandle as KUSB_HANDLE, PolicyType as uint, ValueLength as uint, Value as IntPtr) as bool:
-		pass
-
+	[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+	public static callable LibK_SetCleanupCallbackDelegate([In] Handle as IntPtr, HandleType as KLIB_HANDLE_TYPE, CleanupCB as KLIB_HANDLE_CLEANUP_CB) as bool
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'UsbK_GetPowerPolicy', SetLastError: true)]
-	public static def UsbK_GetPowerPolicy([In] InterfaceHandle as KUSB_HANDLE, PolicyType as uint, ref ValueLength as uint, Value as IntPtr) as bool:
-		pass
-
+	[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+	public static callable LibK_SetContextDelegate([In] Handle as IntPtr, HandleType as KLIB_HANDLE_TYPE, ContextValue as IntPtr) as bool
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'UsbK_SetConfiguration', SetLastError: true)]
-	public static def UsbK_SetConfiguration([In] InterfaceHandle as KUSB_HANDLE, ConfigurationNumber as byte) as bool:
-		pass
-
+	[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+	public static callable LstK_CountDelegate([In] DeviceList as KLST_HANDLE, ref Count as int) as bool
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'UsbK_GetConfiguration', SetLastError: true)]
-	public static def UsbK_GetConfiguration([In] InterfaceHandle as KUSB_HANDLE, ref ConfigurationNumber as byte) as bool:
-		pass
-
+	[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+	public static callable LstK_CurrentDelegate([In] DeviceList as KLST_HANDLE, [Out] ref DeviceInfo as KLST_DEVINFO_HANDLE) as bool
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'UsbK_ResetDevice', SetLastError: true)]
-	public static def UsbK_ResetDevice([In] InterfaceHandle as KUSB_HANDLE) as bool:
-		pass
-
+	[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+	public static callable LstK_EnumerateDelegate([In] DeviceList as KLST_HANDLE, EnumDevListCB as KLST_ENUM_DEVINFO_CB, Context as IntPtr) as bool
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'UsbK_Initialize', SetLastError: true)]
-	public static def UsbK_Initialize(DeviceHandle as IntPtr, [Out] ref InterfaceHandle as KUSB_HANDLE) as bool:
-		pass
-
+	[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+	public static callable LstK_FindByVidPidDelegate([In] DeviceList as KLST_HANDLE, Vid as int, Pid as int, [Out] ref DeviceInfo as KLST_DEVINFO_HANDLE) as bool
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'UsbK_SelectInterface', SetLastError: true)]
-	public static def UsbK_SelectInterface([In] InterfaceHandle as KUSB_HANDLE, NumberOrIndex as byte, IsIndex as bool) as bool:
-		pass
-
+	[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+	public static callable LstK_FreeDelegate([In] DeviceList as KLST_HANDLE) as bool
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'UsbK_GetAssociatedInterface', SetLastError: true)]
-	public static def UsbK_GetAssociatedInterface([In] InterfaceHandle as KUSB_HANDLE, AssociatedInterfaceIndex as byte, [Out] ref AssociatedInterfaceHandle as KUSB_HANDLE) as bool:
-		pass
-
+	[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+	public static callable LstK_InitDelegate([Out] ref DeviceList as KLST_HANDLE, Flags as KLST_FLAG) as bool
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'UsbK_Clone', SetLastError: true)]
-	public static def UsbK_Clone([In] InterfaceHandle as KUSB_HANDLE, [Out] ref DstInterfaceHandle as KUSB_HANDLE) as bool:
-		pass
-
+	[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+	public static callable LstK_InitExDelegate([Out] ref DeviceList as KLST_HANDLE, Flags as KLST_FLAG, [In] ref PatternMatch as KLST_PATTERN_MATCH) as bool
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'UsbK_QueryInterfaceSettings', SetLastError: true)]
-	public static def UsbK_QueryInterfaceSettings([In] InterfaceHandle as KUSB_HANDLE, AltSettingNumber as byte, [Out] ref UsbAltInterfaceDescriptor as USB_INTERFACE_DESCRIPTOR) as bool:
-		pass
-
+	[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+	public static callable LstK_MoveNextDelegate([In] DeviceList as KLST_HANDLE, [Out] ref DeviceInfo as KLST_DEVINFO_HANDLE) as bool
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'UsbK_QueryDeviceInformation', SetLastError: true)]
-	public static def UsbK_QueryDeviceInformation([In] InterfaceHandle as KUSB_HANDLE, InformationType as uint, ref BufferLength as uint, Buffer as IntPtr) as bool:
-		pass
-
+	[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+	public static callable LstK_MoveResetDelegate([In] DeviceList as KLST_HANDLE) as void
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'UsbK_SetCurrentAlternateSetting', SetLastError: true)]
-	public static def UsbK_SetCurrentAlternateSetting([In] InterfaceHandle as KUSB_HANDLE, AltSettingNumber as byte) as bool:
-		pass
-
+	[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+	public static callable OvlK_AcquireDelegate([Out] ref OverlappedK as KOVL_HANDLE, [In] PoolHandle as KOVL_POOL_HANDLE) as bool
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'UsbK_GetCurrentAlternateSetting', SetLastError: true)]
-	public static def UsbK_GetCurrentAlternateSetting([In] InterfaceHandle as KUSB_HANDLE, ref AltSettingNumber as byte) as bool:
-		pass
-
+	[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+	public static callable OvlK_FreeDelegate([In] PoolHandle as KOVL_POOL_HANDLE) as bool
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'UsbK_QueryPipe', SetLastError: true)]
-	public static def UsbK_QueryPipe([In] InterfaceHandle as KUSB_HANDLE, AltSettingNumber as byte, PipeIndex as byte, [Out] ref PipeInformation as WINUSB_PIPE_INFORMATION) as bool:
-		pass
-
+	[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+	public static callable OvlK_GetEventHandleDelegate([In] OverlappedK as KOVL_HANDLE) as IntPtr
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'UsbK_SetPipePolicy', SetLastError: true)]
-	public static def UsbK_SetPipePolicy([In] InterfaceHandle as KUSB_HANDLE, PipeID as byte, PolicyType as uint, ValueLength as uint, Value as IntPtr) as bool:
-		pass
-
+	[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+	public static callable OvlK_InitDelegate([Out] ref PoolHandle as KOVL_POOL_HANDLE, [In] UsbHandle as KUSB_HANDLE, MaxOverlappedCount as int, Flags as KOVL_POOL_FLAG) as bool
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'UsbK_GetPipePolicy', SetLastError: true)]
-	public static def UsbK_GetPipePolicy([In] InterfaceHandle as KUSB_HANDLE, PipeID as byte, PolicyType as uint, ref ValueLength as uint, Value as IntPtr) as bool:
-		pass
-
+	[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+	public static callable OvlK_IsCompleteDelegate([In] OverlappedK as KOVL_HANDLE) as bool
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'UsbK_ReadPipe', SetLastError: true)]
-	public static def UsbK_ReadPipe([In] InterfaceHandle as KUSB_HANDLE, PipeID as byte, Buffer as IntPtr, BufferLength as uint, ref LengthTransferred as uint, Overlapped as IntPtr) as bool:
-		pass
-
+	[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+	public static callable OvlK_ReUseDelegate([In] OverlappedK as KOVL_HANDLE) as bool
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'UsbK_WritePipe', SetLastError: true)]
-	public static def UsbK_WritePipe([In] InterfaceHandle as KUSB_HANDLE, PipeID as byte, Buffer as IntPtr, BufferLength as uint, ref LengthTransferred as uint, Overlapped as IntPtr) as bool:
-		pass
-
+	[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+	public static callable OvlK_ReleaseDelegate([In] OverlappedK as KOVL_HANDLE) as bool
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'UsbK_ResetPipe', SetLastError: true)]
-	public static def UsbK_ResetPipe([In] InterfaceHandle as KUSB_HANDLE, PipeID as byte) as bool:
-		pass
-
+	[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+	public static callable OvlK_WaitAndReleaseDelegate([In] OverlappedK as KOVL_HANDLE, TimeoutMS as int, ref TransferredLength as int) as bool
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'UsbK_AbortPipe', SetLastError: true)]
-	public static def UsbK_AbortPipe([In] InterfaceHandle as KUSB_HANDLE, PipeID as byte) as bool:
-		pass
-
+	[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+	public static callable OvlK_WaitDelegate([In] OverlappedK as KOVL_HANDLE, TimeoutMS as int, WaitFlags as KOVL_WAIT_FLAG, ref TransferredLength as int) as bool
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'UsbK_FlushPipe', SetLastError: true)]
-	public static def UsbK_FlushPipe([In] InterfaceHandle as KUSB_HANDLE, PipeID as byte) as bool:
-		pass
-
+	[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+	public static callable OvlK_WaitOldestDelegate([In] PoolHandle as KOVL_POOL_HANDLE, [Out] ref OverlappedK as KOVL_HANDLE, TimeoutMS as int, WaitFlags as KOVL_WAIT_FLAG, ref TransferredLength as int) as bool
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'UsbK_IsoReadPipe', SetLastError: true)]
-	public static def UsbK_IsoReadPipe([In] InterfaceHandle as KUSB_HANDLE, PipeID as byte, Buffer as IntPtr, BufferLength as uint, Overlapped as IntPtr, [In] IsoContext as KISO_CONTEXT) as bool:
-		pass
-
+	[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+	public static callable OvlK_WaitOrCancelDelegate([In] OverlappedK as KOVL_HANDLE, TimeoutMS as int, ref TransferredLength as int) as bool
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'UsbK_IsoWritePipe', SetLastError: true)]
-	public static def UsbK_IsoWritePipe([In] InterfaceHandle as KUSB_HANDLE, PipeID as byte, Buffer as IntPtr, BufferLength as uint, Overlapped as IntPtr, [In] IsoContext as KISO_CONTEXT) as bool:
-		pass
-
+	[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+	public static callable StmK_FreeDelegate([In] StreamHandle as KSTM_HANDLE) as bool
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'UsbK_GetCurrentFrameNumber', SetLastError: true)]
-	public static def UsbK_GetCurrentFrameNumber([In] InterfaceHandle as KUSB_HANDLE, ref FrameNumber as uint) as bool:
-		pass
-
+	[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+	public static callable StmK_InitDelegate([Out] ref StreamHandle as KSTM_HANDLE, [In] UsbHandle as KUSB_HANDLE, PipeID as byte, MaxTransferSize as int, MaxPendingTransfers as int, MaxPendingIO as int, [In] ref Callbacks as KSTM_CALLBACK, Flags as KSTM_FLAG) as bool
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'UsbK_GetOverlappedResult', SetLastError: true)]
-	public static def UsbK_GetOverlappedResult([In] InterfaceHandle as KUSB_HANDLE, Overlapped as IntPtr, ref lpNumberOfBytesTransferred as uint, bWait as bool) as bool:
-		pass
-
+	[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+	public static callable StmK_ReadDelegate([In] StreamHandle as KSTM_HANDLE, Buffer as IntPtr, Offset as int, Length as int, ref TransferredLength as int) as bool
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'UsbK_GetProperty', SetLastError: true)]
-	public static def UsbK_GetProperty([In] InterfaceHandle as KUSB_HANDLE, PropertyType as KUSB_PROPERTY, ref PropertySize as uint, Value as IntPtr) as bool:
-		pass
-
+	[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+	public static callable StmK_StartDelegate([In] StreamHandle as KSTM_HANDLE) as bool
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'LstK_Init', SetLastError: true)]
-	public static def LstK_Init([Out] ref DeviceList as KLST_HANDLE, Flags as KLST_FLAG) as bool:
-		pass
-
+	[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+	public static callable StmK_StopDelegate([In] StreamHandle as KSTM_HANDLE, TimeoutCancelMS as int) as bool
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'LstK_InitEx', SetLastError: true)]
-	public static def LstK_InitEx([Out] ref DeviceList as KLST_HANDLE, Flags as KLST_FLAG, [In] ref PatternMatch as KLST_PATTERN_MATCH) as bool:
-		pass
-
+	[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+	public static callable StmK_WriteDelegate([In] StreamHandle as KSTM_HANDLE, Buffer as IntPtr, Offset as int, Length as int, ref TransferredLength as int) as bool
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'LstK_Free', SetLastError: true)]
-	public static def LstK_Free([In] DeviceList as IntPtr) as bool:
-		pass
-
+	[UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
+	public static callable UsbK_FreeDelegate([In] InterfaceHandle as KUSB_HANDLE) as bool
+	#endregion
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'LstK_Enumerate', SetLastError: true)]
-	public static def LstK_Enumerate([In] DeviceList as KLST_HANDLE, EnumDevListCB as KLST_ENUM_DEVINFO_CB, Context as IntPtr) as bool:
-		pass
-
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'LstK_Current', SetLastError: true)]
-	public static def LstK_Current([In] DeviceList as KLST_HANDLE, [Out] ref DeviceInfo as KLST_DEVINFO_HANDLE) as bool:
-		pass
+	private static def constructor():
+		if String.IsNullOrEmpty(AllKOptions.LIBUSBK_FULLPATH_TO_ALTERNATE_DLL):
+			mModuleLibusbK = LoadLibraryEx(AllKConstants.LIBUSBK_DLL, IntPtr.Zero, LoadLibraryFlags.NONE)
+		else:
+			mModuleLibusbK = LoadLibraryEx(AllKOptions.LIBUSBK_FULLPATH_TO_ALTERNATE_DLL, IntPtr.Zero, LoadLibraryFlags.LOAD_WITH_ALTERED_SEARCH_PATH)
+		
+		if mModuleLibusbK == IntPtr.Zero:
+			raise DllNotFoundException('libusbK.dll not found.  Please install drivers/applications and retry.')
+		
+		LoadDynamicFunctions()
 
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'LstK_MoveNext', SetLastError: true)]
-	public static def LstK_MoveNext([In] DeviceList as KLST_HANDLE, [Out] ref DeviceInfo as KLST_DEVINFO_HANDLE) as bool:
-		pass
-
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'LstK_MoveReset', SetLastError: true)]
-	public static def LstK_MoveReset([In] DeviceList as KLST_HANDLE):
-		pass
+	#region Nested Enumerations
+	[Flags]
+	private enum LoadLibraryFlags:
 
-	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'LstK_FindByVidPid', SetLastError: true)]
-	public static def LstK_FindByVidPid([In] DeviceList as KLST_HANDLE, Vid as int, Pid as int, [Out] ref DeviceInfo as KLST_DEVINFO_HANDLE) as bool:
-		pass
+		NONE = 0
 
-	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'LstK_Count', SetLastError: true)]
-	public static def LstK_Count([In] DeviceList as KLST_HANDLE, ref Count as uint) as bool:
-		pass
+		DONT_RESOLVE_DLL_REFERENCES = 1
 
-	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'HotK_Init', SetLastError: true)]
-	public static def HotK_Init([Out] ref Handle as KHOT_HANDLE, [In] [Out] ref InitParams as KHOT_PARAMS) as bool:
-		pass
+		LOAD_IGNORE_CODE_AUTHZ_LEVEL = 16
 
-	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'HotK_Free', SetLastError: true)]
-	public static def HotK_Free([In] Handle as IntPtr) as bool:
-		pass
+		LOAD_LIBRARY_AS_DATAFILE = 2
 
-	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'HotK_FreeAll', SetLastError: true)]
-	public static def HotK_FreeAll():
-		pass
+		LOAD_LIBRARY_AS_DATAFILE_EXCLUSIVE = 64
 
-	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'OvlK_Acquire', SetLastError: true)]
-	public static def OvlK_Acquire([Out] ref OverlappedK as KOVL_HANDLE, [In] PoolHandle as KOVL_POOL_HANDLE) as bool:
-		pass
+		LOAD_LIBRARY_AS_IMAGE_RESOURCE = 32
 
-	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'OvlK_Release', SetLastError: true)]
-	public static def OvlK_Release([In] OverlappedK as KOVL_HANDLE) as bool:
-		pass
+		LOAD_WITH_ALTERED_SEARCH_PATH = 8
 
+	#endregion
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'OvlK_Init', SetLastError: true)]
-	public static def OvlK_Init([Out] ref PoolHandle as KOVL_POOL_HANDLE, [In] UsbHandle as KUSB_HANDLE, MaxOverlappedCount as int, Flags as KOVL_POOL_FLAG) as bool:
-		pass
-
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'OvlK_Free', SetLastError: true)]
-	public static def OvlK_Free([In] PoolHandle as IntPtr) as bool:
-		pass
+	#region Public Members
+	public static HotK_Free as HotK_FreeDelegate
 
-	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'OvlK_GetEventHandle', SetLastError: true)]
-	public static def OvlK_GetEventHandle([In] OverlappedK as KOVL_HANDLE) as IntPtr:
-		pass
+	public static HotK_FreeAll as HotK_FreeAllDelegate
 
-	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'OvlK_Wait', SetLastError: true)]
-	public static def OvlK_Wait([In] OverlappedK as KOVL_HANDLE, TimeoutMS as int, WaitFlags as KOVL_WAIT_FLAG, ref TransferredLength as uint) as bool:
-		pass
+	public static HotK_Init as HotK_InitDelegate
 
-	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'OvlK_WaitOrCancel', SetLastError: true)]
-	public static def OvlK_WaitOrCancel([In] OverlappedK as KOVL_HANDLE, TimeoutMS as int, ref TransferredLength as uint) as bool:
-		pass
+	public static IsoK_EnumPackets as IsoK_EnumPacketsDelegate
 
-	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'OvlK_WaitAndRelease', SetLastError: true)]
-	public static def OvlK_WaitAndRelease([In] OverlappedK as KOVL_HANDLE, TimeoutMS as int, ref TransferredLength as uint) as bool:
-		pass
+	public static IsoK_Free as IsoK_FreeDelegate
 
-	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'OvlK_IsComplete', SetLastError: true)]
-	public static def OvlK_IsComplete([In] OverlappedK as KOVL_HANDLE) as bool:
-		pass
+	public static IsoK_GetPacket as IsoK_GetPacketDelegate
 
-	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'OvlK_ReUse', SetLastError: true)]
-	public static def OvlK_ReUse([In] OverlappedK as KOVL_HANDLE) as bool:
-		pass
+	public static IsoK_Init as IsoK_InitDelegate
 
-	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'StmK_Init', SetLastError: true)]
-	public static def StmK_Init([Out] ref StreamHandle as KSTM_HANDLE, [In] UsbHandle as KUSB_HANDLE, PipeID as byte, MaxTransferSize as int, MaxPendingTransfers as int, MaxPendingIO as int, [In] ref Callbacks as KSTM_CALLBACK, Flags as KSTM_FLAG) as bool:
-		pass
+	public static IsoK_ReUse as IsoK_ReUseDelegate
 
-	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'StmK_Free', SetLastError: true)]
-	public static def StmK_Free([In] StreamHandle as IntPtr) as bool:
-		pass
+	public static IsoK_SetPacket as IsoK_SetPacketDelegate
 
-	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'StmK_Start', SetLastError: true)]
-	public static def StmK_Start([In] StreamHandle as KSTM_HANDLE) as bool:
-		pass
+	public static IsoK_SetPackets as IsoK_SetPacketsDelegate
 
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'StmK_Stop', SetLastError: true)]
-	public static def StmK_Stop([In] StreamHandle as KSTM_HANDLE, TimeoutCancelMS as int) as bool:
-		pass
+	public static LibK_CopyDriverAPI as LibK_CopyDriverAPIDelegate
 
-	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'StmK_Read', SetLastError: true)]
-	public static def StmK_Read([In] StreamHandle as KSTM_HANDLE, Buffer as IntPtr, Offset as int, Length as int, ref TransferredLength as uint) as bool:
-		pass
+	public static LibK_GetContext as LibK_GetContextDelegate
 
-	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'StmK_Write', SetLastError: true)]
-	public static def StmK_Write([In] StreamHandle as KSTM_HANDLE, Buffer as IntPtr, Offset as int, Length as int, ref TransferredLength as uint) as bool:
-		pass
+	public static LibK_GetProcAddress as LibK_GetProcAddressDelegate
 
-	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'IsoK_Init', SetLastError: true)]
-	public static def IsoK_Init([Out] ref IsoContext as KISO_CONTEXT, NumberOfPackets as int, StartFrame as int) as bool:
-		pass
+	public static LibK_GetVersion as LibK_GetVersionDelegate
 
-	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'IsoK_Free', SetLastError: true)]
-	public static def IsoK_Free([In] IsoContext as IntPtr) as bool:
-		pass
+	public static LibK_LoadDriverAPI as LibK_LoadDriverAPIDelegate
 
-	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'IsoK_SetPackets', SetLastError: true)]
-	public static def IsoK_SetPackets([In] IsoContext as KISO_CONTEXT, PacketSize as int) as bool:
-		pass
+	public static LibK_SetCleanupCallback as LibK_SetCleanupCallbackDelegate
+
+	public static LibK_SetContext as LibK_SetContextDelegate
+
+	public static LstK_Count as LstK_CountDelegate
+
+	public static LstK_Current as LstK_CurrentDelegate
+
+	public static LstK_Enumerate as LstK_EnumerateDelegate
+
+	public static LstK_FindByVidPid as LstK_FindByVidPidDelegate
+
+	public static LstK_Free as LstK_FreeDelegate
+
+	public static LstK_Init as LstK_InitDelegate
+
+	public static LstK_InitEx as LstK_InitExDelegate
+
+	public static LstK_MoveNext as LstK_MoveNextDelegate
 
+	public static LstK_MoveReset as LstK_MoveResetDelegate
+
+	public static OvlK_Acquire as OvlK_AcquireDelegate
+
+	public static OvlK_Free as OvlK_FreeDelegate
+
+	public static OvlK_GetEventHandle as OvlK_GetEventHandleDelegate
+
+	public static OvlK_Init as OvlK_InitDelegate
+
+	public static OvlK_IsComplete as OvlK_IsCompleteDelegate
+
+	public static OvlK_ReUse as OvlK_ReUseDelegate
+
+	public static OvlK_Release as OvlK_ReleaseDelegate
+
+	public static OvlK_Wait as OvlK_WaitDelegate
+
+	public static OvlK_WaitAndRelease as OvlK_WaitAndReleaseDelegate
+
+	public static OvlK_WaitOldest as OvlK_WaitOldestDelegate
+
+	public static OvlK_WaitOrCancel as OvlK_WaitOrCancelDelegate
+
+	public static StmK_Free as StmK_FreeDelegate
+
+	public static StmK_Init as StmK_InitDelegate
+
+	public static StmK_Read as StmK_ReadDelegate
+
+	public static StmK_Start as StmK_StartDelegate
+
+	public static StmK_Stop as StmK_StopDelegate
+
+	public static StmK_Write as StmK_WriteDelegate
+
+	public static UsbK_Free as UsbK_FreeDelegate
+
+	#endregion
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'IsoK_SetPacket', SetLastError: true)]
-	public static def IsoK_SetPacket([In] IsoContext as KISO_CONTEXT, PacketIndex as int, [In] ref IsoPacket as KISO_PACKET) as bool:
+	
+	#region Private Members
+	[DllImport('kernel32.dll', CharSet: CharSet.Ansi, ExactSpelling: true, SetLastError: true)]
+	private static def GetProcAddress(hModule as IntPtr, procName as string) as IntPtr:
 		pass
 
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'IsoK_GetPacket', SetLastError: true)]
-	public static def IsoK_GetPacket([In] IsoContext as KISO_CONTEXT, PacketIndex as int, [Out] ref IsoPacket as KISO_PACKET) as bool:
-		pass
+	private static def LoadDynamicFunctions():
+		LibK_GetVersion = (Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, 'LibK_GetVersion'), typeof(LibK_GetVersionDelegate)) cast LibK_GetVersionDelegate)
+		LibK_GetContext = (Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, 'LibK_GetContext'), typeof(LibK_GetContextDelegate)) cast LibK_GetContextDelegate)
+		LibK_SetContext = (Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, 'LibK_SetContext'), typeof(LibK_SetContextDelegate)) cast LibK_SetContextDelegate)
+		LibK_SetCleanupCallback = (Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, 'LibK_SetCleanupCallback'), typeof(LibK_SetCleanupCallbackDelegate)) cast LibK_SetCleanupCallbackDelegate)
+		LibK_LoadDriverAPI = (Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, 'LibK_LoadDriverAPI'), typeof(LibK_LoadDriverAPIDelegate)) cast LibK_LoadDriverAPIDelegate)
+		LibK_CopyDriverAPI = (Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, 'LibK_CopyDriverAPI'), typeof(LibK_CopyDriverAPIDelegate)) cast LibK_CopyDriverAPIDelegate)
+		LibK_GetProcAddress = (Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, 'LibK_GetProcAddress'), typeof(LibK_GetProcAddressDelegate)) cast LibK_GetProcAddressDelegate)
+		UsbK_Free = (Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, 'UsbK_Free'), typeof(UsbK_FreeDelegate)) cast UsbK_FreeDelegate)
+		LstK_Init = (Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, 'LstK_Init'), typeof(LstK_InitDelegate)) cast LstK_InitDelegate)
+		LstK_InitEx = (Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, 'LstK_InitEx'), typeof(LstK_InitExDelegate)) cast LstK_InitExDelegate)
+		LstK_Free = (Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, 'LstK_Free'), typeof(LstK_FreeDelegate)) cast LstK_FreeDelegate)
+		LstK_Enumerate = (Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, 'LstK_Enumerate'), typeof(LstK_EnumerateDelegate)) cast LstK_EnumerateDelegate)
+		LstK_Current = (Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, 'LstK_Current'), typeof(LstK_CurrentDelegate)) cast LstK_CurrentDelegate)
+		LstK_MoveNext = (Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, 'LstK_MoveNext'), typeof(LstK_MoveNextDelegate)) cast LstK_MoveNextDelegate)
+		LstK_MoveReset = (Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, 'LstK_MoveReset'), typeof(LstK_MoveResetDelegate)) cast LstK_MoveResetDelegate)
+		LstK_FindByVidPid = (Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, 'LstK_FindByVidPid'), typeof(LstK_FindByVidPidDelegate)) cast LstK_FindByVidPidDelegate)
+		LstK_Count = (Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, 'LstK_Count'), typeof(LstK_CountDelegate)) cast LstK_CountDelegate)
+		HotK_Init = (Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, 'HotK_Init'), typeof(HotK_InitDelegate)) cast HotK_InitDelegate)
+		HotK_Free = (Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, 'HotK_Free'), typeof(HotK_FreeDelegate)) cast HotK_FreeDelegate)
+		HotK_FreeAll = (Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, 'HotK_FreeAll'), typeof(HotK_FreeAllDelegate)) cast HotK_FreeAllDelegate)
+		OvlK_Acquire = (Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, 'OvlK_Acquire'), typeof(OvlK_AcquireDelegate)) cast OvlK_AcquireDelegate)
+		OvlK_Release = (Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, 'OvlK_Release'), typeof(OvlK_ReleaseDelegate)) cast OvlK_ReleaseDelegate)
+		OvlK_Init = (Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, 'OvlK_Init'), typeof(OvlK_InitDelegate)) cast OvlK_InitDelegate)
+		OvlK_Free = (Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, 'OvlK_Free'), typeof(OvlK_FreeDelegate)) cast OvlK_FreeDelegate)
+		OvlK_GetEventHandle = (Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, 'OvlK_GetEventHandle'), typeof(OvlK_GetEventHandleDelegate)) cast OvlK_GetEventHandleDelegate)
+		OvlK_Wait = (Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, 'OvlK_Wait'), typeof(OvlK_WaitDelegate)) cast OvlK_WaitDelegate)
+		OvlK_WaitOldest = (Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, 'OvlK_WaitOldest'), typeof(OvlK_WaitOldestDelegate)) cast OvlK_WaitOldestDelegate)
+		OvlK_WaitOrCancel = (Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, 'OvlK_WaitOrCancel'), typeof(OvlK_WaitOrCancelDelegate)) cast OvlK_WaitOrCancelDelegate)
+		OvlK_WaitAndRelease = (Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, 'OvlK_WaitAndRelease'), typeof(OvlK_WaitAndReleaseDelegate)) cast OvlK_WaitAndReleaseDelegate)
+		OvlK_IsComplete = (Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, 'OvlK_IsComplete'), typeof(OvlK_IsCompleteDelegate)) cast OvlK_IsCompleteDelegate)
+		OvlK_ReUse = (Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, 'OvlK_ReUse'), typeof(OvlK_ReUseDelegate)) cast OvlK_ReUseDelegate)
+		StmK_Init = (Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, 'StmK_Init'), typeof(StmK_InitDelegate)) cast StmK_InitDelegate)
+		StmK_Free = (Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, 'StmK_Free'), typeof(StmK_FreeDelegate)) cast StmK_FreeDelegate)
+		StmK_Start = (Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, 'StmK_Start'), typeof(StmK_StartDelegate)) cast StmK_StartDelegate)
+		StmK_Stop = (Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, 'StmK_Stop'), typeof(StmK_StopDelegate)) cast StmK_StopDelegate)
+		StmK_Read = (Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, 'StmK_Read'), typeof(StmK_ReadDelegate)) cast StmK_ReadDelegate)
+		StmK_Write = (Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, 'StmK_Write'), typeof(StmK_WriteDelegate)) cast StmK_WriteDelegate)
+		IsoK_Init = (Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, 'IsoK_Init'), typeof(IsoK_InitDelegate)) cast IsoK_InitDelegate)
+		IsoK_Free = (Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, 'IsoK_Free'), typeof(IsoK_FreeDelegate)) cast IsoK_FreeDelegate)
+		IsoK_SetPackets = (Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, 'IsoK_SetPackets'), typeof(IsoK_SetPacketsDelegate)) cast IsoK_SetPacketsDelegate)
+		IsoK_SetPacket = (Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, 'IsoK_SetPacket'), typeof(IsoK_SetPacketDelegate)) cast IsoK_SetPacketDelegate)
+		IsoK_GetPacket = (Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, 'IsoK_GetPacket'), typeof(IsoK_GetPacketDelegate)) cast IsoK_GetPacketDelegate)
+		IsoK_EnumPackets = (Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, 'IsoK_EnumPackets'), typeof(IsoK_EnumPacketsDelegate)) cast IsoK_EnumPacketsDelegate)
+		IsoK_ReUse = (Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, 'IsoK_ReUse'), typeof(IsoK_ReUseDelegate)) cast IsoK_ReUseDelegate)
 
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'IsoK_EnumPackets', SetLastError: true)]
-	public static def IsoK_EnumPackets([In] IsoContext as KISO_CONTEXT, EnumPackets as KISO_ENUM_PACKETS_CB, StartPacketIndex as int, UserState as IntPtr) as bool:
+	[DllImport('kernel32.dll')]
+	private static def LoadLibraryEx(lpFileName as string, hReservedNull as IntPtr, dwFlags as LoadLibraryFlags) as IntPtr:
 		pass
 
 	
-	[DllImport(Constants.LIBUSBK_DLL, CallingConvention: CallingConvention.Winapi, CharSet: CharSet.Ansi, EntryPoint: 'IsoK_ReUse', SetLastError: true)]
-	public static def IsoK_ReUse([In] IsoContext as KISO_CONTEXT) as bool:
-		pass
+	private static final mModuleLibusbK as IntPtr = IntPtr.Zero
+	#endregion
 
 #endregion
 
@@ -1250,15 +1129,20 @@ public enum KOVL_POOL_FLAG:
 
 
 [Flags]
-public enum KSTM_FLAG:
+public enum KSTM_FLAG(uint):
 
 	NONE = 0
+
+	NO_PARTIAL_XFERS = 1048576
+
+	TIMEOUT_MASK = 131071
 
 
 public enum KSTM_COMPLETE_RESULT:
 
 	VALID = 0
 
+	
 	INVALID
 
 #endregion
@@ -1279,6 +1163,10 @@ public struct WINUSB_PIPE_INFORMATION:
 	
 	public Interval as byte
 
+	
+	public override def ToString() as string:
+		return string.Format('PipeType: {0}\nPipeId: {1}\nMaximumPacketSize: {2}\nInterval: {3}\n', PipeType, (PipeId.ToString('X2') + 'h'), MaximumPacketSize, (Interval.ToString('X2') + 'h'))
+
 
 [StructLayout(LayoutKind.Sequential, CharSet: CharSet.Ansi, Pack: 1)]
 public struct WINUSB_SETUP_PACKET:
@@ -1297,11 +1185,15 @@ public struct WINUSB_SETUP_PACKET:
 	
 	public Length as ushort
 
+	
+	public override def ToString() as string:
+		return string.Format('RequestType: {0}\nRequest: {1}\nValue: {2}\nIndex: {3}\nLength: {4}\n', (RequestType.ToString('X2') + 'h'), (Request.ToString('X2') + 'h'), (Value.ToString('X4') + 'h'), (Index.ToString('X4') + 'h'), Length)
+
 
 [StructLayout(LayoutKind.Sequential, CharSet: CharSet.Ansi, Pack: 1)]
 public struct KISO_PACKET:
 
-	public Offset as uint
+	public Offset as int
 
 	
 	public Length as ushort
@@ -1309,20 +1201,82 @@ public struct KISO_PACKET:
 	
 	public Status as ushort
 
+	
+	public override def ToString() as string:
+		return string.Format('Offset: {0}\nLength: {1}\nStatus: {2}\n', Offset, Length, (Status.ToString('X4') + 'h'))
 
-[StructLayout(LayoutKind.Sequential, CharSet: CharSet.Ansi, Pack: 1, Size: 16)]
-internal struct KISO_CONTEXT_MAP:
 
-	public Flags as KISO_FLAG
+[StructLayout(LayoutKind.Sequential)]
+public struct KISO_CONTEXT:
+
+	private final mHandlePtr as IntPtr
 
 	
-	public StartFrame as uint
+	public def constructor(Handle as IntPtr):
+		mHandlePtr = Handle
 
 	
-	public ErrorCount as short
+	public Pointer as IntPtr:
+		get:
+			return mHandlePtr
 
 	
-	public NumberOfPackets as short
+	[StructLayout(LayoutKind.Sequential, CharSet: CharSet.Ansi, Pack: 1)]
+	private struct KISO_CONTEXT_MAP:
+
+		private final Flags as KISO_FLAG
+
+		
+		private final StartFrame as int
+
+		
+		private final ErrorCount as short
+
+		
+		private final NumberOfPackets as short
+
+		
+		private final UrbHdrStatus as int
+
+	
+	private static final ofsFlags as int = Marshal.OffsetOf(typeof(KISO_CONTEXT_MAP), 'Flags').ToInt32()
+
+	private static final ofsStartFrame as int = Marshal.OffsetOf(typeof(KISO_CONTEXT_MAP), 'StartFrame').ToInt32()
+
+	private static final ofsErrorCount as int = Marshal.OffsetOf(typeof(KISO_CONTEXT_MAP), 'ErrorCount').ToInt32()
+
+	private static final ofsNumberOfPackets as int = Marshal.OffsetOf(typeof(KISO_CONTEXT_MAP), 'NumberOfPackets').ToInt32()
+
+	private static final ofsUrbHdrStatus as int = Marshal.OffsetOf(typeof(KISO_CONTEXT_MAP), 'UrbHdrStatus').ToInt32()
+
+	
+	public Flags as KISO_FLAG:
+		get:
+			return (Marshal.ReadInt32(mHandlePtr, ofsFlags) cast KISO_FLAG)
+
+	
+	public StartFrame as int:
+		get:
+			return Marshal.ReadInt32(mHandlePtr, ofsStartFrame)
+
+	
+	public ErrorCount as short:
+		get:
+			return Marshal.ReadInt16(mHandlePtr, ofsErrorCount)
+
+	
+	public NumberOfPackets as short:
+		get:
+			return Marshal.ReadInt16(mHandlePtr, ofsNumberOfPackets)
+
+	
+	public UrbHdrStatus as int:
+		get:
+			return Marshal.ReadInt32(mHandlePtr, ofsUrbHdrStatus)
+
+	
+	public override def ToString() as string:
+		return string.Format('Flags: {0}\nStartFrame: {1}\nErrorCount: {2}\nNumberOfPackets: {3}\nUrbHdrStatus: {4}\n', Flags.ToString(), StartFrame, ErrorCount, NumberOfPackets, (UrbHdrStatus.ToString('X8') + 'h'))
 
 
 [StructLayout(LayoutKind.Sequential, CharSet: CharSet.Ansi)]
@@ -1339,6 +1293,10 @@ public struct KLIB_VERSION:
 	
 	public Nano as int
 
+	
+	public override def ToString() as string:
+		return string.Format('Major: {0}\nMinor: {1}\nMicro: {2}\nNano: {3}\n', Major, Minor, Micro, Nano)
+
 
 [StructLayout(LayoutKind.Sequential, CharSet: CharSet.Ansi)]
 public struct KLST_DEV_COMMON_INFO:
@@ -1353,73 +1311,209 @@ public struct KLST_DEV_COMMON_INFO:
 
 	
 	// An ID that uniquely identifies a USB device.
-	[MarshalAs(UnmanagedType.ByValTStr, SizeConst: Constants.KLST_STRING_MAX_LEN)]
-	public InstanceID as string
-
-
-[StructLayout(LayoutKind.Sequential, CharSet: CharSet.Ansi)]
-public struct KLST_DEVINFO:
-
-	public Common as KLST_DEV_COMMON_INFO
-
-	
-	public DriverID as int
-
-	
-	[MarshalAs(UnmanagedType.ByValTStr, SizeConst: Constants.KLST_STRING_MAX_LEN)]
-	public DeviceInterfaceGUID as string
-
-	
-	[MarshalAs(UnmanagedType.ByValTStr, SizeConst: Constants.KLST_STRING_MAX_LEN)]
+	[MarshalAs(UnmanagedType.ByValTStr, SizeConst: AllKConstants.KLST_STRING_MAX_LEN)]
 	public InstanceID as string
 
 	
-	[MarshalAs(UnmanagedType.ByValTStr, SizeConst: Constants.KLST_STRING_MAX_LEN)]
-	public ClassGUID as string
+	public override def ToString() as string:
+		return string.Format('Vid: {0}\nPid: {1}\nMI: {2}\nInstanceID: {3}\n', (Vid.ToString('X4') + 'h'), (Pid.ToString('X4') + 'h'), (MI.ToString('X2') + 'h'), InstanceID)
+
+
+[StructLayout(LayoutKind.Sequential)]
+public struct KLST_DEVINFO_HANDLE(IKLIB_HANDLE):
+
+	private final mHandlePtr as IntPtr
 
 	
-	[MarshalAs(UnmanagedType.ByValTStr, SizeConst: Constants.KLST_STRING_MAX_LEN)]
-	public Mfg as string
+	public def constructor(Handle as IntPtr):
+		mHandlePtr = Handle
 
 	
-	[MarshalAs(UnmanagedType.ByValTStr, SizeConst: Constants.KLST_STRING_MAX_LEN)]
-	public DeviceDesc as string
+	public Pointer as IntPtr:
+		get:
+			return mHandlePtr
 
 	
-	[MarshalAs(UnmanagedType.ByValTStr, SizeConst: Constants.KLST_STRING_MAX_LEN)]
-	public Service as string
+	public HandleType as KLIB_HANDLE_TYPE:
+		get:
+			return KLIB_HANDLE_TYPE.LSTINFOK
 
 	
-	[MarshalAs(UnmanagedType.ByValTStr, SizeConst: Constants.KLST_STRING_MAX_LEN)]
-	public SymbolicLink as string
+	public def GetContext() as IntPtr:
+		return AllKFunctions.LibK_GetContext(mHandlePtr, HandleType)
 
 	
-	[MarshalAs(UnmanagedType.ByValTStr, SizeConst: Constants.KLST_STRING_MAX_LEN)]
-	public DevicePath as string
+	public def SetContext(UserContext as IntPtr) as bool:
+		return AllKFunctions.LibK_SetContext(mHandlePtr, HandleType, UserContext)
 
 	
-	public LUsb0FilterIndex as int
+	public def SetCleanupCallback(CleanupCallback as KLIB_HANDLE_CLEANUP_CB) as bool:
+		return AllKFunctions.LibK_SetCleanupCallback(mHandlePtr, HandleType, CleanupCallback)
 
 	
-	public Connected as bool
+	[StructLayout(LayoutKind.Sequential, CharSet: CharSet.Ansi)]
+	private struct KLST_DEVINFO_MAP:
+
+		private final Common as KLST_DEV_COMMON_INFO
+
+		
+		private final DriverID as int
+
+		
+		[MarshalAs(UnmanagedType.ByValTStr, SizeConst: AllKConstants.KLST_STRING_MAX_LEN)]
+		private final DeviceInterfaceGUID as string
+
+		
+		[MarshalAs(UnmanagedType.ByValTStr, SizeConst: AllKConstants.KLST_STRING_MAX_LEN)]
+		private final InstanceID as string
+
+		
+		[MarshalAs(UnmanagedType.ByValTStr, SizeConst: AllKConstants.KLST_STRING_MAX_LEN)]
+		private final ClassGUID as string
+
+		
+		[MarshalAs(UnmanagedType.ByValTStr, SizeConst: AllKConstants.KLST_STRING_MAX_LEN)]
+		private final Mfg as string
+
+		
+		[MarshalAs(UnmanagedType.ByValTStr, SizeConst: AllKConstants.KLST_STRING_MAX_LEN)]
+		private final DeviceDesc as string
+
+		
+		[MarshalAs(UnmanagedType.ByValTStr, SizeConst: AllKConstants.KLST_STRING_MAX_LEN)]
+		private final Service as string
+
+		
+		[MarshalAs(UnmanagedType.ByValTStr, SizeConst: AllKConstants.KLST_STRING_MAX_LEN)]
+		private final SymbolicLink as string
+
+		
+		[MarshalAs(UnmanagedType.ByValTStr, SizeConst: AllKConstants.KLST_STRING_MAX_LEN)]
+		private final DevicePath as string
+
+		
+		private final LUsb0FilterIndex as int
+
+		
+		private final Connected as bool
+
+		
+		private final SyncFlags as KLST_SYNC_FLAG
 
 	
-	public SyncFlags as KLST_SYNC_FLAG
+	private static final ofsCommon as int = Marshal.OffsetOf(typeof(KLST_DEVINFO_MAP), 'Common').ToInt32()
+
+	private static final ofsDriverID as int = Marshal.OffsetOf(typeof(KLST_DEVINFO_MAP), 'DriverID').ToInt32()
+
+	private static final ofsDeviceInterfaceGUID as int = Marshal.OffsetOf(typeof(KLST_DEVINFO_MAP), 'DeviceInterfaceGUID').ToInt32()
+
+	private static final ofsInstanceID as int = Marshal.OffsetOf(typeof(KLST_DEVINFO_MAP), 'InstanceID').ToInt32()
+
+	private static final ofsClassGUID as int = Marshal.OffsetOf(typeof(KLST_DEVINFO_MAP), 'ClassGUID').ToInt32()
+
+	private static final ofsMfg as int = Marshal.OffsetOf(typeof(KLST_DEVINFO_MAP), 'Mfg').ToInt32()
+
+	private static final ofsDeviceDesc as int = Marshal.OffsetOf(typeof(KLST_DEVINFO_MAP), 'DeviceDesc').ToInt32()
+
+	private static final ofsService as int = Marshal.OffsetOf(typeof(KLST_DEVINFO_MAP), 'Service').ToInt32()
+
+	private static final ofsSymbolicLink as int = Marshal.OffsetOf(typeof(KLST_DEVINFO_MAP), 'SymbolicLink').ToInt32()
+
+	private static final ofsDevicePath as int = Marshal.OffsetOf(typeof(KLST_DEVINFO_MAP), 'DevicePath').ToInt32()
+
+	private static final ofsLUsb0FilterIndex as int = Marshal.OffsetOf(typeof(KLST_DEVINFO_MAP), 'LUsb0FilterIndex').ToInt32()
+
+	private static final ofsConnected as int = Marshal.OffsetOf(typeof(KLST_DEVINFO_MAP), 'Connected').ToInt32()
+
+	private static final ofsSyncFlags as int = Marshal.OffsetOf(typeof(KLST_DEVINFO_MAP), 'SyncFlags').ToInt32()
+
+	
+	public Common as KLST_DEV_COMMON_INFO:
+		get:
+			return (Marshal.PtrToStructure(IntPtr((mHandlePtr.ToInt64() + ofsCommon)), typeof(KLST_DEV_COMMON_INFO)) cast KLST_DEV_COMMON_INFO)
+
+	
+	public DriverID as int:
+		get:
+			return Marshal.ReadInt32(mHandlePtr, ofsDriverID)
+
+	
+	public DeviceInterfaceGUID as string:
+		get:
+			return Marshal.PtrToStringAnsi(IntPtr((mHandlePtr.ToInt64() + ofsDeviceInterfaceGUID)))
+
+	
+	public InstanceID as string:
+		get:
+			return Marshal.PtrToStringAnsi(IntPtr((mHandlePtr.ToInt64() + ofsInstanceID)))
+
+	
+	public ClassGUID as string:
+		get:
+			return Marshal.PtrToStringAnsi(IntPtr((mHandlePtr.ToInt64() + ofsClassGUID)))
+
+	
+	public Mfg as string:
+		get:
+			return Marshal.PtrToStringAnsi(IntPtr((mHandlePtr.ToInt64() + ofsMfg)))
+
+	
+	public DeviceDesc as string:
+		get:
+			return Marshal.PtrToStringAnsi(IntPtr((mHandlePtr.ToInt64() + ofsDeviceDesc)))
+
+	
+	public Service as string:
+		get:
+			return Marshal.PtrToStringAnsi(IntPtr((mHandlePtr.ToInt64() + ofsService)))
+
+	
+	public SymbolicLink as string:
+		get:
+			return Marshal.PtrToStringAnsi(IntPtr((mHandlePtr.ToInt64() + ofsSymbolicLink)))
+
+	
+	public DevicePath as string:
+		get:
+			return Marshal.PtrToStringAnsi(IntPtr((mHandlePtr.ToInt64() + ofsDevicePath)))
+
+	
+	public LUsb0FilterIndex as int:
+		get:
+			return Marshal.ReadInt32(mHandlePtr, ofsLUsb0FilterIndex)
+
+	
+	public Connected as bool:
+		get:
+			return (Marshal.ReadInt32(mHandlePtr, ofsConnected) != 0)
+
+	
+	public SyncFlags as KLST_SYNC_FLAG:
+		get:
+			return (Marshal.ReadInt32(mHandlePtr, ofsSyncFlags) cast KLST_SYNC_FLAG)
+
+	
+	public override def ToString() as string:
+		return string.Format('DriverID: {0}\nDeviceInterfaceGUID: {1}\nInstanceID: {2}\nClassGUID: {3}\nMfg: {4}\nDeviceDesc: {5}\nService: {6}\nSymbolicLink: {7}\nDevicePath: {8}\nLUsb0FilterIndex: {9}\nConnected: {10}\nSyncFlags: {11}\n', DriverID, DeviceInterfaceGUID, InstanceID, ClassGUID, Mfg, DeviceDesc, Service, SymbolicLink, DevicePath, LUsb0FilterIndex, Connected, SyncFlags.ToString())
 
 
 [StructLayout(LayoutKind.Sequential, CharSet: CharSet.Ansi, Size: 1024)]
 public struct KLST_PATTERN_MATCH:
 
-	[MarshalAs(UnmanagedType.ByValTStr, SizeConst: Constants.KLST_STRING_MAX_LEN)]
+	[MarshalAs(UnmanagedType.ByValTStr, SizeConst: AllKConstants.KLST_STRING_MAX_LEN)]
 	public InstanceID as string
 
 	
-	[MarshalAs(UnmanagedType.ByValTStr, SizeConst: Constants.KLST_STRING_MAX_LEN)]
+	[MarshalAs(UnmanagedType.ByValTStr, SizeConst: AllKConstants.KLST_STRING_MAX_LEN)]
 	public DeviceInterfaceGUID as string
 
 	
-	[MarshalAs(UnmanagedType.ByValTStr, SizeConst: Constants.KLST_STRING_MAX_LEN)]
+	[MarshalAs(UnmanagedType.ByValTStr, SizeConst: AllKConstants.KLST_STRING_MAX_LEN)]
 	public SymbolicLink as string
+
+	
+	public override def ToString() as string:
+		return string.Format('InstanceID: {0}\nDeviceInterfaceGUID: {1}\nSymbolicLink: {2}\n', InstanceID, DeviceInterfaceGUID, SymbolicLink)
 
 
 [StructLayout(LayoutKind.Sequential, CharSet: CharSet.Ansi, Pack: 1)]
@@ -1466,6 +1560,10 @@ public struct USB_DEVICE_DESCRIPTOR:
 	
 	public bNumConfigurations as byte
 
+	
+	public override def ToString() as string:
+		return string.Format('bLength: {0}\nbDescriptorType: {1}\nbcdUSB: {2}\nbDeviceClass: {3}\nbDeviceSubClass: {4}\nbDeviceProtocol: {5}\nbMaxPacketSize0: {6}\nidVendor: {7}\nidProduct: {8}\nbcdDevice: {9}\niManufacturer: {10}\niProduct: {11}\niSerialNumber: {12}\nbNumConfigurations: {13}\n', bLength, (bDescriptorType.ToString('X2') + 'h'), (bcdUSB.ToString('X4') + 'h'), (bDeviceClass.ToString('X2') + 'h'), (bDeviceSubClass.ToString('X2') + 'h'), (bDeviceProtocol.ToString('X2') + 'h'), bMaxPacketSize0, (idVendor.ToString('X4') + 'h'), (idProduct.ToString('X4') + 'h'), (bcdDevice.ToString('X4') + 'h'), iManufacturer, iProduct, iSerialNumber, bNumConfigurations)
+
 
 [StructLayout(LayoutKind.Sequential, CharSet: CharSet.Ansi, Pack: 1)]
 public struct USB_ENDPOINT_DESCRIPTOR:
@@ -1486,6 +1584,10 @@ public struct USB_ENDPOINT_DESCRIPTOR:
 
 	
 	public bInterval as byte
+
+	
+	public override def ToString() as string:
+		return string.Format('bLength: {0}\nbDescriptorType: {1}\nbEndpointAddress: {2}\nbmAttributes: {3}\nwMaxPacketSize: {4}\nbInterval: {5}\n', bLength, (bDescriptorType.ToString('X2') + 'h'), (bEndpointAddress.ToString('X2') + 'h'), (bmAttributes.ToString('X2') + 'h'), wMaxPacketSize, bInterval)
 
 
 [StructLayout(LayoutKind.Sequential, CharSet: CharSet.Ansi, Pack: 1)]
@@ -1513,6 +1615,10 @@ public struct USB_CONFIGURATION_DESCRIPTOR:
 
 	
 	public MaxPower as byte
+
+	
+	public override def ToString() as string:
+		return string.Format('bLength: {0}\nbDescriptorType: {1}\nwTotalLength: {2}\nbNumInterfaces: {3}\nbConfigurationValue: {4}\niConfiguration: {5}\nbmAttributes: {6}\nMaxPower: {7}\n', bLength, (bDescriptorType.ToString('X2') + 'h'), wTotalLength, bNumInterfaces, bConfigurationValue, iConfiguration, (bmAttributes.ToString('X2') + 'h'), MaxPower)
 
 
 [StructLayout(LayoutKind.Sequential, CharSet: CharSet.Ansi, Pack: 1)]
@@ -1544,6 +1650,10 @@ public struct USB_INTERFACE_DESCRIPTOR:
 	
 	public iInterface as byte
 
+	
+	public override def ToString() as string:
+		return string.Format('bLength: {0}\nbDescriptorType: {1}\nbInterfaceNumber: {2}\nbAlternateSetting: {3}\nbNumEndpoints: {4}\nbInterfaceClass: {5}\nbInterfaceSubClass: {6}\nbInterfaceProtocol: {7}\niInterface: {8}\n', bLength, (bDescriptorType.ToString('X2') + 'h'), bInterfaceNumber, bAlternateSetting, bNumEndpoints, (bInterfaceClass.ToString('X2') + 'h'), (bInterfaceSubClass.ToString('X2') + 'h'), (bInterfaceProtocol.ToString('X2') + 'h'), iInterface)
+
 
 [StructLayout(LayoutKind.Sequential, CharSet: CharSet.Unicode, Pack: 1)]
 public struct USB_STRING_DESCRIPTOR:
@@ -1554,8 +1664,12 @@ public struct USB_STRING_DESCRIPTOR:
 	public bDescriptorType as byte
 
 	
-	[MarshalAs(UnmanagedType.ByValTStr, SizeConst: Constants.KLST_STRING_MAX_LEN)]
+	[MarshalAs(UnmanagedType.ByValTStr, SizeConst: AllKConstants.KLST_STRING_MAX_LEN)]
 	public bString as string
+
+	
+	public override def ToString() as string:
+		return string.Format('bLength: {0}\nbDescriptorType: {1}\nbString: {2}\n', bLength, (bDescriptorType.ToString('X2') + 'h'), bString)
 
 
 [StructLayout(LayoutKind.Sequential, CharSet: CharSet.Ansi, Pack: 1)]
@@ -1565,6 +1679,10 @@ public struct USB_COMMON_DESCRIPTOR:
 
 	
 	public bDescriptorType as byte
+
+	
+	public override def ToString() as string:
+		return string.Format('bLength: {0}\nbDescriptorType: {1}\n', bLength, (bDescriptorType.ToString('X2') + 'h'))
 
 
 [StructLayout(LayoutKind.Sequential, CharSet: CharSet.Ansi, Pack: 1)]
@@ -1593,6 +1711,10 @@ public struct USB_INTERFACE_ASSOCIATION_DESCRIPTOR:
 	
 	public iFunction as byte
 
+	
+	public override def ToString() as string:
+		return string.Format('bLength: {0}\nbDescriptorType: {1}\nbFirstInterface: {2}\nbInterfaceCount: {3}\nbFunctionClass: {4}\nbFunctionSubClass: {5}\nbFunctionProtocol: {6}\niFunction: {7}\n', bLength, (bDescriptorType.ToString('X2') + 'h'), bFirstInterface, bInterfaceCount, (bFunctionClass.ToString('X2') + 'h'), (bFunctionSubClass.ToString('X2') + 'h'), (bFunctionProtocol.ToString('X2') + 'h'), iFunction)
+
 
 [StructLayout(LayoutKind.Sequential, CharSet: CharSet.Ansi)]
 public struct KUSB_DRIVER_API_INFO:
@@ -1601,6 +1723,10 @@ public struct KUSB_DRIVER_API_INFO:
 
 	
 	public FunctionCount as int
+
+	
+	public override def ToString() as string:
+		return string.Format('DriverID: {0}\nFunctionCount: {1}\n', DriverID, FunctionCount)
 
 
 [StructLayout(LayoutKind.Sequential, CharSet: CharSet.Ansi, Size: 512)]
@@ -1751,7 +1877,7 @@ public struct KHOT_PARAMS:
 	public UserHwnd as IntPtr
 
 	
-	public UserMessage as uint
+	public UserMessage as int
 
 	
 	public Flags as KHOT_FLAG
@@ -1763,47 +1889,202 @@ public struct KHOT_PARAMS:
 	[MarshalAs(UnmanagedType.FunctionPtr)]
 	public OnHotPlug as KHOT_PLUG_CB
 
+	
+	public UserContext as IntPtr
 
-[StructLayout(LayoutKind.Sequential, CharSet: CharSet.Ansi)]
+	
+	public override def ToString() as string:
+		return string.Format('UserHwnd: {0}\nUserMessage: {1}\nFlags: {2}\nUserContext: {3}\n', (UserHwnd.ToString('X16') + 'h'), (UserMessage.ToString('X8') + 'h'), Flags.ToString(), (UserContext.ToString('X16') + 'h'))
+
+
+[StructLayout(LayoutKind.Sequential)]
 public struct KSTM_XFER_CONTEXT:
 
-	public Buffer as IntPtr
+	private final mHandlePtr as IntPtr
 
 	
-	public BufferSize as int
+	public def constructor(Handle as IntPtr):
+		mHandlePtr = Handle
 
 	
-	public TransferLength as int
+	public Pointer as IntPtr:
+		get:
+			return mHandlePtr
 
 	
-	public UserState as IntPtr
+	[StructLayout(LayoutKind.Sequential, CharSet: CharSet.Ansi)]
+	private struct KSTM_XFER_CONTEXT_MAP:
+
+		private final Buffer as IntPtr
+
+		
+		private final BufferSize as int
+
+		
+		private final TransferLength as int
+
+		
+		private final UserState as IntPtr
+
+	
+	private static final ofsBuffer as int = Marshal.OffsetOf(typeof(KSTM_XFER_CONTEXT_MAP), 'Buffer').ToInt32()
+
+	private static final ofsBufferSize as int = Marshal.OffsetOf(typeof(KSTM_XFER_CONTEXT_MAP), 'BufferSize').ToInt32()
+
+	private static final ofsTransferLength as int = Marshal.OffsetOf(typeof(KSTM_XFER_CONTEXT_MAP), 'TransferLength').ToInt32()
+
+	private static final ofsUserState as int = Marshal.OffsetOf(typeof(KSTM_XFER_CONTEXT_MAP), 'UserState').ToInt32()
+
+	
+	public Buffer as IntPtr:
+		get:
+			return Marshal.ReadIntPtr(mHandlePtr, ofsBuffer)
+
+	
+	public BufferSize as int:
+		get:
+			return Marshal.ReadInt32(mHandlePtr, ofsBufferSize)
+
+	
+	public TransferLength as int:
+		get:
+			return Marshal.ReadInt32(mHandlePtr, ofsTransferLength)
+
+	
+	public UserState as IntPtr:
+		get:
+			return Marshal.ReadIntPtr(mHandlePtr, ofsUserState)
+		set:
+			Marshal.WriteIntPtr(mHandlePtr, ofsUserState, value)
+
+	
+	public override def ToString() as string:
+		return string.Format('Buffer: {0}\nBufferSize: {1}\nTransferLength: {2}\nUserState: {3}\n', (Buffer.ToString('X16') + 'h'), BufferSize, TransferLength, (UserState.ToString('X16') + 'h'))
 
 
-[StructLayout(LayoutKind.Sequential, CharSet: CharSet.Ansi)]
+[StructLayout(LayoutKind.Sequential)]
 public struct KSTM_INFO:
 
-	public UsbHandle as IntPtr
+	private final mHandlePtr as IntPtr
 
 	
-	public PipeID as byte
+	public def constructor(Handle as IntPtr):
+		mHandlePtr = Handle
 
 	
-	public MaxPendingTransfers as int
+	public Pointer as IntPtr:
+		get:
+			return mHandlePtr
 
 	
-	public MaxTransferSize as int
+	[StructLayout(LayoutKind.Sequential, CharSet: CharSet.Ansi)]
+	private struct KSTM_INFO_MAP:
+
+		private final UsbHandle as IntPtr
+
+		
+		private final PipeID as byte
+
+		
+		private final MaxPendingTransfers as int
+
+		
+		private final MaxTransferSize as int
+
+		
+		private final MaxPendingIO as int
+
+		
+		private final EndpointDescriptor as USB_ENDPOINT_DESCRIPTOR
+
+		
+		private final DriverAPI as KUSB_DRIVER_API
+
+		
+		private final DeviceHandle as IntPtr
+
+		
+		private final StreamHandle as IntPtr
+
+		
+		private final UserState as IntPtr
 
 	
-	public MaxPendingIO as int
+	private static final ofsUsbHandle as int = Marshal.OffsetOf(typeof(KSTM_INFO_MAP), 'UsbHandle').ToInt32()
+
+	private static final ofsPipeID as int = Marshal.OffsetOf(typeof(KSTM_INFO_MAP), 'PipeID').ToInt32()
+
+	private static final ofsMaxPendingTransfers as int = Marshal.OffsetOf(typeof(KSTM_INFO_MAP), 'MaxPendingTransfers').ToInt32()
+
+	private static final ofsMaxTransferSize as int = Marshal.OffsetOf(typeof(KSTM_INFO_MAP), 'MaxTransferSize').ToInt32()
+
+	private static final ofsMaxPendingIO as int = Marshal.OffsetOf(typeof(KSTM_INFO_MAP), 'MaxPendingIO').ToInt32()
+
+	private static final ofsEndpointDescriptor as int = Marshal.OffsetOf(typeof(KSTM_INFO_MAP), 'EndpointDescriptor').ToInt32()
+
+	private static final ofsDriverAPI as int = Marshal.OffsetOf(typeof(KSTM_INFO_MAP), 'DriverAPI').ToInt32()
+
+	private static final ofsDeviceHandle as int = Marshal.OffsetOf(typeof(KSTM_INFO_MAP), 'DeviceHandle').ToInt32()
+
+	private static final ofsStreamHandle as int = Marshal.OffsetOf(typeof(KSTM_INFO_MAP), 'StreamHandle').ToInt32()
+
+	private static final ofsUserState as int = Marshal.OffsetOf(typeof(KSTM_INFO_MAP), 'UserState').ToInt32()
 
 	
-	public EndpointDescriptor as USB_ENDPOINT_DESCRIPTOR
+	public UsbHandle as IntPtr:
+		get:
+			return Marshal.ReadIntPtr(mHandlePtr, ofsUsbHandle)
 
 	
-	public DriverAPI as KUSB_DRIVER_API
+	public PipeID as byte:
+		get:
+			return Marshal.ReadByte(mHandlePtr, ofsPipeID)
 
 	
-	public DeviceHandle as IntPtr
+	public MaxPendingTransfers as int:
+		get:
+			return Marshal.ReadInt32(mHandlePtr, ofsMaxPendingTransfers)
+
+	
+	public MaxTransferSize as int:
+		get:
+			return Marshal.ReadInt32(mHandlePtr, ofsMaxTransferSize)
+
+	
+	public MaxPendingIO as int:
+		get:
+			return Marshal.ReadInt32(mHandlePtr, ofsMaxPendingIO)
+
+	
+	public EndpointDescriptor as USB_ENDPOINT_DESCRIPTOR:
+		get:
+			return (Marshal.PtrToStructure(IntPtr((mHandlePtr.ToInt64() + ofsEndpointDescriptor)), typeof(USB_ENDPOINT_DESCRIPTOR)) cast USB_ENDPOINT_DESCRIPTOR)
+
+	
+	public DriverAPI as KUSB_DRIVER_API:
+		get:
+			return (Marshal.PtrToStructure(IntPtr((mHandlePtr.ToInt64() + ofsDriverAPI)), typeof(KUSB_DRIVER_API)) cast KUSB_DRIVER_API)
+
+	
+	public DeviceHandle as IntPtr:
+		get:
+			return Marshal.ReadIntPtr(mHandlePtr, ofsDeviceHandle)
+
+	
+	public StreamHandle as IntPtr:
+		get:
+			return Marshal.ReadIntPtr(mHandlePtr, ofsStreamHandle)
+
+	
+	public UserState as IntPtr:
+		get:
+			return Marshal.ReadIntPtr(mHandlePtr, ofsUserState)
+		set:
+			Marshal.WriteIntPtr(mHandlePtr, ofsUserState, value)
+
+	
+	public override def ToString() as string:
+		return string.Format('UsbHandle: {0}\nPipeID: {1}\nMaxPendingTransfers: {2}\nMaxTransferSize: {3}\nMaxPendingIO: {4}\nDeviceHandle: {5}\nStreamHandle: {6}\nUserState: {7}\n', (UsbHandle.ToString('X16') + 'h'), (PipeID.ToString('X2') + 'h'), MaxPendingTransfers, MaxTransferSize, MaxPendingIO, (DeviceHandle.ToString('X16') + 'h'), (StreamHandle.ToString('X16') + 'h'), (UserState.ToString('X16') + 'h'))
 
 
 [StructLayout(LayoutKind.Sequential, CharSet: CharSet.Ansi, Size: 64)]
@@ -1840,10 +2121,10 @@ public struct KSTM_CALLBACK:
 public callable KLIB_HANDLE_CLEANUP_CB([In] Handle as IntPtr, HandleType as KLIB_HANDLE_TYPE, UserContext as IntPtr) as int
 
 [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
-public callable KISO_ENUM_PACKETS_CB(PacketIndex as uint, [In] ref IsoPacket as KISO_PACKET, UserState as IntPtr) as bool
+public callable KISO_ENUM_PACKETS_CB(PacketIndex as int, [In] ref IsoPacket as KISO_PACKET, UserState as IntPtr) as bool
 
 [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
-public callable KLST_ENUM_DEVINFO_CB([In] DeviceList as IntPtr, [In] DeviceInfo as KLST_DEVINFO_HANDLE, Context as IntPtr) as bool
+public callable KLST_ENUM_DEVINFO_CB([In] DeviceList as KLST_HANDLE, [In] DeviceInfo as KLST_DEVINFO_HANDLE, Context as IntPtr) as bool
 
 [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
 public callable KUSB_InitDelegate([Out] ref InterfaceHandle as KUSB_HANDLE, [In] DevInfo as KLST_DEVINFO_HANDLE) as bool
@@ -1864,16 +2145,16 @@ public callable KUSB_SetAltInterfaceDelegate([In] InterfaceHandle as KUSB_HANDLE
 public callable KUSB_GetAltInterfaceDelegate([In] InterfaceHandle as KUSB_HANDLE, NumberOrIndex as byte, IsIndex as bool, ref AltSettingNumber as byte) as bool
 
 [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
-public callable KUSB_GetDescriptorDelegate([In] InterfaceHandle as KUSB_HANDLE, DescriptorType as byte, Index as byte, LanguageID as ushort, Buffer as IntPtr, BufferLength as uint, ref LengthTransferred as uint) as bool
+public callable KUSB_GetDescriptorDelegate([In] InterfaceHandle as KUSB_HANDLE, DescriptorType as byte, Index as byte, LanguageID as ushort, Buffer as IntPtr, BufferLength as int, ref LengthTransferred as int) as bool
 
 [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
-public callable KUSB_ControlTransferDelegate([In] InterfaceHandle as KUSB_HANDLE, SetupPacket as WINUSB_SETUP_PACKET, Buffer as IntPtr, BufferLength as uint, ref LengthTransferred as uint, Overlapped as IntPtr) as bool
+public callable KUSB_ControlTransferDelegate([In] InterfaceHandle as KUSB_HANDLE, SetupPacket as WINUSB_SETUP_PACKET, Buffer as IntPtr, BufferLength as int, ref LengthTransferred as int, Overlapped as IntPtr) as bool
 
 [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
-public callable KUSB_SetPowerPolicyDelegate([In] InterfaceHandle as KUSB_HANDLE, PolicyType as uint, ValueLength as uint, Value as IntPtr) as bool
+public callable KUSB_SetPowerPolicyDelegate([In] InterfaceHandle as KUSB_HANDLE, PolicyType as int, ValueLength as int, Value as IntPtr) as bool
 
 [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
-public callable KUSB_GetPowerPolicyDelegate([In] InterfaceHandle as KUSB_HANDLE, PolicyType as uint, ref ValueLength as uint, Value as IntPtr) as bool
+public callable KUSB_GetPowerPolicyDelegate([In] InterfaceHandle as KUSB_HANDLE, PolicyType as int, ref ValueLength as int, Value as IntPtr) as bool
 
 [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
 public callable KUSB_SetConfigurationDelegate([In] InterfaceHandle as KUSB_HANDLE, ConfigurationNumber as byte) as bool
@@ -1900,7 +2181,7 @@ public callable KUSB_CloneDelegate([In] InterfaceHandle as KUSB_HANDLE, [Out] re
 public callable KUSB_QueryInterfaceSettingsDelegate([In] InterfaceHandle as KUSB_HANDLE, AltSettingNumber as byte, [Out] ref UsbAltInterfaceDescriptor as USB_INTERFACE_DESCRIPTOR) as bool
 
 [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
-public callable KUSB_QueryDeviceInformationDelegate([In] InterfaceHandle as KUSB_HANDLE, InformationType as uint, ref BufferLength as uint, Buffer as IntPtr) as bool
+public callable KUSB_QueryDeviceInformationDelegate([In] InterfaceHandle as KUSB_HANDLE, InformationType as int, ref BufferLength as int, Buffer as IntPtr) as bool
 
 [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
 public callable KUSB_SetCurrentAlternateSettingDelegate([In] InterfaceHandle as KUSB_HANDLE, AltSettingNumber as byte) as bool
@@ -1912,16 +2193,16 @@ public callable KUSB_GetCurrentAlternateSettingDelegate([In] InterfaceHandle as 
 public callable KUSB_QueryPipeDelegate([In] InterfaceHandle as KUSB_HANDLE, AltSettingNumber as byte, PipeIndex as byte, [Out] ref PipeInformation as WINUSB_PIPE_INFORMATION) as bool
 
 [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
-public callable KUSB_SetPipePolicyDelegate([In] InterfaceHandle as KUSB_HANDLE, PipeID as byte, PolicyType as uint, ValueLength as uint, Value as IntPtr) as bool
+public callable KUSB_SetPipePolicyDelegate([In] InterfaceHandle as KUSB_HANDLE, PipeID as byte, PolicyType as int, ValueLength as int, Value as IntPtr) as bool
 
 [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
-public callable KUSB_GetPipePolicyDelegate([In] InterfaceHandle as KUSB_HANDLE, PipeID as byte, PolicyType as uint, ref ValueLength as uint, Value as IntPtr) as bool
+public callable KUSB_GetPipePolicyDelegate([In] InterfaceHandle as KUSB_HANDLE, PipeID as byte, PolicyType as int, ref ValueLength as int, Value as IntPtr) as bool
 
 [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
-public callable KUSB_ReadPipeDelegate([In] InterfaceHandle as KUSB_HANDLE, PipeID as byte, Buffer as IntPtr, BufferLength as uint, ref LengthTransferred as uint, Overlapped as IntPtr) as bool
+public callable KUSB_ReadPipeDelegate([In] InterfaceHandle as KUSB_HANDLE, PipeID as byte, Buffer as IntPtr, BufferLength as int, ref LengthTransferred as int, Overlapped as IntPtr) as bool
 
 [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
-public callable KUSB_WritePipeDelegate([In] InterfaceHandle as KUSB_HANDLE, PipeID as byte, Buffer as IntPtr, BufferLength as uint, ref LengthTransferred as uint, Overlapped as IntPtr) as bool
+public callable KUSB_WritePipeDelegate([In] InterfaceHandle as KUSB_HANDLE, PipeID as byte, Buffer as IntPtr, BufferLength as int, ref LengthTransferred as int, Overlapped as IntPtr) as bool
 
 [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
 public callable KUSB_ResetPipeDelegate([In] InterfaceHandle as KUSB_HANDLE, PipeID as byte) as bool
@@ -1933,619 +2214,891 @@ public callable KUSB_AbortPipeDelegate([In] InterfaceHandle as KUSB_HANDLE, Pipe
 public callable KUSB_FlushPipeDelegate([In] InterfaceHandle as KUSB_HANDLE, PipeID as byte) as bool
 
 [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
-public callable KUSB_IsoReadPipeDelegate([In] InterfaceHandle as KUSB_HANDLE, PipeID as byte, Buffer as IntPtr, BufferLength as uint, Overlapped as IntPtr, [In] IsoContext as KISO_CONTEXT) as bool
+public callable KUSB_IsoReadPipeDelegate([In] InterfaceHandle as KUSB_HANDLE, PipeID as byte, Buffer as IntPtr, BufferLength as int, Overlapped as IntPtr, [In] IsoContext as KISO_CONTEXT) as bool
 
 [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
-public callable KUSB_IsoWritePipeDelegate([In] InterfaceHandle as KUSB_HANDLE, PipeID as byte, Buffer as IntPtr, BufferLength as uint, Overlapped as IntPtr, [In] IsoContext as KISO_CONTEXT) as bool
+public callable KUSB_IsoWritePipeDelegate([In] InterfaceHandle as KUSB_HANDLE, PipeID as byte, Buffer as IntPtr, BufferLength as int, Overlapped as IntPtr, [In] IsoContext as KISO_CONTEXT) as bool
 
 [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
-public callable KUSB_GetCurrentFrameNumberDelegate([In] InterfaceHandle as KUSB_HANDLE, ref FrameNumber as uint) as bool
+public callable KUSB_GetCurrentFrameNumberDelegate([In] InterfaceHandle as KUSB_HANDLE, ref FrameNumber as int) as bool
 
 [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
-public callable KUSB_GetOverlappedResultDelegate([In] InterfaceHandle as KUSB_HANDLE, Overlapped as IntPtr, ref lpNumberOfBytesTransferred as uint, bWait as bool) as bool
+public callable KUSB_GetOverlappedResultDelegate([In] InterfaceHandle as KUSB_HANDLE, Overlapped as IntPtr, ref lpNumberOfBytesTransferred as int, bWait as bool) as bool
 
 [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
-public callable KUSB_GetPropertyDelegate([In] InterfaceHandle as KUSB_HANDLE, PropertyType as KUSB_PROPERTY, ref PropertySize as uint, Value as IntPtr) as bool
+public callable KUSB_GetPropertyDelegate([In] InterfaceHandle as KUSB_HANDLE, PropertyType as KUSB_PROPERTY, ref PropertySize as int, Value as IntPtr) as bool
 
 [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
-public callable KHOT_PLUG_CB([In] HotHandle as IntPtr, [In] DeviceInfo as KLST_DEVINFO_HANDLE, PlugType as KLST_SYNC_FLAG) as void
+public callable KHOT_PLUG_CB([In] HotHandle as KHOT_HANDLE, [In] DeviceInfo as KLST_DEVINFO_HANDLE, PlugType as KLST_SYNC_FLAG) as void
 
 [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
-public callable KSTM_ERROR_CB([In] ref StreamInfo as KSTM_INFO, [In] ref XferContext as KSTM_XFER_CONTEXT, ErrorCode as int) as int
+public callable KSTM_ERROR_CB([In] StreamInfo as KSTM_INFO, [In] XferContext as KSTM_XFER_CONTEXT, XferContextIndex as int, ErrorCode as int) as int
 
 [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
-public callable KSTM_SUBMIT_CB([In] ref StreamInfo as KSTM_INFO, [In] ref XferContext as KSTM_XFER_CONTEXT, Overlapped as IntPtr) as int
+public callable KSTM_SUBMIT_CB([In] StreamInfo as KSTM_INFO, [In] XferContext as KSTM_XFER_CONTEXT, XferContextIndex as int, Overlapped as IntPtr) as int
 
 [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
-public callable KSTM_STARTED_CB([In] ref StreamInfo as KSTM_INFO, [In] ref XferContext as KSTM_XFER_CONTEXT, XferContextIndex as int) as int
+public callable KSTM_STARTED_CB([In] StreamInfo as KSTM_INFO, [In] XferContext as KSTM_XFER_CONTEXT, XferContextIndex as int) as int
 
 [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
-public callable KSTM_STOPPED_CB([In] ref StreamInfo as KSTM_INFO, [In] ref XferContext as KSTM_XFER_CONTEXT, XferContextIndex as int) as int
+public callable KSTM_STOPPED_CB([In] StreamInfo as KSTM_INFO, [In] XferContext as KSTM_XFER_CONTEXT, XferContextIndex as int) as int
 
 [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
-public callable KSTM_COMPLETE_CB([In] ref StreamInfo as KSTM_INFO, [In] ref XferContext as KSTM_XFER_CONTEXT, ErrorCode as int) as int
+public callable KSTM_COMPLETE_CB([In] StreamInfo as KSTM_INFO, [In] XferContext as KSTM_XFER_CONTEXT, XferContextIndex as int, ErrorCode as int) as int
 
 [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet: CharSet.Ansi, SetLastError: true)]
-public callable KSTM_BEFORE_COMPLETE_CB([In] ref StreamInfo as KSTM_INFO, [In] ref XferContext as KSTM_XFER_CONTEXT, ref ErrorCode as int) as KSTM_COMPLETE_RESULT
+public callable KSTM_BEFORE_COMPLETE_CB([In] StreamInfo as KSTM_INFO, [In] XferContext as KSTM_XFER_CONTEXT, XferContextIndex as int, ref ErrorCode as int) as KSTM_COMPLETE_RESULT
 #endregion
 
 
-public class LstK:
+public class LstK(IDisposable):
 
-	protected final handle as KLST_HANDLE
+	protected mHandleStruct as KLST_HANDLE
+
+	protected mbDisposed as bool
 
 	
-	public def constructor(Flags as KLST_FLAG):
-		RuntimeHelpers.PrepareConstrainedRegions()
-		
-		try:
-			pass
-		ensure:
-			success as bool = Functions.LstK_Init(handle, Flags)
+	protected def constructor():
+		pass
+
+	
+	
+	#region IDisposable Members
+	public virtual def Dispose():
+		Dispose(true)
+		GC.SuppressFinalize(self)
+
+	#endregion
+	
+	
+	def destructor():
+		Dispose(false)
+
+	
+	protected virtual def Dispose(disposing as bool):
+		if not mbDisposed:
+			if mHandleStruct.Pointer != IntPtr.Zero:
+				AllKFunctions.LstK_Free(mHandleStruct)
+				Debug.Print('{0} Dispose: Freed Handle:{1:X16}h Explicit:{2}', GetType().Name, mHandleStruct.Pointer.ToInt64(), disposing)
+			else:
+				Debug.Print('{0} Dispose: [WARNING] Handle is null', GetType().Name)
 			
-			if ((not success) or handle.IsInvalid) or handle.IsClosed:
-				handle.SetHandleAsInvalid()
-				errorCode as int = Marshal.GetLastWin32Error()
-				raise Exception(((GetType().Name + ' failed. ErrorCode=') + errorCode.ToString('X')))
+			mHandleStruct = KLST_HANDLE(IntPtr.Zero)
+			mbDisposed = true
+
+	
+	protected def Init(Flags as KLST_FLAG) as bool:
+		success as bool = AllKFunctions.LstK_Init(mHandleStruct, Flags)
+		
+		if not success:
+			raise Exception(string.Format('{0} failed initializing. ErrorCode={1:X8}h', GetType().Name, Marshal.GetLastWin32Error()))
+		
+		Debug.Print('{0} Init: handle 0x{1:X16}', GetType().Name, mHandleStruct.Pointer.ToInt64())
+		return true
+
+	
+	protected def InitEx(Flags as KLST_FLAG, ref PatternMatch as KLST_PATTERN_MATCH) as bool:
+		success as bool = AllKFunctions.LstK_InitEx(mHandleStruct, Flags, PatternMatch)
+		
+		if not success:
+			raise Exception(string.Format('{0} failed initializing. ErrorCode={1:X8}h', GetType().Name, Marshal.GetLastWin32Error()))
+		
+		Debug.Print('{0} Init: handle 0x{1:X16}', GetType().Name, mHandleStruct.Pointer.ToInt64())
+		return true
+
+	
+	
+	#region Public Members
+	public def constructor(Flags as KLST_FLAG):
+		success as bool = AllKFunctions.LstK_Init(mHandleStruct, Flags)
+		
+		if not success:
+			raise Exception(string.Format('{0} failed initializing. ErrorCode={1:X8}h', GetType().Name, Marshal.GetLastWin32Error()))
+		
+		Debug.Print('{0} Init: handle 0x{1:X16}', GetType().Name, mHandleStruct.Pointer.ToInt64())
 
 	
 	public def constructor(Flags as KLST_FLAG, ref PatternMatch as KLST_PATTERN_MATCH):
-		RuntimeHelpers.PrepareConstrainedRegions()
+		success as bool = AllKFunctions.LstK_InitEx(mHandleStruct, Flags, PatternMatch)
 		
-		try:
-			pass
-		ensure:
-			success as bool = Functions.LstK_InitEx(handle, Flags, PatternMatch)
-			
-			if ((not success) or handle.IsInvalid) or handle.IsClosed:
-				handle.SetHandleAsInvalid()
-				errorCode as int = Marshal.GetLastWin32Error()
-				raise Exception(((GetType().Name + ' failed. ErrorCode=') + errorCode.ToString('X')))
+		if not success:
+			raise Exception(string.Format('{0} failed initializing. ErrorCode={1:X8}h', GetType().Name, Marshal.GetLastWin32Error()))
+		
+		Debug.Print('{0} Init: handle 0x{1:X16}', GetType().Name, mHandleStruct.Pointer.ToInt64())
+
+	
+	public virtual def Count(ref Count as int) as bool:
+		return AllKFunctions.LstK_Count(mHandleStruct, Count)
+
+	
+	public virtual def Current(ref DeviceInfo as KLST_DEVINFO_HANDLE) as bool:
+		return AllKFunctions.LstK_Current(mHandleStruct, DeviceInfo)
+
+	
+	public virtual def Enumerate(EnumDevListCB as KLST_ENUM_DEVINFO_CB, Context as IntPtr) as bool:
+		return AllKFunctions.LstK_Enumerate(mHandleStruct, EnumDevListCB, Context)
+
+	
+	public virtual def FindByVidPid(Vid as int, Pid as int, ref DeviceInfo as KLST_DEVINFO_HANDLE) as bool:
+		return AllKFunctions.LstK_FindByVidPid(mHandleStruct, Vid, Pid, DeviceInfo)
+
+	
+	public virtual def Free():
+		Dispose()
 
 	
 	public Handle as KLST_HANDLE:
 		get:
-			return handle
+			return mHandleStruct
 
 	
-	public virtual def Free() as bool:
-		if handle.IsInvalid or handle.IsClosed:
-			return false
+	public virtual def MoveNext(ref DeviceInfo as KLST_DEVINFO_HANDLE) as bool:
+		return AllKFunctions.LstK_MoveNext(mHandleStruct, DeviceInfo)
+
+	
+	public virtual def MoveReset():
+		AllKFunctions.LstK_MoveReset(mHandleStruct)
+	#endregion
+
+
+public class HotK(IDisposable):
+
+	protected mHandleStruct as KHOT_HANDLE
+
+	protected mbDisposed as bool
+
+	
+	protected def constructor():
+		pass
+
+	
+	
+	#region IDisposable Members
+	public virtual def Dispose():
+		Dispose(true)
+		GC.SuppressFinalize(self)
+
+	#endregion
+	
+	
+	def destructor():
+		Dispose(false)
+
+	
+	protected virtual def Dispose(disposing as bool):
+		if not mbDisposed:
+			if mHandleStruct.Pointer != IntPtr.Zero:
+				AllKFunctions.HotK_Free(mHandleStruct)
+				Debug.Print('{0} Dispose: Freed Handle:{1:X16}h Explicit:{2}', GetType().Name, mHandleStruct.Pointer.ToInt64(), disposing)
+			else:
+				Debug.Print('{0} Dispose: [WARNING] Handle is null', GetType().Name)
+			
+			mHandleStruct = KHOT_HANDLE(IntPtr.Zero)
+			mbDisposed = true
+
+	
+	protected def Init(ref InitParams as KHOT_PARAMS) as bool:
+		success as bool = AllKFunctions.HotK_Init(mHandleStruct, InitParams)
 		
-		handle.Close()
+		if not success:
+			raise Exception(string.Format('{0} failed initializing. ErrorCode={1:X8}h', GetType().Name, Marshal.GetLastWin32Error()))
+		
+		Debug.Print('{0} Init: handle 0x{1:X16}', GetType().Name, mHandleStruct.Pointer.ToInt64())
 		return true
 
 	
-	public def Enumerate(EnumDevListCB as KLST_ENUM_DEVINFO_CB, Context as IntPtr) as bool:
-		return Functions.LstK_Enumerate(handle, EnumDevListCB, Context)
-
 	
-	public def Current(ref DeviceInfo as KLST_DEVINFO_HANDLE) as bool:
-		return Functions.LstK_Current(handle, DeviceInfo)
-
-	
-	public def MoveNext(ref DeviceInfo as KLST_DEVINFO_HANDLE) as bool:
-		return Functions.LstK_MoveNext(handle, DeviceInfo)
-
-	
-	public def MoveReset():
-		Functions.LstK_MoveReset(handle)
-
-	
-	public def FindByVidPid(Vid as int, Pid as int, ref DeviceInfo as KLST_DEVINFO_HANDLE) as bool:
-		return Functions.LstK_FindByVidPid(handle, Vid, Pid, DeviceInfo)
-
-	
-	public def Count(ref Count as uint) as bool:
-		return Functions.LstK_Count(handle, Count)
-
-
-public class HotK:
-
-	protected final handle as KHOT_HANDLE
-
-	
+	#region Public Members
 	public def constructor(ref InitParams as KHOT_PARAMS):
-		RuntimeHelpers.PrepareConstrainedRegions()
+		success as bool = AllKFunctions.HotK_Init(mHandleStruct, InitParams)
 		
-		try:
-			pass
-		ensure:
-			success as bool = Functions.HotK_Init(handle, InitParams)
-			
-			if ((not success) or handle.IsInvalid) or handle.IsClosed:
-				handle.SetHandleAsInvalid()
-				errorCode as int = Marshal.GetLastWin32Error()
-				raise Exception(((GetType().Name + ' failed. ErrorCode=') + errorCode.ToString('X')))
+		if not success:
+			raise Exception(string.Format('{0} failed initializing. ErrorCode={1:X8}h', GetType().Name, Marshal.GetLastWin32Error()))
+		
+		Debug.Print('{0} Init: handle 0x{1:X16}', GetType().Name, mHandleStruct.Pointer.ToInt64())
+
+	
+	public virtual def Free():
+		Dispose()
+
+	
+	public virtual def FreeAll():
+		AllKFunctions.HotK_FreeAll()
 
 	
 	public Handle as KHOT_HANDLE:
 		get:
-			return handle
+			return mHandleStruct
+	#endregion
+
+
+public class UsbK(IDisposable):
+
+	protected driverAPI as KUSB_DRIVER_API
+
+	protected mHandleStruct as KUSB_HANDLE
+
+	protected mbDisposed as bool
 
 	
-	public virtual def Free() as bool:
-		if handle.IsInvalid or handle.IsClosed:
-			return false
+	protected def constructor():
+		pass
+
+	
+	
+	#region IDisposable Members
+	public virtual def Dispose():
+		Dispose(true)
+		GC.SuppressFinalize(self)
+
+	#endregion
+	
+	
+	def destructor():
+		Dispose(false)
+
+	
+	protected virtual def Dispose(disposing as bool):
+		if not mbDisposed:
+			if mHandleStruct.Pointer != IntPtr.Zero:
+				AllKFunctions.UsbK_Free(mHandleStruct)
+				Debug.Print('{0} Dispose: Freed Handle:{1:X16}h Explicit:{2}', GetType().Name, mHandleStruct.Pointer.ToInt64(), disposing)
+			else:
+				Debug.Print('{0} Dispose: [WARNING] Handle is null', GetType().Name)
+			
+			mHandleStruct = KUSB_HANDLE(IntPtr.Zero)
+			mbDisposed = true
+
+	
+	protected def Init(DevInfo as KLST_DEVINFO_HANDLE) as bool:
+		success as bool = AllKFunctions.LibK_LoadDriverAPI(driverAPI, DevInfo.DriverID)
 		
-		handle.Close()
+		if not success:
+			raise Exception(string.Format('{0} failed loading Driver API. ErrorCode={1:X8}h', GetType().Name, Marshal.GetLastWin32Error()))
+		
+		success = driverAPI.Init(mHandleStruct, DevInfo)
+		
+		if not success:
+			raise Exception(string.Format('{0} failed initializing usb device. ErrorCode={1:X8}h', GetType().Name, Marshal.GetLastWin32Error()))
+		
+		Debug.Print('{0} Init: handle 0x{1:X16}', GetType().Name, mHandleStruct.Pointer.ToInt64())
 		return true
 
 	
-	public def FreeAll():
-		Functions.HotK_FreeAll()
-
-
-public class UsbK:
-
-	protected final driverAPI as KUSB_DRIVER_API
-
-	protected final handle as KUSB_HANDLE
+	protected def Initialize(DeviceHandle as IntPtr, driverID as KUSB_DRVID) as bool:
+		success as bool = AllKFunctions.LibK_LoadDriverAPI(driverAPI, (driverID cast int))
+		
+		if not success:
+			raise Exception(string.Format('{0} failed loading Driver API. ErrorCode={1:X8}h', GetType().Name, Marshal.GetLastWin32Error()))
+		
+		success = driverAPI.Initialize(DeviceHandle, mHandleStruct)
+		
+		if not success:
+			raise Exception(string.Format('{0} failed initializing usb device. ErrorCode={1:X8}h', GetType().Name, Marshal.GetLastWin32Error()))
+		
+		Debug.Print('{0} Init: handle 0x{1:X16}', GetType().Name, mHandleStruct.Pointer.ToInt64())
+		return true
 
 	
+	
+	#region Public Members
 	public def constructor(DevInfo as KLST_DEVINFO_HANDLE):
-		if not Functions.LibK_LoadDriverAPI(driverAPI, DevInfo.DriverID):
-			raise Exception(((GetType().Name + ' failed loading Driver API. ErrorCode=') + Marshal.GetLastWin32Error().ToString('X')))
+		success as bool = AllKFunctions.LibK_LoadDriverAPI(driverAPI, DevInfo.DriverID)
 		
-		RuntimeHelpers.PrepareConstrainedRegions()
+		if not success:
+			raise Exception(string.Format('{0} failed loading Driver API. ErrorCode={1:X8}h', GetType().Name, Marshal.GetLastWin32Error()))
 		
-		try:
-			pass
-		ensure:
-			success as bool = driverAPI.Init(handle, DevInfo)
-			
-			if ((not success) or handle.IsInvalid) or handle.IsClosed:
-				handle.SetHandleAsInvalid()
-				errorCode as int = Marshal.GetLastWin32Error()
-				raise Exception(((GetType().Name + ' failed. ErrorCode=') + errorCode.ToString('X')))
+		success = driverAPI.Init(mHandleStruct, DevInfo)
+		
+		if not success:
+			raise Exception(string.Format('{0} failed initializing usb device. ErrorCode={1:X8}h', GetType().Name, Marshal.GetLastWin32Error()))
+		
+		Debug.Print('{0} Init: handle 0x{1:X16}', GetType().Name, mHandleStruct.Pointer.ToInt64())
 
 	
 	public def constructor(DeviceHandle as IntPtr, driverID as KUSB_DRVID):
-		if not Functions.LibK_LoadDriverAPI(driverAPI, (driverID cast int)):
-			raise Exception(((GetType().Name + ' failed loading Driver API. ErrorCode=') + Marshal.GetLastWin32Error().ToString('X')))
+		success as bool = AllKFunctions.LibK_LoadDriverAPI(driverAPI, (driverID cast int))
 		
-		RuntimeHelpers.PrepareConstrainedRegions()
+		if not success:
+			raise Exception(string.Format('{0} failed loading Driver API. ErrorCode={1:X8}h', GetType().Name, Marshal.GetLastWin32Error()))
 		
-		try:
-			pass
-		ensure:
-			success as bool = driverAPI.Initialize(DeviceHandle, handle)
-			
-			if ((not success) or handle.IsInvalid) or handle.IsClosed:
-				handle.SetHandleAsInvalid()
-				errorCode as int = Marshal.GetLastWin32Error()
-				raise Exception(((GetType().Name + ' failed. ErrorCode=') + errorCode.ToString('X')))
+		success = driverAPI.Initialize(DeviceHandle, mHandleStruct)
+		
+		if not success:
+			raise Exception(string.Format('{0} failed initializing usb device. ErrorCode={1:X8}h', GetType().Name, Marshal.GetLastWin32Error()))
+		
+		Debug.Print('{0} Init: handle 0x{1:X16}', GetType().Name, mHandleStruct.Pointer.ToInt64())
+
+	
+	public virtual def AbortPipe(PipeID as byte) as bool:
+		return driverAPI.AbortPipe(mHandleStruct, PipeID)
+
+	
+	public virtual def ClaimInterface(NumberOrIndex as byte, IsIndex as bool) as bool:
+		return driverAPI.ClaimInterface(mHandleStruct, NumberOrIndex, IsIndex)
+
+	
+	public virtual def Clone(ref DstInterfaceHandle as KUSB_HANDLE) as bool:
+		return driverAPI.Clone(mHandleStruct, DstInterfaceHandle)
+
+	
+	public virtual def ControlTransfer(SetupPacket as WINUSB_SETUP_PACKET, Buffer as IntPtr, BufferLength as int, ref LengthTransferred as int, Overlapped as IntPtr) as bool:
+		return driverAPI.ControlTransfer(mHandleStruct, SetupPacket, Buffer, BufferLength, LengthTransferred, Overlapped)
+
+	
+	public virtual def ControlTransfer(SetupPacket as WINUSB_SETUP_PACKET, Buffer as Array, BufferLength as int, ref LengthTransferred as int, Overlapped as IntPtr) as bool:
+		return driverAPI.ControlTransfer(mHandleStruct, SetupPacket, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, LengthTransferred, Overlapped)
+
+	
+	public virtual def ControlTransfer(SetupPacket as WINUSB_SETUP_PACKET, Buffer as Array, BufferLength as int, ref LengthTransferred as int, Overlapped as KOVL_HANDLE) as bool:
+		return driverAPI.ControlTransfer(mHandleStruct, SetupPacket, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, LengthTransferred, Overlapped.Pointer)
+
+	
+	public virtual def ControlTransfer(SetupPacket as WINUSB_SETUP_PACKET, Buffer as IntPtr, BufferLength as int, ref LengthTransferred as int, Overlapped as KOVL_HANDLE) as bool:
+		return driverAPI.ControlTransfer(mHandleStruct, SetupPacket, Buffer, BufferLength, LengthTransferred, Overlapped.Pointer)
+
+	
+	public virtual def FlushPipe(PipeID as byte) as bool:
+		return driverAPI.FlushPipe(mHandleStruct, PipeID)
+
+	
+	public virtual def Free():
+		Dispose()
+
+	
+	public virtual def GetAltInterface(NumberOrIndex as byte, IsIndex as bool, ref AltSettingNumber as byte) as bool:
+		return driverAPI.GetAltInterface(mHandleStruct, NumberOrIndex, IsIndex, AltSettingNumber)
+
+	
+	public virtual def GetAssociatedInterface(AssociatedInterfaceIndex as byte, ref AssociatedInterfaceHandle as KUSB_HANDLE) as bool:
+		return driverAPI.GetAssociatedInterface(mHandleStruct, AssociatedInterfaceIndex, AssociatedInterfaceHandle)
+
+	
+	public virtual def GetConfiguration(ref ConfigurationNumber as byte) as bool:
+		return driverAPI.GetConfiguration(mHandleStruct, ConfigurationNumber)
+
+	
+	public virtual def GetCurrentAlternateSetting(ref AltSettingNumber as byte) as bool:
+		return driverAPI.GetCurrentAlternateSetting(mHandleStruct, AltSettingNumber)
+
+	
+	public virtual def GetCurrentFrameNumber(ref FrameNumber as int) as bool:
+		return driverAPI.GetCurrentFrameNumber(mHandleStruct, FrameNumber)
+
+	
+	public virtual def GetDescriptor(DescriptorType as byte, Index as byte, LanguageID as int, Buffer as IntPtr, BufferLength as int, ref LengthTransferred as int) as bool:
+		return driverAPI.GetDescriptor(mHandleStruct, DescriptorType, Index, (LanguageID cast ushort), Buffer, BufferLength, LengthTransferred)
+
+	
+	public virtual def GetDescriptor(DescriptorType as byte, Index as byte, LanguageID as int, Buffer as Array, BufferLength as int, ref LengthTransferred as int) as bool:
+		return driverAPI.GetDescriptor(mHandleStruct, DescriptorType, Index, (LanguageID cast ushort), Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, LengthTransferred)
+
+	
+	public virtual def GetOverlappedResult(Overlapped as IntPtr, ref lpNumberOfBytesTransferred as int, bWait as bool) as bool:
+		return driverAPI.GetOverlappedResult(mHandleStruct, Overlapped, lpNumberOfBytesTransferred, bWait)
+
+	
+	public virtual def GetOverlappedResult(Overlapped as KOVL_HANDLE, ref lpNumberOfBytesTransferred as int, bWait as bool) as bool:
+		return driverAPI.GetOverlappedResult(mHandleStruct, Overlapped.Pointer, lpNumberOfBytesTransferred, bWait)
+
+	
+	public virtual def GetPipePolicy(PipeID as byte, PolicyType as int, ref ValueLength as int, Value as IntPtr) as bool:
+		return driverAPI.GetPipePolicy(mHandleStruct, PipeID, PolicyType, ValueLength, Value)
+
+	
+	public virtual def GetPipePolicy(PipeID as byte, PolicyType as int, ref ValueLength as int, Value as Array) as bool:
+		return driverAPI.GetPipePolicy(mHandleStruct, PipeID, PolicyType, ValueLength, Marshal.UnsafeAddrOfPinnedArrayElement(Value, 0))
+
+	
+	public virtual def GetPowerPolicy(PolicyType as int, ref ValueLength as int, Value as IntPtr) as bool:
+		return driverAPI.GetPowerPolicy(mHandleStruct, PolicyType, ValueLength, Value)
+
+	
+	public virtual def GetPowerPolicy(PolicyType as int, ref ValueLength as int, Value as Array) as bool:
+		return driverAPI.GetPowerPolicy(mHandleStruct, PolicyType, ValueLength, Marshal.UnsafeAddrOfPinnedArrayElement(Value, 0))
+
+	
+	public virtual def GetProperty(PropertyType as KUSB_PROPERTY, ref PropertySize as int, Value as IntPtr) as bool:
+		return driverAPI.GetProperty(mHandleStruct, PropertyType, PropertySize, Value)
+
+	
+	public virtual def GetProperty(PropertyType as KUSB_PROPERTY, ref PropertySize as int, Value as Array) as bool:
+		return driverAPI.GetProperty(mHandleStruct, PropertyType, PropertySize, Marshal.UnsafeAddrOfPinnedArrayElement(Value, 0))
 
 	
 	public Handle as KUSB_HANDLE:
 		get:
-			return handle
+			return mHandleStruct
 
 	
-	public virtual def Free() as bool:
-		if handle.IsInvalid or handle.IsClosed:
-			return false
+	public virtual def IsoReadPipe(PipeID as byte, Buffer as IntPtr, BufferLength as int, Overlapped as IntPtr, IsoContext as KISO_CONTEXT) as bool:
+		return driverAPI.IsoReadPipe(mHandleStruct, PipeID, Buffer, BufferLength, Overlapped, IsoContext)
+
+	
+	public virtual def IsoReadPipe(PipeID as byte, Buffer as Array, BufferLength as int, Overlapped as IntPtr, IsoContext as KISO_CONTEXT) as bool:
+		return driverAPI.IsoReadPipe(mHandleStruct, PipeID, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, Overlapped, IsoContext)
+
+	
+	public virtual def IsoReadPipe(PipeID as byte, Buffer as Array, BufferLength as int, Overlapped as KOVL_HANDLE, IsoContext as KISO_CONTEXT) as bool:
+		return driverAPI.IsoReadPipe(mHandleStruct, PipeID, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, Overlapped.Pointer, IsoContext)
+
+	
+	public virtual def IsoReadPipe(PipeID as byte, Buffer as IntPtr, BufferLength as int, Overlapped as KOVL_HANDLE, IsoContext as KISO_CONTEXT) as bool:
+		return driverAPI.IsoReadPipe(mHandleStruct, PipeID, Buffer, BufferLength, Overlapped.Pointer, IsoContext)
+
+	
+	public virtual def IsoWritePipe(PipeID as byte, Buffer as IntPtr, BufferLength as int, Overlapped as IntPtr, IsoContext as KISO_CONTEXT) as bool:
+		return driverAPI.IsoWritePipe(mHandleStruct, PipeID, Buffer, BufferLength, Overlapped, IsoContext)
+
+	
+	public virtual def IsoWritePipe(PipeID as byte, Buffer as Array, BufferLength as int, Overlapped as IntPtr, IsoContext as KISO_CONTEXT) as bool:
+		return driverAPI.IsoWritePipe(mHandleStruct, PipeID, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, Overlapped, IsoContext)
+
+	
+	public virtual def IsoWritePipe(PipeID as byte, Buffer as Array, BufferLength as int, Overlapped as KOVL_HANDLE, IsoContext as KISO_CONTEXT) as bool:
+		return driverAPI.IsoWritePipe(mHandleStruct, PipeID, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, Overlapped.Pointer, IsoContext)
+
+	
+	public virtual def IsoWritePipe(PipeID as byte, Buffer as IntPtr, BufferLength as int, Overlapped as KOVL_HANDLE, IsoContext as KISO_CONTEXT) as bool:
+		return driverAPI.IsoWritePipe(mHandleStruct, PipeID, Buffer, BufferLength, Overlapped.Pointer, IsoContext)
+
+	
+	public virtual def QueryDeviceInformation(InformationType as int, ref BufferLength as int, Buffer as IntPtr) as bool:
+		return driverAPI.QueryDeviceInformation(mHandleStruct, InformationType, BufferLength, Buffer)
+
+	
+	public virtual def QueryInterfaceSettings(AltSettingNumber as byte, ref UsbAltInterfaceDescriptor as USB_INTERFACE_DESCRIPTOR) as bool:
+		return driverAPI.QueryInterfaceSettings(mHandleStruct, AltSettingNumber, UsbAltInterfaceDescriptor)
+
+	
+	public virtual def QueryPipe(AltSettingNumber as byte, PipeIndex as byte, ref PipeInformation as WINUSB_PIPE_INFORMATION) as bool:
+		return driverAPI.QueryPipe(mHandleStruct, AltSettingNumber, PipeIndex, PipeInformation)
+
+	
+	public virtual def ReadPipe(PipeID as byte, Buffer as IntPtr, BufferLength as int, ref LengthTransferred as int, Overlapped as IntPtr) as bool:
+		return driverAPI.ReadPipe(mHandleStruct, PipeID, Buffer, BufferLength, LengthTransferred, Overlapped)
+
+	
+	public virtual def ReadPipe(PipeID as byte, Buffer as Array, BufferLength as int, ref LengthTransferred as int, Overlapped as IntPtr) as bool:
+		return driverAPI.ReadPipe(mHandleStruct, PipeID, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, LengthTransferred, Overlapped)
+
+	
+	public virtual def ReadPipe(PipeID as byte, Buffer as Array, BufferLength as int, ref LengthTransferred as int, Overlapped as KOVL_HANDLE) as bool:
+		return driverAPI.ReadPipe(mHandleStruct, PipeID, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, LengthTransferred, Overlapped.Pointer)
+
+	
+	public virtual def ReadPipe(PipeID as byte, Buffer as IntPtr, BufferLength as int, ref LengthTransferred as int, Overlapped as KOVL_HANDLE) as bool:
+		return driverAPI.ReadPipe(mHandleStruct, PipeID, Buffer, BufferLength, LengthTransferred, Overlapped.Pointer)
+
+	
+	public virtual def ReleaseInterface(NumberOrIndex as byte, IsIndex as bool) as bool:
+		return driverAPI.ReleaseInterface(mHandleStruct, NumberOrIndex, IsIndex)
+
+	
+	public virtual def ResetDevice() as bool:
+		return driverAPI.ResetDevice(mHandleStruct)
+
+	
+	public virtual def ResetPipe(PipeID as byte) as bool:
+		return driverAPI.ResetPipe(mHandleStruct, PipeID)
+
+	
+	public virtual def SelectInterface(NumberOrIndex as byte, IsIndex as bool) as bool:
+		return driverAPI.SelectInterface(mHandleStruct, NumberOrIndex, IsIndex)
+
+	
+	public virtual def SetAltInterface(NumberOrIndex as byte, IsIndex as bool, AltSettingNumber as byte) as bool:
+		return driverAPI.SetAltInterface(mHandleStruct, NumberOrIndex, IsIndex, AltSettingNumber)
+
+	
+	public virtual def SetConfiguration(ConfigurationNumber as byte) as bool:
+		return driverAPI.SetConfiguration(mHandleStruct, ConfigurationNumber)
+
+	
+	public virtual def SetCurrentAlternateSetting(AltSettingNumber as byte) as bool:
+		return driverAPI.SetCurrentAlternateSetting(mHandleStruct, AltSettingNumber)
+
+	
+	public virtual def SetPipePolicy(PipeID as byte, PolicyType as int, ValueLength as int, Value as IntPtr) as bool:
+		return driverAPI.SetPipePolicy(mHandleStruct, PipeID, PolicyType, ValueLength, Value)
+
+	
+	public virtual def SetPipePolicy(PipeID as byte, PolicyType as int, ValueLength as int, Value as Array) as bool:
+		return driverAPI.SetPipePolicy(mHandleStruct, PipeID, PolicyType, ValueLength, Marshal.UnsafeAddrOfPinnedArrayElement(Value, 0))
+
+	
+	public virtual def SetPowerPolicy(PolicyType as int, ValueLength as int, Value as IntPtr) as bool:
+		return driverAPI.SetPowerPolicy(mHandleStruct, PolicyType, ValueLength, Value)
+
+	
+	public virtual def SetPowerPolicy(PolicyType as int, ValueLength as int, Value as Array) as bool:
+		return driverAPI.SetPowerPolicy(mHandleStruct, PolicyType, ValueLength, Marshal.UnsafeAddrOfPinnedArrayElement(Value, 0))
+
+	
+	public virtual def WritePipe(PipeID as byte, Buffer as IntPtr, BufferLength as int, ref LengthTransferred as int, Overlapped as IntPtr) as bool:
+		return driverAPI.WritePipe(mHandleStruct, PipeID, Buffer, BufferLength, LengthTransferred, Overlapped)
+
+	
+	public virtual def WritePipe(PipeID as byte, Buffer as Array, BufferLength as int, ref LengthTransferred as int, Overlapped as IntPtr) as bool:
+		return driverAPI.WritePipe(mHandleStruct, PipeID, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, LengthTransferred, Overlapped)
+
+	
+	public virtual def WritePipe(PipeID as byte, Buffer as Array, BufferLength as int, ref LengthTransferred as int, Overlapped as KOVL_HANDLE) as bool:
+		return driverAPI.WritePipe(mHandleStruct, PipeID, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, LengthTransferred, Overlapped.Pointer)
+
+	
+	public virtual def WritePipe(PipeID as byte, Buffer as IntPtr, BufferLength as int, ref LengthTransferred as int, Overlapped as KOVL_HANDLE) as bool:
+		return driverAPI.WritePipe(mHandleStruct, PipeID, Buffer, BufferLength, LengthTransferred, Overlapped.Pointer)
+	#endregion
+
+
+public class OvlK(IDisposable):
+
+	protected mHandleStruct as KOVL_POOL_HANDLE
+
+	protected mbDisposed as bool
+
+	
+	protected def constructor():
+		pass
+
+	
+	
+	#region IDisposable Members
+	public virtual def Dispose():
+		Dispose(true)
+		GC.SuppressFinalize(self)
+
+	#endregion
+	
+	
+	def destructor():
+		Dispose(false)
+
+	
+	protected virtual def Dispose(disposing as bool):
+		if not mbDisposed:
+			if mHandleStruct.Pointer != IntPtr.Zero:
+				AllKFunctions.OvlK_Free(mHandleStruct)
+				Debug.Print('{0} Dispose: Freed Handle:{1:X16}h Explicit:{2}', GetType().Name, mHandleStruct.Pointer.ToInt64(), disposing)
+			else:
+				Debug.Print('{0} Dispose: [WARNING] Handle is null', GetType().Name)
+			
+			mHandleStruct = KOVL_POOL_HANDLE(IntPtr.Zero)
+			mbDisposed = true
+
+	
+	protected def Init(UsbHandle as KUSB_HANDLE, MaxOverlappedCount as int, Flags as KOVL_POOL_FLAG) as bool:
+		success as bool = AllKFunctions.OvlK_Init(mHandleStruct, UsbHandle, MaxOverlappedCount, Flags)
 		
-		handle.Close()
+		if not success:
+			raise Exception(string.Format('{0} failed initializing. ErrorCode={1:X8}h', GetType().Name, Marshal.GetLastWin32Error()))
+		
+		Debug.Print('{0} Init: handle 0x{1:X16}', GetType().Name, mHandleStruct.Pointer.ToInt64())
 		return true
 
 	
-	public def ClaimInterface(NumberOrIndex as byte, IsIndex as bool) as bool:
-		return driverAPI.ClaimInterface(handle, NumberOrIndex, IsIndex)
-
 	
-	public def ReleaseInterface(NumberOrIndex as byte, IsIndex as bool) as bool:
-		return driverAPI.ReleaseInterface(handle, NumberOrIndex, IsIndex)
-
-	
-	public def SetAltInterface(NumberOrIndex as byte, IsIndex as bool, AltSettingNumber as byte) as bool:
-		return driverAPI.SetAltInterface(handle, NumberOrIndex, IsIndex, AltSettingNumber)
-
-	
-	public def GetAltInterface(NumberOrIndex as byte, IsIndex as bool, ref AltSettingNumber as byte) as bool:
-		return driverAPI.GetAltInterface(handle, NumberOrIndex, IsIndex, AltSettingNumber)
-
-	
-	public def GetDescriptor(DescriptorType as byte, Index as byte, LanguageID as ushort, Buffer as IntPtr, BufferLength as uint, ref LengthTransferred as uint) as bool:
-		return driverAPI.GetDescriptor(handle, DescriptorType, Index, LanguageID, Buffer, BufferLength, LengthTransferred)
-
-	
-	public def GetDescriptor(DescriptorType as byte, Index as byte, LanguageID as ushort, Buffer as Array, BufferLength as uint, ref LengthTransferred as uint) as bool:
-		return driverAPI.GetDescriptor(handle, DescriptorType, Index, LanguageID, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, LengthTransferred)
-
-	
-	public def ControlTransfer(SetupPacket as WINUSB_SETUP_PACKET, Buffer as IntPtr, BufferLength as uint, ref LengthTransferred as uint, Overlapped as IntPtr) as bool:
-		return driverAPI.ControlTransfer(handle, SetupPacket, Buffer, BufferLength, LengthTransferred, Overlapped)
-
-	
-	public def ControlTransfer(SetupPacket as WINUSB_SETUP_PACKET, Buffer as Array, BufferLength as uint, ref LengthTransferred as uint, Overlapped as IntPtr) as bool:
-		return driverAPI.ControlTransfer(handle, SetupPacket, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, LengthTransferred, Overlapped)
-
-	
-	public def ControlTransfer(SetupPacket as WINUSB_SETUP_PACKET, Buffer as Array, BufferLength as uint, ref LengthTransferred as uint, Overlapped as KOVL_HANDLE) as bool:
-		return driverAPI.ControlTransfer(handle, SetupPacket, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, LengthTransferred, Overlapped.DangerousGetHandle())
-
-	
-	public def ControlTransfer(SetupPacket as WINUSB_SETUP_PACKET, Buffer as IntPtr, BufferLength as uint, ref LengthTransferred as uint, Overlapped as KOVL_HANDLE) as bool:
-		return driverAPI.ControlTransfer(handle, SetupPacket, Buffer, BufferLength, LengthTransferred, Overlapped.DangerousGetHandle())
-
-	
-	public def SetPowerPolicy(PolicyType as uint, ValueLength as uint, Value as IntPtr) as bool:
-		return driverAPI.SetPowerPolicy(handle, PolicyType, ValueLength, Value)
-
-	
-	public def SetPowerPolicy(PolicyType as uint, ValueLength as uint, Value as Array) as bool:
-		return driverAPI.SetPowerPolicy(handle, PolicyType, ValueLength, Marshal.UnsafeAddrOfPinnedArrayElement(Value, 0))
-
-	
-	public def GetPowerPolicy(PolicyType as uint, ref ValueLength as uint, Value as IntPtr) as bool:
-		return driverAPI.GetPowerPolicy(handle, PolicyType, ValueLength, Value)
-
-	
-	public def GetPowerPolicy(PolicyType as uint, ref ValueLength as uint, Value as Array) as bool:
-		return driverAPI.GetPowerPolicy(handle, PolicyType, ValueLength, Marshal.UnsafeAddrOfPinnedArrayElement(Value, 0))
-
-	
-	public def SetConfiguration(ConfigurationNumber as byte) as bool:
-		return driverAPI.SetConfiguration(handle, ConfigurationNumber)
-
-	
-	public def GetConfiguration(ref ConfigurationNumber as byte) as bool:
-		return driverAPI.GetConfiguration(handle, ConfigurationNumber)
-
-	
-	public def ResetDevice() as bool:
-		return driverAPI.ResetDevice(handle)
-
-	
-	public def SelectInterface(NumberOrIndex as byte, IsIndex as bool) as bool:
-		return driverAPI.SelectInterface(handle, NumberOrIndex, IsIndex)
-
-	
-	public def GetAssociatedInterface(AssociatedInterfaceIndex as byte, ref AssociatedInterfaceHandle as KUSB_HANDLE) as bool:
-		return driverAPI.GetAssociatedInterface(handle, AssociatedInterfaceIndex, AssociatedInterfaceHandle)
-
-	
-	public def Clone(ref DstInterfaceHandle as KUSB_HANDLE) as bool:
-		return driverAPI.Clone(handle, DstInterfaceHandle)
-
-	
-	public def QueryInterfaceSettings(AltSettingNumber as byte, ref UsbAltInterfaceDescriptor as USB_INTERFACE_DESCRIPTOR) as bool:
-		return driverAPI.QueryInterfaceSettings(handle, AltSettingNumber, UsbAltInterfaceDescriptor)
-
-	
-	public def QueryDeviceInformation(InformationType as uint, ref BufferLength as uint, Buffer as IntPtr) as bool:
-		return driverAPI.QueryDeviceInformation(handle, InformationType, BufferLength, Buffer)
-
-	
-	public def SetCurrentAlternateSetting(AltSettingNumber as byte) as bool:
-		return driverAPI.SetCurrentAlternateSetting(handle, AltSettingNumber)
-
-	
-	public def GetCurrentAlternateSetting(ref AltSettingNumber as byte) as bool:
-		return driverAPI.GetCurrentAlternateSetting(handle, AltSettingNumber)
-
-	
-	public def QueryPipe(AltSettingNumber as byte, PipeIndex as byte, ref PipeInformation as WINUSB_PIPE_INFORMATION) as bool:
-		return driverAPI.QueryPipe(handle, AltSettingNumber, PipeIndex, PipeInformation)
-
-	
-	public def SetPipePolicy(PipeID as byte, PolicyType as uint, ValueLength as uint, Value as IntPtr) as bool:
-		return driverAPI.SetPipePolicy(handle, PipeID, PolicyType, ValueLength, Value)
-
-	
-	public def SetPipePolicy(PipeID as byte, PolicyType as uint, ValueLength as uint, Value as Array) as bool:
-		return driverAPI.SetPipePolicy(handle, PipeID, PolicyType, ValueLength, Marshal.UnsafeAddrOfPinnedArrayElement(Value, 0))
-
-	
-	public def GetPipePolicy(PipeID as byte, PolicyType as uint, ref ValueLength as uint, Value as IntPtr) as bool:
-		return driverAPI.GetPipePolicy(handle, PipeID, PolicyType, ValueLength, Value)
-
-	
-	public def GetPipePolicy(PipeID as byte, PolicyType as uint, ref ValueLength as uint, Value as Array) as bool:
-		return driverAPI.GetPipePolicy(handle, PipeID, PolicyType, ValueLength, Marshal.UnsafeAddrOfPinnedArrayElement(Value, 0))
-
-	
-	public def ReadPipe(PipeID as byte, Buffer as IntPtr, BufferLength as uint, ref LengthTransferred as uint, Overlapped as IntPtr) as bool:
-		return driverAPI.ReadPipe(handle, PipeID, Buffer, BufferLength, LengthTransferred, Overlapped)
-
-	
-	public def ReadPipe(PipeID as byte, Buffer as Array, BufferLength as uint, ref LengthTransferred as uint, Overlapped as IntPtr) as bool:
-		return driverAPI.ReadPipe(handle, PipeID, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, LengthTransferred, Overlapped)
-
-	
-	public def ReadPipe(PipeID as byte, Buffer as Array, BufferLength as uint, ref LengthTransferred as uint, Overlapped as KOVL_HANDLE) as bool:
-		return driverAPI.ReadPipe(handle, PipeID, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, LengthTransferred, Overlapped.DangerousGetHandle())
-
-	
-	public def ReadPipe(PipeID as byte, Buffer as IntPtr, BufferLength as uint, ref LengthTransferred as uint, Overlapped as KOVL_HANDLE) as bool:
-		return driverAPI.ReadPipe(handle, PipeID, Buffer, BufferLength, LengthTransferred, Overlapped.DangerousGetHandle())
-
-	
-	public def WritePipe(PipeID as byte, Buffer as IntPtr, BufferLength as uint, ref LengthTransferred as uint, Overlapped as IntPtr) as bool:
-		return driverAPI.WritePipe(handle, PipeID, Buffer, BufferLength, LengthTransferred, Overlapped)
-
-	
-	public def WritePipe(PipeID as byte, Buffer as Array, BufferLength as uint, ref LengthTransferred as uint, Overlapped as IntPtr) as bool:
-		return driverAPI.WritePipe(handle, PipeID, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, LengthTransferred, Overlapped)
-
-	
-	public def WritePipe(PipeID as byte, Buffer as Array, BufferLength as uint, ref LengthTransferred as uint, Overlapped as KOVL_HANDLE) as bool:
-		return driverAPI.WritePipe(handle, PipeID, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, LengthTransferred, Overlapped.DangerousGetHandle())
-
-	
-	public def WritePipe(PipeID as byte, Buffer as IntPtr, BufferLength as uint, ref LengthTransferred as uint, Overlapped as KOVL_HANDLE) as bool:
-		return driverAPI.WritePipe(handle, PipeID, Buffer, BufferLength, LengthTransferred, Overlapped.DangerousGetHandle())
-
-	
-	public def ResetPipe(PipeID as byte) as bool:
-		return driverAPI.ResetPipe(handle, PipeID)
-
-	
-	public def AbortPipe(PipeID as byte) as bool:
-		return driverAPI.AbortPipe(handle, PipeID)
-
-	
-	public def FlushPipe(PipeID as byte) as bool:
-		return driverAPI.FlushPipe(handle, PipeID)
-
-	
-	public def IsoReadPipe(PipeID as byte, Buffer as IntPtr, BufferLength as uint, Overlapped as IntPtr, IsoContext as KISO_CONTEXT) as bool:
-		return driverAPI.IsoReadPipe(handle, PipeID, Buffer, BufferLength, Overlapped, IsoContext)
-
-	
-	public def IsoReadPipe(PipeID as byte, Buffer as Array, BufferLength as uint, Overlapped as IntPtr, IsoContext as KISO_CONTEXT) as bool:
-		return driverAPI.IsoReadPipe(handle, PipeID, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, Overlapped, IsoContext)
-
-	
-	public def IsoReadPipe(PipeID as byte, Buffer as Array, BufferLength as uint, Overlapped as KOVL_HANDLE, IsoContext as KISO_CONTEXT) as bool:
-		return driverAPI.IsoReadPipe(handle, PipeID, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, Overlapped.DangerousGetHandle(), IsoContext)
-
-	
-	public def IsoReadPipe(PipeID as byte, Buffer as IntPtr, BufferLength as uint, Overlapped as KOVL_HANDLE, IsoContext as KISO_CONTEXT) as bool:
-		return driverAPI.IsoReadPipe(handle, PipeID, Buffer, BufferLength, Overlapped.DangerousGetHandle(), IsoContext)
-
-	
-	public def IsoWritePipe(PipeID as byte, Buffer as IntPtr, BufferLength as uint, Overlapped as IntPtr, IsoContext as KISO_CONTEXT) as bool:
-		return driverAPI.IsoWritePipe(handle, PipeID, Buffer, BufferLength, Overlapped, IsoContext)
-
-	
-	public def IsoWritePipe(PipeID as byte, Buffer as Array, BufferLength as uint, Overlapped as IntPtr, IsoContext as KISO_CONTEXT) as bool:
-		return driverAPI.IsoWritePipe(handle, PipeID, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, Overlapped, IsoContext)
-
-	
-	public def IsoWritePipe(PipeID as byte, Buffer as Array, BufferLength as uint, Overlapped as KOVL_HANDLE, IsoContext as KISO_CONTEXT) as bool:
-		return driverAPI.IsoWritePipe(handle, PipeID, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, Overlapped.DangerousGetHandle(), IsoContext)
-
-	
-	public def IsoWritePipe(PipeID as byte, Buffer as IntPtr, BufferLength as uint, Overlapped as KOVL_HANDLE, IsoContext as KISO_CONTEXT) as bool:
-		return driverAPI.IsoWritePipe(handle, PipeID, Buffer, BufferLength, Overlapped.DangerousGetHandle(), IsoContext)
-
-	
-	public def GetCurrentFrameNumber(ref FrameNumber as uint) as bool:
-		return driverAPI.GetCurrentFrameNumber(handle, FrameNumber)
-
-	
-	public def GetOverlappedResult(Overlapped as IntPtr, ref lpNumberOfBytesTransferred as uint, bWait as bool) as bool:
-		return driverAPI.GetOverlappedResult(handle, Overlapped, lpNumberOfBytesTransferred, bWait)
-
-	
-	public def GetOverlappedResult(Overlapped as KOVL_HANDLE, ref lpNumberOfBytesTransferred as uint, bWait as bool) as bool:
-		return driverAPI.GetOverlappedResult(handle, Overlapped.DangerousGetHandle(), lpNumberOfBytesTransferred, bWait)
-
-	
-	public def GetProperty(PropertyType as KUSB_PROPERTY, ref PropertySize as uint, Value as IntPtr) as bool:
-		return driverAPI.GetProperty(handle, PropertyType, PropertySize, Value)
-
-	
-	public def GetProperty(PropertyType as KUSB_PROPERTY, ref PropertySize as uint, Value as Array) as bool:
-		return driverAPI.GetProperty(handle, PropertyType, PropertySize, Marshal.UnsafeAddrOfPinnedArrayElement(Value, 0))
-
-
-public class OvlK:
-
-	protected final handle as KOVL_POOL_HANDLE
-
-	
+	#region Public Members
 	public def constructor(UsbHandle as KUSB_HANDLE, MaxOverlappedCount as int, Flags as KOVL_POOL_FLAG):
-		RuntimeHelpers.PrepareConstrainedRegions()
+		success as bool = AllKFunctions.OvlK_Init(mHandleStruct, UsbHandle, MaxOverlappedCount, Flags)
 		
-		try:
-			pass
-		ensure:
-			success as bool = Functions.OvlK_Init(handle, UsbHandle, MaxOverlappedCount, Flags)
-			
-			if ((not success) or handle.IsInvalid) or handle.IsClosed:
-				handle.SetHandleAsInvalid()
-				errorCode as int = Marshal.GetLastWin32Error()
-				raise Exception(((GetType().Name + ' failed. ErrorCode=') + errorCode.ToString('X')))
+		if not success:
+			raise Exception(string.Format('{0} failed initializing. ErrorCode={1:X8}h', GetType().Name, Marshal.GetLastWin32Error()))
+		
+		Debug.Print('{0} Init: handle 0x{1:X16}', GetType().Name, mHandleStruct.Pointer.ToInt64())
+
+	
+	public virtual def Acquire(ref OverlappedK as KOVL_HANDLE) as bool:
+		return AllKFunctions.OvlK_Acquire(OverlappedK, mHandleStruct)
+
+	
+	public virtual def Free():
+		Dispose()
+
+	
+	public virtual def GetEventHandle(OverlappedK as KOVL_HANDLE) as IntPtr:
+		return AllKFunctions.OvlK_GetEventHandle(OverlappedK)
 
 	
 	public Handle as KOVL_POOL_HANDLE:
 		get:
-			return handle
+			return mHandleStruct
 
 	
-	public virtual def Free() as bool:
-		if handle.IsInvalid or handle.IsClosed:
-			return false
+	public virtual def IsComplete(OverlappedK as KOVL_HANDLE) as bool:
+		return AllKFunctions.OvlK_IsComplete(OverlappedK)
+
+	
+	public virtual def ReUse(OverlappedK as KOVL_HANDLE) as bool:
+		return AllKFunctions.OvlK_ReUse(OverlappedK)
+
+	
+	public virtual def Release(OverlappedK as KOVL_HANDLE) as bool:
+		return AllKFunctions.OvlK_Release(OverlappedK)
+
+	
+	public virtual def Wait(OverlappedK as KOVL_HANDLE, TimeoutMS as int, WaitFlags as KOVL_WAIT_FLAG, ref TransferredLength as int) as bool:
+		return AllKFunctions.OvlK_Wait(OverlappedK, TimeoutMS, WaitFlags, TransferredLength)
+
+	
+	public virtual def WaitAndRelease(OverlappedK as KOVL_HANDLE, TimeoutMS as int, ref TransferredLength as int) as bool:
+		return AllKFunctions.OvlK_WaitAndRelease(OverlappedK, TimeoutMS, TransferredLength)
+
+	
+	public virtual def WaitOldest(ref OverlappedK as KOVL_HANDLE, TimeoutMS as int, WaitFlags as KOVL_WAIT_FLAG, ref TransferredLength as int) as bool:
+		return AllKFunctions.OvlK_WaitOldest(mHandleStruct, OverlappedK, TimeoutMS, WaitFlags, TransferredLength)
+
+	
+	public virtual def WaitOrCancel(OverlappedK as KOVL_HANDLE, TimeoutMS as int, ref TransferredLength as int) as bool:
+		return AllKFunctions.OvlK_WaitOrCancel(OverlappedK, TimeoutMS, TransferredLength)
+	#endregion
+
+
+public class StmK(IDisposable):
+
+	protected mHandleStruct as KSTM_HANDLE
+
+	protected mbDisposed as bool
+
+	
+	protected def constructor():
+		pass
+
+	
+	
+	#region IDisposable Members
+	public virtual def Dispose():
+		Dispose(true)
+		GC.SuppressFinalize(self)
+
+	#endregion
+	
+	
+	def destructor():
+		Dispose(false)
+
+	
+	protected virtual def Dispose(disposing as bool):
+		if not mbDisposed:
+			if mHandleStruct.Pointer != IntPtr.Zero:
+				AllKFunctions.StmK_Free(mHandleStruct)
+				Debug.Print('{0} Dispose: Freed Handle:{1:X16}h Explicit:{2}', GetType().Name, mHandleStruct.Pointer.ToInt64(), disposing)
+			else:
+				Debug.Print('{0} Dispose: [WARNING] Handle is null', GetType().Name)
+			
+			mHandleStruct = KSTM_HANDLE(IntPtr.Zero)
+			mbDisposed = true
+
+	
+	protected def Init(UsbHandle as KUSB_HANDLE, PipeID as byte, MaxTransferSize as int, MaxPendingTransfers as int, MaxPendingIO as int, ref Callbacks as KSTM_CALLBACK, Flags as KSTM_FLAG) as bool:
+		success as bool = AllKFunctions.StmK_Init(mHandleStruct, UsbHandle, PipeID, MaxTransferSize, MaxPendingTransfers, MaxPendingIO, Callbacks, Flags)
 		
-		handle.Close()
+		if not success:
+			raise Exception(string.Format('{0} failed initializing. ErrorCode={1:X8}h', GetType().Name, Marshal.GetLastWin32Error()))
+		
+		Debug.Print('{0} Init: handle 0x{1:X16}', GetType().Name, mHandleStruct.Pointer.ToInt64())
 		return true
 
 	
-	public def Acquire(ref OverlappedK as KOVL_HANDLE) as bool:
-		return Functions.OvlK_Acquire(OverlappedK, handle)
-
 	
-	public def Release(OverlappedK as KOVL_HANDLE) as bool:
-		return Functions.OvlK_Release(OverlappedK)
-
-	
-	public def GetEventHandle(OverlappedK as KOVL_HANDLE) as IntPtr:
-		return Functions.OvlK_GetEventHandle(OverlappedK)
-
-	
-	public def Wait(OverlappedK as KOVL_HANDLE, TimeoutMS as int, WaitFlags as KOVL_WAIT_FLAG, ref TransferredLength as uint) as bool:
-		return Functions.OvlK_Wait(OverlappedK, TimeoutMS, WaitFlags, TransferredLength)
-
-	
-	public def WaitOrCancel(OverlappedK as KOVL_HANDLE, TimeoutMS as int, ref TransferredLength as uint) as bool:
-		return Functions.OvlK_WaitOrCancel(OverlappedK, TimeoutMS, TransferredLength)
-
-	
-	public def WaitAndRelease(OverlappedK as KOVL_HANDLE, TimeoutMS as int, ref TransferredLength as uint) as bool:
-		return Functions.OvlK_WaitAndRelease(OverlappedK, TimeoutMS, TransferredLength)
-
-	
-	public def IsComplete(OverlappedK as KOVL_HANDLE) as bool:
-		return Functions.OvlK_IsComplete(OverlappedK)
-
-	
-	public def ReUse(OverlappedK as KOVL_HANDLE) as bool:
-		return Functions.OvlK_ReUse(OverlappedK)
-
-
-public class StmK:
-
-	protected final handle as KSTM_HANDLE
-
-	
+	#region Public Members
 	public def constructor(UsbHandle as KUSB_HANDLE, PipeID as byte, MaxTransferSize as int, MaxPendingTransfers as int, MaxPendingIO as int, ref Callbacks as KSTM_CALLBACK, Flags as KSTM_FLAG):
-		RuntimeHelpers.PrepareConstrainedRegions()
+		success as bool = AllKFunctions.StmK_Init(mHandleStruct, UsbHandle, PipeID, MaxTransferSize, MaxPendingTransfers, MaxPendingIO, Callbacks, Flags)
 		
-		try:
-			pass
-		ensure:
-			success as bool = Functions.StmK_Init(handle, UsbHandle, PipeID, MaxTransferSize, MaxPendingTransfers, MaxPendingIO, Callbacks, Flags)
-			
-			if ((not success) or handle.IsInvalid) or handle.IsClosed:
-				handle.SetHandleAsInvalid()
-				errorCode as int = Marshal.GetLastWin32Error()
-				raise Exception(((GetType().Name + ' failed. ErrorCode=') + errorCode.ToString('X')))
+		if not success:
+			raise Exception(string.Format('{0} failed initializing. ErrorCode={1:X8}h', GetType().Name, Marshal.GetLastWin32Error()))
+		
+		Debug.Print('{0} Init: handle 0x{1:X16}', GetType().Name, mHandleStruct.Pointer.ToInt64())
+
+	
+	public virtual def Free():
+		Dispose()
 
 	
 	public Handle as KSTM_HANDLE:
 		get:
-			return handle
+			return mHandleStruct
 
 	
-	public virtual def Free() as bool:
-		if handle.IsInvalid or handle.IsClosed:
-			return false
+	public virtual def Read(Buffer as IntPtr, Offset as int, Length as int, ref TransferredLength as int) as bool:
+		return AllKFunctions.StmK_Read(mHandleStruct, Buffer, Offset, Length, TransferredLength)
+
+	
+	public virtual def Read(Buffer as Array, Offset as int, Length as int, ref TransferredLength as int) as bool:
+		return AllKFunctions.StmK_Read(mHandleStruct, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), Offset, Length, TransferredLength)
+
+	
+	public virtual def Start() as bool:
+		return AllKFunctions.StmK_Start(mHandleStruct)
+
+	
+	public virtual def Stop(TimeoutCancelMS as int) as bool:
+		return AllKFunctions.StmK_Stop(mHandleStruct, TimeoutCancelMS)
+
+	
+	public virtual def Write(Buffer as IntPtr, Offset as int, Length as int, ref TransferredLength as int) as bool:
+		return AllKFunctions.StmK_Write(mHandleStruct, Buffer, Offset, Length, TransferredLength)
+
+	
+	public virtual def Write(Buffer as Array, Offset as int, Length as int, ref TransferredLength as int) as bool:
+		return AllKFunctions.StmK_Write(mHandleStruct, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), Offset, Length, TransferredLength)
+	#endregion
+
+
+public class IsoK(IDisposable):
+
+	protected mHandleStruct as KISO_CONTEXT
+
+	protected mbDisposed as bool
+
+	
+	protected def constructor():
+		pass
+
+	
+	
+	#region IDisposable Members
+	public virtual def Dispose():
+		Dispose(true)
+		GC.SuppressFinalize(self)
+
+	#endregion
+	
+	
+	def destructor():
+		Dispose(false)
+
+	
+	protected virtual def Dispose(disposing as bool):
+		if not mbDisposed:
+			if mHandleStruct.Pointer != IntPtr.Zero:
+				AllKFunctions.IsoK_Free(mHandleStruct)
+				Debug.Print('{0} Dispose: Freed Handle:{1:X16}h Explicit:{2}', GetType().Name, mHandleStruct.Pointer.ToInt64(), disposing)
+			else:
+				Debug.Print('{0} Dispose: [WARNING] Handle is null', GetType().Name)
+			
+			mHandleStruct = KISO_CONTEXT(IntPtr.Zero)
+			mbDisposed = true
+
+	
+	protected def Init(NumberOfPackets as int, StartFrame as int) as bool:
+		success as bool = AllKFunctions.IsoK_Init(mHandleStruct, NumberOfPackets, StartFrame)
 		
-		handle.Close()
+		if not success:
+			raise Exception(string.Format('{0} failed initializing. ErrorCode={1:X8}h', GetType().Name, Marshal.GetLastWin32Error()))
+		
+		Debug.Print('{0} Init: handle 0x{1:X16}', GetType().Name, mHandleStruct.Pointer.ToInt64())
 		return true
 
 	
-	public def Start() as bool:
-		return Functions.StmK_Start(handle)
-
 	
-	public def Stop(TimeoutCancelMS as int) as bool:
-		return Functions.StmK_Stop(handle, TimeoutCancelMS)
+	#region Nested Structs
+	[StructLayout(LayoutKind.Sequential, CharSet: CharSet.Ansi, Pack: 1)]
+	private struct KISO_CONTEXT_MAP:
 
-	
-	public def Read(Buffer as IntPtr, Offset as int, Length as int, ref TransferredLength as uint) as bool:
-		return Functions.StmK_Read(handle, Buffer, Offset, Length, TransferredLength)
+		private final Flags as KISO_FLAG
 
-	
-	public def Read(Buffer as Array, Offset as int, Length as int, ref TransferredLength as uint) as bool:
-		return Functions.StmK_Read(handle, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), Offset, Length, TransferredLength)
-
-	
-	public def Write(Buffer as IntPtr, Offset as int, Length as int, ref TransferredLength as uint) as bool:
-		return Functions.StmK_Write(handle, Buffer, Offset, Length, TransferredLength)
-
-	
-	public def Write(Buffer as Array, Offset as int, Length as int, ref TransferredLength as uint) as bool:
-		return Functions.StmK_Write(handle, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), Offset, Length, TransferredLength)
-
-
-public class IsoK:
-
-	private static final ofsFlags as int = Marshal.OffsetOf(typeof(KISO_CONTEXT_MAP), 'Flags').ToInt32()
-
-	private static final ofsStartFrame as int = Marshal.OffsetOf(typeof(KISO_CONTEXT_MAP), 'StartFrame').ToInt32()
-
-	private static final ofsErrorCount as int = Marshal.OffsetOf(typeof(KISO_CONTEXT_MAP), 'ErrorCount').ToInt32()
-
-	private static final ofsNumberOfPackets as int = Marshal.OffsetOf(typeof(KISO_CONTEXT_MAP), 'NumberOfPackets').ToInt32()
-
-	protected final handle as KISO_CONTEXT
-
-	
-	public def constructor(NumberOfPackets as int, StartFrame as int):
-		RuntimeHelpers.PrepareConstrainedRegions()
 		
-		try:
-			pass
-		ensure:
-			success as bool = Functions.IsoK_Init(handle, NumberOfPackets, StartFrame)
-			
-			if ((not success) or handle.IsInvalid) or handle.IsClosed:
-				handle.SetHandleAsInvalid()
-				errorCode as int = Marshal.GetLastWin32Error()
-				raise Exception(((GetType().Name + ' failed. ErrorCode=') + errorCode.ToString('X')))
+		private final StartFrame as int
+
+		
+		private final ErrorCount as short
+
+		
+		private final NumberOfPackets as short
+
+		
+		private final UrbHdrStatus as int
+
+	#endregion
+	
+	
+	#region Public Members
+	public def constructor(NumberOfPackets as int, StartFrame as int):
+		success as bool = AllKFunctions.IsoK_Init(mHandleStruct, NumberOfPackets, StartFrame)
+		
+		if not success:
+			raise Exception(string.Format('{0} failed initializing. ErrorCode={1:X8}h', GetType().Name, Marshal.GetLastWin32Error()))
+		
+		Debug.Print('{0} Init: handle 0x{1:X16}', GetType().Name, mHandleStruct.Pointer.ToInt64())
 
 	
-	public Handle as KISO_CONTEXT:
-		get:
-			return handle
-
-	
-	public Flags as KISO_FLAG:
-		get:
-			return (Marshal.ReadInt32(handle.DangerousGetHandle(), ofsFlags) cast KISO_FLAG)
-		set:
-			Marshal.WriteInt32(handle.DangerousGetHandle(), ofsFlags, (value cast int))
-
-	
-	public StartFrame as uint:
-		get:
-			return (Marshal.ReadInt32(handle.DangerousGetHandle(), ofsStartFrame) cast uint)
-		set:
-			Marshal.WriteInt32(handle.DangerousGetHandle(), ofsStartFrame, (value cast Int32))
+	public virtual def EnumPackets(EnumPackets as KISO_ENUM_PACKETS_CB, StartPacketIndex as int, UserState as IntPtr) as bool:
+		return AllKFunctions.IsoK_EnumPackets(mHandleStruct, EnumPackets, StartPacketIndex, UserState)
 
 	
 	public ErrorCount as short:
 		get:
-			return Marshal.ReadInt16(handle.DangerousGetHandle(), ofsErrorCount)
+			return Marshal.ReadInt16(mHandleStruct.Pointer, ofsErrorCount)
 		set:
-			Marshal.WriteInt16(handle.DangerousGetHandle(), ofsErrorCount, value)
+			Marshal.WriteInt16(mHandleStruct.Pointer, ofsErrorCount, value)
+
+	
+	public Flags as KISO_FLAG:
+		get:
+			return (Marshal.ReadInt32(mHandleStruct.Pointer, ofsFlags) cast KISO_FLAG)
+		set:
+			Marshal.WriteInt32(mHandleStruct.Pointer, ofsFlags, (value cast int))
+
+	
+	public virtual def Free():
+		Dispose()
+
+	
+	public virtual def GetPacket(PacketIndex as int, ref IsoPacket as KISO_PACKET) as bool:
+		return AllKFunctions.IsoK_GetPacket(mHandleStruct, PacketIndex, IsoPacket)
+
+	
+	public Handle as KISO_CONTEXT:
+		get:
+			return mHandleStruct
 
 	
 	public NumberOfPackets as short:
 		get:
-			return Marshal.ReadInt16(handle.DangerousGetHandle(), ofsNumberOfPackets)
+			return Marshal.ReadInt16(mHandleStruct.Pointer, ofsNumberOfPackets)
 		set:
-			Marshal.WriteInt16(handle.DangerousGetHandle(), ofsNumberOfPackets, value)
+			Marshal.WriteInt16(mHandleStruct.Pointer, ofsNumberOfPackets, value)
 
 	
-	public virtual def Free() as bool:
-		if handle.IsInvalid or handle.IsClosed:
-			return false
-		
-		handle.Close()
-		return true
+	public virtual def ReUse() as bool:
+		return AllKFunctions.IsoK_ReUse(mHandleStruct)
 
 	
-	public def SetPackets(PacketSize as int) as bool:
-		return Functions.IsoK_SetPackets(handle, PacketSize)
+	public virtual def SetPacket(PacketIndex as int, ref IsoPacket as KISO_PACKET) as bool:
+		return AllKFunctions.IsoK_SetPacket(mHandleStruct, PacketIndex, IsoPacket)
 
 	
-	public def SetPacket(PacketIndex as int, ref IsoPacket as KISO_PACKET) as bool:
-		return Functions.IsoK_SetPacket(handle, PacketIndex, IsoPacket)
+	public virtual def SetPackets(PacketSize as int) as bool:
+		return AllKFunctions.IsoK_SetPackets(mHandleStruct, PacketSize)
 
 	
-	public def GetPacket(PacketIndex as int, ref IsoPacket as KISO_PACKET) as bool:
-		return Functions.IsoK_GetPacket(handle, PacketIndex, IsoPacket)
+	public StartFrame as int:
+		get:
+			return Marshal.ReadInt32(mHandleStruct.Pointer, ofsStartFrame)
+		set:
+			Marshal.WriteInt32(mHandleStruct.Pointer, ofsStartFrame, value)
 
 	
-	public def EnumPackets(EnumPackets as KISO_ENUM_PACKETS_CB, StartPacketIndex as int, UserState as IntPtr) as bool:
-		return Functions.IsoK_EnumPackets(handle, EnumPackets, StartPacketIndex, UserState)
+	public UrbHdrStatus as int:
+		get:
+			return Marshal.ReadInt32(mHandleStruct.Pointer, ofsUrbHdrStatus)
+		set:
+			Marshal.WriteInt32(mHandleStruct.Pointer, ofsUrbHdrStatus, value)
 
+	#endregion
 	
-	public def ReUse() as bool:
-		return Functions.IsoK_ReUse(handle)
+	
+	#region Private Members
+	private static final ofsErrorCount as int = Marshal.OffsetOf(typeof(KISO_CONTEXT_MAP), 'ErrorCount').ToInt32()
+
+	private static final ofsFlags as int = Marshal.OffsetOf(typeof(KISO_CONTEXT_MAP), 'Flags').ToInt32()
+
+	private static final ofsNumberOfPackets as int = Marshal.OffsetOf(typeof(KISO_CONTEXT_MAP), 'NumberOfPackets').ToInt32()
+
+	private static final ofsStartFrame as int = Marshal.OffsetOf(typeof(KISO_CONTEXT_MAP), 'StartFrame').ToInt32()
+
+	private static final ofsUrbHdrStatus as int = Marshal.OffsetOf(typeof(KISO_CONTEXT_MAP), 'UrbHdrStatus').ToInt32()
+	#endregion
 
