@@ -1527,8 +1527,11 @@ typedef struct _KHOT_PARAMS
 	*/
 	KHOT_PLUG_CB* OnHotPlug;
 
+	//! The initial value assign to the handle user context space. See \ref LibK_SetContext and \ref LibK_GetContext.
+	KLIB_USER_CONTEXT UserContext;
+
 	//! fixed structure padding.
-	UCHAR z_F_i_x_e_d[2048 - sizeof(KLST_PATTERN_MATCH) - sizeof(UINT_PTR) * 2 - sizeof(UINT) * 2];
+	UCHAR z_F_i_x_e_d[2048 - sizeof(KLST_PATTERN_MATCH) - sizeof(UINT_PTR) * 2 - sizeof(UINT) * 2 - sizeof(KLIB_USER_CONTEXT)];
 
 } KHOT_PARAMS;
 C_ASSERT(sizeof(KHOT_PARAMS) == 2048);
@@ -1603,9 +1606,10 @@ typedef enum _KOVL_POOL_FLAG
 typedef enum _KSTM_FLAG
 {
     //! None
-    KSTM_FLAG_NONE			= 0L,
+    KSTM_FLAG_NONE			   = 0L,
+    KSTM_FLAG_NO_PARTIAL_XFERS = 0x00100000,
     KSTM_FLAG_USE_TIMEOUT	= 0x80000000,
-	KSTM_FLAG_TIMEOUT_MASK	= 0x0001FFFF
+    KSTM_FLAG_TIMEOUT_MASK	= 0x0001FFFF
 } KSTM_FLAG;
 
 //! Stream config flags.

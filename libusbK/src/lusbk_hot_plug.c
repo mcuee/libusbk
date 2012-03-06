@@ -417,6 +417,8 @@ static LRESULT CALLBACK h_WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
 		memcpy(&handle->Public, InitParams, sizeof(handle->Public));
 		*handleRef = handle;
 
+		LibK_SetContext(handle, KLIB_HANDLE_TYPE_HOTK, InitParams->UserContext);
+
 		// Add to the list and set the cleaunup callback for the hot handle
 		handle->Base.Evt.Cleanup = Cleanup_HotK;
 		DL_APPEND(g_HotNotifierList.Items, handle);

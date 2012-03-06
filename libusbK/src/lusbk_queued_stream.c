@@ -30,21 +30,111 @@ extern ULONG DebugLevel;
 
 #define Stm_Alloc(mStream,mSize) HeapAlloc((mStream)->Heap,HEAP_ZERO_MEMORY,mSize)
 
-static void CALLBACK Stm_ReadAPC(__in ULONG_PTR dwParam)
-{
-	PKSTM_XFER_LINK_EL xferEL = (PKSTM_XFER_LINK_EL)dwParam;
-	PKSTM_HANDLE_INTERNAL handle = (PKSTM_HANDLE_INTERNAL)xferEL->Xfer->StreamHandle;
+#define mStm_QueueTransferList(mStreamHandle, mXferSubmitList, mXferEL, mXferTempEL, mErrorJump)do { \
+		if (mXferSubmitList && mStreamHandle->Thread.State == KSTM_THREADSTATE_STARTED)  						\
+		{																										\
+			PoolHandle_Inc_StmK(mStreamHandle);  																\
+			if (!QueueUserAPC(Stm_TransferListAPC, mStreamHandle->Thread.Handle, (ULONG_PTR)mXferSubmitList))	\
+			{																									\
+				PoolHandle_Dec_StmK(mStreamHandle);  															\
+				USBERRN("QueueUserAPC failed. ErrorCode=%08Xh", GetLastError()); 								\
+				goto mErrorJump;  																				\
+			}																									\
+			IncLock(mStreamHandle->APCTransferQueueCount);   													\
+		}																										\
+		else 																									\
+		{																										\
+			/* Stream is not started; add items added to the Queued list. */  									\
+			DL_FOREACH_SAFE(mXferSubmitList, mXferEL, mXferTempEL)   											\
+			{																									\
+				DL_DELETE(mXferSubmitList, mXferEL); 															\
+				DL_APPEND(mStreamHandle->List.Queued, mXferEL);  												\
+			}																									\
+		}																										\
+	}																											\
+	while(0)
 
-	DL_APPEND(handle->List.Queued, xferEL);
-	PoolHandle_Dec_StmK(handle);
+#define mStm_SpinLockForTransferRequest(mStreamHandle, mErrorJump)do { \
+		if (mStreamHandle->SemReady)   																				\
+		{  																											\
+			if  (WaitForSingleObject(mStreamHandle->SemReady, mStreamHandle->WaitTimeout) != WAIT_OBJECT_0)			\
+			{  																										\
+				USBWRNN("[WaitTimeout] No more pending transfer slots. PipeID=%02Xh", mStreamHandle->Info->PipeID);	\
+				SetLastError(ERROR_NO_MORE_ITEMS); 																	\
+				goto mErrorJump;																					\
+			}  																										\
+		}  																											\
+		else if (mStreamHandle->List.Finished == NULL) 																\
+		{  																											\
+			USBWRNN("No more pending transfer slots. PipeID=%02Xh", mStreamHandle->Info->PipeID);  					\
+			SetLastError(ERROR_NO_MORE_ITEMS); 																		\
+			goto mErrorJump;																						\
+		}  																											\
+		\
+		mSpin_Acquire(&mStreamHandle->List.FinishedLock);  															\
+		if (mStreamHandle->List.Finished == NULL)  																	\
+		{  																											\
+			mSpin_Release(&mStreamHandle->List.FinishedLock);  														\
+			\
+			if (mStreamHandle->SemReady) ReleaseSemaphore(mStreamHandle->SemReady, 1, NULL);   						\
+			USBWRNN("No more pending transfer slots. PipeID=%02Xh", mStreamHandle->Info->PipeID);  					\
+			SetLastError(ERROR_NO_MORE_ITEMS); 																		\
+			goto mErrorJump;																						\
+		}  																											\
+	}  																												\
+	while(0)
+
+#define mStm_CheckPartialTransfer(mStreamHandle, mLength, mTransferredLengthRef, mTransferLength, mErrorJump)do { \
+		if (mLength > 0) 																									\
+		{																													\
+			if (((mStreamHandle)->Flags & KSTM_FLAG_NO_PARTIAL_XFERS) || !(mTransferredLengthRef))  						\
+			{																												\
+				USBERRN("No more pending transfer slots. PipeID=%02Xh", (mStreamHandle)->Info->PipeID);  					\
+				SetLastError(ERROR_NO_MORE_ITEMS);   																		\
+				goto mErrorJump; 																							\
+			}																												\
+			else 																											\
+			{																												\
+				USBWRNN("[PartialTransfer] PipeID=%02Xh Transferred=%u", (mStreamHandle)->Info->PipeID, mTransferLength);	\
+			}																												\
+		}																													\
+	}																														\
+	while(0)
+
+static BOOL Stm_SynchronizeFinishedList(PKSTM_HANDLE_INTERNAL handle, BOOL requireLock)
+{
+	PKSTM_XFER_LINK_EL xferEL, xferTempEL;
+
+	if (requireLock)
+	{
+		// SPIN-LOCKED : List.FinishedLock
+		mSpin_Acquire(&handle->List.FinishedLock);
+	}
+
+	DL_FOREACH_SAFE(handle->List.FinishedTemp, xferEL, xferTempEL)
+	{
+		DL_DELETE(handle->List.FinishedTemp, xferEL);
+		DL_APPEND(handle->List.Finished, xferEL);
+	}
+
+	// SPIN-LOCK-RELEASE : List.FinishedLock
+	if (requireLock) mSpin_Release(&handle->List.FinishedLock);
+	return TRUE;
+
 }
 
-static void CALLBACK Stm_WriteAPC(__in ULONG_PTR dwParam)
+static void CALLBACK Stm_TransferListAPC(__in ULONG_PTR dwParam)
 {
-	PKSTM_XFER_LINK_EL xferEL = (PKSTM_XFER_LINK_EL)dwParam;
-	PKSTM_HANDLE_INTERNAL handle = (PKSTM_HANDLE_INTERNAL)xferEL->Xfer->StreamHandle;
+	PKSTM_XFER_LINK_EL xferListEL = (PKSTM_XFER_LINK_EL)dwParam;
+	PKSTM_XFER_LINK_EL xferEL, xferTempEL;
+	PKSTM_HANDLE_INTERNAL handle = (PKSTM_HANDLE_INTERNAL)xferListEL->Xfer->StreamHandle;
 
-	DL_APPEND(handle->List.Queued, xferEL);
+	DL_FOREACH_SAFE(xferListEL, xferEL, xferTempEL)
+	{
+		DL_DELETE(xferListEL, xferEL);
+		DL_APPEND(handle->List.Queued, xferEL);
+	}
+	DecLock(handle->APCTransferQueueCount);
 	PoolHandle_Dec_StmK(handle);
 }
 
@@ -53,7 +143,6 @@ static void CALLBACK Stm_StopAPC(__in ULONG_PTR dwParam)
 	PKSTM_HANDLE_INTERNAL handle = (PKSTM_HANDLE_INTERNAL)dwParam;
 
 	UNREFERENCED_PARAMETER(handle);
-//	handle->Info->DriverAPI.FlushPipe(handle->Info->UsbHandle,handle->Info->PipeID);
 }
 
 static INT KUSB_API Stm_SubmitRead(
@@ -79,6 +168,7 @@ static INT KUSB_API Stm_SubmitWrite(
 	StreamInfo->DriverAPI.WritePipe(StreamInfo->UsbHandle, StreamInfo->PipeID, XferContext->Buffer, XferContext->TransferLength, NULL, Overlapped);
 	return (INT)GetLastError();
 }
+
 typedef struct _KSTM_THREAD_INTERNAL
 {
 	PKSTM_HANDLE_INTERNAL handle;
@@ -93,6 +183,8 @@ typedef struct _KSTM_THREAD_INTERNAL
 
 	DWORD errorCode;
 	BOOL success;
+	BOOL NoWaiting;
+
 } KSTM_THREAD_INTERNAL, *PKSTM_THREAD_INTERNAL;
 
 static BOOL Stm_Thread_Alloc_Ovl(PKSTM_THREAD_INTERNAL stm)
@@ -144,48 +236,62 @@ static BOOL Stm_Thread_Free_Ovl(PKSTM_THREAD_INTERNAL stm)
 	return TRUE;
 }
 
+typedef enum _KSTM_THREAD_RESULT
+{
+    KSTM_THREAD_RESULT_ITEM_PROCESSED,
+    KSTM_THREAD_RESULT_OVERLAPPED_EMPTY,
+    KSTM_THREAD_RESULT_QUEUE_EMPTY,
+    KSTM_THREAD_RESULT_SUMBIT_ERROR,
+
+} KSTM_THREAD_RESULT;
+
 static BOOL Stm_Thread_ProcessQueued(PKSTM_THREAD_INTERNAL stm)
 {
-	stm->success = TRUE;
-	while(stm->ovlList)
+	// No more pending IO slots
+	if (!stm->ovlList)
+		return KSTM_THREAD_RESULT_OVERLAPPED_EMPTY;
+
+	/* Nothing queued.
+	   - Read pipes need the stream thread to submit more in 'ProcessPending'
+	   - Write pipes need the user to submit more requests.
+	*/
+	if (!stm->handle->List.Queued)
+		return KSTM_THREAD_RESULT_QUEUE_EMPTY;
+
+	// Get the next xfer item and link it with the next overlapped
+	stm->xferNext	= stm->handle->List.Queued;
+	stm->ovlNext	= stm->ovlList;
+	DL_DELETE(stm->handle->List.Queued, stm->xferNext);
+	DL_DELETE(stm->ovlList, stm->ovlNext);
+	stm->xferNext->Xfer->Overlapped = &stm->ovlNext->Overlapped;
+
+	// Reset the overlapped event, buffer pointers and sizes each time.
+	ResetEvent(stm->ovlNext->Overlapped.hEvent);
+	stm->xferNext->Xfer->Public.Buffer		= stm->xferNext->Xfer->Buffer;
+	stm->xferNext->Xfer->Public.BufferSize	= stm->xferNext->Xfer->BufferSize;
+
+	// For Read pipes, reset the TransferLength to the buffer size.
+	if (USB_ENDPOINT_DIRECTION_IN(stm->handle->Info->PipeID))
+		stm->xferNext->Xfer->Public.TransferLength	= stm->xferNext->Xfer->BufferSize;
+
+	// Submit
+	stm->errorCode = stm->handle->UserCB->Submit(stm->handle->Info, &stm->xferNext->Xfer->Public, stm->xferNext->Xfer->Index, stm->xferNext->Xfer->Overlapped);
+
+	// Accept ERROR_IO_PENDING or ERROR_SUCCESS equally.
+	if (stm->errorCode != ERROR_IO_PENDING  && stm->errorCode != ERROR_SUCCESS)
 	{
-		// Continue to submit transfers while PendingIO is less than MaxPendingIO.
-		stm->xferNext = stm->handle->List.Queued;
-		if (!stm->xferNext)
-		{
-			// exhausted all transfers
-			stm->errorCode = ERROR_NO_MORE_ITEMS;
-			stm->success = FALSE;
-			return stm->success;
-		}
+		ErrorNoSetAction(!stm->success, NOP_FUNCTION, "Submit failed.");
 
-		stm->ovlNext = stm->ovlList;
-		DL_DELETE(stm->handle->List.Queued, stm->xferNext);
-		DL_DELETE(stm->ovlList, stm->ovlNext);
-		stm->xferNext->Xfer->Overlapped = &stm->ovlNext->Overlapped;
-
-		ResetEvent(stm->ovlNext->Overlapped.hEvent);
-
-		stm->xferNext->Xfer->Public.Buffer		= stm->xferNext->Xfer->Buffer;
-		stm->xferNext->Xfer->Public.BufferSize	= stm->xferNext->Xfer->BufferSize;
-
-		stm->errorCode = stm->handle->UserCB->Submit(stm->handle->Info, &stm->xferNext->Xfer->Public, stm->xferNext->Xfer->Index, stm->xferNext->Xfer->Overlapped);
-
-		if (stm->errorCode != ERROR_IO_PENDING  && stm->errorCode != ERROR_SUCCESS)
-		{
-			stm->success = FALSE;
-			ErrorNoSetAction(!stm->success, NOP_FUNCTION, "Submit failed.");
-
-			SetEvent(stm->ovlNext->Overlapped.hEvent);
-			DL_PREPEND(stm->ovlList, stm->ovlNext);
-			DL_PREPEND(stm->handle->List.Queued, stm->xferNext);
-			return stm->success;
-		}
-		IncLock(stm->handle->PendingIO);
-
-		DL_APPEND(stm->pendingList, stm->xferNext);
+		SetEvent(stm->ovlNext->Overlapped.hEvent);
+		DL_PREPEND(stm->ovlList, stm->ovlNext);
+		DL_PREPEND(stm->handle->List.Queued, stm->xferNext);
+		return KSTM_THREAD_RESULT_SUMBIT_ERROR;
 	}
-	return stm->success;
+
+	// Increment the IO count and add this to the pending list.
+	IncLock(stm->handle->PendingIO);
+	DL_APPEND(stm->pendingList, stm->xferNext);
+	return KSTM_THREAD_RESULT_ITEM_PROCESSED;
 }
 
 static BOOL Stm_Thread_ProcessPending(PKSTM_THREAD_INTERNAL stm, DWORD timeoutOverride)
@@ -203,32 +309,36 @@ static BOOL Stm_Thread_ProcessPending(PKSTM_THREAD_INTERNAL stm, DWORD timeoutOv
 	stm->xferNext = stm->pendingList;
 	stm->ovlNext = (PKSTM_OVERLAPPED_EL)stm->xferNext->Xfer->Overlapped;
 
-	if (!timeoutOverride)
-		timeout = (stm->handle->PendingIO == (long)stm->handle->Info->MaxPendingIO) ? INFINITE : 0;
-	else
-		timeout = timeoutOverride;
+	timeout = timeoutOverride;
 
 	stm->success	= TRUE;
-	while (stm->success)
-	{
-		waitResult = WaitForSingleObjectEx(stm->ovlNext->Overlapped.hEvent, timeout, TRUE);
-		if (!timeoutOverride)
-			timeout = (stm->handle->PendingIO == (long)stm->handle->Info->MaxPendingIO) ? INFINITE : 0;
 
-		if (waitResult == STATUS_USER_APC) continue;
-		if (waitResult == WAIT_OBJECT_0)
+	if (!stm->NoWaiting)
+	{
+		while (stm->success)
 		{
-			stm->errorCode = ERROR_SUCCESS;
-			break;
+			waitResult = WaitForSingleObjectEx(stm->ovlNext->Overlapped.hEvent, timeout, TRUE);
+			if (waitResult == STATUS_USER_APC)
+			{
+				// User APC; we need no fallback to the thread proc so it can take action.
+				stm->success	= FALSE;
+				stm->errorCode  = waitResult;
+				return FALSE;
+			}
+			if (waitResult == WAIT_OBJECT_0)
+			{
+				stm->errorCode = ERROR_SUCCESS;
+				break;
+			}
+			else if (waitResult == WAIT_TIMEOUT)
+			{
+				stm->success	= FALSE;
+				stm->errorCode	= ERROR_IO_INCOMPLETE;
+				break;
+			}
 		}
-		else if (waitResult == WAIT_TIMEOUT)
-		{
-			stm->success	= FALSE;
-			stm->errorCode	= ERROR_IO_INCOMPLETE;
-			break;
-		}
+		if (!stm->success) return FALSE;
 	}
-	if (!stm->success) return FALSE;
 
 	DL_DELETE(stm->pendingList, stm->xferNext);
 	DL_DELETE(stm->ovlList, stm->ovlNext);
@@ -271,21 +381,35 @@ static BOOL Stm_Thread_ProcessPending(PKSTM_THREAD_INTERNAL stm, DWORD timeoutOv
 
 	if (completeResult == KSTM_COMPLETE_RESULT_INVALID)
 	{
+		// This can only happen if using a custom BeforeComplete callback; user code has instructed to place this xfer item back in the queue
+		// for re-processing.
 		DL_APPEND(stm->handle->List.Queued, stm->xferNext);
+		DecLock(stm->handle->PendingIO);
 	}
 	else
 	{
-		AL_PushTail_XferLink(stm->handle->List.Finished, stm->xferNext);
+		// Place the xfer item in the finished list.
+
+		// SPIN-LOCKED-TRY ///////////////////////////////////////////
+		if (mSpin_Try_Acquire(&(stm->handle->List.FinishedLock)))
+		{
+			Stm_SynchronizeFinishedList(stm->handle, FALSE);
+			DL_APPEND(stm->handle->List.Finished, stm->xferNext);
+
+			// SPIN-LOCK-RELEASE : List.FinishedLock
+			mSpin_Release(&(stm->handle->List.FinishedLock));
+		}
+		else
+		{
+			DL_APPEND(stm->handle->List.FinishedTemp, stm->xferNext);
+		}
+		//////////////////////////////////////////////////////////////
+
 		DecLock(stm->handle->PendingIO);
 
-		if (USB_ENDPOINT_DIRECTION_IN(stm->handle->Info->PipeID))
-			IncLock(stm->handle->PendingTransfers);
-		else
-			DecLock(stm->handle->PendingTransfers);
-
 		if (stm->handle->SemReady)
-			ReleaseSemaphore(stm->handle->SemReady,1,NULL);
-		
+			ReleaseSemaphore(stm->handle->SemReady, 1, NULL);
+
 		if (stm->handle->UserCB->Complete)
 		{
 			stm->errorCode = stm->handle->UserCB->Complete(stm->handle->Info, &stm->xferNext->Xfer->Public, stm->xferNext->Xfer->Index, stm->errorCode);
@@ -302,11 +426,17 @@ static BOOL Stm_StopInternal(
 	BOOL success;
 
 	success = (InterlockedCompareExchange(&handle->Thread.State, KSTM_THREADSTATE_STOPPING, KSTM_THREADSTATE_STARTED) == KSTM_THREADSTATE_STARTED) ? TRUE : FALSE;
-	if (!success) return FALSE;
+	ErrorSet(!success, Error, ERROR_ACCESS_DENIED, "stream already stopped");
 
-	QueueUserAPC(Stm_StopAPC, handle->Thread.Handle, (ULONG_PTR)handle);
-	WaitForSingleObject(handle->Thread.StoppedEvent, INFINITE);
+	ErrorNoSetAction(!QueueUserAPC(Stm_StopAPC, handle->Thread.Handle, (ULONG_PTR)handle), goto Error, "QueueUserAPC failed.");
+
+	Sleep(0);
+	while (InterlockedCompareExchange(&handle->Thread.State, KSTM_THREADSTATE_STOPPED, KSTM_THREADSTATE_STOPPED) != KSTM_THREADSTATE_STOPPED)
+		if (!SwitchToThread()) Sleep(0);
+
 	return TRUE;
+Error:
+	return FALSE;
 }
 
 static unsigned _stdcall Stm_ThreadProc(PKSTM_HANDLE_INTERNAL handle)
@@ -314,17 +444,14 @@ static unsigned _stdcall Stm_ThreadProc(PKSTM_HANDLE_INTERNAL handle)
 	DWORD exitCode = ERROR_SUCCESS;
 	KSTM_THREAD_INTERNAL stm_thread_internal;
 	PKSTM_THREAD_INTERNAL stm;
-	BOOL isQueueEmpty, isPendingIoEmpty;
+	//BOOL isQueueEmpty, isPendingIoEmpty;
 	DWORD maxWaitMS;
+	KSTM_THREAD_RESULT threadResult;
 
 	stm = &stm_thread_internal;
 
 	memset(stm, 0, sizeof(*stm));
 	stm->handle = handle;
-
-	InterlockedExchange(&handle->Thread.State, KSTM_THREADSTATE_STARTED);
-	SetEvent(stm->handle->Thread.StartedEvent);
-	ResetEvent(stm->handle->Thread.StoppedEvent);
 
 	if (!Stm_Thread_Alloc_Ovl(stm))
 	{
@@ -334,98 +461,113 @@ static unsigned _stdcall Stm_ThreadProc(PKSTM_HANDLE_INTERNAL handle)
 
 	if (handle->UserCB->Started)
 	{
-		PKSTM_XFER_LINK_EL xferEL;
-		DL_FOREACH(handle->List.Master, xferEL)
+		// Execute the user callback for all of the xfer items.
+		int listIndex;
+		PKSTM_XFER_INTERNAL xferItem;
+
+		for (listIndex = 0; listIndex < handle->XferItemsCount; listIndex++)
 		{
-			handle->UserCB->Started(handle->Info, &xferEL->Xfer->Public, xferEL->Xfer->Index);
+			xferItem = &handle->XferItems[listIndex];
+			handle->UserCB->Started(handle->Info, &xferItem->Public, xferItem->Index);
 		}
 	}
 
+	// Notify the Start function that we are ready.
+	InterlockedExchange(&handle->Thread.State, KSTM_THREADSTATE_STARTED);
+	SwitchToThread();
+
 	while(handle->Thread.State == KSTM_THREADSTATE_STARTED && exitCode == ERROR_SUCCESS)
 	{
-		isQueueEmpty = FALSE;
-		isPendingIoEmpty = FALSE;
-		if (!Stm_Thread_ProcessQueued(stm))
+		if (handle->List.FinishedTemp) Stm_SynchronizeFinishedList(handle, FALSE);
+
+		// Continue processing the list while there are xfer items queued.
+		while ((threadResult = Stm_Thread_ProcessQueued(stm)) == KSTM_THREAD_RESULT_ITEM_PROCESSED);
+
+		if (threadResult == KSTM_THREAD_RESULT_OVERLAPPED_EMPTY || threadResult == KSTM_THREAD_RESULT_QUEUE_EMPTY)
 		{
-			if (stm->errorCode == ERROR_NO_MORE_ITEMS)
+			// - No more pending IO slots; we need to process pending.
+			// - Nothing left in the queue.
+			//   - For IN pipes, all of the xfer items are sitting in the finished list. User needs to call StmK_Read before we can proceed.
+			//   - For OUT pipes, the user has not given the stream any more data to send. User needs to call StmK_Write before we can proceed.
+
+			if (!Stm_Thread_ProcessPending(stm, (handle->List.FinishedTemp) ? 1 : INFINITE))
 			{
-				isQueueEmpty = TRUE;
-			}
-			else
-			{
-				// fatal stream error; aborting..
+				// User APC.  (Read, Write, Stop, etc)
+				if (stm->errorCode == STATUS_USER_APC) continue;
+
+				// A timout accured; (should not be possible because we wait INFINITE)
+				if (stm->errorCode == ERROR_IO_INCOMPLETE) continue;
+
+				if (stm->errorCode == ERROR_NO_MORE_ITEMS)
+				{
+					// No more pending *transfer* slots.
+					USBDEVN("KSTM_THREAD_RESULT_OVERLAPPED_EMPTY");
+					SleepEx(INFINITE, TRUE);
+					continue;
+				}
+
+				USBERRN("Un-handled stream error; aborting.. ErrorCode=%08Xh", stm->errorCode);
 				exitCode = stm->errorCode;
-				break;
 			}
+
+		}
+		else if (threadResult == KSTM_THREAD_RESULT_SUMBIT_ERROR)
+		{
+			USBDEVN("KSTM_THREAD_RESULT_SUMBIT_ERROR");
+			// An Error occured or was returned by the user submit callback.
+			exitCode = stm->errorCode;
+			goto Done;
 		}
 		else
 		{
-			isPendingIoEmpty = TRUE;
-		}
-
-		if (!Stm_Thread_ProcessPending(stm, 0))
-		{
-			if (stm->errorCode == ERROR_IO_INCOMPLETE) continue;
-
-			if (stm->errorCode == ERROR_NO_MORE_ITEMS)
-			{
-				if (isQueueEmpty || isPendingIoEmpty)
-				{
-					if (USB_ENDPOINT_DIRECTION_IN(stm->handle->Info->PipeID))
-						SleepEx(stm->handle->PendingTransfers == (long)stm->handle->Info->MaxPendingTransfers ? INFINITE : 0, TRUE);
-					else
-						SleepEx(stm->handle->PendingTransfers == 0 ? INFINITE : 0, TRUE);
-				}
-				else
-				{
-					SleepEx(0, TRUE);
-				}
-			}
-			else
-			{
-				// fatal stream error; aborting..
-				exitCode = stm->errorCode;
-				break;
-			}
+			USBERRN("Fatal Error: UNHANDLED KSTM_THREAD_RESULT");
+			exitCode = ERROR_FUNCTION_FAILED;
+			goto Done;
 		}
 	}
 
 Done:
+	// Set the stopping state.
 	InterlockedExchange(&handle->Thread.State, KSTM_THREADSTATE_STOPPING);
 
-	// Wait for all queued APCs
-	while (ALLK_GETREF_HANDLE(stm->handle) > 2)
-		SleepEx(INFINITE, TRUE);
 
-	if (stm->handle->TimeoutCancelMS)
-		maxWaitMS = stm->handle->TimeoutCancelMS;
-	else
-		maxWaitMS = 1000;
-
+	// TimeoutCancelMS is set be the Stop() function.
+	maxWaitMS = stm->handle->TimeoutCancelMS;
 	stm->handle->TimeoutCancelMS = 0;
 
 	while(stm->handle->PendingIO > 0)
 	{
+		SleepEx(0, TRUE);
+		// Complete or cancel all of the pending IO.
 		if (!Stm_Thread_ProcessPending(stm, maxWaitMS))
 		{
-			if (stm->errorCode == ERROR_IO_INCOMPLETE) CancelIo(stm->handle->Info->DeviceHandle);
-			maxWaitMS = 10;
+			if (stm->errorCode == ERROR_IO_INCOMPLETE)
+			{
+				// Disable waiting in Stm_Thread_ProcessPending
+				if (!stm->NoWaiting) stm->NoWaiting = TRUE;
+
+				// A timout occured; cancel *all* IO on the stream thread.
+				if (!CancelIo(stm->handle->Info->DeviceHandle))
+				{
+					USBERRN("CancelIo Failed. ErrorCode=%08Xh", GetLastError());
+				}
+			}
 		}
 	}
 
 	if (handle->UserCB->Stopped)
 	{
-		PKSTM_XFER_LINK_EL xferEL;
-		DL_FOREACH(handle->List.Master, xferEL)
+		int listIndex;
+		PKSTM_XFER_INTERNAL xferItem;
+
+		for (listIndex = 0; listIndex < handle->XferItemsCount; listIndex++)
 		{
-			handle->UserCB->Stopped(handle->Info, &xferEL->Xfer->Public, xferEL->Xfer->Index);
+			xferItem = &handle->XferItems[listIndex];
+			handle->UserCB->Stopped(handle->Info, &xferItem->Public, xferItem->Index);
 		}
 	}
 
 	Stm_Thread_Free_Ovl(stm);
-
-	ResetEvent(stm->handle->Thread.StartedEvent);
-	SetEvent(stm->handle->Thread.StoppedEvent);
 
 	InterlockedExchange(&handle->Thread.State, KSTM_THREADSTATE_STOPPED);
 	_endthreadex(exitCode);
@@ -444,10 +586,9 @@ static void KUSB_API Stm_Cleanup(PKSTM_HANDLE_INTERNAL handle)
 	PoolHandle_Dead_StmK(handle);
 	if (handle->Info)
 	{
-		if(handle->Info->UsbHandle) PoolHandle_Dec_UsbK((PKUSB_HANDLE_INTERNAL)handle->Info->UsbHandle);
+		if(handle->Info->UsbHandle)
+			PoolHandle_Dec_UsbK((PKUSB_HANDLE_INTERNAL)handle->Info->UsbHandle);
 	}
-	if (handle->Thread.StartedEvent) CloseHandle(handle->Thread.StartedEvent);
-	if (handle->Thread.StoppedEvent) CloseHandle(handle->Thread.StoppedEvent);
 	if (handle->SemReady) CloseHandle(handle->SemReady);
 
 	if (handle->Heap)
@@ -468,12 +609,12 @@ KUSB_EXP BOOL KUSB_API StmK_Init(
     _inopt KSTM_FLAG Flags)
 {
 	DWORD minHeapSize = 0;
-	DWORD errorCode = ERROR_SUCCESS;
 	PKSTM_HANDLE_INTERNAL handle;
 	PKUSB_HANDLE_INTERNAL usbHandle;
-	LONG TransferIndex;
+	LONG xferIndex;
 	USB_ENDPOINT_DESCRIPTOR epDescriptor;
 	BOOL success;
+	PUCHAR bufferMemory;
 
 	usbHandle = (PKUSB_HANDLE_INTERNAL)UsbHandle;
 
@@ -501,14 +642,22 @@ KUSB_EXP BOOL KUSB_API StmK_Init(
 	handle->UserCB = Stm_Alloc(handle, sizeof(*handle->UserCB));
 	ErrorMemory(!handle->UserCB, Error);
 
+	handle->XferItems = Stm_Alloc(handle, sizeof(KSTM_XFER_INTERNAL) * MaxPendingTransfers);
+	ErrorMemory(!handle->XferItems, Error);
+
+	bufferMemory = Stm_Alloc(handle, MaxTransferSize * MaxPendingTransfers);
+	ErrorMemory(!bufferMemory, Error);
+
 	if (Flags & KSTM_FLAG_USE_TIMEOUT)
 	{
 		handle->SemReady = CreateSemaphoreA(NULL, USB_ENDPOINT_DIRECTION_IN(PipeID) ? 0 : MaxPendingTransfers, MaxPendingTransfers, NULL);
-		ErrorNoSetAction(!handle->SemReady, goto Error,"CreateSemaphoreA failed.");
+		ErrorNoSetAction(!handle->SemReady, goto Error, "CreateSemaphoreA failed.");
 
-		handle->WaitTimeout = (Flags & KSTM_FLAG_TIMEOUT_MASK)==KSTM_FLAG_TIMEOUT_MASK ? INFINITE : Flags & KSTM_FLAG_TIMEOUT_MASK;
+		handle->WaitTimeout = (Flags & KSTM_FLAG_TIMEOUT_MASK) == KSTM_FLAG_TIMEOUT_MASK ? INFINITE : Flags & KSTM_FLAG_TIMEOUT_MASK;
 	}
-	
+	else
+		handle->SemReady = NULL;
+
 	handle->Flags = Flags;
 
 	ErrorSet(!PoolHandle_Inc_UsbK(usbHandle), Error, ERROR_RESOURCE_NOT_AVAILABLE, "->PoolHandle_Inc_UsbK");
@@ -522,6 +671,7 @@ KUSB_EXP BOOL KUSB_API StmK_Init(
 	handle->Info->MaxTransferSize		= MaxTransferSize;
 	handle->Info->PipeID				= PipeID;
 	handle->Info->StreamHandle          = handle;
+	handle->TimeoutCancelMS				= 1;
 
 	if (Callbacks)
 		memcpy(handle->UserCB, Callbacks, sizeof(*handle->UserCB));
@@ -534,34 +684,19 @@ KUSB_EXP BOOL KUSB_API StmK_Init(
 			handle->UserCB->Submit = &Stm_SubmitWrite;
 	}
 
-	handle->Thread.StartedEvent = CreateEventA(NULL, TRUE, FALSE, NULL);
-	handle->Thread.StoppedEvent = CreateEventA(NULL, TRUE, TRUE, NULL);
-
-	errorCode = AL_Create_XferLink(&handle->List.Idle, handle->Heap, handle->Info->MaxPendingTransfers);
-	ErrorNoSet(errorCode, Error, "AL_Create List.Idle failed.");
-
-	errorCode = AL_Create_XferLink(&handle->List.Finished, handle->Heap, handle->Info->MaxPendingTransfers);
-	ErrorNoSet(errorCode, Error, "AL_Create List.Finished failed.");
-
-	for (TransferIndex = 0; TransferIndex < handle->Info->MaxPendingTransfers; TransferIndex++)
+	for (xferIndex = 0; xferIndex < MaxPendingTransfers; xferIndex++)
 	{
 		PKSTM_XFER_INTERNAL xfer;
 
-		xfer = Stm_Alloc(handle, sizeof(*xfer));
-		ErrorMemory(!xfer, Error);
+		xfer = &handle->XferItems[xferIndex];
 
-		xfer->Buffer = Stm_Alloc(handle, handle->Info->MaxTransferSize);
-		ErrorMemory(!xfer->Buffer, Error);
-
-		xfer->MasterLink.Xfer	= xfer;
+		xfer->Buffer			= &bufferMemory[xferIndex * MaxTransferSize];
 		xfer->Link.Xfer			= xfer;
-		xfer->Index				= TransferIndex;
+		xfer->Index				= xferIndex;
 		xfer->StreamHandle		= handle;
-		xfer->BufferSize		= handle->Info->MaxTransferSize;
+		xfer->BufferSize		= MaxTransferSize;
 		xfer->Public.Buffer		= xfer->Buffer;
 		xfer->Public.BufferSize = xfer->BufferSize;
-
-		DL_APPEND(handle->List.Master, &xfer->MasterLink);
 
 		if (USB_ENDPOINT_DIRECTION_IN(handle->Info->PipeID))
 		{
@@ -569,7 +704,7 @@ KUSB_EXP BOOL KUSB_API StmK_Init(
 		}
 		else
 		{
-			AL_PushTail_XferLink(handle->List.Idle, &xfer->Link);
+			DL_APPEND(handle->List.Finished, &xfer->Link);
 		}
 	}
 
@@ -613,9 +748,19 @@ KUSB_EXP BOOL KUSB_API StmK_Start(
 	if (!success) InterlockedExchange(&handle->Thread.State, KSTM_THREADSTATE_STOPPED);
 	ErrorNoSet(!success, Error, "->Stm_Create_Thread");
 
-	ResumeThread(handle->Thread.Handle);
-	WaitForSingleObject(handle->Thread.StartedEvent, INFINITE);
+	success = ResumeThread(handle->Thread.Handle) != 0xFFFFFFFF;
+	if (!success)
+	{
+		TerminateThread(handle->Thread.Handle, GetLastError());
+		InterlockedExchange(&handle->Thread.State, KSTM_THREADSTATE_STOPPED);
+		ErrorNoSet(!success, Error, "->ResumeThread");
+	}
 
+	Sleep(0);
+	while (InterlockedCompareExchange(&handle->Thread.State, KSTM_THREADSTATE_STARTED, KSTM_THREADSTATE_STARTED) != KSTM_THREADSTATE_STARTED)
+		if (!SwitchToThread()) Sleep(0);
+
+	USBMSGN("Stream Started.  ThreadID=%08Xh", handle->Thread.Id);
 	PoolHandle_Dec_StmK(handle);
 	return TRUE;
 Error:
@@ -633,11 +778,12 @@ KUSB_EXP BOOL KUSB_API StmK_Stop(
 	Pub_To_Priv_StmK(StreamHandle, handle, return FALSE);
 	ErrorSetAction(!PoolHandle_Inc_StmK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_StmK");
 
-	handle->TimeoutCancelMS = TimeoutCancelMS ? TimeoutCancelMS : 1000;
+	handle->TimeoutCancelMS = TimeoutCancelMS;
 
 	success = Stm_StopInternal(handle);
 	ErrorSet(!success, Error, ERROR_ACCESS_DENIED, "stream already stopped");
 
+	USBMSGN("Stream Stopped.  ThreadID=%08Xh", handle->Thread.Id);
 	PoolHandle_Dec_StmK(handle);
 	return TRUE;
 Error:
@@ -647,15 +793,23 @@ Error:
 
 KUSB_EXP BOOL KUSB_API StmK_Read(
     _in KSTM_HANDLE StreamHandle,
-    _out PUCHAR Buffer,
+    _in PUCHAR Buffer,
     _in INT Offset,
     _in INT Length,
     _out PUINT TransferredLength)
 {
 	PKSTM_HANDLE_INTERNAL handle = NULL;
-	PKSTM_XFER_LINK_EL xferEL = NULL;
-	LONG transferLength = 0;
-	LONG stageSize;
+	PKSTM_XFER_LINK_EL xferEL, xferTempEL;
+	PKSTM_XFER_LINK_EL xferSubmitList = NULL;
+
+	UINT transferLength = 0;
+	UINT stageSize;
+	int iTemp;
+
+	INT backupTransferLength = 0;
+	INT backupBufferSize = 0;
+	PUCHAR backupBuffer = NULL;
+	PKSTM_XFER_LINK_EL backupXferItem = NULL;
 
 	Pub_To_Priv_StmK(StreamHandle, handle, return FALSE);
 	ErrorParamAction(!Buffer, "Buffer", return FALSE);
@@ -665,64 +819,97 @@ KUSB_EXP BOOL KUSB_API StmK_Read(
 
 	ErrorSetAction(!PoolHandle_Inc_StmK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_StmK");
 	ErrorSet(!USB_ENDPOINT_DIRECTION_IN(handle->Info->PipeID), Error, ERROR_ACCESS_DENIED, "cannot read from a write stream");
-	ErrorParam((Length % handle->Info->MaxTransferSize) > 0, Error, "Length not an interval of MaxTransferSize");
+	ErrorSet(handle->Thread.State > KSTM_THREADSTATE_STARTED, Error, ERROR_ACCESS_DENIED, "stream is stopping or starting");
 
-	while(Length > 0)
+	// Wait on the semaphore (if using a timeout) and acquire the Finished list lock.
+	mStm_SpinLockForTransferRequest(handle, Error);
+
+	DL_FOREACH_SAFE(handle->List.Finished, xferEL, xferTempEL)
 	{
-		if (handle->SemReady) 
+		if ((handle->SemReady) && xferEL != handle->List.Finished)
 		{
-			if (WaitForSingleObject(handle->SemReady, handle->WaitTimeout) != WAIT_OBJECT_0)
-			{
-				USBWRNN("No more transfer buffers. TotalTransferLength=%u", transferLength);
-				if (transferLength == 0)
-					goto Error;
-				else
-					goto PartialTransfer;
-			}
+			if (WaitForSingleObject(handle->SemReady, 0) != WAIT_OBJECT_0)
+				break;
 		}
 
-		if (AL_PopHead_XferLink(handle->List.Finished, &xferEL) != ERROR_SUCCESS)
-		{
-			if (handle->SemReady)
-				ReleaseSemaphore(handle->SemReady,1,NULL);
-
-			if (transferLength == 0)
-			{
-				LusbwError(ERROR_NO_MORE_ITEMS);
-				goto Error;
-			}
-			else
-			{
-				goto PartialTransfer;
-			}
-		}
-
-		DecLock(handle->PendingTransfers);
-
-		stageSize = Length >  (LONG)xferEL->Xfer->Public.TransferLength ? (LONG)xferEL->Xfer->Public.TransferLength : Length;
+		stageSize		= (Length > xferEL->Xfer->Public.TransferLength) ? xferEL->Xfer->Public.TransferLength : Length;
 		Length			-= stageSize;
 		transferLength	+= stageSize;
 
-		xferEL->Xfer->Public.TransferLength = stageSize;
 		memcpy(Buffer + Offset, xferEL->Xfer->Buffer, stageSize);
 		Offset += stageSize;
 
-		if (handle->Thread.State == KSTM_THREADSTATE_STARTED)
+		if ((xferEL->Xfer->Public.TransferLength - stageSize) > 0)
 		{
-			PoolHandle_Inc_StmK(handle);
-			QueueUserAPC(Stm_ReadAPC, handle->Thread.Handle, (ULONG_PTR)xferEL);
+			// We need to backup these original values up before modifying incase an error occurs queueing the APC.
+			backupXferItem			= xferEL;
+			backupTransferLength	= xferEL->Xfer->Public.TransferLength;
+			backupBuffer			= xferEL->Xfer->Public.Buffer;
+			backupBufferSize		= xferEL->Xfer->Public.BufferSize;
+
+			// There are still bytes remaining in this xfer context; update the conext and push in back to the list head.
+			// This is an inefficient way to use the stream and is not entirely thread safe because we need no put
+			// everything back after the fact.
+			xferEL->Xfer->Public.TransferLength -= stageSize;
+			xferEL->Xfer->Public.Buffer += stageSize;
+			xferEL->Xfer->Public.BufferSize -= stageSize;
+
+			if (handle->SemReady) ReleaseSemaphore(handle->SemReady, 1, NULL);
+			break;
 		}
 		else
 		{
-			DL_APPEND(handle->List.Queued, xferEL);
+			DL_DELETE(handle->List.Finished, xferEL);
+			DL_APPEND(xferSubmitList, xferEL);
 		}
-	}
 
-PartialTransfer:
-	*TransferredLength = transferLength;
+		if (Length == 0) break;
+	}
+	// SPIN-LOCK-RELEASE : List.FinishedLock
+	mSpin_Release(&handle->List.FinishedLock);
+
+	mStm_CheckPartialTransfer(handle, Length, TransferredLength, transferLength, Error);
+
+	mStm_QueueTransferList(handle, xferSubmitList, xferEL, xferTempEL, Error);
+
+	if (TransferredLength)
+		*TransferredLength = transferLength;
+
 	PoolHandle_Dec_StmK(handle);
 	return TRUE;
+
 Error:
+	if (xferSubmitList)
+	{
+		// SPIN-LOCKED : List.FinishedLock
+		mSpin_Acquire(&handle->List.FinishedLock);
+
+		if (backupXferItem)
+		{
+			// This was a partial transfer that is still in the finished list.
+			backupXferItem->Xfer->Public.Buffer = backupBuffer;
+			backupXferItem->Xfer->Public.BufferSize = backupBufferSize;
+			backupXferItem->Xfer->Public.TransferLength = backupTransferLength;
+		}
+
+		// Add the elements back to the finished list.
+		iTemp = 0;
+		DL_FOREACH(xferSubmitList, xferEL)
+		{
+			iTemp++;
+			DL_PREPEND(handle->List.Finished, xferEL);
+		}
+
+		// Release xferSubmitList semaphores
+		if (iTemp && handle->SemReady) ReleaseSemaphore(handle->SemReady, iTemp, NULL);
+
+		// SPIN-LOCK-RELEASE : List.FinishedLock
+		mSpin_Release(&handle->List.FinishedLock);
+	}
+
+	if (TransferredLength)
+		*TransferredLength = 0;
+
 	PoolHandle_Dec_StmK(handle);
 	return FALSE;
 }
@@ -735,54 +922,34 @@ KUSB_EXP BOOL KUSB_API StmK_Write(
     _out PUINT TransferredLength)
 {
 	PKSTM_HANDLE_INTERNAL handle = NULL;
-	PKSTM_XFER_LINK_EL xferEL = NULL;
+	PKSTM_XFER_LINK_EL xferEL, xferTempEL;
+	PKSTM_XFER_LINK_EL xferSubmitList = NULL;
+
 	UINT transferLength = 0;
 	UINT stageSize;
+	int iTemp;
 
 	Pub_To_Priv_StmK(StreamHandle, handle, return FALSE);
 	ErrorParamAction(!Buffer, "Buffer", return FALSE);
 	ErrorParamAction(Offset < 0, "Offset", return FALSE);
 	ErrorParamAction(Length <= 0, "Length", return FALSE);
-	ErrorParamAction(!TransferredLength, "TransferredLength", return FALSE);
 
 	ErrorSetAction(!PoolHandle_Inc_StmK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_StmK");
 	ErrorSet(USB_ENDPOINT_DIRECTION_IN(handle->Info->PipeID), Error, ERROR_ACCESS_DENIED, "cannot write to a read stream");
+	ErrorSet(handle->Thread.State > KSTM_THREADSTATE_STARTED, Error, ERROR_ACCESS_DENIED, "stream is stopping or starting");
 
-	while(Length > 0)
+	// Wait on the semaphore (if using a timeout) and acquire the Finished list lock.
+	mStm_SpinLockForTransferRequest(handle, Error);
+
+	DL_FOREACH_SAFE(handle->List.Finished, xferEL, xferTempEL)
 	{
-		if (handle->SemReady) 
+		if ((handle->SemReady) && xferEL != handle->List.Finished)
 		{
-			if (WaitForSingleObject(handle->SemReady, handle->WaitTimeout) != WAIT_OBJECT_0)
-			{
-				USBWRNN("No more transfer buffers. TotalTransferLength=%u", transferLength);
-				if (transferLength == 0)
-					goto Error;
-				else
-					goto PartialTransfer;
-			}
+			if (WaitForSingleObject(handle->SemReady, 0) != WAIT_OBJECT_0)
+				break;
 		}
 
-		if (AL_PopHead_XferLink(handle->List.Idle, &xferEL) != ERROR_SUCCESS)
-		{
-			if (AL_PopHead_XferLink(handle->List.Finished, &xferEL) != ERROR_SUCCESS)
-			{
-				if (handle->SemReady)
-					ReleaseSemaphore(handle->SemReady,1,NULL);
-
-				if (transferLength == 0)
-				{
-					LusbwError(ERROR_NO_MORE_ITEMS);
-					goto Error;
-				}
-				else
-				{
-					goto PartialTransfer;
-				}
-			}
-		}
-
-		IncLock(handle->PendingTransfers);
-		stageSize = Length >  (LONG)xferEL->Xfer->BufferSize ? (LONG)xferEL->Xfer->BufferSize : Length;
+		stageSize		= (Length > xferEL->Xfer->BufferSize) ? xferEL->Xfer->BufferSize : Length;
 		Length			-= stageSize;
 		transferLength	+= stageSize;
 
@@ -790,23 +957,45 @@ KUSB_EXP BOOL KUSB_API StmK_Write(
 		memcpy(xferEL->Xfer->Buffer, Buffer + Offset, stageSize);
 		Offset += stageSize;
 
-		if (handle->Thread.State == KSTM_THREADSTATE_STARTED)
-		{
-			PoolHandle_Inc_StmK(handle);
-			QueueUserAPC(Stm_WriteAPC, handle->Thread.Handle, (ULONG_PTR)xferEL);
-		}
-		else
-		{
-			DL_APPEND(handle->List.Queued, xferEL);
-		}
+		DL_DELETE(handle->List.Finished, xferEL);
+		DL_APPEND(xferSubmitList, xferEL);
+
+		if (Length == 0) break;
 	}
 
-PartialTransfer:
-	*TransferredLength = transferLength;
+	// SPIN-LOCK-RELEASE : List.FinishedLock
+	mSpin_Release(&handle->List.FinishedLock);
+
+	mStm_CheckPartialTransfer(handle, Length, TransferredLength, transferLength, Error);
+
+	mStm_QueueTransferList(handle, xferSubmitList, xferEL, xferTempEL, Error);
+
+	if (TransferredLength)
+		*TransferredLength = transferLength;
+
 	PoolHandle_Dec_StmK(handle);
 	return TRUE;
+
 Error:
-	*TransferredLength = transferLength;
+	if (xferSubmitList)
+	{
+		iTemp = 0;
+
+		// SPIN-LOCKED : List.FinishedLock
+		mSpin_Acquire(&handle->List.FinishedLock);
+		DL_FOREACH(xferSubmitList, xferEL)
+		{
+			iTemp++;
+			DL_PREPEND(handle->List.Finished, xferEL);
+		}
+		// SPIN-LOCK-RELEASE : List.FinishedLock
+		mSpin_Release(&handle->List.FinishedLock);
+
+		// Release xferSubmitList semaphores
+		if (iTemp && handle->SemReady) ReleaseSemaphore(handle->SemReady, iTemp, NULL);
+	}
+
+	*TransferredLength = 0;
 	PoolHandle_Dec_StmK(handle);
 	return FALSE;
 }

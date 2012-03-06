@@ -1,7 +1,10 @@
 LIBUSBK RELEASE NOTES
 
-V3.0.5.9 RC9 (02/30/2012)
+V3.0.5.9 RC9 (03/05/2012)
 ==============================================
+- Added KHOT_PARAMS fields:
+  - KLIB_USER_CONTEXT UserContext;
+  
 - Fixed missing 'HotK_FreeAll' function export.
 
 - Removed OvlK thread safe handlers to improve performance and increase
@@ -9,13 +12,18 @@ V3.0.5.9 RC9 (02/30/2012)
   
 - New 'OvlK_WaitOldest' function.
 
+- Eliminated 'StmK_Read' transfer size restrictions. (Partial Transfers)
+
+- Fixed StmK dead-lock issue when calling StmK_Stop()
+
 - Added KSTM_FLAG enum values:
   - KSTM_FLAG_USE_TIMEOUT = 0x80000000
+  - KSTM_FLAG_NO_PARTIAL_XFERS = 0x00100000
   - KSTM_FLAG_TIMEOUT_MASK = 0x0001FFFF
-
+ 
 - GLOBAL HEADER TYPE CHANGE: LONGs to INTs
   - All LONG, PLONG, ULONG, PULONG, and LPDWORD data types were changed 
-    to the equivalent INT representation. 
+    to the equivalent INT, UINT representation. 
 
 - PULIC _KISO_CONTEXT typedef changed.
   Inserted:
