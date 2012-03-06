@@ -335,6 +335,7 @@ GOTO :EOF
 GOTO :EOF
 
 	:Clean_Full
+		attrib -H /S *.suo > NUL
 		CALL :Clean_All
 		REM - Remove the entire output directory on a full clean
 		ECHO !__Clean_BuildOutputDirRel!>>!__Clean_AllDirList!
