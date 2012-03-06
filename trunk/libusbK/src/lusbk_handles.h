@@ -384,13 +384,11 @@ typedef struct _KSTM_XFER_INTERNAL
 
 	KSTM_XFER_LINK_EL Link;
 
-	KSTM_XFER_LINK_EL MasterLink;
-
 	INT Index;
 
 	struct _KSTM_HANDLE_INTERNAL* StreamHandle;
 
-	ULONG BufferSize;
+	INT BufferSize;
 	PUCHAR Buffer;
 
 } KSTM_XFER_INTERNAL, *PKSTM_XFER_INTERNAL;
@@ -593,8 +591,6 @@ typedef KLST_DEVINFO_HANDLE_INTERNAL* PKLST_DEVINFO_HANDLE_INTERNAL;
 		(HandlePtr)->Info = NULL;										\
 		(HandlePtr)->Flags = 0;											\
 		(HandlePtr)->UserCB = NULL;										\
-		(HandlePtr)->PendingTransfers = 0;								\
-		(HandlePtr)->PendingIO = 0;										\
 		(HandlePtr)->TimeoutCancelMS = 0;								\
 		memset(&((HandlePtr)->Thread), 0, sizeof((HandlePtr)->Thread));	\
 		memset(&((HandlePtr)->List), 0, sizeof((HandlePtr)->List));		\
@@ -608,8 +604,8 @@ typedef struct _KSTM_HANDLE_INTERNAL
 	KSTM_FLAG		Flags;
 	PKSTM_CALLBACK	UserCB;
 
-	volatile long PendingTransfers;
 	volatile long PendingIO;
+	volatile long APCTransferQueueCount;
 
 	ULONG TimeoutCancelMS;
 	HANDLE SemReady;
@@ -621,18 +617,20 @@ typedef struct _KSTM_HANDLE_INTERNAL
 
 		UINT Id;
 		HANDLE Handle;
-		HANDLE StartedEvent;
-		HANDLE StoppedEvent;
 	} Thread;
 
 	struct
 	{
-		PKSTM_XFER_LIST Idle;
-		PKSTM_XFER_LIST Finished;
-		PKSTM_XFER_LINK_EL Queued;
-		PKSTM_XFER_LINK_EL Master;
+		volatile long		FinishedLock;
+		PKSTM_XFER_LINK_EL	Finished;
+		PKSTM_XFER_LINK_EL  FinishedTemp;
 
+		PKSTM_XFER_LINK_EL	Queued;
 	} List;
+
+	PKSTM_XFER_INTERNAL XferItems;
+	INT XferItemsCount;
+
 
 } KSTM_HANDLE_INTERNAL;
 typedef KSTM_HANDLE_INTERNAL* PKSTM_HANDLE_INTERNAL;
