@@ -185,7 +185,7 @@ KUSB_EXP BOOL KUSB_API LibK_GetProcAddress(
     _in INT DriverID,
     _in INT FunctionID)
 {
-	CheckLibInit();
+	if (AllK == NULL && CheckLibInit() == FALSE) return FALSE;
 
 	*ProcAddress = (KPROC)NULL;
 
@@ -234,7 +234,7 @@ KUSB_EXP BOOL KUSB_API LibK_LoadDriverAPI(
 	int fnIdIndex;
 	int fnIdCount = 0;
 
-	CheckLibInit();
+	if (AllK == NULL && CheckLibInit() == FALSE) return FALSE;
 
 	if (!IsHandleValid(DriverAPI))
 	{
@@ -387,4 +387,82 @@ KUSB_EXP VOID KUSB_API LibK_GetVersion(
 	Version->Minor = VERSION_MINOR;
 	Version->Micro = VERSION_MICRO;
 	Version->Nano = VERSION_NANO;
+}
+
+KUSB_EXP KLIB_USER_CONTEXT KUSB_API LibK_GetDefaultContext(
+    _in KLIB_HANDLE_TYPE HandleType)
+{
+	switch (HandleType)
+	{
+	case KLIB_HANDLE_TYPE_HOTK:
+		return AllK->HotK.DefaultUserContext;
+
+	case KLIB_HANDLE_TYPE_USBK:
+		return AllK->UsbK.DefaultUserContext;
+
+	case KLIB_HANDLE_TYPE_USBSHAREDK:
+		return AllK->DevK.DefaultUserContext;
+
+	case KLIB_HANDLE_TYPE_LSTK:
+		return AllK->LstK.DefaultUserContext;
+
+	case KLIB_HANDLE_TYPE_LSTINFOK:
+		return AllK->LstInfoK.DefaultUserContext;
+
+	case KLIB_HANDLE_TYPE_OVLK:
+		return AllK->OvlK.DefaultUserContext;
+
+	case KLIB_HANDLE_TYPE_OVLPOOLK:
+		return AllK->OvlPoolK.DefaultUserContext;
+
+	case KLIB_HANDLE_TYPE_STMK:
+		return AllK->StmK.DefaultUserContext;
+	}
+
+	LusbwError(ERROR_INVALID_HANDLE);
+	return 0;
+}
+
+KUSB_EXP BOOL KUSB_API LibK_SetDefaultContext(
+    _in KLIB_HANDLE_TYPE HandleType,
+    _in KLIB_USER_CONTEXT ContextValue)
+{
+
+	switch (HandleType)
+	{
+	case KLIB_HANDLE_TYPE_HOTK:
+		InterlockedExchangePointer(&AllK->HotK.DefaultUserContext, ContextValue);
+		return TRUE;
+
+	case KLIB_HANDLE_TYPE_USBK:
+		InterlockedExchangePointer(&AllK->UsbK.DefaultUserContext, ContextValue);
+		return TRUE;
+
+	case KLIB_HANDLE_TYPE_USBSHAREDK:
+		InterlockedExchangePointer(&AllK->DevK.DefaultUserContext, ContextValue);
+		return TRUE;
+
+	case KLIB_HANDLE_TYPE_LSTK:
+		InterlockedExchangePointer(&AllK->LstK.DefaultUserContext, ContextValue);
+		return TRUE;
+
+	case KLIB_HANDLE_TYPE_LSTINFOK:
+		InterlockedExchangePointer(&AllK->LstInfoK.DefaultUserContext, ContextValue);
+		return TRUE;
+
+	case KLIB_HANDLE_TYPE_OVLK:
+		InterlockedExchangePointer(&AllK->OvlK.DefaultUserContext, ContextValue);
+		return TRUE;
+
+	case KLIB_HANDLE_TYPE_OVLPOOLK:
+		InterlockedExchangePointer(&AllK->OvlPoolK.DefaultUserContext, ContextValue);
+		return TRUE;
+
+	case KLIB_HANDLE_TYPE_STMK:
+		InterlockedExchangePointer(&AllK->StmK.DefaultUserContext, ContextValue);
+		return TRUE;
+	}
+
+	LusbwError(ERROR_INVALID_HANDLE);
+	return FALSE;
 }

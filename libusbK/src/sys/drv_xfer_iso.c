@@ -51,7 +51,7 @@ const USHORT Frames_Per_bInterval_FullSpeed[32] =
 		mUrb->UrbIsochronousTransfer.TransferBufferLength = mTransferLength;  														\
 		mUrb->UrbIsochronousTransfer.TransferFlags        = mTransferFlags;   														\
 	}while(0) 																														\
-		 
+ 
 #define mXfer_IsoPacketsToUrb(mIsoPacketArray,mUrb,mNumberOfPackets,mDataLength,mErrorAction) do {  	\
 		LONG mPos; 																							\
 		for (mPos = 0; mPos < (LONG)mNumberOfPackets; mPos++)  												\

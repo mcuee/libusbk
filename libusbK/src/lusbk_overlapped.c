@@ -55,7 +55,7 @@ static void KUSB_API Cleanup_OvlK(PKOVL_HANDLE_INTERNAL handle)
 	{
 		if (DecLock(handle->Pool->MasterListCount) == 0)
 		{
-			HeapFree(AllK.Heap, 0, handle->Pool->MasterArray);
+			HeapFree(AllK->Heap, 0, handle->Pool->MasterArray);
 			handle->Pool->AcquiredList = NULL;
 			handle->Pool->ReleasedList = NULL;
 			handle->Pool->MasterListCount = 0;
@@ -165,7 +165,7 @@ KUSB_EXP BOOL KUSB_API OvlK_Init(
 	ErrorSet(!PoolHandle_Inc_UsbK(usbHandle), UsbHandleError, ERROR_RESOURCE_NOT_AVAILABLE, "->PoolHandle_Inc_UsbK");
 	handle->UsbHandle	= usbHandle;
 
-	handle->MasterArray		= Ovl_SafeMemAlloc(AllK.Heap, MaxOverlappedCount * sizeof(KOVL_EL));
+	handle->MasterArray		= Ovl_SafeMemAlloc(AllK->Heap, MaxOverlappedCount * sizeof(KOVL_EL));
 	ErrorMemory(!handle->MasterArray, Error);
 	handle->MasterListCount = MaxOverlappedCount;
 
@@ -292,8 +292,8 @@ CancelIoRetry:
 		// overlapped I/O has not completed yet but is still pending.
 		if (WaitFlags & KOVL_WAIT_FLAG_CANCEL_ON_TIMEOUT)
 		{
-			if (AllK.CancelIoEx)
-				success = AllK.CancelIoEx(overlapped->Pool->UsbHandle->Device->MasterDeviceHandle, overlapped);
+			if (AllK->CancelIoEx)
+				success = AllK->CancelIoEx(overlapped->Pool->UsbHandle->Device->MasterDeviceHandle, overlapped);
 			else
 				success = CancelIo(overlapped->Pool->UsbHandle->Device->MasterDeviceHandle);
 

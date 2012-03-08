@@ -67,7 +67,6 @@ VOID WUsb_Init_Library()
 
 	if (!WinUsb.Init.IsInitialized)
 	{
-		CheckLibInit();
 		mSpin_Acquire(&WinUsb.Init.Lock);
 		if ((WinUsb.Init.DLL = LoadLibraryA("winusb.dll")) != NULL)
 		{

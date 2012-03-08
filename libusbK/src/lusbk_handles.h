@@ -31,14 +31,12 @@ binary distributions.
 #define KOVL_POOL_HANDLE_COUNT			64
 #define KSTM_HANDLE_COUNT				32
 
-#define DL_MatchPattern(FilePattern,FilePath) (AllK.PathMatchSpec(FilePath, FilePattern)?0:-1)
-
-#define ALLK_HANDLE_COUNT(AllKSection) (sizeof(AllK.AllKSection.Handles)/sizeof(AllK.AllKSection.Handles[0]))
+#define ALLK_HANDLE_COUNT(AllKSection) (sizeof(AllK->AllKSection.Handles)/sizeof(AllK->AllKSection.Handles[0]))
 
 #define ALLK_VALID_HANDLE(HandlePtr, AllKSection)															\
 	((																										\
-	        (UINT_PTR)(HandlePtr) >= (UINT_PTR)(&AllK.AllKSection.Handles[0]) &&								\
-	        (UINT_PTR)(HandlePtr) <= (UINT_PTR)(&AllK.AllKSection.Handles[ALLK_HANDLE_COUNT(AllKSection)-1])	\
+	        (UINT_PTR)(HandlePtr) >= (UINT_PTR)(&AllK->AllKSection.Handles[0]) &&								\
+	        (UINT_PTR)(HandlePtr) <= (UINT_PTR)(&AllK->AllKSection.Handles[ALLK_HANDLE_COUNT(AllKSection)-1])	\
 	 )?TRUE:FALSE)
 
 #define ALLK_INUSE_HANDLE(HandlePtr)	((HandlePtr)->Base.Count.Use==SPINLOCK_HELD)
@@ -50,21 +48,17 @@ binary distributions.
 #define ALLK_GET_USER_CONTEXT(BaseObjPtr)		(&((BaseObjPtr)->User.Context))
 #define ALLK_GET_USER_CONTEXT_SIZE(BaseObjPtr)	(((BaseObjPtr)->User.ContextSize>sizeof(KLIB_USER_CONTEXT)) ? (BaseObjPtr)->User.ContextSize : sizeof(KLIB_USER_CONTEXT))
 
-#define KOVL_GET_PRIVATE_INFO(KOvl_Handle) ((((PKOVL_HANDLE_INTERNAL)(KOvl_Handle))->Private))
 #define IS_OVLK(mOverlapped) (ALLK_LIVE_HANDLE(((PKOVL_HANDLE_INTERNAL)mOverlapped),OvlK))
-
-#define ALLK_HANDLE_FOR_LOOP(HandlePosVar,AllKSection)	\
-	for (HandlePosVar=0; HandlePosVar < sizeof(AllK->AllKSection.Handles)/sizeof(AllK->AllKSection.Handles[0]); HandlePosVar++)
 
 #define POOLHANDLE_LIB_EXIT_CHECK(AllKSection)	do {												\
 		int pos;  																						\
-		for (pos=0; pos < sizeof(AllK.AllKSection.Handles)/sizeof(AllK.AllKSection.Handles[0]); pos++)	\
+		for (pos=0; pos < sizeof(AllK->AllKSection.Handles)/sizeof(AllK->AllKSection.Handles[0]); pos++)	\
 		{ 																								\
-			if (AllK.AllKSection.Handles[pos].Base.Count.Ref != 0)  									\
+			if (AllK->AllKSection.Handles[pos].Base.Count.Ref != 0)  									\
 			{ 																							\
 				USBWRNN("Invalid %s handle reference count %d at index %d",   							\
 				        DEFINE_TO_STR(AllKSection),   														\
-				        AllK.AllKSection.Handles[pos].Base.Count.Ref,   									\
+				        AllK->AllKSection.Handles[pos].Base.Count.Ref,   									\
 				        pos); 																				\
 			} 																							\
 		} 																								\
@@ -111,7 +105,7 @@ binary distributions.
 	BOOL PoolHandle_Inc_##AllKSection(P##HandleType PoolHandle);							\
 	BOOL PoolHandle_IncEx_##AllKSection(P##HandleType PoolHandle, long* lockCount);			\
 	BOOL PoolHandle_Dec_##AllKSection(P##HandleType PoolHandle);							\
-	 
+ 
 
 #define FindInterfaceEL(mUsbStack,mInterfaceEL,mIsIndex,mNumberOrIndex)	if (mIsIndex)		\
 	{																						\
@@ -393,10 +387,11 @@ typedef struct _KSTM_XFER_INTERNAL
 
 
 #define Init_Handle_ObjK(BaseObjPtr,AllKSection) do {			\
-		memset(&((BaseObjPtr)->User),0,sizeof((BaseObjPtr)->User));	\
-		(BaseObjPtr)->Evt.Cleanup = NULL;							\
-		(BaseObjPtr)->Count.Ref = 1;								\
-		(BaseObjPtr)->Disposing = 0;								\
+		memset(&((BaseObjPtr)->User),0,sizeof((BaseObjPtr)->User));			\
+		(BaseObjPtr)->Evt.Cleanup = NULL;									\
+		(BaseObjPtr)->Count.Ref = 1;										\
+		(BaseObjPtr)->Disposing = 0;										\
+		(BaseObjPtr)->User.Context = AllK->AllKSection.DefaultUserContext;	\
 	}while(0)
 typedef struct _KOBJ_BASE
 {
@@ -639,15 +634,13 @@ typedef KSTM_HANDLE_INTERNAL* PKSTM_HANDLE_INTERNAL;
 	struct  																\
 	{   																	\
 		volatile long Index; 												\
+		volatile KLIB_USER_CONTEXT DefaultUserContext; 						\
 		HandleType Handles[HandlePoolCount];								\
 	} AllKSection
 
 // structure of all static libusbK handle pools.
 typedef struct
 {
-	volatile BOOL Valid;
-	volatile long InitLock;
-
 	HANDLE Heap;
 
 	BOOL (WINAPI* CancelIoEx)(HANDLE DeviceHandle, KOVL_HANDLE Overlapped);
@@ -662,9 +655,10 @@ typedef struct
 	DEF_POOLED_HANDLE_STRUCT(OvlK,		KOVL_HANDLE_INTERNAL,			KOVL_HANDLE_COUNT);
 	DEF_POOLED_HANDLE_STRUCT(OvlPoolK,	KOVL_POOL_HANDLE_INTERNAL,		KOVL_POOL_HANDLE_COUNT);
 	DEF_POOLED_HANDLE_STRUCT(StmK,		KSTM_HANDLE_INTERNAL,			KSTM_HANDLE_COUNT);
-} ALLK_CONTEXT;
+} ALLK_CONTEXT, *PALLK_CONTEXT;
 
-extern ALLK_CONTEXT AllK;
+// extern ALLK_CONTEXT AllK;
+extern PALLK_CONTEXT AllK;
 
 //////////////////////////////////////////////////////////////////////////////
 // Inline memory allocation functions.
@@ -672,7 +666,7 @@ extern ALLK_CONTEXT AllK;
 
 FORCEINLINE PVOID KUSB_API Mem_Alloc(__in size_t size)
 {
-	PVOID memory = HeapAlloc(AllK.Heap, HEAP_ZERO_MEMORY, size);
+	PVOID memory = HeapAlloc(AllK->Heap, HEAP_ZERO_MEMORY, size);
 	if (!memory) LusbwError(ERROR_NOT_ENOUGH_MEMORY);
 	return memory;
 }
@@ -682,7 +676,7 @@ FORCEINLINE VOID KUSB_API Mem_Free(__deref_inout_opt PVOID* memoryRef)
 	if (memoryRef)
 	{
 		if (IsHandleValid(*memoryRef))
-			HeapFree(AllK.Heap, 0, *memoryRef);
+			HeapFree(AllK->Heap, 0, *memoryRef);
 
 		*memoryRef = NULL;
 	}
@@ -702,7 +696,7 @@ FORCEINLINE LPSTR Str_Dupe(__in_opt LPCSTR string)
 	return strDupe;
 }
 
-void CheckLibInit();
+BOOL CheckLibInit();
 
 PROTO_POOLHANDLE(HotK, KHOT_HANDLE_INTERNAL);
 PROTO_POOLHANDLE(LstK, KLST_HANDLE_INTERNAL);

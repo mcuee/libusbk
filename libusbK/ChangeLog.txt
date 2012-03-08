@@ -1,16 +1,17 @@
 LIBUSBK RELEASE NOTES
 
-V3.0.5.9 RC9 (03/05/2012)
+V3.0.5.10 RC10 (03/08/2012)
 ==============================================
-- Added KHOT_PARAMS fields:
-  - KLIB_USER_CONTEXT UserContext;
-  
+- New 'LibK_SetDefaultContext' function.
+
+- New 'LibK_GetDefaultContext' function.
+
+- New 'OvlK_WaitOldest' function.
+
 - Fixed missing 'HotK_FreeAll' function export.
 
 - Removed OvlK thread safe handlers to improve performance and increase
   flexibility.
-  
-- New 'OvlK_WaitOldest' function.
 
 - Eliminated 'StmK_Read' transfer size restrictions. (Partial Transfers)
 
@@ -27,7 +28,7 @@ V3.0.5.9 RC9 (03/05/2012)
 
 - PULIC _KISO_CONTEXT typedef changed.
   Inserted:
-  - ULONG UrbHdrStatus;
+  - UINT UrbHdrStatus;
   
 - PULIC KSTM_INFO typedef changed.
   Added:
@@ -36,27 +37,27 @@ V3.0.5.9 RC9 (03/05/2012)
   
 - PULIC KSTM_ERROR_CB signature changed.
   Old:
-  - typedef LONG KUSB_API KSTM_ERROR_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LONG ErrorCode);
+  - typedef INT KUSB_API KSTM_ERROR_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in INT ErrorCode);
   New:
-  - typedef LONG KUSB_API KSTM_ERROR_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LONG XferContextIndex, _in LONG ErrorCode);
+  - typedef INT KUSB_API KSTM_ERROR_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in INT XferContextIndex, _in INT ErrorCode);
 
 - PULIC KSTM_SUBMIT_CB signature changed.
   Old:
-  - typedef LONG KUSB_API KSTM_SUBMIT_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LPOVERLAPPED Overlapped);
+  - typedef INT KUSB_API KSTM_SUBMIT_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LPOVERLAPPED Overlapped);
   New:
-  - typedef LONG KUSB_API KSTM_SUBMIT_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LONG XferContextIndex, _in LPOVERLAPPED Overlapped);
+  - typedef INT KUSB_API KSTM_SUBMIT_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in INT XferContextIndex, _in LPOVERLAPPED Overlapped);
 
 - PULIC KSTM_COMPLETE_CB signature changed.
   Old:
-  - typedef LONG KUSB_API KSTM_COMPLETE_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LONG ErrorCode);
+  - typedef INT KUSB_API KSTM_COMPLETE_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in INT ErrorCode);
   New:
-  - typedef LONG KUSB_API KSTM_COMPLETE_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LONG XferContextIndex, _in LONG ErrorCode);
+  - typedef INT KUSB_API KSTM_COMPLETE_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in INT XferContextIndex, _in INT ErrorCode);
 
 - PULIC KSTM_BEFORE_COMPLETE_CB signature changed.
   Old:
   - typedef KSTM_COMPLETE_RESULT KUSB_API KSTM_BEFORE_COMPLETE_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in PLONG ErrorCode);
   New:  
-  - typedef KSTM_COMPLETE_RESULT KUSB_API KSTM_BEFORE_COMPLETE_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in LONG XferContextIndex, _in PLONG ErrorCode);
+  - typedef KSTM_COMPLETE_RESULT KUSB_API KSTM_BEFORE_COMPLETE_CB(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in INT XferContextIndex, _in PLONG ErrorCode);
 
 V3.0.5.5 RC5 (02/09/2012)
 ==============================================

@@ -8,6 +8,8 @@ EXPORTS
     LibK_LoadDriverAPI
     LibK_CopyDriverAPI
     LibK_GetProcAddress
+    LibK_SetDefaultContext
+    LibK_GetDefaultContext
     
     UsbK_Init
     UsbK_ClaimInterface

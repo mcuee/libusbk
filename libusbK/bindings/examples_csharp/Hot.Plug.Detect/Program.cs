@@ -1,4 +1,5 @@
 ﻿#region Copyright(c) Travis Robinson
+
 // Copyright (c) 2012 Travis Robinson <libusbdotnet@gmail.com>
 // All rights reserved.
 // 
@@ -24,24 +25,42 @@
 // CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF 
 // THE POSSIBILITY OF SUCH DAMAGE.
-#endregion
 
+#endregion
 
 using System;
 using libusbK;
-
 
 namespace Hot.Plug.Detect
 {
     internal class Program
     {
-        #region Private Members
+        // ReSharper disable InconsistentNaming
+        private const int WM_USER = 0x400;
+        private const int WM_USER_HOT_BASE = WM_USER;
+        private const int WM_USER_HOT_REMOVAL = WM_USER_HOT_BASE;
+        private const int WM_USER_HOT_ARRIVAL = WM_USER_HOT_BASE + 1;
+
         private static void Main()
         {
             KHOT_PARAMS hotInitParams = new KHOT_PARAMS();
+
+            // In the real world, you would want to filter for only *your* device(s).
             hotInitParams.PatternMatch.DeviceInterfaceGUID = "*";
+
+            // The PLUG_ALL_ON_INIT flag will force plug events for matching devices that are already connected.
             hotInitParams.Flags = KHOT_FLAG.PLUG_ALL_ON_INIT;
+
             hotInitParams.OnHotPlug = OnHotPlug;
+
+            /* Instead of a callback you can send/post messages directly to a window handle.
+            hotInitParams.UserHwnd = IntPtr.Zero;
+            hotInitParams.UserMessage = WM_USER_HOT_BASE;
+            */
+
+            // You may set your hot handle user context like this.
+            // This example is using it to count connected devices and detect the first OnHotPlug event (Int32.MaxValue).
+            hotInitParams.UserContext =new IntPtr(Int32.MaxValue);
 
             Console.WriteLine("Monitoring libusbK arrival/removal events.");
             Console.WriteLine("[PatternMatch]");
@@ -56,15 +75,20 @@ namespace Hot.Plug.Detect
             hot.Free();
         }
 
-        private static void OnHotPlug(KHOT_HANDLE hothandle,
-                                      KLST_DEVINFO_HANDLE deviceinfo,
-                                      KLST_SYNC_FLAG plugtype)
+        private static void OnHotPlug(KHOT_HANDLE hotHandle,
+                                      KLST_DEVINFO_HANDLE deviceInfo,
+                                      KLST_SYNC_FLAG plugType)
         {
             string plugText;
 
-            int totalPluggedDeviceCount = (int) hothandle.GetContext().ToInt64();
+            int totalPluggedDeviceCount = (int) hotHandle.GetContext().ToInt64();
+            if (totalPluggedDeviceCount == int.MaxValue)
+            {
+                Console.WriteLine("OnHotPlug is being called for the first time on handle:{0}", hotHandle.Pointer);
+                totalPluggedDeviceCount = 0;
+            }
 
-            switch (plugtype)
+            switch (plugType)
             {
                 case KLST_SYNC_FLAG.ADDED:
                     plugText = "Arrival";
@@ -75,17 +99,16 @@ namespace Hot.Plug.Detect
                     totalPluggedDeviceCount--;
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException("plugtype");
+                    throw new ArgumentOutOfRangeException("plugType");
             }
 
-            hothandle.SetContext(new IntPtr(totalPluggedDeviceCount));
+            hotHandle.SetContext(new IntPtr(totalPluggedDeviceCount));
 
             Console.WriteLine("\n[OnHotPlug] Device {0}:{1} \n",
                               plugText,
-                              deviceinfo);
+                              deviceInfo);
             Console.WriteLine("Total Plugged Device Count: {0}",
                               totalPluggedDeviceCount);
         }
-        #endregion
     }
 }

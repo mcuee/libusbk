@@ -25,7 +25,7 @@
 	        (mIsSetDescriptor) ? USB_REQUEST_SET_DESCRIPTOR : USB_REQUEST_GET_DESCRIPTOR, 									\
 	        (USHORT)(((((mLibUsbReqPtr)->descriptor.type) << 8) & 0xFF00) | (((mLibUsbReqPtr)->descriptor.index) & 0xFF)),	\
 	        (USHORT)((mLibUsbReqPtr)->descriptor.language_id))																\
-	 
+ 
 #define FormatVendorRequestAsControlTransfer(mRequestContext, mLibUsbReqPtr, mIsVendorWrite)   						\
 	WDF_USB_CONTROL_SETUP_PACKET_INIT_VENDOR( 																		\
 	        (PWDF_USB_CONTROL_SETUP_PACKET)&((mRequestContext)->IoControlRequest.control), 									\
@@ -34,7 +34,7 @@
 	        (BYTE)  (mLibUsbReqPtr)->vendor.request,																		\
 	        (USHORT)(mLibUsbReqPtr)->vendor.value,																			\
 	        (USHORT)(mLibUsbReqPtr)->vendor.index)																			\
-	 
+ 
 #define FormatFeatureRequestAsControlTransfer(mRequestContext,mLibUsbReqPtr,mIsSetFeature) 							\
 	WDF_USB_CONTROL_SETUP_PACKET_INIT_FEATURE(																		\
 	        (PWDF_USB_CONTROL_SETUP_PACKET)&((mRequestContext)->IoControlRequest.control), 									\

@@ -27,7 +27,8 @@ binary distributions.
 #define GetRegDevNodeString(DeviceInterfaceElement,ValuenNameString,Key,ValueDataString)	\
 	(_stricmp(ValuenNameString,DEFINE_TO_STR(Key))==0 ? l_Str_CopyLast(';',DeviceInterfaceElement->Key,ValueDataString):NULL)
 
-#define lstk_DL_MatchSymbolicLink(PatternEL, MatchEL) DL_MatchPattern((PatternEL)->Public.SymbolicLink, (MatchEL)->Public.SymbolicLink)
+#define lstk_DL_MatchSymbolicLink(PatternEL, MatchEL) (AllK->PathMatchSpec((MatchEL)->Public.SymbolicLink, (PatternEL)->Public.SymbolicLink)?0:-1)
+
 #define Match_DevItem_SymbolicLink(check, find)	strcmp(check->Public.SymbolicLink, find)
 
 #define KEY_DEVICECLASSES "SYSTEM\\CurrentControlSet\\Control\\DeviceClasses"
@@ -684,7 +685,7 @@ static BOOL l_EnumKey_Instances(LPCSTR Name, KUSB_ENUM_REGKEY_PARAMS* RegEnumPar
 	// apply PatternMatch->InstanceID
 	if (RegEnumParams->PatternMatch && RegEnumParams->PatternMatch->InstanceID[0])
 	{
-		if (!AllK.PathMatchSpec(RegEnumParams->TempItem->InstanceID, RegEnumParams->PatternMatch->InstanceID))
+		if (!AllK->PathMatchSpec(RegEnumParams->TempItem->InstanceID, RegEnumParams->PatternMatch->InstanceID))
 			return TRUE;
 	}
 
@@ -697,7 +698,7 @@ static BOOL l_EnumKey_Instances(LPCSTR Name, KUSB_ENUM_REGKEY_PARAMS* RegEnumPar
 	// apply PatternMatch->SymbolicLink
 	if (RegEnumParams->PatternMatch && RegEnumParams->PatternMatch->SymbolicLink[0])
 	{
-		if (!AllK.PathMatchSpec(RegEnumParams->TempItem->SymbolicLink, RegEnumParams->PatternMatch->SymbolicLink))
+		if (!AllK->PathMatchSpec(RegEnumParams->TempItem->SymbolicLink, RegEnumParams->PatternMatch->SymbolicLink))
 			return TRUE;
 	}
 	// DevicePath is equal to SymbolicLink unless it ends up being a libusb0 filter device
@@ -735,7 +736,7 @@ static BOOL l_EnumKey_Guids(LPCSTR Name, KUSB_ENUM_REGKEY_PARAMS* RegEnumParams)
 	// If a Class guild was set, we
 	if (RegEnumParams->PatternMatch && RegEnumParams->PatternMatch->DeviceInterfaceGUID[0])
 	{
-		if (!AllK.PathMatchSpec(Name, RegEnumParams->PatternMatch->DeviceInterfaceGUID))
+		if (!AllK->PathMatchSpec(Name, RegEnumParams->PatternMatch->DeviceInterfaceGUID))
 			return TRUE;
 	}
 

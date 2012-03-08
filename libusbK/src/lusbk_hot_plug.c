@@ -33,7 +33,7 @@ binary distributions.
 #define GUID_MAXSIZE 38
 #define GUID_FORMAT_STRING "%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X"
 #define IsPatternMatch(IsMatch,HotHandle,DeviceInfo,FieldName) if (strlen(HotHandle->Public.PatternMatch.FieldName)) {		\
-		if (!AllK.PathMatchSpec(DeviceInfo->FieldName, HotHandle->Public.PatternMatch.FieldName))										\
+		if (!AllK->PathMatchSpec(DeviceInfo->FieldName, HotHandle->Public.PatternMatch.FieldName))										\
 			IsMatch = FALSE;																									\
 	}
 
@@ -153,7 +153,7 @@ static BOOL KUSB_API h_DevEnum_UpdateForRemoval(KLST_HANDLE DeviceList, KLST_DEV
 	UNREFERENCED_PARAMETER(DeviceList);
 
 	if (!DeviceInfo->Connected) return TRUE;
-	if (AllK.PathMatchSpec(Context->dbcc_name, DeviceInfo->SymbolicLink))
+	if (AllK->PathMatchSpec(Context->dbcc_name, DeviceInfo->SymbolicLink))
 	{
 		DeviceInfo->SyncFlags = KLST_SYNC_FLAG_REMOVED;
 		DeviceInfo->Connected = FALSE;
@@ -416,8 +416,6 @@ static LRESULT CALLBACK h_WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
 
 		memcpy(&handle->Public, InitParams, sizeof(handle->Public));
 		*handleRef = handle;
-
-		LibK_SetContext(handle, KLIB_HANDLE_TYPE_HOTK, InitParams->UserContext);
 
 		// Add to the list and set the cleaunup callback for the hot handle
 		handle->Base.Evt.Cleanup = Cleanup_HotK;

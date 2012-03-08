@@ -45,6 +45,14 @@ BOOL WINAPI DllMain(HANDLE module, DWORD reason, LPVOID reserved)
 		POOLHANDLE_LIB_EXIT_CHECK(OvlPoolK);
 		POOLHANDLE_LIB_EXIT_CHECK(StmK);
 #endif
+
+		if (AllK && AllK->Heap)
+		{
+			if (GetProcessHeap() == AllK->Heap)
+				HeapFree(AllK->Heap, 0, AllK);
+			else
+				HeapDestroy(AllK->Heap);
+		}
 		break;
 	case DLL_THREAD_ATTACH:
 		break;

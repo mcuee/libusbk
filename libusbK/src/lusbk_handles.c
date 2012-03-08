@@ -21,6 +21,10 @@ binary distributions.
 // warning C4127: conditional expression is constant.
 #pragma warning(disable: 4127)
 
+volatile long AllKInitLock = 0;
+
+PALLK_CONTEXT AllK = NULL;
+
 #define ALLK_LOCKEX_HANDLE(HandlePtr,Required)	SpinLock_AcquireEx(&(HandlePtr)->Base.Lock, Required)
 #define ALLK_UNLOCK_HANDLE(HandlePtr)			SpinLock_ReleaseEx(&(HandlePtr)->Base.Lock)
 #define ALLK_INCREF_HANDLE(HandlePtr)			InterlockedIncrement(&ALLK_GETREF_HANDLE(HandlePtr))
@@ -35,6 +39,7 @@ binary distributions.
 		memset(AllK->AllKSection.Handles, 0, sizeof(AllK->AllKSection.Handles));	\
 	}while(0)
 
+#if 0
 #define ALLK_INIT_SECTION(AllKSection) 	\
 	/* AllKSection			= */{			\
 		/* Index				= */	-1,		\
@@ -58,11 +63,18 @@ ALLK_CONTEXT AllK =
 	ALLK_INIT_SECTION(OvlPoolK),
 	ALLK_INIT_SECTION(StmK),
 };
+#endif
 
-static BOOL AllK_Context_Initialize(ALLK_CONTEXT* AllK)
+static BOOL AllK_Context_Initialize(PALLK_CONTEXT* AllKRef, HANDLE Heap)
 {
 	HMODULE shlwapi_dll		= LoadLibraryA("shlwapi");
 	HMODULE kernel32_dll	= GetModuleHandleA("kernel32");
+	PALLK_CONTEXT AllK;
+
+	AllK = HeapAlloc(Heap, HEAP_ZERO_MEMORY, sizeof(ALLK_CONTEXT));
+	ErrorMemory(AllK == NULL, Error);
+
+	AllK->Heap = Heap;
 
 	// one-time AllK initialize
 	USBLOG_PRINTLN("");
@@ -90,31 +102,39 @@ static BOOL AllK_Context_Initialize(ALLK_CONTEXT* AllK)
 	AllK->CancelIoEx	= (KDYN_CancelIoEx*)GetProcAddress(kernel32_dll, "CancelIoEx");
 
 	USBLOG_PRINTLN("KLST_DEVINFO = %u bytes", sizeof(KLST_DEVINFO));
+
+	*AllKRef = AllK;
 	return TRUE;
+
+Error:
+	*AllKRef = NULL;
+	return FALSE;
 }
 
-void CheckLibInit()
+BOOL CheckLibInit()
 {
-	if (AllK.Valid) return;
+	if (AllK) return TRUE;
 
-	mSpin_Acquire(&AllK.InitLock);
-	if (AllK.Valid)
+	mSpin_Acquire(&AllKInitLock);
+	if (!AllK_Context_Initialize(&AllK, GetProcessHeap()))
 	{
-		mSpin_Release(&AllK.InitLock);
-		return;
+		USBERRN("Failed initializing default context. ErrorCode=%08Xh", GetLastError());
+		mSpin_Release(&AllKInitLock);
+		return FALSE;
 	}
-	AllK.Heap = GetProcessHeap();
-	AllK.Valid = AllK_Context_Initialize(&AllK);
-	mSpin_Release(&AllK.InitLock);
+	mSpin_Release(&AllKInitLock);
+
+	return TRUE;
 }
 
 #define POOLHANDLE_ACQUIRE(ReturnHandle,AllKSection) do { 																\
 		long nextPos,startPos;																								\
-		if (!AllK.Valid) CheckLibInit();   																					\
-		nextPos = startPos = (IncLock(AllK.AllKSection.Index)) % ALLK_HANDLE_COUNT(AllKSection);							\
+		(ReturnHandle) = NULL;																								\
+		if (AllK==NULL && CheckLibInit()==FALSE) break;																		\
+		nextPos = startPos = (IncLock(AllK->AllKSection.Index)) % ALLK_HANDLE_COUNT(AllKSection);							\
 		do																													\
 		{ 																													\
-			(ReturnHandle) = &AllK.AllKSection.Handles[nextPos];  															\
+			(ReturnHandle) = &AllK->AllKSection.Handles[nextPos];  															\
 			if (mSpin_Try_Acquire(&(ReturnHandle)->Base.Count.Use)) 														\
 			{ 																												\
 				Init_Handle_ObjK(&(ReturnHandle)->Base,AllKSection);  														\
@@ -122,7 +142,7 @@ void CheckLibInit()
 				break;																										\
 			} 																												\
 			(ReturnHandle) = NULL;																							\
-			nextPos = (IncLock(AllK.AllKSection.Index)) % ALLK_HANDLE_COUNT(AllKSection);   								\
+			nextPos = (IncLock(AllK->AllKSection.Index)) % ALLK_HANDLE_COUNT(AllKSection);   								\
 		}while(nextPos!=startPos);																							\
 		\
 		if (!(ReturnHandle))  																								\

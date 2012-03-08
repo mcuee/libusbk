@@ -1527,11 +1527,8 @@ typedef struct _KHOT_PARAMS
 	*/
 	KHOT_PLUG_CB* OnHotPlug;
 
-	//! The initial value assign to the handle user context space. See \ref LibK_SetContext and \ref LibK_GetContext.
-	KLIB_USER_CONTEXT UserContext;
-
 	//! fixed structure padding.
-	UCHAR z_F_i_x_e_d[2048 - sizeof(KLST_PATTERN_MATCH) - sizeof(UINT_PTR) * 2 - sizeof(UINT) * 2 - sizeof(KLIB_USER_CONTEXT)];
+	UCHAR z_F_i_x_e_d[2048 - sizeof(KLST_PATTERN_MATCH) - sizeof(UINT_PTR) * 2 - sizeof(UINT) * 2];
 
 } KHOT_PARAMS;
 C_ASSERT(sizeof(KHOT_PARAMS) == 2048);
@@ -1810,7 +1807,7 @@ extern "C" {
 	* The handle containg the context to retrieve.
 	*
 	* \param[in] HandleType
-	* Handle tyoe of \c Handle.
+	* Handle type of \c Handle.
 	*
 	* \returns
 	* - on success, The user context value.
@@ -1911,6 +1908,36 @@ extern "C" {
 	    _out KPROC* ProcAddress,
 	    _in INT DriverID,
 	    _in INT FunctionID);
+
+//! Sets the default user context for the specified \ref KLIB_HANDLE_TYPE.
+	/*!
+	*
+	* \param[in] HandleType
+	* The handle type which will be assigned the default ContextValue.
+	*
+	* \param[in] ContextValue
+	* Value assigned to the default user context for the specified \ref KLIB_HANDLE_TYPE.
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
+	*/
+	KUSB_EXP BOOL KUSB_API LibK_SetDefaultContext(
+	    _in KLIB_HANDLE_TYPE HandleType,
+	    _in KLIB_USER_CONTEXT ContextValue);
+
+//! Gets the default user context for the specified \ref KLIB_HANDLE_TYPE.
+	/*!
+	*
+	* \param[in] HandleType
+	* Handle type used to retrieve the default user context.
+	*
+	* \returns
+	* - on success, The default user context value.
+	* - On failure, returns NULL and sets last error to \c ERROR_INVALID_HANDLE.
+	*
+	*/
+	KUSB_EXP KLIB_USER_CONTEXT KUSB_API LibK_GetDefaultContext(
+	    _in KLIB_HANDLE_TYPE HandleType);
 
 	/**@}*/
 #endif
