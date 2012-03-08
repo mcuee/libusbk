@@ -251,7 +251,7 @@ static LPCSTR DescriptorTypeString[] =
 #define HID_END(CategoryName,format,...)	\
 	_TAB_DEC();								\
 	WRITERAW(DESC_MARK_END KLIST_CATEGORY_FORMAT format KLIST_LN,CategoryName,__VA_ARGS__) \
-	 
+ 
 #define PrintfDeviceElement(DeviceListFieldName) printf("    %-21s: %s\n",DEFINE_TO_STR(DeviceListFieldName),deviceElement->DeviceListFieldName)
 
 #define IsDescValid(DescriptorPtr, RemainingTotalSize)\

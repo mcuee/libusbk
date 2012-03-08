@@ -35,7 +35,6 @@ namespace List.Devices
 {
     internal class Program
     {
-        #region Private Members
         private static void Main()
         {
             int deviceIndex = 0;
@@ -62,6 +61,5 @@ namespace List.Devices
 
             lst.Free();
         }
-        #endregion
     }
 }

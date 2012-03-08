@@ -43,7 +43,7 @@ namespace Xfer.UsbStream
     internal class Program
     {
         #region TODO USER: Set the test parameters for your device.
-        public static StmTestParameters Test = new StmTestParameters(0x04d8, 0xfa2e, 0, 0x81, 16384, null, -1, 4, 64);
+        public static StmTestParameters Test = new StmTestParameters(0x04d8, 0xfa2e, 0, 0x81, 1024, null, -1, 4, 64);
         #endregion
 
 
@@ -98,7 +98,7 @@ namespace Xfer.UsbStream
                 "This example requires the IN and OUT endpoints have the same MaximumPacketSize.");
 
             if (Test.TransferBufferSize == -1)
-                Test.TransferBufferSize = pipeInfoWrite.MaximumPacketSize*128;
+                Test.TransferBufferSize = pipeInfoWrite.MaximumPacketSize * 2;
 
 #if BMFW
             // TODO FOR USER: Remove this block if not using benchmark firmware.
@@ -113,7 +113,7 @@ namespace Xfer.UsbStream
 #endif
             if (!Test.ShowTestReady()) goto Done;
 
-            UsbStream stmRead = new UsbStream(usb, pipeInfoRead.PipeId, Test.TransferBufferSize, Test.MaxPendingTransfers, Test.MaxPendingIO, true, 0);
+            UsbStream stmRead = new UsbStream(usb, pipeInfoRead.PipeId, Test.TransferBufferSize, Test.MaxPendingTransfers, Test.MaxPendingIO, true, 1000);
             UsbStream stmWrite = new UsbStream(usb, pipeInfoWrite.PipeId, Test.TransferBufferSize, Test.MaxPendingTransfers, Test.MaxPendingIO, true, 1000);
 
             StreamReader stmReader = new StreamReader(stmRead);
@@ -121,7 +121,6 @@ namespace Xfer.UsbStream
 
             stmRead.Start();
             stmWrite.Start();
-            Thread.Sleep(0);
 
             Char[] chTemp = new char[Test.TransferBufferSize];
             while (stmReader.Read(chTemp, 0, chTemp.Length) > 0)
@@ -131,8 +130,12 @@ namespace Xfer.UsbStream
             string sWrite = String.Empty;
             string sPartialRead = String.Empty;
             string sRead;
-            const string lineFormat = "Tx#{0:00000} This string is being looped through endpoints {1:X2}h and {2:X2}h";
+            const string lineFormat = "Tx#{0:000000} This string is being looped through endpoints {1:X2}h and {2:X2}h";
             int lineLength = String.Format(lineFormat, 0, 0, 0).Length;
+
+            // This is a counter/timer used only for statistics gathering.
+            Thread.Sleep(0);
+            Test.Dcs.Start();
 
             for (int iTransfers = 0; iTransfers < Test.MaxTransfersTotal; iTransfers++)
             {
@@ -140,8 +143,8 @@ namespace Xfer.UsbStream
                 stmWriter.WriteLine(sWrite);
                 Console.WriteLine(sWrite);
 
-                // stmWriter.Flush();
-                if ((String.IsNullOrEmpty((sRead = stmReader.ReadLine()))))
+                if ((iTransfers & 8) > 0) stmWriter.Flush();
+                if (iTransfers <= 16 || (String.IsNullOrEmpty((sRead = stmReader.ReadLine()))))
                     continue;
 
                 if (!FormatBrokenStrings(lineLength, "Rx", ref sPartialRead, ref sRead)) continue;
@@ -154,6 +157,10 @@ namespace Xfer.UsbStream
                 if (!FormatBrokenStrings(lineLength, "Rx", ref sPartialRead, ref sRead)) continue;
                 Console.WriteLine(sRead);
             }
+
+            Test.Dcs.Stop();
+            TimeSpan ts=new TimeSpan(Test.Dcs.Ticks);
+            Console.WriteLine("Elapsed Time:\n\t{0} mins\n\t{1} secs\n\t{2} msecs", Math.Floor(ts.TotalMinutes), ts.Seconds, ts.Milliseconds);
 
             stmWriter.Dispose();
             stmReader.Dispose();

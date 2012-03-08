@@ -74,6 +74,19 @@ namespace Win32
         }
 
         /// <summary>
+        ///   Gets the duration of the timer (in seconds)
+        /// </summary>
+        public long Ticks
+        {
+            get
+            {
+                long tDiff = stopTime - startTime;
+                tDiff = (tDiff*10000000)/freq;
+
+                return tDiff;
+            }
+        }
+        /// <summary>
         ///   Start the timer
         /// </summary>
         public void Start()

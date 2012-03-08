@@ -33,10 +33,8 @@ extern ULONG DebugLevel;
 #define mStm_QueueTransferList(mStreamHandle, mXferSubmitList, mXferEL, mXferTempEL, mErrorJump)do { \
 		if (mXferSubmitList && mStreamHandle->Thread.State == KSTM_THREADSTATE_STARTED)  						\
 		{																										\
-			PoolHandle_Inc_StmK(mStreamHandle);  																\
 			if (!QueueUserAPC(Stm_TransferListAPC, mStreamHandle->Thread.Handle, (ULONG_PTR)mXferSubmitList))	\
 			{																									\
-				PoolHandle_Dec_StmK(mStreamHandle);  															\
 				USBERRN("QueueUserAPC failed. ErrorCode=%08Xh", GetLastError()); 								\
 				goto mErrorJump;  																				\
 			}																									\
@@ -59,25 +57,23 @@ extern ULONG DebugLevel;
 		{  																											\
 			if  (WaitForSingleObject(mStreamHandle->SemReady, mStreamHandle->WaitTimeout) != WAIT_OBJECT_0)			\
 			{  																										\
-				USBWRNN("[WaitTimeout] No more pending transfer slots. PipeID=%02Xh", mStreamHandle->Info->PipeID);	\
+				USBDEVN("[WaitTimeout] No more pending transfer slots. PipeID=%02Xh", mStreamHandle->Info->PipeID);	\
 				SetLastError(ERROR_NO_MORE_ITEMS); 																	\
 				goto mErrorJump;																					\
 			}  																										\
 		}  																											\
 		else if (mStreamHandle->List.Finished == NULL) 																\
 		{  																											\
-			USBWRNN("No more pending transfer slots. PipeID=%02Xh", mStreamHandle->Info->PipeID);  					\
+			USBDEVN("No more pending transfer slots. PipeID=%02Xh", mStreamHandle->Info->PipeID);  					\
 			SetLastError(ERROR_NO_MORE_ITEMS); 																		\
 			goto mErrorJump;																						\
 		}  																											\
-		\
 		mSpin_Acquire(&mStreamHandle->List.FinishedLock);  															\
 		if (mStreamHandle->List.Finished == NULL)  																	\
 		{  																											\
 			mSpin_Release(&mStreamHandle->List.FinishedLock);  														\
-			\
 			if (mStreamHandle->SemReady) ReleaseSemaphore(mStreamHandle->SemReady, 1, NULL);   						\
-			USBWRNN("No more pending transfer slots. PipeID=%02Xh", mStreamHandle->Info->PipeID);  					\
+			USBDEVN("No more pending transfer slots. PipeID=%02Xh", mStreamHandle->Info->PipeID);  					\
 			SetLastError(ERROR_NO_MORE_ITEMS); 																		\
 			goto mErrorJump;																						\
 		}  																											\
@@ -95,50 +91,76 @@ extern ULONG DebugLevel;
 			}																												\
 			else 																											\
 			{																												\
-				USBWRNN("[PartialTransfer] PipeID=%02Xh Transferred=%u", (mStreamHandle)->Info->PipeID, mTransferLength);	\
+				USBDEVN("[PartialTransfer] PipeID=%02Xh Transferred=%u", (mStreamHandle)->Info->PipeID, mTransferLength);	\
 			}																												\
 		}																													\
 	}																														\
 	while(0)
 
-static BOOL Stm_SynchronizeFinishedList(PKSTM_HANDLE_INTERNAL handle, BOOL requireLock)
+static BOOL Stm_SynchronizeFinishedList(PKSTM_HANDLE_INTERNAL handle, BOOL force, PKSTM_XFER_LINK_EL finishedXferItem)
 {
 	PKSTM_XFER_LINK_EL xferEL, xferTempEL;
+	int semCount = 0;
 
-	if (requireLock)
+	// SPIN-LOCKED : List.FinishedLock
+	if (force)
 	{
-		// SPIN-LOCKED : List.FinishedLock
 		mSpin_Acquire(&handle->List.FinishedLock);
+	}
+	else
+	{
+		if (!mSpin_Try_Acquire(&handle->List.FinishedLock))
+		{
+			return FALSE;
+		}
 	}
 
 	DL_FOREACH_SAFE(handle->List.FinishedTemp, xferEL, xferTempEL)
 	{
+		semCount++;
 		DL_DELETE(handle->List.FinishedTemp, xferEL);
 		DL_APPEND(handle->List.Finished, xferEL);
 	}
 
+	if (finishedXferItem)
+	{
+		semCount++;
+		DL_APPEND(handle->List.Finished, finishedXferItem);
+	}
+
+
+	if (handle->SemReady)
+		ReleaseSemaphore(handle->SemReady, semCount, NULL);
+
 	// SPIN-LOCK-RELEASE : List.FinishedLock
-	if (requireLock) mSpin_Release(&handle->List.FinishedLock);
+	mSpin_Release(&handle->List.FinishedLock);
+
+
 	return TRUE;
 
 }
 
-static void CALLBACK Stm_TransferListAPC(__in ULONG_PTR dwParam)
+static void CALLBACK Stm_TransferListAPC(_in ULONG_PTR dwParam)
 {
-	PKSTM_XFER_LINK_EL xferListEL = (PKSTM_XFER_LINK_EL)dwParam;
+	PKSTM_XFER_LINK_EL xferSubmitList;
 	PKSTM_XFER_LINK_EL xferEL, xferTempEL;
-	PKSTM_HANDLE_INTERNAL handle = (PKSTM_HANDLE_INTERNAL)xferListEL->Xfer->StreamHandle;
+	PKSTM_HANDLE_INTERNAL handle;
 
-	DL_FOREACH_SAFE(xferListEL, xferEL, xferTempEL)
+	xferSubmitList = (PKSTM_XFER_LINK_EL)dwParam;
+	if (xferSubmitList != NULL)
 	{
-		DL_DELETE(xferListEL, xferEL);
-		DL_APPEND(handle->List.Queued, xferEL);
+		handle = (PKSTM_HANDLE_INTERNAL)xferSubmitList->Xfer->StreamHandle;
+
+		DL_FOREACH_SAFE(xferSubmitList, xferEL, xferTempEL)
+		{
+			DL_DELETE(xferSubmitList, xferEL);
+			DL_APPEND(handle->List.Queued, xferEL);
+		}
+		DecLock(handle->APCTransferQueueCount);
 	}
-	DecLock(handle->APCTransferQueueCount);
-	PoolHandle_Dec_StmK(handle);
 }
 
-static void CALLBACK Stm_StopAPC(__in ULONG_PTR dwParam)
+static void CALLBACK Stm_StopAPC(_in ULONG_PTR dwParam)
 {
 	PKSTM_HANDLE_INTERNAL handle = (PKSTM_HANDLE_INTERNAL)dwParam;
 
@@ -146,10 +168,10 @@ static void CALLBACK Stm_StopAPC(__in ULONG_PTR dwParam)
 }
 
 static INT KUSB_API Stm_SubmitRead(
-    __in PKSTM_INFO StreamInfo,
-    __in PKSTM_XFER_CONTEXT XferContext,
-    __in INT XferContextIndex,
-    __in LPOVERLAPPED Overlapped)
+    _in PKSTM_INFO StreamInfo,
+    _in PKSTM_XFER_CONTEXT XferContext,
+    _in INT XferContextIndex,
+    _in LPOVERLAPPED Overlapped)
 {
 	UNREFERENCED_PARAMETER(XferContextIndex);
 
@@ -158,10 +180,10 @@ static INT KUSB_API Stm_SubmitRead(
 }
 
 static INT KUSB_API Stm_SubmitWrite(
-    __in PKSTM_INFO StreamInfo,
-    __in PKSTM_XFER_CONTEXT XferContext,
-    __in INT XferContextIndex,
-    __in LPOVERLAPPED Overlapped)
+    _in PKSTM_INFO StreamInfo,
+    _in PKSTM_XFER_CONTEXT XferContext,
+    _in INT XferContextIndex,
+    _in LPOVERLAPPED Overlapped)
 {
 	UNREFERENCED_PARAMETER(XferContextIndex);
 
@@ -391,24 +413,13 @@ static BOOL Stm_Thread_ProcessPending(PKSTM_THREAD_INTERNAL stm, DWORD timeoutOv
 		// Place the xfer item in the finished list.
 
 		// SPIN-LOCKED-TRY ///////////////////////////////////////////
-		if (mSpin_Try_Acquire(&(stm->handle->List.FinishedLock)))
-		{
-			Stm_SynchronizeFinishedList(stm->handle, FALSE);
-			DL_APPEND(stm->handle->List.Finished, stm->xferNext);
-
-			// SPIN-LOCK-RELEASE : List.FinishedLock
-			mSpin_Release(&(stm->handle->List.FinishedLock));
-		}
-		else
+		if (!Stm_SynchronizeFinishedList(stm->handle, FALSE, stm->xferNext))
 		{
 			DL_APPEND(stm->handle->List.FinishedTemp, stm->xferNext);
+			USBDBGN("'Finished' list busy. Added to 'FinishedTemp'");
 		}
-		//////////////////////////////////////////////////////////////
 
 		DecLock(stm->handle->PendingIO);
-
-		if (stm->handle->SemReady)
-			ReleaseSemaphore(stm->handle->SemReady, 1, NULL);
 
 		if (stm->handle->UserCB->Complete)
 		{
@@ -444,7 +455,6 @@ static unsigned _stdcall Stm_ThreadProc(PKSTM_HANDLE_INTERNAL handle)
 	DWORD exitCode = ERROR_SUCCESS;
 	KSTM_THREAD_INTERNAL stm_thread_internal;
 	PKSTM_THREAD_INTERNAL stm;
-	//BOOL isQueueEmpty, isPendingIoEmpty;
 	DWORD maxWaitMS;
 	KSTM_THREAD_RESULT threadResult;
 
@@ -478,8 +488,13 @@ static unsigned _stdcall Stm_ThreadProc(PKSTM_HANDLE_INTERNAL handle)
 
 	while(handle->Thread.State == KSTM_THREADSTATE_STARTED && exitCode == ERROR_SUCCESS)
 	{
-		if (handle->List.FinishedTemp) Stm_SynchronizeFinishedList(handle, FALSE);
-
+		if (handle->List.FinishedTemp)
+		{
+			if (Stm_SynchronizeFinishedList(handle, FALSE, NULL))
+			{
+				USBDBGN("Synchronized 'Finished' list");
+			}
+		}
 		// Continue processing the list while there are xfer items queued.
 		while ((threadResult = Stm_Thread_ProcessQueued(stm)) == KSTM_THREAD_RESULT_ITEM_PROCESSED);
 
@@ -490,7 +505,8 @@ static unsigned _stdcall Stm_ThreadProc(PKSTM_HANDLE_INTERNAL handle)
 			//   - For IN pipes, all of the xfer items are sitting in the finished list. User needs to call StmK_Read before we can proceed.
 			//   - For OUT pipes, the user has not given the stream any more data to send. User needs to call StmK_Write before we can proceed.
 
-			if (!Stm_Thread_ProcessPending(stm, (handle->List.FinishedTemp) ? 1 : INFINITE))
+			// If 'FinishedTemp' is not empty, the threadproc will spin with a 0 wait until it synchornizes above.
+			if (!Stm_Thread_ProcessPending(stm, (handle->List.FinishedTemp == NULL) ? INFINITE : 0))
 			{
 				// User APC.  (Read, Write, Stop, etc)
 				if (stm->errorCode == STATUS_USER_APC) continue;
@@ -530,14 +546,24 @@ Done:
 	// Set the stopping state.
 	InterlockedExchange(&handle->Thread.State, KSTM_THREADSTATE_STOPPING);
 
+	Stm_SynchronizeFinishedList(handle, TRUE, NULL);
 
 	// TimeoutCancelMS is set be the Stop() function.
 	maxWaitMS = stm->handle->TimeoutCancelMS;
 	stm->handle->TimeoutCancelMS = 0;
 
-	while(stm->handle->PendingIO > 0)
+	// Wait for all pendingIO to complete and any outstanding queued APCs to arrive.
+	while(stm->handle->PendingIO > 0 || stm->handle->APCTransferQueueCount > 0)
 	{
+		if (stm->handle->PendingIO <= 0)
+		{
+			// The only thing left to do is wait for outstanding queued APCs.
+			SleepEx(INFINITE, TRUE);
+			continue;
+		}
+
 		SleepEx(0, TRUE);
+
 		// Complete or cancel all of the pending IO.
 		if (!Stm_Thread_ProcessPending(stm, maxWaitMS))
 		{
@@ -804,6 +830,7 @@ KUSB_EXP BOOL KUSB_API StmK_Read(
 
 	UINT transferLength = 0;
 	UINT stageSize;
+	UINT semCount = 0;
 	int iTemp;
 
 	INT backupTransferLength = 0;
@@ -824,19 +851,21 @@ KUSB_EXP BOOL KUSB_API StmK_Read(
 	// Wait on the semaphore (if using a timeout) and acquire the Finished list lock.
 	mStm_SpinLockForTransferRequest(handle, Error);
 
+	semCount = 1;
 	DL_FOREACH_SAFE(handle->List.Finished, xferEL, xferTempEL)
 	{
-		if ((handle->SemReady) && xferEL != handle->List.Finished)
+		if ((handle->SemReady) && semCount > 1)
 		{
 			if (WaitForSingleObject(handle->SemReady, 0) != WAIT_OBJECT_0)
 				break;
 		}
+		semCount++;
 
 		stageSize		= (Length > xferEL->Xfer->Public.TransferLength) ? xferEL->Xfer->Public.TransferLength : Length;
 		Length			-= stageSize;
 		transferLength	+= stageSize;
 
-		memcpy(Buffer + Offset, xferEL->Xfer->Buffer, stageSize);
+		memcpy(&Buffer[Offset], xferEL->Xfer->Public.Buffer, stageSize);
 		Offset += stageSize;
 
 		if ((xferEL->Xfer->Public.TransferLength - stageSize) > 0)
@@ -875,6 +904,7 @@ KUSB_EXP BOOL KUSB_API StmK_Read(
 	if (TransferredLength)
 		*TransferredLength = transferLength;
 
+
 	PoolHandle_Dec_StmK(handle);
 	return TRUE;
 
@@ -894,9 +924,10 @@ Error:
 
 		// Add the elements back to the finished list.
 		iTemp = 0;
-		DL_FOREACH(xferSubmitList, xferEL)
+		DL_FOREACH_SAFE(xferSubmitList, xferEL, xferTempEL)
 		{
 			iTemp++;
+			DL_DELETE(xferSubmitList, xferEL);
 			DL_PREPEND(handle->List.Finished, xferEL);
 		}
 
@@ -927,6 +958,7 @@ KUSB_EXP BOOL KUSB_API StmK_Write(
 
 	UINT transferLength = 0;
 	UINT stageSize;
+	UINT semCount;
 	int iTemp;
 
 	Pub_To_Priv_StmK(StreamHandle, handle, return FALSE);
@@ -941,20 +973,22 @@ KUSB_EXP BOOL KUSB_API StmK_Write(
 	// Wait on the semaphore (if using a timeout) and acquire the Finished list lock.
 	mStm_SpinLockForTransferRequest(handle, Error);
 
+	semCount = 1;
 	DL_FOREACH_SAFE(handle->List.Finished, xferEL, xferTempEL)
 	{
-		if ((handle->SemReady) && xferEL != handle->List.Finished)
+		if ((handle->SemReady) && semCount > 1)
 		{
 			if (WaitForSingleObject(handle->SemReady, 0) != WAIT_OBJECT_0)
 				break;
 		}
+		semCount++;
 
 		stageSize		= (Length > xferEL->Xfer->BufferSize) ? xferEL->Xfer->BufferSize : Length;
 		Length			-= stageSize;
 		transferLength	+= stageSize;
 
 		xferEL->Xfer->Public.TransferLength = stageSize;
-		memcpy(xferEL->Xfer->Buffer, Buffer + Offset, stageSize);
+		memcpy(xferEL->Xfer->Buffer, &Buffer[Offset], stageSize);
 		Offset += stageSize;
 
 		DL_DELETE(handle->List.Finished, xferEL);
@@ -983,16 +1017,19 @@ Error:
 
 		// SPIN-LOCKED : List.FinishedLock
 		mSpin_Acquire(&handle->List.FinishedLock);
-		DL_FOREACH(xferSubmitList, xferEL)
+		iTemp = 0;
+		DL_FOREACH_SAFE(xferSubmitList, xferEL, xferTempEL)
 		{
 			iTemp++;
+			DL_DELETE(xferSubmitList, xferEL);
 			DL_PREPEND(handle->List.Finished, xferEL);
 		}
-		// SPIN-LOCK-RELEASE : List.FinishedLock
-		mSpin_Release(&handle->List.FinishedLock);
 
 		// Release xferSubmitList semaphores
 		if (iTemp && handle->SemReady) ReleaseSemaphore(handle->SemReady, iTemp, NULL);
+
+		// SPIN-LOCK-RELEASE : List.FinishedLock
+		mSpin_Release(&handle->List.FinishedLock);
 	}
 
 	*TransferredLength = 0;

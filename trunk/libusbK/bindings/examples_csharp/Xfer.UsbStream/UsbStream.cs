@@ -1,11 +1,12 @@
 #region Copyright(c) Travis Robinson
+
 // Copyright (c) 2012 Travis Robinson <libusbdotnet@gmail.com>
 // All rights reserved.
 // 
 // UsbStream.cs
 // 
 // Created:      03.05.2012
-// Last Updated: 03.05.2012
+// Last Updated: 03.07.2012
 // 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -24,65 +25,59 @@
 // CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF 
 // THE POSSIBILITY OF SUCH DAMAGE.
-#endregion
 
+#endregion
 
 using System;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Threading;
 using libusbK;
-
 
 namespace Xfer.UsbStream
 {
+    // ReSharper disable InconsistentNaming
+
     public class UsbStream : Stream
     {
+        public static bool UseCallbacks = true;
+
+        private readonly KSTM_CALLBACK mCallbacks;
         protected readonly byte mPipeId;
-        protected long mCurrentPosition;
         protected StmK mStm;
-        protected long mTotalTransferred;
         protected UsbK mUsb;
+        private bool mbDisposed;
 
-        protected override void Dispose(bool disposing)
-        {
-            if (!mbDisposed)
-            {
-                mStm.Dispose();
-                mStm = null;
-                mUsb = null;
-                mbDisposed = true;
-            }
-            base.Dispose(disposing);
-        }
-
-
-        #region Public Members
         public UsbStream(UsbK usb,
                          byte pipeId,
                          int maxTransferSize,
                          int maxPendingTransfers,
-                         int MaxPendingIO,
+                         int maxPendingIo,
                          bool useTimeout,
                          UInt16 timeout)
         {
             mUsb = usb;
             mPipeId = pipeId;
 
-            mCallbacks.Complete = StmComplete;
-            if (((mPipeId & AllKConstants.USB_ENDPOINT_DIRECTION_MASK) > 0))
-                mCallbacks.Submit = StmSubmitRead;
-            else
-                mCallbacks.Submit = StmSubmitWrite;
-
+            if (UseCallbacks)
+            {
+                mCallbacks.Complete = StmComplete;
+                if (((mPipeId & AllKConstants.USB_ENDPOINT_DIRECTION_MASK) > 0))
+                {
+                    mCallbacks.Submit = StmSubmitRead;
+                }
+                else
+                {
+                    mCallbacks.Submit = StmSubmitWrite;
+                }
+            }
             KSTM_FLAG flags = useTimeout ? KSTM_FLAG.USE_TIMEOUT | (KSTM_FLAG) timeout : KSTM_FLAG.NONE;
 
             mStm = new StmK(mUsb.Handle,
                             pipeId,
                             maxTransferSize,
                             maxPendingTransfers,
-                            MaxPendingIO,
+                            maxPendingIo,
                             ref mCallbacks,
                             flags);
         }
@@ -111,48 +106,29 @@ namespace Xfer.UsbStream
             }
         }
 
-        public override long Length
+        protected override void Dispose(bool disposing)
         {
-            get
+            if (!mbDisposed)
             {
-                return (CanRead) ? mTotalTransferred : mCurrentPosition;
+                mStm.Dispose();
+                mStm = null;
+                mUsb = null;
+                mbDisposed = true;
             }
+            base.Dispose(disposing);
         }
 
-        public int OutstandingCount
-        {
-            get
-            {
-                return mOutstandingCount;
-            }
-        }
-
-        public override long Position
-        {
-            get
-            {
-                return (CanWrite) ? mTotalTransferred : mCurrentPosition;
-            }
-            set
-            {
-                throw new NotSupportedException();
-            }
-        }
-
-        public override int Read(byte[] buffer,
-                                 int offset,
-                                 int count)
+        public override int Read(byte[] buffer, int offset, int count)
         {
             int transferred;
-            if (!mStm.Read(buffer,
-                           offset,
-                           count,
-                           out transferred))
-                return 0;
+            bool success = mStm.Read(buffer, offset, count, out transferred);
 
-            mCurrentPosition += transferred;
+            Debug.WriteLineIf(!success,
+                              String.Format("Failed reading from usb stream. ErrorCode={0:X8}h",
+                                            Marshal.GetLastWin32Error()),
+                              "ERROR");
 
-            return transferred;
+            return !success ? 0 : transferred;
         }
 
         public bool Start()
@@ -165,62 +141,40 @@ namespace Xfer.UsbStream
             return mStm.Stop(timeoutCancelMs);
         }
 
-        public override void Write(byte[] buffer,
-                                   int offset,
-                                   int count)
+        public override void Write(byte[] buffer, int offset, int count)
         {
-            int transferred = 0;
+            int transferred;
 
-            if (!mStm.Write(buffer,
-                            offset,
-                            count,
-                            out transferred))
+            bool success = mStm.Write(buffer, offset, count, out transferred);
+            if (!success)
             {
-                // This exception (and the one below) is caused by a lack of 'PendingTransfer' slots.
-                throw new Exception(String.Format("Failed writing to usb stream. ErrorCode={0:X8}h",
-                                                  Marshal.GetLastWin32Error()));
+                // This is caused by a lack of 'PendingTransfer' slots.
+                Debug.WriteLine(
+                                String.Format("Failed writing to usb stream. ErrorCode={0:X8}h",
+                                              Marshal.GetLastWin32Error()),
+                                "ERROR");
+                return;
             }
-            mCurrentPosition += transferred;
 
-            // If the KSTM_FLAG.NO_PARTIAL_XFERS is *not* set, StmK will transfer as many bytes as it can. This class always sets
-            // this flag so the below code should never execute.
-            if (transferred != count)
-                throw new Exception(String.Format("Not all bytes were written. Expected:{0} Transferred:{1}",
-                                                  count,
-                                                  transferred));
+            // If the KSTM_FLAG.NO_PARTIAL_XFERS is *not* set, StmK will transfer as many bytes as it can and return true.
+            Debug.WriteLineIf(transferred != count,
+                              String.Format("Not all bytes were written. Expected:{0} Transferred:{1}",
+                                            count,
+                                            transferred),
+                              "ERROR");
         }
-        #endregion
 
-
-        #region Not Implemented
         public override void Flush()
         {
         }
 
-        public override long Seek(long offset,
-                                  SeekOrigin origin)
+        private int StmComplete(KSTM_INFO stmInfo, KSTM_XFER_CONTEXT xferContext, int stmXferContextIndex, int errorCode)
         {
-            throw new NotSupportedException();
-        }
-
-        public override void SetLength(long value)
-        {
-            throw new NotSupportedException();
-        }
-        #endregion
-
-
-        #region Private Members
-        private int StmComplete(KSTM_INFO stmInfo,
-                                KSTM_XFER_CONTEXT stmXferContext,
-                                int stmXferContextIndex,
-                                int errorCode)
-        {
-            if (errorCode == ErrorCodes.Success)
-                mTotalTransferred += stmXferContext.TransferLength;
-
-            Interlocked.Decrement(ref mOutstandingCount);
-
+            Debug.WriteLineIf(errorCode != ErrorCodes.Success,
+                              String.Format("Failed completing transfer. PipeID:{0:X2}h ErrorCode:{1:X8}h",
+                                            mPipeId,
+                                            errorCode),
+                              "ERROR");
             return errorCode;
         }
 
@@ -232,17 +186,16 @@ namespace Xfer.UsbStream
             int notUsedForAsync;
             int bufferSize = xferContext.BufferSize;
 
-            mUsb.ReadPipe(mPipeId,
-                          xferContext.Buffer,
-                          bufferSize,
-                          out notUsedForAsync,
-                          nativeOverlapped);
+            bool success = mUsb.ReadPipe(mPipeId, xferContext.Buffer, bufferSize, out notUsedForAsync, nativeOverlapped);
             int errorCode = Marshal.GetLastWin32Error();
 
-            Debug.Assert(errorCode == ErrorCodes.IoPending,
-                         String.Format("TODO USER: Handle submit read errors here. ErrorCode:{0:X8}h",
-                                       errorCode));
-            Interlocked.Increment(ref mOutstandingCount);
+            if (!success && errorCode == ErrorCodes.IoPending) return ErrorCodes.Success;
+
+            Debug.WriteLine(
+                            String.Format("Failed submitting transfer. PipeID:{0:X2}h ErrorCode:{1:X8}h",
+                                          mPipeId,
+                                          errorCode),
+                            "ERROR");
             return errorCode;
         }
 
@@ -254,23 +207,52 @@ namespace Xfer.UsbStream
             int notUsedForAsync;
             int bufferSize = xferContext.TransferLength;
 
-            mUsb.WritePipe(mPipeId,
-                           xferContext.Buffer,
-                           bufferSize,
-                           out notUsedForAsync,
-                           nativeOverlapped);
+            bool success = mUsb.WritePipe(mPipeId, xferContext.Buffer, bufferSize, out notUsedForAsync, nativeOverlapped);
             int errorCode = Marshal.GetLastWin32Error();
 
-            Debug.Assert(errorCode == ErrorCodes.IoPending,
-                         String.Format("TODO USER: Handle submit write errors here. ErrorCode:{0:X8}h",
-                                       errorCode));
-            Interlocked.Increment(ref mOutstandingCount);
+            if (!success && errorCode == ErrorCodes.IoPending) return ErrorCodes.Success;
+
+            Debug.WriteLine(
+                            String.Format("Failed submitting transfer. PipeID:{0:X2}h ErrorCode:{1:X8}h",
+                                          mPipeId,
+                                          errorCode),
+                            "ERROR");
+
             return errorCode;
         }
 
-        private readonly KSTM_CALLBACK mCallbacks;
-        private int mOutstandingCount;
-        private bool mbDisposed;
+        #region Not Supported
+
+        public override long Length
+        {
+            get
+            {
+                throw new NotSupportedException();
+            }
+        }
+
+        public override long Position
+        {
+            get
+            {
+                throw new NotSupportedException();
+            }
+            set
+            {
+                throw new NotSupportedException();
+            }
+        }
+
+        public override long Seek(long offset, SeekOrigin origin)
+        {
+            throw new NotSupportedException();
+        }
+
+        public override void SetLength(long value)
+        {
+            throw new NotSupportedException();
+        }
+
         #endregion
     }
 }
