@@ -15,6 +15,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Xfer.Async", "Xfer.Async\Xf
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Xfer.UsbStream", "Xfer.UsbStream\Xfer.UsbStream.csproj", "{6A4CD32B-560F-4967-9112-37B3FD5699CC}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hot.Plug.Detect.GUI", "Hot.Plug.Detect.GUI\Hot.Plug.Detect.GUI.csproj", "{CFB108D9-5489-48D4-AAFD-5FBCB3C00582}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -49,6 +51,10 @@ Global
 		{6A4CD32B-560F-4967-9112-37B3FD5699CC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6A4CD32B-560F-4967-9112-37B3FD5699CC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6A4CD32B-560F-4967-9112-37B3FD5699CC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CFB108D9-5489-48D4-AAFD-5FBCB3C00582}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CFB108D9-5489-48D4-AAFD-5FBCB3C00582}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CFB108D9-5489-48D4-AAFD-5FBCB3C00582}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CFB108D9-5489-48D4-AAFD-5FBCB3C00582}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

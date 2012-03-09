@@ -1,11 +1,11 @@
 ﻿#region Copyright(c) Travis Robinson
-// Copyright (c) 2012 Travis Robinson <libusbdotnet@gmail.com>
+
+// Copyright (c) 2011-2012 Travis Robinson <libusbdotnet@gmail.com>
 // All rights reserved.
 // 
-// Program.cs
+// Read.Isochronous
 // 
-// Created:      02.26.2012
-// Last Updated: 03.01.2012
+// Last Updated: 03.08.2012
 // 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -24,8 +24,8 @@
 // CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF 
 // THE POSSIBILITY OF SUCH DAMAGE.
-#endregion
 
+#endregion
 
 #define BMFW
 
@@ -37,7 +37,6 @@ using Test.Devices;
 using libusbK;
 using libusbK.Examples;
 
-
 namespace Read.Isochronous
 {
     // ReSharper disable InconsistentNaming
@@ -45,7 +44,9 @@ namespace Read.Isochronous
     internal class Program
     {
         #region TODO USER: Set the test parameters for your device.
+
         public static IsoTestParameters Test = new IsoTestParameters(0x04d8, 0xfa2e, 0, 0x82, 3, 64, "xfer-iso-read.txt", 24);
+
         #endregion
 
         private static void Main(string[] args)
@@ -195,31 +196,35 @@ namespace Read.Isochronous
     internal class ReadIsoTransferQueue
     {
         #region Transfer lists
+
         public LinkedList<IsoTransferItem> Completed = new LinkedList<IsoTransferItem>();
         public LinkedList<IsoTransferItem> Master = new LinkedList<IsoTransferItem>();
         public LinkedList<IsoTransferItem> Outstanding = new LinkedList<IsoTransferItem>();
+
         #endregion
 
-
         #region Core queue members
+
         public readonly int DataBufferSize;
         public readonly OvlK OvlPool;
         public readonly WINUSB_PIPE_INFORMATION PipeInfo;
         public readonly UsbK Usb;
-        #endregion
 
+        #endregion
 
         #region Frame management
+
         public int FrameNumber;
         public int LastStartFrame;
-        #endregion
 
+        #endregion
 
         #region Statisitics
+
         public uint CompletedCount;
         public uint TotalSubmittedCount;
-        #endregion
 
+        #endregion
 
         public ReadIsoTransferQueue(UsbK usb, ref WINUSB_PIPE_INFORMATION pipeInfo, int maxPendingTransfers, int numberOfPackets)
         {

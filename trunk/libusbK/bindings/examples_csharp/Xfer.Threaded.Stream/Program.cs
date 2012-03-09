@@ -1,11 +1,11 @@
 ﻿#region Copyright(c) Travis Robinson
-// Copyright (c) 2012 Travis Robinson <libusbdotnet@gmail.com>
+
+// Copyright (c) 2011-2012 Travis Robinson <libusbdotnet@gmail.com>
 // All rights reserved.
 // 
-// Program.cs
+// Xfer.Stm
 // 
-// Created:      02.27.2012
-// Last Updated: 03.05.2012
+// Last Updated: 03.08.2012
 // 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -24,8 +24,8 @@
 // CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF 
 // THE POSSIBILITY OF SUCH DAMAGE.
-#endregion
 
+#endregion
 
 #define BMFW
 
@@ -36,7 +36,6 @@ using Test.Devices;
 using libusbK;
 using libusbK.Examples;
 
-
 // ReSharper disable InconsistentNaming
 
 namespace Xfer.Stm
@@ -44,9 +43,10 @@ namespace Xfer.Stm
     internal class Program
     {
         #region TODO USER: Set the test parameters for your device.
-        public static StmTestParameters Test = new StmTestParameters(0x04d8, 0xfa2e, 0, 0x81, 1024, null, -1, 4, 64);
-        #endregion
 
+        public static StmTestParameters Test = new StmTestParameters(0x04d8, 0xfa2e, 0, 0x81, 1024, null, -1, 4, 64);
+
+        #endregion
 
         private static void Main()
         {
@@ -115,7 +115,10 @@ namespace Xfer.Stm
                                                   tempBuffer[6],
                                                   tempBuffer[7]);
 
-                Console.WriteLine(totalTransferCount > Test.MaxTransfersTotal ? "#{0}: [Stream Stopped] {1} transferred. {2}" : "#{0}: {1} transferred. {2}",
+                Console.WriteLine(
+                                  totalTransferCount > Test.MaxTransfersTotal
+                                      ? "#{0}: [Stream Stopped] {1} transferred. {2}"
+                                      : "#{0}: {1} transferred. {2}",
                                   totalTransferCount.ToString("0000"),
                                   transferred,
                                   dataPrefix);
