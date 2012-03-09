@@ -431,35 +431,35 @@ KUSB_EXP BOOL KUSB_API LibK_SetDefaultContext(
 	switch (HandleType)
 	{
 	case KLIB_HANDLE_TYPE_HOTK:
-		InterlockedExchangePointer(&AllK->HotK.DefaultUserContext, ContextValue);
+		InterlockedExchangePointer(&((PVOID)AllK->HotK.DefaultUserContext), (PVOID)ContextValue);
 		return TRUE;
 
 	case KLIB_HANDLE_TYPE_USBK:
-		InterlockedExchangePointer(&AllK->UsbK.DefaultUserContext, ContextValue);
+		InterlockedExchangePointer(&((PVOID)AllK->UsbK.DefaultUserContext), (PVOID)ContextValue);
 		return TRUE;
 
 	case KLIB_HANDLE_TYPE_USBSHAREDK:
-		InterlockedExchangePointer(&AllK->DevK.DefaultUserContext, ContextValue);
+		InterlockedExchangePointer(&((PVOID)AllK->DevK.DefaultUserContext), (PVOID)ContextValue);
 		return TRUE;
 
 	case KLIB_HANDLE_TYPE_LSTK:
-		InterlockedExchangePointer(&AllK->LstK.DefaultUserContext, ContextValue);
+		InterlockedExchangePointer(&((PVOID)AllK->LstK.DefaultUserContext), (PVOID)ContextValue);
 		return TRUE;
 
 	case KLIB_HANDLE_TYPE_LSTINFOK:
-		InterlockedExchangePointer(&AllK->LstInfoK.DefaultUserContext, ContextValue);
+		InterlockedExchangePointer(&((PVOID)AllK->LstInfoK.DefaultUserContext), (PVOID)ContextValue);
 		return TRUE;
 
 	case KLIB_HANDLE_TYPE_OVLK:
-		InterlockedExchangePointer(&AllK->OvlK.DefaultUserContext, ContextValue);
+		InterlockedExchangePointer(&((PVOID)AllK->OvlK.DefaultUserContext), (PVOID)ContextValue);
 		return TRUE;
 
 	case KLIB_HANDLE_TYPE_OVLPOOLK:
-		InterlockedExchangePointer(&AllK->OvlPoolK.DefaultUserContext, ContextValue);
+		InterlockedExchangePointer(&((PVOID)AllK->OvlPoolK.DefaultUserContext), (PVOID)ContextValue);
 		return TRUE;
 
 	case KLIB_HANDLE_TYPE_STMK:
-		InterlockedExchangePointer(&AllK->StmK.DefaultUserContext, ContextValue);
+		InterlockedExchangePointer(&((PVOID)AllK->StmK.DefaultUserContext), (PVOID)ContextValue);
 		return TRUE;
 	}
 
