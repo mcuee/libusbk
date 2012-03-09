@@ -1,11 +1,11 @@
 ﻿#region Copyright(c) Travis Robinson
-// Copyright (c) 2012 Travis Robinson <libusbdotnet@gmail.com>
+
+// Copyright (c) 2011-2012 Travis Robinson <libusbdotnet@gmail.com>
 // All rights reserved.
 // 
-// Program.cs
+// Xfer.Async
 // 
-// Created:      02.29.2012
-// Last Updated: 03.01.2012
+// Last Updated: 03.08.2012
 // 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -24,8 +24,8 @@
 // CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF 
 // THE POSSIBILITY OF SUCH DAMAGE.
-#endregion
 
+#endregion
 
 #define BMFW
 
@@ -36,7 +36,6 @@ using Test.Devices;
 using libusbK;
 using libusbK.Examples;
 
-
 // ReSharper disable InconsistentNaming
 
 namespace Xfer.Async
@@ -44,7 +43,9 @@ namespace Xfer.Async
     internal class Program
     {
         #region TODO USER: Set the test parameters for your device.
+
         public static StmTestParameters Test = new StmTestParameters(0x04d8, 0xfa2e, 0, 0x82, 4096, null, -1, 3, -1);
+
         #endregion
 
         private static void Main()
@@ -77,12 +78,12 @@ namespace Xfer.Async
             // By default, sync transfers wait infinitely on a transfer to complete.
 
             // Set the pipe timeout policy to 3000ms
-            int[] pipeTimeoutMS = new int[] {3000};
+            int[] pipeTimeoutMS = new[] {3000};
             usb.SetPipePolicy(
-                (byte) Test.PipeId,
-                (int) PipePolicyType.PIPE_TRANSFER_TIMEOUT,
-                Marshal.SizeOf(typeof (int)),
-                pipeTimeoutMS);
+                              (byte) Test.PipeId,
+                              (int) PipePolicyType.PIPE_TRANSFER_TIMEOUT,
+                              Marshal.SizeOf(typeof (int)),
+                              pipeTimeoutMS);
 
             int totalSubmittedTransfers = 0;
             int totalCompletedTransfers = 0;

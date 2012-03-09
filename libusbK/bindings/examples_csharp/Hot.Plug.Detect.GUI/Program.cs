@@ -3,7 +3,7 @@
 // Copyright (c) 2011-2012 Travis Robinson <libusbdotnet@gmail.com>
 // All rights reserved.
 // 
-// List.Devices
+// Hot.Plug.Detect.GUI
 // 
 // Last Updated: 03.08.2012
 // 
@@ -28,37 +28,21 @@
 #endregion
 
 using System;
-using libusbK;
+using System.Windows.Forms;
 
-namespace List.Devices
+namespace Hot.Plug.Detect.GUI
 {
-    internal class Program
+    internal static class Program
     {
+        /// <summary>
+        /// The main entry point for the application.
+        /// </summary>
+        [STAThread]
         private static void Main()
         {
-            int deviceIndex = 0;
-            int deviceCount = 0;
-            KLST_DEVINFO_HANDLE deviceInfo;
-            LstK lst = new LstK(KLST_FLAG.NONE);
-
-            lst.Count(ref deviceCount);
-            while (lst.MoveNext(out deviceInfo))
-            {
-                // Write some information about the device.
-                string displayLine = String.Format("{0} of {1}: {2}",
-                                                   ++deviceIndex,
-                                                   deviceCount,
-                                                   deviceInfo.DeviceDesc);
-                Console.WriteLine(displayLine);
-                Console.WriteLine("- " + deviceInfo.Common.ToString().Replace("\n",
-                                                                              "  "));
-                Console.WriteLine();
-            }
-
-            if (deviceCount == 0)
-                Console.WriteLine("No devices found!\n");
-
-            lst.Free();
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+            Application.Run(new Form1());
         }
     }
 }

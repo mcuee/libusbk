@@ -1,11 +1,11 @@
 ﻿#region Copyright(c) Travis Robinson
-// Copyright (c) 2012 Travis Robinson <libusbdotnet@gmail.com>
+
+// Copyright (c) 2011-2012 Travis Robinson <libusbdotnet@gmail.com>
 // All rights reserved.
 // 
-// Program.cs
+// Xfer.UsbStream
 // 
-// Created:      03.03.2012
-// Last Updated: 03.05.2012
+// Last Updated: 03.08.2012
 // 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -24,8 +24,8 @@
 // CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF 
 // THE POSSIBILITY OF SUCH DAMAGE.
-#endregion
 
+#endregion
 
 #define BMFW
 
@@ -37,15 +37,15 @@ using Test.Devices;
 using libusbK;
 using libusbK.Examples;
 
-
 namespace Xfer.UsbStream
 {
     internal class Program
     {
         #region TODO USER: Set the test parameters for your device.
-        public static StmTestParameters Test = new StmTestParameters(0x04d8, 0xfa2e, 0, 0x81, 1024, null, -1, 4, 64);
-        #endregion
 
+        public static StmTestParameters Test = new StmTestParameters(0x04d8, 0xfa2e, 0, 0x81, 1024, null, -1, 4, 64);
+
+        #endregion
 
         private static bool FormatBrokenStrings(int fixedLength, string preAdd, ref string sPartialRead, ref string sRead)
         {
@@ -90,15 +90,18 @@ namespace Xfer.UsbStream
             if (!Test.FindPipeAndInterface(usb, out interfaceDescriptorWrite, out pipeInfoWrite)) return;
 
             Debug.Assert(
-                interfaceDescriptorRead.bInterfaceNumber == interfaceDescriptorWrite.bInterfaceNumber,
-                "This example requires the IN and OUT endpoints have the same bInterfaceNumber.");
+                         interfaceDescriptorRead.bInterfaceNumber == interfaceDescriptorWrite.bInterfaceNumber,
+                         "This example requires the IN and OUT endpoints have the same bInterfaceNumber.");
 
             Debug.Assert(
-                pipeInfoRead.MaximumPacketSize == pipeInfoWrite.MaximumPacketSize,
-                "This example requires the IN and OUT endpoints have the same MaximumPacketSize.");
+                         pipeInfoRead.MaximumPacketSize > 0 && 
+                         pipeInfoRead.MaximumPacketSize == pipeInfoWrite.MaximumPacketSize,
+                         "This example requires the IN and OUT endpoints have the same MaximumPacketSize.");
 
+            // We will keep the buffer >= 1024.
+            // To satisfy StmK it must also be an interval of MaximumPacketSize
             if (Test.TransferBufferSize == -1)
-                Test.TransferBufferSize = pipeInfoWrite.MaximumPacketSize * 2;
+                Test.TransferBufferSize = pipeInfoWrite.MaximumPacketSize * ((1024 + pipeInfoWrite.MaximumPacketSize-1) / pipeInfoWrite.MaximumPacketSize);
 
 #if BMFW
             // TODO FOR USER: Remove this block if not using benchmark firmware.
@@ -113,8 +116,20 @@ namespace Xfer.UsbStream
 #endif
             if (!Test.ShowTestReady()) goto Done;
 
-            UsbStream stmRead = new UsbStream(usb, pipeInfoRead.PipeId, Test.TransferBufferSize, Test.MaxPendingTransfers, Test.MaxPendingIO, true, 1000);
-            UsbStream stmWrite = new UsbStream(usb, pipeInfoWrite.PipeId, Test.TransferBufferSize, Test.MaxPendingTransfers, Test.MaxPendingIO, true, 1000);
+            UsbStream stmRead = new UsbStream(usb,
+                                              pipeInfoRead.PipeId,
+                                              Test.TransferBufferSize,
+                                              Test.MaxPendingTransfers,
+                                              Test.MaxPendingIO,
+                                              true,
+                                              1);
+            UsbStream stmWrite = new UsbStream(usb,
+                                               pipeInfoWrite.PipeId,
+                                               Test.TransferBufferSize,
+                                               Test.MaxPendingTransfers,
+                                               Test.MaxPendingIO,
+                                               true,
+                                               3000);
 
             StreamReader stmReader = new StreamReader(stmRead);
             StreamWriter stmWriter = new StreamWriter(stmWrite);
@@ -159,7 +174,7 @@ namespace Xfer.UsbStream
             }
 
             Test.Dcs.Stop();
-            TimeSpan ts=new TimeSpan(Test.Dcs.Ticks);
+            TimeSpan ts = new TimeSpan(Test.Dcs.Ticks);
             Console.WriteLine("Elapsed Time:\n\t{0} mins\n\t{1} secs\n\t{2} msecs", Math.Floor(ts.TotalMinutes), ts.Seconds, ts.Milliseconds);
 
             stmWriter.Dispose();
