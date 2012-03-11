@@ -428,6 +428,7 @@ KUSB_EXP BOOL KUSB_API LibK_SetDefaultContext(
     _in KLIB_USER_CONTEXT ContextValue)
 {
 
+	if (!AllK) CheckLibInit();
 	switch (HandleType)
 	{
 	case KLIB_HANDLE_TYPE_HOTK:
