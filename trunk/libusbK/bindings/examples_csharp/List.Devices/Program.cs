@@ -50,8 +50,7 @@ namespace List.Devices
                                                    deviceCount,
                                                    deviceInfo.DeviceDesc);
                 Console.WriteLine(displayLine);
-                Console.WriteLine("- " + deviceInfo.Common.ToString().Replace("\n",
-                                                                              "  "));
+                Console.WriteLine("- " + deviceInfo.InstanceID);
                 Console.WriteLine();
             }
 

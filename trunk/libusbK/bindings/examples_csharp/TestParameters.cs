@@ -357,7 +357,7 @@ namespace libusbK.Examples
         {
             return
                 String.Format(
-                    "Vid: {0:X4}h\nPid: {1:X4}h\nMI: {2:X2}h\nPipeId: {3:X2}h\nMaxOutstandingTransfers: {4}\n\nLogFilename: {5}\n",
+                    "Vid: {0:X4}h\nPid: {1:X4}h\nMI: {2:X2}h\nPipeId: {3:X2}h\nMaxTransfersTotal: {4}\n\nLogFilename: {5}\n",
                     Vid,
                     Pid,
                     MI,
@@ -484,6 +484,51 @@ namespace libusbK.Examples
             object[] args = new object[]
                                 {
                                     TransferBufferSize, MaxPendingIO, MaxPendingTransfers
+                                };
+            return base.ToString() + string.Format(fmt,
+                                                   args);
+        }
+
+        public int TransferBufferSize;
+        #endregion
+    }
+
+    internal class AsyncTestParameters : TestParameters
+    {
+        #region Public Members
+        public AsyncTestParameters(int vid,
+                                 int pid,
+                                 int altInterfaceId,
+                                 byte pipeId,
+                                 int maxTransfersTotal,
+                                 string logFilename,
+                                 int transferBufferSize,
+                                 int maxPendingIO)
+            : base(vid,
+                   pid,
+                   altInterfaceId,
+                   pipeId,
+                   maxTransfersTotal,
+                   logFilename)
+        {
+            TransferBufferSize = transferBufferSize;
+            MaxPendingIO = maxPendingIO;
+
+            FillFromCommandLine(Environment.CommandLine);
+            Init();
+        }
+
+        public int MaxPendingIO;
+
+        public override string ToString()
+        {
+            string fmt = String.Empty;
+            fmt += "TransferBufferSize: {0}\n";
+            fmt += "MaxPendingIO: {1}\n";
+
+            object[] args = new object[]
+                                {
+                                    TransferBufferSize, MaxPendingIO
                                 };
             return base.ToString() + string.Format(fmt,
                                                    args);
