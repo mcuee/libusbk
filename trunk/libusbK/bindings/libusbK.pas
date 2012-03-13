@@ -12,6 +12,11 @@
 // 2012-02-10 Added Hotplug Event Notifier API, LstK_InitEx, implicit linking
 //            and minor stuff (Alberto Semenzato)
 //
+// 2012-03-09 Added LibK_SetContext, LibK_GetContext, HotK_FreeAll,
+//            KSTM_BEFORE_COMPLETE_CB, OvlK_WaitOldest,
+//            LibK_SetDefaultContext, LibK_GetDefaultContext,
+//            3.0.5.10 changes has been applied (Alberto Semenzato)
+//
 // Functions not in the original sources:
 //
 // GetIsoPacketFromIsoContext: helper to get a pointer to a specific packet
@@ -33,10 +38,10 @@
 // IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
 // TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
 // PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL TRAVIS LEE ROBINSON
-// OR EKKEHARD DOMNING BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
-// TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-// PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+// OR EKKEHARD DOMNING OR ALBERTO SEMENZATO BE LIABLE FOR ANY DIRECT, INDIRECT,
+// INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+// LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,
+// OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
 // LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
@@ -187,10 +192,7 @@ interface
       StartFrame: Cardinal;
       ErrorCount: SmallInt;
       NumberOfPackets: SmallInt;
-      // fixed structure padding.
-      z_F_i_x_e_d: array
-        [0 .. (16 - (SizeOf(Cardinal) * 2) - (SizeOf(SmallInt) * 2) -
-        1)] of Byte;
+      UrbHdrStatus: Cardinal;
       // Contains a variable-length array of KISO_PACKET structures that
       // describe the isochronous transfer packets to be transferred on the
       // USB bus.
@@ -204,6 +206,8 @@ interface
       // to a specific packet.
       IsoPackets: record end;
     end;
+
+    KLIB_USER_CONTEXT = pointer;
 
     // pointer to a \c KISO_CONTEXT structure
     KLIB_HANDLE = pointer;
@@ -600,9 +604,17 @@ interface
 
     KSTM_FLAG = Cardinal;
 
+    KSTM_COMPLETE_RESULT = Cardinal;
+
   const
 
     KSTM_FLAG_NONE = 0;
+    KSTM_FLAG_USE_TIMEOUT = $80000000;
+    KSTM_FLAG_NO_PARTIAL_XFERS = $00100000;
+    KSTM_FLAG_TIMEOUT_MASK = $0001FFFF;
+
+    KSTM_COMPLETE_RESULT_VALID = 0;
+    KSTM_COMPLETE_RESULT_INVALID = 1;
 
   type
 
@@ -626,14 +638,18 @@ interface
       EndpointDescriptor: USB_ENDPOINT_DESCRIPTOR;
       DriverAPI: KUSB_DRIVER_API;
       DeviceHandle: THandle;
+      StreamHandle: KSTM_HANDLE;
+      UserState: pointer;
     end;
 
+    PInteger = ^Integer;
+
     KSTM_ERROR_CB = function(const StreamInfo: PKSTM_INFO;
-      const XferContext: PKSTM_XFER_CONTEXT; const ErrorCode: Integer)
-      : Integer; stdcall;
+      const XferContext: PKSTM_XFER_CONTEXT; const XferContextIndex: Integer;
+      const ErrorCode: Integer): Integer; stdcall;
     KSTM_SUBMIT_CB = function(const StreamInfo: PKSTM_INFO;
-      const XferContext: PKSTM_XFER_CONTEXT; Overlapped: POverlapped)
-      : Integer; stdcall;
+      const XferContext: PKSTM_XFER_CONTEXT; const XferContextIndex: Integer;
+      Overlapped: POverlapped): Integer; stdcall;
     KSTM_STARTED_CB = function(const StreamInfo: PKSTM_INFO;
       const XferContext: PKSTM_XFER_CONTEXT; const XferContextIndex: Integer)
       : Integer; stdcall;
@@ -641,8 +657,11 @@ interface
       const XferContext: PKSTM_XFER_CONTEXT; const XferContextIndex: Integer)
       : Integer; stdcall;
     KSTM_COMPLETE_CB = function(const StreamInfo: PKSTM_INFO;
-      const XferContext: PKSTM_XFER_CONTEXT; const ErrorCode: Integer)
-      : Integer; stdcall;
+      const XferContext: PKSTM_XFER_CONTEXT; const XferContextIndex: Integer;
+      const ErrorCode: Integer): Integer; stdcall;
+    KSTM_BEFORE_COMPLETE_CB = function(const StreamInfo: PKSTM_INFO;
+      const XferContext: PKSTM_XFER_CONTEXT; const XferContextIndex: Integer;
+      const ErrorCode: PInteger): KSTM_COMPLETE_RESULT; stdcall;
 
     PKSTM_CALLBACK = ^KSTM_CALLBACK;
 
@@ -652,6 +671,7 @@ interface
       Complete: KSTM_COMPLETE_CB;
       Started: KSTM_STARTED_CB;
       Stopped: KSTM_STOPPED_CB;
+      BeforeComplete: KSTM_BEFORE_COMPLETE_CB;
       z_F_i_x_e_d: array [0 .. (64 - SizeOf(pointer) * 5) - 1] of Byte;
     end;
 
@@ -673,15 +693,16 @@ interface
 
     DllAvailable: Boolean;
 
-  {$IFDEF DynamicLink}
+    {$IFDEF DynamicLink}
 
   var
 
     HLIBUSBKDll: THandle;
 
-    HotK_Free: function(const Handle: KHOT_HANDLE): Bool; stdcall;
     HotK_Init: function(var Handle: KHOT_HANDLE; const InitParams: PKHOT_PARAMS)
       : Bool; stdcall;
+    HotK_Free: function(const Handle: KHOT_HANDLE): Bool; stdcall;
+    HotK_FreeAll: procedure; stdcall;
     IsoK_EnumPackets: function(const IsoContext: PKISO_CONTEXT;
       const EnumPackets: KISO_ENUM_PACKETS_CB; const StartPacketIndex: Integer;
       const UserState): Bool; stdcall;
@@ -696,13 +717,20 @@ interface
     IsoK_SetPackets: function(const IsoContext: PKISO_CONTEXT;
       const PacketSize: Integer): Bool; stdcall;
     LibK_CopyDriverAPI: function: Bool; stdcall;
-    LibK_GetContext: function: Bool; stdcall;
+    LibK_GetContext: function(const Handle: KLIB_HANDLE;
+      const HandleType: KLIB_HANDLE_TYPE): KLIB_USER_CONTEXT; stdcall;
     LibK_GetProcAddress: function: Bool; stdcall;
     LibK_GetVersion: function: Bool; stdcall;
     LibK_LoadDriverAPI: function(var DriverAPI: KUSB_DRIVER_API;
       const DriverID: Integer): Bool; stdcall;
     LibK_SetCleanupCallback: function: Bool; stdcall;
-    LibK_SetContext: function: Bool; stdcall;
+    LibK_SetContext: function(const Handle: KLIB_HANDLE;
+      const HandleType: KLIB_HANDLE_TYPE; const ContextValue: KLIB_USER_CONTEXT)
+      : Bool; stdcall;
+    LibK_SetDefaultContext: function(const HandleType: KLIB_HANDLE_TYPE;
+      const UserContext: KLIB_USER_CONTEXT): Bool; stdcall;
+    LibK_GetDefaultContext: function(const HandleType: KLIB_HANDLE_TYPE)
+      : KLIB_USER_CONTEXT; stdcall;
     LstK_AttachInfo: function: Bool; stdcall;
     LstK_Clone: function(const InterfaceHandle: KUSB_HANDLE;
       var DstInterfaceHandle: KUSB_HANDLE): Bool; stdcall;
@@ -738,6 +766,10 @@ interface
     OvlK_Wait: function(const OverlappedK: KOVL_HANDLE;
       const TimeoutMS: Integer; const WaitFlags: KOVL_WAIT_FLAG;
       var TransferredLength: Cardinal): Bool; stdcall;
+    OvlK_WaitOldest: function(const PoolHandle: KOVL_POOL_HANDLE;
+      var OverlappedK: KOVL_HANDLE; const TimeoutMS: Integer;
+      const WaitFlags: KOVL_WAIT_FLAG; var TransferredLength: Cardinal)
+      : Bool; stdcall;
     OvlK_WaitAndRelease: function(const OverlappedK: KOVL_HANDLE;
       const TimeoutMS: Integer; var TransferredLength: Cardinal): Bool; stdcall;
     OvlK_WaitOrCancel: function(const OverlappedK: KOVL_HANDLE;
@@ -846,12 +878,12 @@ interface
     WinUsb_SetPowerPolicy: function: Bool; stdcall;
     WinUsb_WritePipe: function: Bool; stdcall;
 
-  {$ELSE}
-
-  function HotK_Free(const Handle: KHOT_HANDLE): Bool; stdcall;
-    external LIBUSBK_DLL name 'HotK_Free';
+    {$ELSE}
   function HotK_Init(var Handle: KHOT_HANDLE; const InitParams: PKHOT_PARAMS)
     : Bool; stdcall; external LIBUSBK_DLL name 'HotK_Init';
+  function HotK_Free(const Handle: KHOT_HANDLE): Bool; stdcall;
+    external LIBUSBK_DLL name 'HotK_Free';
+  procedure HotK_FreeAll; stdcall; external LIBUSBK_DLL name 'HotK_FreeAll';
   function IsoK_EnumPackets(const IsoContext: PKISO_CONTEXT;
     const EnumPackets: KISO_ENUM_PACKETS_CB; const StartPacketIndex: Integer;
     const UserState): Bool; stdcall;
@@ -874,7 +906,8 @@ interface
     external LIBUSBK_DLL name 'IsoK_SetPackets';
   function LibK_CopyDriverAPI: Bool; stdcall;
     external LIBUSBK_DLL name 'LibK_CopyDriverAPI';
-  function LibK_GetContext: Bool; stdcall;
+  function LibK_GetContext(const Handle: KLIB_HANDLE;
+    const HandleType: KLIB_HANDLE_TYPE): KLIB_USER_CONTEXT; stdcall;
     external LIBUSBK_DLL name 'LibK_GetContext';
   function LibK_GetProcAddress: Bool; stdcall;
     external LIBUSBK_DLL name 'LibK_GetProcAddress';
@@ -885,8 +918,15 @@ interface
     external LIBUSBK_DLL name 'LibK_LoadDriverAPI';
   function LibK_SetCleanupCallback: Bool; stdcall;
     external LIBUSBK_DLL name 'LibK_SetCleanupCallback';
-  function LibK_SetContext: Bool; stdcall;
-    external LIBUSBK_DLL name 'LibK_SetContext';
+  function LibK_SetContext(const Handle: KLIB_HANDLE;
+    const HandleType: KLIB_HANDLE_TYPE; const ContextValue: KLIB_USER_CONTEXT)
+    : Bool; stdcall; external LIBUSBK_DLL name 'LibK_SetContext';
+  function LibK_SetDefaultContext(const HandleType: KLIB_HANDLE_TYPE;
+    const UserContext: KLIB_USER_CONTEXT): Bool; stdcall;
+    external LIBUSBK_DLL name 'LibK_SetDefaultContext';
+  function LibK_GetDefaultContext(const HandleType: KLIB_HANDLE_TYPE)
+    : KLIB_USER_CONTEXT; stdcall;
+    external LIBUSBK_DLL name 'LibK_GetDefaultContext';
   function LstK_AttachInfo: Bool; stdcall;
     external LIBUSBK_DLL name 'LstK_AttachInfo';
   function LstK_Clone(const InterfaceHandle: KUSB_HANDLE;
@@ -940,6 +980,10 @@ interface
   function OvlK_Wait(const OverlappedK: KOVL_HANDLE; const TimeoutMS: Integer;
     const WaitFlags: KOVL_WAIT_FLAG; var TransferredLength: Cardinal): Bool;
     stdcall; external LIBUSBK_DLL name 'OvlK_Wait';
+  function OvlK_WaitOldest(const PoolHandle: KOVL_POOL_HANDLE;
+    var OverlappedK: KOVL_HANDLE; const TimeoutMS: Integer;
+    const WaitFlags: KOVL_WAIT_FLAG; var TransferredLength: Cardinal): Bool;
+    stdcall; external LIBUSBK_DLL name 'OvlK_WaitOldest';
   function OvlK_WaitAndRelease(const OverlappedK: KOVL_HANDLE;
     const TimeoutMS: Integer; var TransferredLength: Cardinal): Bool; stdcall;
     external LIBUSBK_DLL name 'OvlK_WaitAndRelease';
@@ -1106,7 +1150,6 @@ interface
     external LIBUSBK_DLL name 'WinUsb_WritePipe';
 
   {$ENDIF}
-
   function GetIsoPacketFromIsoContext(const AIsoContext: PKISO_CONTEXT;
     const AIndex: Integer): PKISO_PACKET;
 
@@ -1186,8 +1229,9 @@ implementation
     HLIBUSBKDll:= LoadLibrary(LIBUSBK_DLL);
     if HLIBUSBKDll >= 32 then { success }
     begin
-      HotK_Free:= GetProcAddress(HLIBUSBKDll, 'HotK_Free');
       HotK_Init:= GetProcAddress(HLIBUSBKDll, 'HotK_Init');
+      HotK_Free:= GetProcAddress(HLIBUSBKDll, 'HotK_Free');
+      HotK_FreeAll:= GetProcAddress(HLIBUSBKDll, 'HotK_FreeAll');
       IsoK_EnumPackets:= GetProcAddress(HLIBUSBKDll, 'IsoK_EnumPackets');
       IsoK_Free:= GetProcAddress(HLIBUSBKDll, 'IsoK_Free');
       IsoK_GetPacket:= GetProcAddress(HLIBUSBKDll, 'IsoK_GetPacket');
@@ -1203,6 +1247,10 @@ implementation
       LibK_SetCleanupCallback:= GetProcAddress(HLIBUSBKDll,
         'LibK_SetCleanupCallback');
       LibK_SetContext:= GetProcAddress(HLIBUSBKDll, 'LibK_SetContext');
+      LibK_SetDefaultContext:= GetProcAddress(HLIBUSBKDll,
+        'LibK_SetDefaultContext');
+      LibK_GetDefaultContext:= GetProcAddress(HLIBUSBKDll,
+        'LibK_GetDefaultContext');
       LstK_AttachInfo:= GetProcAddress(HLIBUSBKDll, 'LstK_AttachInfo');
       LstK_Clone:= GetProcAddress(HLIBUSBKDll, 'LstK_Clone');
       LstK_CloneInfo:= GetProcAddress(HLIBUSBKDll, 'LstK_CloneInfo');
@@ -1226,6 +1274,7 @@ implementation
       OvlK_ReUse:= GetProcAddress(HLIBUSBKDll, 'OvlK_ReUse');
       OvlK_Release:= GetProcAddress(HLIBUSBKDll, 'OvlK_Release');
       OvlK_Wait:= GetProcAddress(HLIBUSBKDll, 'OvlK_Wait');
+      OvlK_WaitOldest:= GetProcAddress(HLIBUSBKDll, 'OvlK_WaitOldest');
       OvlK_WaitAndRelease:= GetProcAddress(HLIBUSBKDll, 'OvlK_WaitAndRelease');
       OvlK_WaitOrCancel:= GetProcAddress(HLIBUSBKDll, 'OvlK_WaitOrCancel');
       StmK_Free:= GetProcAddress(HLIBUSBKDll, 'StmK_Free');
@@ -1315,8 +1364,9 @@ implementation
         'WinUsb_SetPowerPolicy');
       WinUsb_WritePipe:= GetProcAddress(HLIBUSBKDll, 'WinUsb_WritePipe');
       Result:= True;
-      Result:= Result and Assigned(HotK_Free);
       Result:= Result and Assigned(HotK_Init);
+      Result:= Result and Assigned(HotK_Free);
+      Result:= Result and Assigned(HotK_FreeAll);
       Result:= Result and Assigned(IsoK_EnumPackets);
       Result:= Result and Assigned(IsoK_Free);
       Result:= Result and Assigned(IsoK_GetPacket);
@@ -1331,6 +1381,8 @@ implementation
       Result:= Result and Assigned(LibK_LoadDriverAPI);
       Result:= Result and Assigned(LibK_SetCleanupCallback);
       Result:= Result and Assigned(LibK_SetContext);
+      Result:= Result and Assigned(LibK_SetDefaultContext);
+      Result:= Result and Assigned(LibK_GetDefaultContext);
       Result:= Result and Assigned(LstK_AttachInfo);
       Result:= Result and Assigned(LstK_Clone);
       Result:= Result and Assigned(LstK_CloneInfo);
@@ -1354,6 +1406,7 @@ implementation
       Result:= Result and Assigned(OvlK_ReUse);
       Result:= Result and Assigned(OvlK_Release);
       Result:= Result and Assigned(OvlK_Wait);
+      Result:= Result and Assigned(OvlK_WaitOldest);
       Result:= Result and Assigned(OvlK_WaitAndRelease);
       Result:= Result and Assigned(OvlK_WaitOrCancel);
       Result:= Result and Assigned(StmK_Free);
@@ -1419,8 +1472,9 @@ implementation
     end
     else
     begin
-      HotK_Free:= Nil;
       HotK_Init:= Nil;
+      HotK_Free:= Nil;
+      HotK_FreeAll:= Nil;
       IsoK_EnumPackets:= Nil;
       IsoK_Free:= Nil;
       IsoK_GetPacket:= Nil;
@@ -1435,6 +1489,8 @@ implementation
       LibK_LoadDriverAPI:= Nil;
       LibK_SetCleanupCallback:= Nil;
       LibK_SetContext:= Nil;
+      LibK_SetDefaultContext:= Nil;
+      LibK_GetDefaultContext:= Nil;
       LstK_AttachInfo:= Nil;
       LstK_Clone:= Nil;
       LstK_CloneInfo:= Nil;
@@ -1458,6 +1514,7 @@ implementation
       OvlK_ReUse:= Nil;
       OvlK_Release:= Nil;
       OvlK_Wait:= Nil;
+      OvlK_WaitOldest:= Nil;
       OvlK_WaitAndRelease:= Nil;
       OvlK_WaitOrCancel:= Nil;
       StmK_Free:= Nil;
@@ -1537,7 +1594,7 @@ implementation
 initialization
 
   {$IFDEF DynamicLink}
-  DllAvailable:= InitDllImport;
+    DllAvailable:= InitDllImport;
   {$ELSE}
   // Anyway the program will not start if the DLL is not available
   DllAvailable:= True;
@@ -1558,7 +1615,7 @@ initialization
 finalization
 
   {$IFDEF DynamicLink}
-  DoneDllImport;
+    DoneDllImport;
   {$ENDIF}
 
 end.
