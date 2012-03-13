@@ -55,6 +55,7 @@ all: pipe-policy-other
 all: xfer-iso-read
 all: xfer-control
 all: enum_descriptors
+all: xfer-stream-loop
 
 # make the hot-plug-monitor example for the specified "arch" (default is x86)
 #
@@ -136,6 +137,11 @@ xfer-control:
 .PHONY: enum_descriptors
 enum_descriptors:
 	$(MAKE) --no-print-directory --directory=./enum_descriptors $(subst w -- ,,$(MAKEFLAGS)) all
+# make the xfer-stream-loop example for the specified "arch" (default is x86)
+#
+.PHONY: xfer-stream-loop
+xfer-stream-loop:
+	$(MAKE) --no-print-directory --directory=./xfer-stream-loop $(subst w -- ,,$(MAKEFLAGS)) all
 
 # make all examples for x86 and amd64 archs. ("arch" argument not used)
 #
@@ -164,4 +170,5 @@ clean:
 	$(MAKE) --directory=./xfer-iso-read $(MAKEFLAGS) clean
 	$(MAKE) --directory=./xfer-control $(MAKEFLAGS) clean
 	$(MAKE) --directory=./enum_descriptors $(MAKEFLAGS) clean
+	$(MAKE) --directory=./xfer-stream-loop $(MAKEFLAGS) clean
 	$(RM) ./_ReSharper*
