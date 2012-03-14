@@ -24,6 +24,10 @@
 */
 #include "examples.h"
 
+// Thes region markers create folding sections in developement IDEs.  Their
+// only purpose is make source code easier to read.
+#define REGION(mRegionName) 1
+
 // Example configuration:
 #define EP_TX					0x01
 #define EP_RX					0x81
@@ -46,8 +50,22 @@ UCHAR gTxBuffer[MAX_TRANSFER_SIZE];
 UINT gRxBufferLen = sizeof(gRxBuffer);
 UINT gTxBufferLen = sizeof(gTxBuffer);
 
+// Prototypes:
 VOID FillTxBufferForWrite(void);
 VOID ProcessRxBufferFromRead(void);
+
+#if REGION( RX Stream Callback Functions - ProtoTypes)
+
+INT KUSB_API StmRx_Complete(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in INT XferContextIndex, _in INT ErrorCode);
+KSTM_COMPLETE_RESULT KUSB_API StmRx_BeforeComplete(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in INT XferContextIndex, _in PINT ErrorCode);
+
+#endif
+
+#if REGION( TX Stream Callback Functions - ProtoTypes)
+
+INT KUSB_API StmTx_Complete(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in INT XferContextIndex, _in INT ErrorCode);
+
+#endif
 
 DWORD __cdecl main(int argc, char* argv[])
 {
@@ -60,6 +78,7 @@ DWORD __cdecl main(int argc, char* argv[])
 	DWORD totalTransferLength = 0;
 	BOOL success;
 	BM_TEST_TYPE testType = BM_TEST_TYPE_LOOP;
+	KSTM_CALLBACK streamCallbacks;
 
 	/*
 	Find the test device. Uses "vid=hhhh pid=hhhh" arguments supplied on the
@@ -87,6 +106,13 @@ DWORD __cdecl main(int argc, char* argv[])
 	success = Bench_Configure(usbHandle, BM_COMMAND_SET_TEST, 0, &Usb, &testType);
 
 	/*
+	Assign optional stream callback functions for EP_RX
+	*/
+	memset(&streamCallbacks, 0, sizeof(streamCallbacks));
+	streamCallbacks.Complete = StmRx_Complete;
+	streamCallbacks.BeforeComplete = StmRx_BeforeComplete;
+
+	/*
 	Initialize a new IN stream handle.
 	*/
 	success = StmK_Init(
@@ -96,7 +122,7 @@ DWORD __cdecl main(int argc, char* argv[])
 	              MAX_TRANSFER_SIZE,
 	              MAX_PENDING_TRANSFERS_RX,
 	              MAX_PENDING_IO,
-	              NULL,
+	              &streamCallbacks,
 	              ((STREAM_TIMEOUT_RX) == -1) ? KSTM_FLAG_NONE : KSTM_FLAG_USE_TIMEOUT | (STREAM_TIMEOUT_RX & KSTM_FLAG_TIMEOUT_MASK));
 	if (!success)
 	{
@@ -104,6 +130,12 @@ DWORD __cdecl main(int argc, char* argv[])
 		printf("StmK_Init failed. ErrorCode: %08Xh\n", errorCode);
 		goto Done;
 	}
+
+	/*
+	Assign optional stream callback functions for EP_TX
+	*/
+	memset(&streamCallbacks, 0, sizeof(streamCallbacks));
+	streamCallbacks.Complete = StmTx_Complete;
 
 	/*
 	Initialize a new OUT stream handle.
@@ -115,7 +147,7 @@ DWORD __cdecl main(int argc, char* argv[])
 	              MAX_TRANSFER_SIZE,
 	              MAX_PENDING_TRANSFERS_TX,
 	              MAX_PENDING_IO,
-	              NULL,
+	              &streamCallbacks,
 	              ((STREAM_TIMEOUT_TX) == -1) ? KSTM_FLAG_NONE : KSTM_FLAG_USE_TIMEOUT | (STREAM_TIMEOUT_TX & KSTM_FLAG_TIMEOUT_MASK));
 	if (!success)
 	{
@@ -223,6 +255,45 @@ VOID ProcessRxBufferFromRead(void)
 	Use gRxBufferLen to determine the actual number of bytes received.
 	*/
 }
+
+#if REGION( RX Stream Callback Functions )
+
+/* StmRx_Complete
+This function is executed by the internal stream thread after processing
+an overlapped result for a pending transfer and placing it in a
+'Finished' list to be retrieved by StmK_Read.
+*/
+INT KUSB_API StmRx_Complete(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in INT XferContextIndex, _in INT ErrorCode)
+{
+	return ErrorCode;
+}
+
+/* StmRx_BeforeComplete
+This function is executed by the internal stream thread after processing
+an overlapped result for a pending transfer.  Returning a VALID or INVALID
+KSTM_COMPLETE_RESULT detemines whether the transfer is placed in the
+'Finished' list or returned to the 'Queued' List. (respectively)
+*/
+KSTM_COMPLETE_RESULT KUSB_API StmRx_BeforeComplete(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in INT XferContextIndex, _in PINT ErrorCode)
+{
+	return KSTM_COMPLETE_RESULT_VALID;
+}
+
+#endif
+
+#if REGION( TX Stream Callback Functions )
+
+/* StmTx_Complete
+This function is executed by the internal stream thread after processing
+an overlapped result for a pending transfer and placing it in a
+'Finished' list to be re-used by StmK_Write.
+*/
+INT KUSB_API StmTx_Complete(_in PKSTM_INFO StreamInfo, _in PKSTM_XFER_CONTEXT XferContext, _in INT XferContextIndex, _in INT ErrorCode)
+{
+	return ErrorCode;
+}
+
+#endif
 
 /*!
 Looking for device vid/pid 04D8/FA2E..
