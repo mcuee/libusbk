@@ -31,6 +31,9 @@
 #define CreateDeviceFile(DevicePathStrA) \
 	CreateFileA(DevicePathStrA, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL)
 
+#define GUID_MAXSIZE 38
+#define GUID_FORMAT_STRING "%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X"
+
 ///////////////////////////////////////////////////////////////
 // Interlocked inc/dec macros
 #define IncLock(mVolatileLong) InterlockedIncrement(&(mVolatileLong))

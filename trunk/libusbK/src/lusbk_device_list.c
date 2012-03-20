@@ -20,6 +20,7 @@ binary distributions.
 #include "lusbk_handles.h"
 #include "lusb_defdi_guids.h"
 #include "lusbk_linked_list.h"
+#include <setupapi.h>
 
 // warning C4127: conditional expression is constant.
 #pragma warning(disable: 4127)
@@ -125,6 +126,28 @@ static const SERVICE_DRVID_MAP DevGuidDrvIdMap[] =
 
 	{ -1,	NULL}
 };
+
+static BOOL l_String_To_Guid(_out GUID* GuidVal, __in LPCSTR GuidString)
+{
+	int scanCount;
+	UCHAR guidChars[11 * sizeof(int)];
+	GUID* Guid = (GUID*)&guidChars;
+
+
+	if (GuidString[0] == '{') GuidString++;
+
+	scanCount = sscanf_s(GuidString, GUID_FORMAT_STRING,
+	                     &Guid->Data1,
+	                     &Guid->Data2,
+	                     &Guid->Data3,
+	                     &Guid->Data4[0], &Guid->Data4[1], &Guid->Data4[2], &Guid->Data4[3],
+	                     &Guid->Data4[4], &Guid->Data4[5], &Guid->Data4[6], &Guid->Data4[7]);
+
+	if (scanCount == 11)
+		memcpy(GuidVal, &guidChars, sizeof(GUID));
+
+	return (scanCount == 11);
+}
 
 static LONG l_GetReg_String(__in HKEY hKeyParent,
                             __in LPCSTR keyBasePath,
@@ -655,26 +678,19 @@ static void l_Build_Common_Info(__in PKLST_DEVINFO_EL devItem)
 static BOOL l_EnumKey_Instances(LPCSTR Name, KUSB_ENUM_REGKEY_PARAMS* RegEnumParams)
 {
 	LONG status;
-	DWORD referenceCount;
+	// DWORD referenceCount;
 	BOOL isNewItem;
 	PKLST_DEVINFO_EL newDevItem = NULL;
+	GUID guidDevInterface;
+	HDEVINFO hDevInfo;
+	SP_DEVICE_INTERFACE_DATA deviceInterfaceData;
+	DWORD digcFlags = DIGCF_DEVICEINTERFACE;
 
 	if (!l_IsUsb_RegKey(Name)) return TRUE;
 
 	Mem_Zero(RegEnumParams->TempItem, sizeof(*RegEnumParams->TempItem));
 
 	strcpy_s(RegEnumParams->TempItem->DeviceInterfaceGUID, sizeof(RegEnumParams->TempItem->DeviceInterfaceGUID), RegEnumParams->CurrentGUID);
-
-	// query reference count (connected device instance id count)
-	// e.g. HKLM\SYSTEM\CurrentControlSet\Control\DeviceClasses\{20343a29-6da1-4db8-8a3c-16e774057bf5}\##?#USB#VID_1234&PID_0001#BMD001#{20343a29-6da1-4db8-8a3c-16e774057bf5}\Control\ReferenceCount
-	status = l_GetReg_DWord(RegEnumParams->hOpenedKey, Name, "\\Control", "ReferenceCount", &referenceCount);
-	if (status != ERROR_SUCCESS)
-		return TRUE;
-
-	if (!referenceCount && (!(RegEnumParams->Flags & KLST_FLAG_INCLUDE_DISCONNECT)))
-		return TRUE;
-
-	RegEnumParams->TempItem->Connected = referenceCount > 0;
 
 	// query device instance id
 	// e.g. HKLM\SYSTEM\CurrentControlSet\Control\DeviceClasses\{20343a29-6da1-4db8-8a3c-16e774057bf5}\##?#USB#VID_1234&PID_0001#BMD001#{20343a29-6da1-4db8-8a3c-16e774057bf5}\DeviceInstance
@@ -693,7 +709,18 @@ static BOOL l_EnumKey_Instances(LPCSTR Name, KUSB_ENUM_REGKEY_PARAMS* RegEnumPar
 	// e.g. HKLM\SYSTEM\CurrentControlSet\Control\DeviceClasses\{20343a29-6da1-4db8-8a3c-16e774057bf5}\##?#USB#VID_1234&PID_0001#BMD001#{20343a29-6da1-4db8-8a3c-16e774057bf5}\#\SymbolicLink
 	status = l_GetReg_String(RegEnumParams->hOpenedKey, Name, "\\#", "SymbolicLink",  RegEnumParams->TempItem->SymbolicLink);
 	if (status != ERROR_SUCCESS)
-		return TRUE;
+	{
+		if (_strnicmp(Name, "##?#", 4) != 0)
+			return TRUE;
+
+		RegEnumParams->TempItem->SymbolicLink[0] = '\\';
+		RegEnumParams->TempItem->SymbolicLink[1] = '\\';
+		RegEnumParams->TempItem->SymbolicLink[2] = '?';
+		RegEnumParams->TempItem->SymbolicLink[3] = '\\';
+		RegEnumParams->TempItem->SymbolicLink[4] = (CHAR)0;
+		strcat_s(RegEnumParams->TempItem->SymbolicLink, sizeof(RegEnumParams->TempItem->SymbolicLink), &Name[4]);
+	}
+
 
 	// apply PatternMatch->SymbolicLink
 	if (RegEnumParams->PatternMatch && RegEnumParams->PatternMatch->SymbolicLink[0])
@@ -701,6 +728,55 @@ static BOOL l_EnumKey_Instances(LPCSTR Name, KUSB_ENUM_REGKEY_PARAMS* RegEnumPar
 		if (!AllK->PathMatchSpec(RegEnumParams->TempItem->SymbolicLink, RegEnumParams->PatternMatch->SymbolicLink))
 			return TRUE;
 	}
+
+
+	if (!l_String_To_Guid(&guidDevInterface, RegEnumParams->TempItem->DeviceInterfaceGUID))
+	{
+		USBERRN("Failed converting GUID string:%s", RegEnumParams->TempItem->DeviceInterfaceGUID);
+		return TRUE;
+	}
+
+	if (!(RegEnumParams->Flags & KLST_FLAG_INCLUDE_DISCONNECT))
+		digcFlags |= DIGCF_PRESENT;
+
+	hDevInfo = SetupDiGetClassDevsA(&guidDevInterface, RegEnumParams->TempItem->InstanceID, NULL, digcFlags);
+	if (!IsHandleValid(hDevInfo))
+	{
+		USBDBGN("SetupDiGetClassDevs Failed. ErrorCode:%08Xh", GetLastError());
+		return TRUE;
+	}
+
+	memset(&deviceInterfaceData, 0, sizeof(deviceInterfaceData));
+	deviceInterfaceData.cbSize = sizeof(deviceInterfaceData);
+	if (!SetupDiEnumDeviceInterfaces(hDevInfo, NULL, &guidDevInterface, 0, &deviceInterfaceData))
+	{
+		USBDBGN("SetupDiEnumDeviceInterfaces Failed. ErrorCode:%08Xh", GetLastError());
+		SetupDiDestroyDeviceInfoList(hDevInfo);
+		return TRUE;
+	}
+
+	SetupDiDestroyDeviceInfoList(hDevInfo);
+
+	RegEnumParams->TempItem->Connected = (deviceInterfaceData.Flags & SPINT_ACTIVE) ? TRUE : FALSE;
+
+	if (RegEnumParams->TempItem->Connected == FALSE && !(RegEnumParams->Flags & KLST_FLAG_INCLUDE_DISCONNECT))
+	{
+		USBDBGN("Excluding in-active device interface: %s", RegEnumParams->TempItem->DeviceInterfaceGUID);
+		return TRUE;
+	}
+
+	/*
+	// query reference count (connected device instance id count)
+	// e.g. HKLM\SYSTEM\CurrentControlSet\Control\DeviceClasses\{20343a29-6da1-4db8-8a3c-16e774057bf5}\##?#USB#VID_1234&PID_0001#BMD001#{20343a29-6da1-4db8-8a3c-16e774057bf5}\Control\ReferenceCount
+	status = l_GetReg_DWord(RegEnumParams->hOpenedKey, Name, "\\Control", "ReferenceCount", &referenceCount);
+	if (status != ERROR_SUCCESS)
+		return TRUE;
+
+	if (!referenceCount && (!(RegEnumParams->Flags & KLST_FLAG_INCLUDE_DISCONNECT)))
+		return TRUE;
+
+	RegEnumParams->TempItem->Connected = referenceCount > 0;
+	*/
 	// DevicePath is equal to SymbolicLink unless it ends up being a libusb0 filter device
 	strcpy_s(RegEnumParams->TempItem->DevicePath, sizeof(RegEnumParams->TempItem->DevicePath), RegEnumParams->TempItem->SymbolicLink);
 
@@ -839,6 +915,7 @@ KUSB_EXP BOOL KUSB_API LstK_InitEx(
 	}
 	return success;
 }
+
 
 KUSB_EXP BOOL KUSB_API LstK_Init(
     _out KLST_HANDLE* DeviceList,

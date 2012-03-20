@@ -20,9 +20,10 @@ MSC_WARNING_LEVEL=/W4 /WX
 C_DEFINES=$(C_DEFINES) -DKWDK_COMPILER
 
 TARGETLIBS=$(SDK_LIB_PATH)\kernel32.lib \
-           $(SDK_LIB_PATH)\advapi32.lib \
-           $(SDK_LIB_PATH)\user32.lib \
-		   $(TARGET_OUTPUT_BASE_DIR)\lib\$(WDK_OUTPUT_SUBDIR)\libusbK.lib
+			$(SDK_LIB_PATH)\advapi32.lib \
+			$(SDK_LIB_PATH)\user32.lib \
+			$(SDK_LIB_PATH)\setupapi.lib \
+			$(TARGET_OUTPUT_BASE_DIR)\lib\$(WDK_OUTPUT_SUBDIR)\libusbK.lib
 		   
 INCLUDES=.\;..\;..\..\includes;$(DDK_INC_PATH);$(INCLUDES)
 
