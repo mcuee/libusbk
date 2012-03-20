@@ -30,8 +30,6 @@ binary distributions.
 #define IDT_KHOT_DBT_DEVICEARRIVAL			0xB
 #define IDT_KHOT_DBT_DEVICEREMOVAL			0xC
 
-#define GUID_MAXSIZE 38
-#define GUID_FORMAT_STRING "%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X"
 #define IsPatternMatch(IsMatch,HotHandle,DeviceInfo,FieldName) if (strlen(HotHandle->Public.PatternMatch.FieldName)) {		\
 		if (!AllK->PathMatchSpec(DeviceInfo->FieldName, HotHandle->Public.PatternMatch.FieldName))										\
 			IsMatch = FALSE;																									\
@@ -728,7 +726,7 @@ KUSB_EXP BOOL KUSB_API HotK_Init(
 		g_HotNotifierList.DevNodesChangePending = 0;
 		if (!g_HotNotifierList.hAppInstance) g_HotNotifierList.hAppInstance = GetModuleHandle(NULL);
 
-		success = LstK_InitEx(&g_HotNotifierList.DeviceList, KLST_FLAG_INCLUDE_DISCONNECT, &InitParams->PatternMatch);
+		success = LstK_InitEx(&g_HotNotifierList.DeviceList, KLST_FLAG_INCLUDE_DISCONNECT, NULL);
 		ErrorNoSet(!success, Error, "Failed creating master device list.");
 
 		success = h_Create_Thread(&g_HotNotifierList);
