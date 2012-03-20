@@ -1,6 +1,6 @@
 /*
 #
-# Copyright (c) 2011 Travis Robinson <libusbdotnet@gmail.com>
+# Copyright (c) 2011-2012 Travis Robinson <libusbdotnet@gmail.com>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -39,7 +39,7 @@
 #define VERSION_MINOR 1
 #define VERSION_MICRO 8
 #define VERSION_NANO 2
-#define VERSION_DATE 03/13/2012
+#define VERSION_DATE 03/20/2012
 #define RC_FILENAME_STR "xfer-iso-read.exe"
 
 #define RC_VERSION VERSION_MAJOR,VERSION_MINOR,VERSION_MICRO,VERSION_NANO

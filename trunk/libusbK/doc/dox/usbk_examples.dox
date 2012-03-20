@@ -590,7 +590,7 @@ Device opened successfully!
 
 //! Gets, sets, various pipe policies and transfers synchronously.
 /*!
-* \example pipe-polcy-other.c
+* \example pipe-policy-other.c
 *
 * \par pipe-polcy-other example:
 * -# Finds a device by vid/pid (use vid=hhhh, pid=hhhhh and the command line).

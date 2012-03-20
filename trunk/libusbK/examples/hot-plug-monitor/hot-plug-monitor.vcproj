@@ -63,7 +63,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib libusbK.lib"
+				AdditionalDependencies="msvcrt.lib setupapi.lib kernel32.lib user32.lib libusbK.lib"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="..\..\bin\lib\Win32\Debug;..\lib\x86;..\..\bin\lib\x86"
 				IgnoreAllDefaultLibraries="true"
@@ -138,7 +138,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib libusbK.lib"
+				AdditionalDependencies="msvcrt.lib setupapi.lib kernel32.lib user32.lib libusbK.lib"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="..\..\bin\lib\x64\Debug;..\lib\amd64;..\..\bin\lib\amd64"
 				IgnoreAllDefaultLibraries="true"
@@ -213,7 +213,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib libusbK.lib"
+				AdditionalDependencies="msvcrt.lib setupapi.lib kernel32.lib user32.lib libusbK.lib"
 				AdditionalLibraryDirectories="..\..\bin\lib\Win32\Release;..\lib\x86;..\..\bin\lib\x86"
 				IgnoreAllDefaultLibraries="true"
 				SubSystem="1"
@@ -287,7 +287,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib libusbK.lib"
+				AdditionalDependencies="msvcrt.lib setupapi.lib kernel32.lib user32.lib libusbK.lib"
 				AdditionalLibraryDirectories="..\..\bin\lib\x64\Release;..\lib\amd64;..\..\bin\lib\amd64"
 				IgnoreAllDefaultLibraries="true"
 				SubSystem="1"
