@@ -96,11 +96,12 @@ These examples show basic library functionality like finding and opening a devic
 
 <B>Writing the code:</B><BR>
 -# Init and Free
-   - All modules except \ref isok implement an \b Init and a \b Free function for creating and and detroying a
-     handle specific to the module.
+   - All modules implement an \b Init and a \b Free function for creating and and detroying a handle or
+     context specific to the module.
 -# Handles
    - Each \ref KLIB_HANDLE implements a user assignable cleanup callback function and a user context pointer.
-     See \ref LibK_SetCleanupCallback, \ref LibK_SetContext, \ref LibK_GetContext.
+     See \ref LibK_SetCleanupCallback, \ref LibK_SetContext, \ref LibK_GetContext, \ref LibK_SetDefaultContext, \ref LibK_GetDefaultContext.
+     All modules, with the exception of \ref isok, have their own managed handle type which support these functions.
 -# Function Returns
    - Nearly all function have a \c BOOL return type. If a function does not complete as expected it returns
      FALSE (0). To get extended error information, the user must call the \c GetLastError() Windows API

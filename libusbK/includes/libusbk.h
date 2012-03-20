@@ -262,7 +262,7 @@ typedef struct _KLST_DEV_COMMON_INFO
 	//! ProductID parsed from \ref KLST_DEVINFO::InstanceID
 	INT Pid;
 
-	//! Interface number (valid for composite devices only) parsed from \ref KLST_DEVINFO::InstanceID
+	//! Composite interface number parsed from \ref KLST_DEVINFO::InstanceID.  Set to \b -1 for devices that do not have the composite parent driver.
 	INT MI;
 
 	// An ID that uniquely identifies a USB device.

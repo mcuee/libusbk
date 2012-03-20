@@ -76,8 +76,7 @@ standard C library are provided for the folllowing languages:
 
 
 /*! \addtogroup libk USB General
-* \brief General function/typdef/defines.
-* \brief LibK Dynamic Driver API module.
+* \brief General libusbK library functions, defines, and structures.
 *  @{
 */
 

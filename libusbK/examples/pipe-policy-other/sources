@@ -1,7 +1,7 @@
 # pipe-policy-other WINDDK build "sources" file
 #
 #
-# Copyright (c) 2011 Travis Robinson <libusbdotnet@gmail.com>
+# Copyright (c) 2011-2012 Travis Robinson <libusbdotnet@gmail.com>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -63,4 +63,5 @@ SOURCES       = $(PRJ_RC_FILE) pipe-policy-other.c ..\examples.c
 TARGETLIBS=$(SDK_LIB_PATH)\kernel32.lib \
            $(SDK_LIB_PATH)\advapi32.lib \
            $(SDK_LIB_PATH)\user32.lib \
+           $(SDK_LIB_PATH)\setupapi.lib \
 		   $(USBK_LIB_FILE)
