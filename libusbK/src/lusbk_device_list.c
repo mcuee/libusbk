@@ -563,7 +563,7 @@ static BOOL l_Build_AssignDriver(KLST_DEVINFO_HANDLE devItem)
 		if (devItem->DriverID == KUSB_DRVID_LIBUSB0_FILTER ||
 		        devItem->DriverID == KUSB_DRVID_LIBUSB0 )
 		{
-			if (devItem->LUsb0FilterIndex > 255) return FALSE;
+			if (devItem->LUsb0FilterIndex > 255 || devItem->LUsb0FilterIndex < 0) return FALSE;
 
 			// libusb-win32 filter driver is active on this device.
 			sprintf_s(devItem->DevicePath, sizeof(devItem->DevicePath) - 1,
@@ -756,6 +756,12 @@ static BOOL l_EnumKey_Instances(LPCSTR Name, KUSB_ENUM_REGKEY_PARAMS* RegEnumPar
 	}
 
 	SetupDiDestroyDeviceInfoList(hDevInfo);
+
+	if (deviceInterfaceData.Flags & SPINT_REMOVED)
+	{
+		USBDBGN("SPINT_REMOVED: %s", RegEnumParams->TempItem->DeviceInterfaceGUID);
+		return TRUE;
+	}
 
 	RegEnumParams->TempItem->Connected = (deviceInterfaceData.Flags & SPINT_ACTIVE) ? TRUE : FALSE;
 
@@ -1109,7 +1115,7 @@ KUSB_EXP BOOL KUSB_API LstK_Sync(
 	if (!SlaveList)
 	{
 		// Use a new list for the slave list
-		KLST_FLAG slaveListInit = KLST_FLAG_INCLUDE_DISCONNECT;
+		KLST_FLAG slaveListInit = KLST_FLAG_NONE;
 		ErrorNoSetAction(!LstK_Init(&SlaveList, slaveListInit), goto Error_IncRefSlave, "->PoolHandle_Inc_LstK");
 		context.Slave = (PKLST_HANDLE_INTERNAL)SlaveList;
 	}

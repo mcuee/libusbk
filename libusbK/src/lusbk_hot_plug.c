@@ -545,7 +545,7 @@ static LRESULT CALLBACK h_WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
 #else
 			h_RegisterForBroadcast(NULL);
 			// re/sync the device list
-			LstK_Sync(g_HotNotifierList.DeviceList, NULL, NULL);
+			LstK_Sync(g_HotNotifierList.DeviceList, NULL, KLST_SYNC_FLAG_MASK);
 			// notify hot handle waiters
 			h_NotifyWaiters(NULL, TRUE);
 #endif
@@ -726,7 +726,7 @@ KUSB_EXP BOOL KUSB_API HotK_Init(
 		g_HotNotifierList.DevNodesChangePending = 0;
 		if (!g_HotNotifierList.hAppInstance) g_HotNotifierList.hAppInstance = GetModuleHandle(NULL);
 
-		success = LstK_InitEx(&g_HotNotifierList.DeviceList, KLST_FLAG_INCLUDE_DISCONNECT, NULL);
+		success = LstK_InitEx(&g_HotNotifierList.DeviceList, KLST_FLAG_NONE, NULL);
 		ErrorNoSet(!success, Error, "Failed creating master device list.");
 
 		success = h_Create_Thread(&g_HotNotifierList);
