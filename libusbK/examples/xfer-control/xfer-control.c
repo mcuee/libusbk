@@ -78,11 +78,11 @@ DWORD __cdecl main(int argc, char* argv[])
 	setupPacket.Value				= USB_DESCRIPTOR_MAKE_TYPE_AND_INDEX(USB_DESCRIPTOR_TYPE_DEVICE, 0);
 	setupPacket.Request				= USB_REQUEST_GET_DESCRIPTOR;
 	setupPacket.Length				= sizeof(deviceDescriptor);
-	success = UsbK_ControlTransfer(usbHandle, *((WINUSB_SETUP_PACKET*)&setupPacket), (PUCHAR)&deviceDescriptor, sizeof(deviceDescriptor), NULL, NULL);
+	success = Usb.ControlTransfer(usbHandle, *((WINUSB_SETUP_PACKET*)&setupPacket), (PUCHAR)&deviceDescriptor, sizeof(deviceDescriptor), NULL, NULL);
 	if (!success)
 	{
 		errorCode = GetLastError();
-		printf("UsbK_ControlTransfer failed. Win32Error=%u (0x%08X)\n", errorCode, errorCode);
+		printf("Usb.ControlTransfer failed. Win32Error=%u (0x%08X)\n", errorCode, errorCode);
 		goto Done;
 
 	}
@@ -103,11 +103,11 @@ DWORD __cdecl main(int argc, char* argv[])
 	setupPacket.BmRequest.Recipient = BMREQUEST_RECIPIENT_DEVICE;
 	setupPacket.Request				= BM_COMMAND_SET_VBUF;
 	setupPacket.Length				= sizeof(vendorBuffer) - 1;
-	success = UsbK_ControlTransfer(usbHandle, *((WINUSB_SETUP_PACKET*)&setupPacket), vendorBuffer, sizeof(vendorBuffer) - 1, NULL, NULL);
+	success = Usb.ControlTransfer(usbHandle, *((WINUSB_SETUP_PACKET*)&setupPacket), vendorBuffer, sizeof(vendorBuffer) - 1, NULL, NULL);
 	if (!success)
 	{
 		errorCode = GetLastError();
-		printf("UsbK_ControlTransfer failed. Win32Error=%u (0x%08X)\n", errorCode, errorCode);
+		printf("Usb.ControlTransfer failed. Win32Error=%u (0x%08X)\n", errorCode, errorCode);
 		goto Done;
 
 	}
@@ -129,11 +129,11 @@ DWORD __cdecl main(int argc, char* argv[])
 	setupPacket.BmRequest.Recipient = BMREQUEST_RECIPIENT_DEVICE;
 	setupPacket.Request				= BM_COMMAND_GET_VBUF;
 	setupPacket.Length				= sizeof(vendorBuffer) - 1;
-	success = UsbK_ControlTransfer(usbHandle, *((WINUSB_SETUP_PACKET*)&setupPacket), vendorBuffer, sizeof(vendorBuffer) - 1, NULL, NULL);
+	success = Usb.ControlTransfer(usbHandle, *((WINUSB_SETUP_PACKET*)&setupPacket), vendorBuffer, sizeof(vendorBuffer) - 1, NULL, NULL);
 	if (!success)
 	{
 		errorCode = GetLastError();
-		printf("UsbK_ControlTransfer failed. Win32Error=%u (0x%08X)\n", errorCode, errorCode);
+		printf("Usb.ControlTransfer failed. Win32Error=%u (0x%08X)\n", errorCode, errorCode);
 		goto Done;
 
 	}

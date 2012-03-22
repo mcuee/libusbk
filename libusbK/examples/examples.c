@@ -69,7 +69,7 @@ BOOL Examples_GetTestDeviceEx(KLST_HANDLE* DeviceList,
 	LstK_Count(deviceList, &deviceCount);
 	if (!deviceCount)
 	{
-		printf("No device not connected.\n");
+		printf("Device list empty.\n");
 		SetLastError(ERROR_DEVICE_NOT_CONNECTED);
 
 		// If LstK_Init returns TRUE, the list must be freed.
