@@ -514,7 +514,6 @@ static LRESULT CALLBACK h_WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
 			break;
 
 		case DBT_DEVICEREMOVECOMPLETE:
-		case DBT_DEVICEREMOVEPENDING:
 			if (!devInterface || devInterface->dbcc_devicetype != DBT_DEVTYP_DEVICEINTERFACE)
 				break;
 			if (!strlen(devInterface->dbcc_name))
@@ -523,6 +522,7 @@ static LRESULT CALLBACK h_WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
 				SetTimer(hwnd, IDT_KHOT_DBT_DEVICEARRIVAL, g_HotNotifierList.MaxRefreshMS, (TIMERPROC) NULL);
 				break;
 			}
+			USBDBGN("[DBT_DEVICEREMOVECOMPLETE] dbcc_name: %s", devInterface->dbcc_name);
 
 			HOTWND_LOCK_ACQUIRE();
 

@@ -74,6 +74,7 @@ static BOOL AllK_Context_Initialize(PALLK_CONTEXT* AllKRef, HANDLE Heap)
 	AllK = HeapAlloc(Heap, HEAP_ZERO_MEMORY, sizeof(ALLK_CONTEXT));
 	ErrorMemory(AllK == NULL, Error);
 
+	AllK->ProcessHeap = GetProcessHeap();
 	AllK->Heap = Heap;
 
 	// one-time AllK initialize

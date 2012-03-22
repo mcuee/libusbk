@@ -641,6 +641,7 @@ typedef KSTM_HANDLE_INTERNAL* PKSTM_HANDLE_INTERNAL;
 // structure of all static libusbK handle pools.
 typedef struct
 {
+	HANDLE ProcessHeap;
 	HANDLE Heap;
 
 	BOOL (WINAPI* CancelIoEx)(HANDLE DeviceHandle, KOVL_HANDLE Overlapped);

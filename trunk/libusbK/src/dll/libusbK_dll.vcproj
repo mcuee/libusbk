@@ -63,7 +63,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib advapi32.lib $(NOINHERIT)"
+				AdditionalDependencies="msvcrt.lib setupapi.lib kernel32.lib user32.lib advapi32.lib $(NOINHERIT)"
 				IgnoreAllDefaultLibraries="true"
 				IgnoreDefaultLibraryNames=""
 				ModuleDefinitionFile="libusbK.def"
@@ -139,8 +139,8 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="kernel32.lib user32.lib advapi32.lib $(NOINHERIT)"
-				IgnoreAllDefaultLibraries="false"
+				AdditionalDependencies="msvcrt.lib setupapi.lib kernel32.lib user32.lib advapi32.lib $(NOINHERIT)"
+				IgnoreAllDefaultLibraries="true"
 				IgnoreDefaultLibraryNames=""
 				ModuleDefinitionFile="libusbK.def"
 				AddModuleNamesToAssembly=""
@@ -216,7 +216,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="msvcrt.lib kernel32.lib user32.lib advapi32.lib $(NOINHERIT)"
+				AdditionalDependencies="msvcrt.lib setupapi.lib kernel32.lib user32.lib advapi32.lib $(NOINHERIT)"
 				IgnoreAllDefaultLibraries="true"
 				IgnoreDefaultLibraryNames=""
 				ModuleDefinitionFile="libusbK.def"
@@ -293,8 +293,8 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="kernel32.lib user32.lib advapi32.lib $(NOINHERIT)"
-				IgnoreAllDefaultLibraries="false"
+				AdditionalDependencies="msvcrt.lib setupapi.lib kernel32.lib user32.lib advapi32.lib $(NOINHERIT)"
+				IgnoreAllDefaultLibraries="true"
 				IgnoreDefaultLibraryNames=""
 				ModuleDefinitionFile="libusbK.def"
 				AddModuleNamesToAssembly=""
