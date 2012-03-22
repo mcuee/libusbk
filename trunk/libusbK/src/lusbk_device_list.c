@@ -306,26 +306,6 @@ static BOOL KUSB_API l_DevEnum_Clone_All(
 	return FALSE;
 }
 
-static BOOL KUSB_API l_DevEnum_Apply_Filter(
-    __in KLST_HANDLE DeviceList,
-    __in KLST_DEVINFO_HANDLE DeviceInfo,
-    __in KLST_FLAG* Flags)
-{
-	if (!(*Flags & KLST_FLAG_INCLUDE_RAWGUID))
-	{
-		if (_stricmp(DeviceInfo->DeviceInterfaceGUID, RawDeviceGuidA) == 0)
-		{
-			if (LstK_DetachInfo(DeviceList, DeviceInfo))
-				LstK_FreeInfo(DeviceInfo);
-
-			return TRUE;
-		}
-	}
-
-	PoolHandle_Live_LstInfoK(((KLST_DEVINFO_EL*)DeviceInfo)->DevInfoHandle);
-	return TRUE;
-}
-
 static void KUSB_API Cleanup_DeviceList(__in PKLST_HANDLE_INTERNAL handle)
 {
 	PoolHandle_Dead_LstK(handle);
@@ -684,7 +664,10 @@ static BOOL l_EnumKey_Instances(LPCSTR Name, KUSB_ENUM_REGKEY_PARAMS* RegEnumPar
 	GUID guidDevInterface;
 	HDEVINFO hDevInfo;
 	SP_DEVICE_INTERFACE_DATA deviceInterfaceData;
+	SP_DEVINFO_DATA deviceInfoData;
 	DWORD digcFlags = DIGCF_DEVICEINTERFACE;
+	DWORD length;
+	HKEY hKey;
 
 	if (!l_IsUsb_RegKey(Name)) return TRUE;
 
@@ -694,9 +677,24 @@ static BOOL l_EnumKey_Instances(LPCSTR Name, KUSB_ENUM_REGKEY_PARAMS* RegEnumPar
 
 	// query device instance id
 	// e.g. HKLM\SYSTEM\CurrentControlSet\Control\DeviceClasses\{20343a29-6da1-4db8-8a3c-16e774057bf5}\##?#USB#VID_1234&PID_0001#BMD001#{20343a29-6da1-4db8-8a3c-16e774057bf5}\DeviceInstance
-	status = l_GetReg_String(RegEnumParams->hOpenedKey, Name, NULL, "DeviceInstance", RegEnumParams->TempItem->InstanceID);
+	//status = l_GetReg_String(RegEnumParams->hOpenedKey, Name, NULL, "DeviceInstance", RegEnumParams->TempItem->InstanceID);
+	//if (status != ERROR_SUCCESS)
+	//	return TRUE;
+
+	// Query DeviceInstance
+	status = RegOpenKeyExA(RegEnumParams->hOpenedKey, Name, 0, KEY_READ, &hKey);
 	if (status != ERROR_SUCCESS)
+	{
 		return TRUE;
+	}
+	status = RegQueryValueExA(hKey, "DeviceInstance", 0, NULL, (LPBYTE)RegEnumParams->TempItem->InstanceID, &length);
+	if (status != ERROR_SUCCESS)
+	{
+		RegCloseKey(hKey);
+		return TRUE;
+	}
+	RegEnumParams->TempItem->InstanceID[length]=(CHAR)0;
+	RegCloseKey(hKey);
 
 	// apply PatternMatch->InstanceID
 	if (RegEnumParams->PatternMatch && RegEnumParams->PatternMatch->InstanceID[0])
@@ -707,9 +705,10 @@ static BOOL l_EnumKey_Instances(LPCSTR Name, KUSB_ENUM_REGKEY_PARAMS* RegEnumPar
 
 	// query symbolic link value
 	// e.g. HKLM\SYSTEM\CurrentControlSet\Control\DeviceClasses\{20343a29-6da1-4db8-8a3c-16e774057bf5}\##?#USB#VID_1234&PID_0001#BMD001#{20343a29-6da1-4db8-8a3c-16e774057bf5}\#\SymbolicLink
-	status = l_GetReg_String(RegEnumParams->hOpenedKey, Name, "\\#", "SymbolicLink",  RegEnumParams->TempItem->SymbolicLink);
-	if (status != ERROR_SUCCESS)
-	{
+	
+	//status = l_GetReg_String(RegEnumParams->hOpenedKey, Name, "\\#", "SymbolicLink",  RegEnumParams->TempItem->SymbolicLink);
+	//if (status != ERROR_SUCCESS)
+	//{
 		if (_strnicmp(Name, "##?#", 4) != 0)
 			return TRUE;
 
@@ -719,7 +718,7 @@ static BOOL l_EnumKey_Instances(LPCSTR Name, KUSB_ENUM_REGKEY_PARAMS* RegEnumPar
 		RegEnumParams->TempItem->SymbolicLink[3] = '\\';
 		RegEnumParams->TempItem->SymbolicLink[4] = (CHAR)0;
 		strcat_s(RegEnumParams->TempItem->SymbolicLink, sizeof(RegEnumParams->TempItem->SymbolicLink), &Name[4]);
-	}
+	//}
 
 
 	// apply PatternMatch->SymbolicLink
@@ -755,11 +754,10 @@ static BOOL l_EnumKey_Instances(LPCSTR Name, KUSB_ENUM_REGKEY_PARAMS* RegEnumPar
 		return TRUE;
 	}
 
-	SetupDiDestroyDeviceInfoList(hDevInfo);
-
 	if (deviceInterfaceData.Flags & SPINT_REMOVED)
 	{
 		USBDBGN("SPINT_REMOVED: %s", RegEnumParams->TempItem->DeviceInterfaceGUID);
+		SetupDiDestroyDeviceInfoList(hDevInfo);
 		return TRUE;
 	}
 
@@ -768,8 +766,57 @@ static BOOL l_EnumKey_Instances(LPCSTR Name, KUSB_ENUM_REGKEY_PARAMS* RegEnumPar
 	if (RegEnumParams->TempItem->Connected == FALSE && !(RegEnumParams->Flags & KLST_FLAG_INCLUDE_DISCONNECT))
 	{
 		USBDBGN("Excluding in-active device interface: %s", RegEnumParams->TempItem->DeviceInterfaceGUID);
+		SetupDiDestroyDeviceInfoList(hDevInfo);
 		return TRUE;
 	}
+
+	memset(&deviceInfoData, 0, sizeof(deviceInfoData));
+	deviceInfoData.cbSize = sizeof(deviceInfoData);
+	if (!SetupDiEnumDeviceInfo(hDevInfo, 0, &deviceInfoData))
+	{
+		USBDBGN("SetupDiEnumDeviceInfo Failed. ErrorCode:%08Xh", GetLastError());
+		SetupDiDestroyDeviceInfoList(hDevInfo);
+		return TRUE;
+	}
+
+	// DevicePath is equal to SymbolicLink unless it ends up being a libusb0 filter device
+	strcpy_s(RegEnumParams->TempItem->DevicePath, sizeof(RegEnumParams->TempItem->DevicePath), RegEnumParams->TempItem->SymbolicLink);
+
+	// query LUsb0
+	RegEnumParams->TempItem->LUsb0FilterIndex = (ULONG) - 1;
+	// e.g. HKLM\SYSTEM\CurrentControlSet\Control\DeviceClasses\{20343a29-6da1-4db8-8a3c-16e774057bf5}\##?#USB#VID_1234&PID_0001#BMD001#{20343a29-6da1-4db8-8a3c-16e774057bf5}\#\Device Parameters\LUsb0
+	status = l_GetReg_DWord(RegEnumParams->hOpenedKey, Name, "\\#\\Device Parameters", "LUsb0", (LPDWORD)&RegEnumParams->TempItem->LUsb0FilterIndex);
+
+	// Get SPDRP_SERVICE
+	if (!SetupDiGetDeviceRegistryPropertyA(hDevInfo, &deviceInfoData, SPDRP_SERVICE, NULL, (PBYTE)RegEnumParams->TempItem->Service, sizeof(RegEnumParams->TempItem->Service)-1, NULL))
+	{
+		USBDBGN("SetupDiGetDeviceRegistryPropertyA SPDRP_SERVICE Failed. ErrorCode:%08Xh", GetLastError());
+		SetupDiDestroyDeviceInfoList(hDevInfo);
+		return TRUE;
+	}
+
+	// Assign a supported driver
+	if (!l_Build_AssignDriver(RegEnumParams->TempItem))
+	{
+		SetupDiDestroyDeviceInfoList(hDevInfo);
+		return TRUE;
+	}
+
+	// Get SPDRP_DEVICEDESC
+	if (!SetupDiGetDeviceRegistryPropertyA(hDevInfo, &deviceInfoData, SPDRP_DEVICEDESC, NULL, (PBYTE)RegEnumParams->TempItem->DeviceDesc, sizeof(RegEnumParams->TempItem->DeviceDesc)-1, &length))
+		length = 0;
+	RegEnumParams->TempItem->DeviceDesc[length]=(CHAR)0;
+
+	// Get SPDRP_MFG
+	if (!SetupDiGetDeviceRegistryPropertyA(hDevInfo, &deviceInfoData, SPDRP_MFG, NULL, (PBYTE)RegEnumParams->TempItem->Mfg, sizeof(RegEnumParams->TempItem->Mfg)-1, &length))
+		length = 0;
+	RegEnumParams->TempItem->Mfg[length]=(CHAR)0;
+
+	// Get SPDRP_CLASSGUID
+	if (!SetupDiGetDeviceRegistryPropertyA(hDevInfo, &deviceInfoData, SPDRP_CLASSGUID, NULL, (PBYTE)RegEnumParams->TempItem->ClassGUID, sizeof(RegEnumParams->TempItem->ClassGUID)-1, &length))
+		length = 0;
+	RegEnumParams->TempItem->ClassGUID[length]=(CHAR)0;
+
 
 	/*
 	// query reference count (connected device instance id count)
@@ -782,28 +829,25 @@ static BOOL l_EnumKey_Instances(LPCSTR Name, KUSB_ENUM_REGKEY_PARAMS* RegEnumPar
 		return TRUE;
 
 	RegEnumParams->TempItem->Connected = referenceCount > 0;
-	*/
-	// DevicePath is equal to SymbolicLink unless it ends up being a libusb0 filter device
-	strcpy_s(RegEnumParams->TempItem->DevicePath, sizeof(RegEnumParams->TempItem->DevicePath), RegEnumParams->TempItem->SymbolicLink);
-
-	// query LUsb0
-	RegEnumParams->TempItem->LUsb0FilterIndex = (ULONG) - 1;
-	// e.g. HKLM\SYSTEM\CurrentControlSet\Control\DeviceClasses\{20343a29-6da1-4db8-8a3c-16e774057bf5}\##?#USB#VID_1234&PID_0001#BMD001#{20343a29-6da1-4db8-8a3c-16e774057bf5}\#\Device Parameters\LUsb0
-	status = l_GetReg_DWord(RegEnumParams->hOpenedKey, Name, "\\#\\Device Parameters", "LUsb0", (LPDWORD)&RegEnumParams->TempItem->LUsb0FilterIndex);
 
 	if (!l_Build_FillProperties(RegEnumParams->TempItem))
+	{
+		SetupDiDestroyDeviceInfoList(hDevInfo);
 		return TRUE;
-
-	if (!l_Build_AssignDriver(RegEnumParams->TempItem))
-		return TRUE;
+	}
+	*/
 
 	RegEnumParams->ErrorCode = l_Build_AddElement(RegEnumParams->DeviceList, RegEnumParams->TempItem, &newDevItem, &isNewItem);
 	if (RegEnumParams->ErrorCode != ERROR_SUCCESS)
+	{
+		SetupDiDestroyDeviceInfoList(hDevInfo);
 		return FALSE;
+	}
 
 	if (isNewItem)
 		l_Build_Common_Info(newDevItem);
 
+	SetupDiDestroyDeviceInfoList(hDevInfo);
 	return TRUE;
 }
 
@@ -819,6 +863,12 @@ static BOOL l_EnumKey_Guids(LPCSTR Name, KUSB_ENUM_REGKEY_PARAMS* RegEnumParams)
 	if (RegEnumParams->PatternMatch && RegEnumParams->PatternMatch->DeviceInterfaceGUID[0])
 	{
 		if (!AllK->PathMatchSpec(Name, RegEnumParams->PatternMatch->DeviceInterfaceGUID))
+			return TRUE;
+	}
+
+	if (!(RegEnumParams->Flags & KLST_FLAG_INCLUDE_RAWGUID))
+	{
+		if (_stricmp(Name, RawDeviceGuidA) == 0)
 			return TRUE;
 	}
 
@@ -901,11 +951,11 @@ KUSB_EXP BOOL KUSB_API LstK_InitEx(
 	// e.g. HKLM\SYSTEM\CurrentControlSet\Control\DeviceClasses\{20343a29-6da1-4db8-8a3c-16e774057bf5}
 	if (l_Enum_RegKey(&enumParams))
 	{
-		if (handle->head)
+		PKLST_DEVINFO_EL devEL;
+		DL_FOREACH(handle->head, devEL)
 		{
-			LstK_Enumerate((KLST_HANDLE)enumParams.DeviceList, l_DevEnum_Apply_Filter, &enumParams.Flags);
+			PoolHandle_Live_LstInfoK(devEL->DevInfoHandle);
 		}
-
 		success = TRUE;
 	}
 
