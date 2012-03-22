@@ -30,6 +30,9 @@
 #define EP_READ				0x81
 #define EP_WRITE			0x01
 
+// Globals:
+KUSB_DRIVER_API Usb;
+
 DWORD __cdecl main(int argc, char* argv[])
 {
 	KLST_HANDLE deviceList = NULL;
@@ -45,11 +48,17 @@ DWORD __cdecl main(int argc, char* argv[])
 	if (!Examples_GetTestDevice(&deviceList, &deviceInfo, argc, argv))
 		return GetLastError();
 
+	/*!
+	This example will use the dynamic driver api so that it can be used
+	with all supported drivers.
+	*/
+	LibK_LoadDriverAPI(&Usb, deviceInfo->DriverID);
+
 	// Initialize the device
-	if (!UsbK_Init(&handle, deviceInfo))
+	if (!Usb.Init(&handle, deviceInfo))
 	{
 		errorCode = GetLastError();
-		printf("UsbK_Init failed. ErrorCode: %08Xh\n",  errorCode);
+		printf("Usb.Init failed. ErrorCode: %08Xh\n",  errorCode);
 		goto Done;
 	}
 	printf("Device opened successfully!\n");
@@ -59,13 +68,13 @@ DWORD __cdecl main(int argc, char* argv[])
 	cooperatively in libusbK application to ensure only one application is
 	usng the interface at a time.
 	*/
-	if (!UsbK_ClaimInterface(handle, INTF_NUMBER, FALSE))
+	if (!Usb.ClaimInterface(handle, INTF_NUMBER, FALSE))
 	{
 		errorCode = GetLastError();
 		if (errorCode == ERROR_NO_MORE_ITEMS)
 			printf("Interface number %02Xh does not exists.\n", INTF_NUMBER);
 		else
-			printf("UsbK_ClaimInterface failed. ErrorCode: %08Xh\n",  errorCode);
+			printf("Usb.ClaimInterface failed. ErrorCode: %08Xh\n",  errorCode);
 
 		goto Done;
 	}
@@ -73,13 +82,13 @@ DWORD __cdecl main(int argc, char* argv[])
 	/*
 	Get the interface descriptor for the specified alternate settings number.
 	*/
-	if (!UsbK_QueryInterfaceSettings(handle, ALT_SETTING_NUMBER, &interfaceInfo))
+	if (!Usb.QueryInterfaceSettings(handle, ALT_SETTING_NUMBER, &interfaceInfo))
 	{
 		errorCode = GetLastError();
 		if (errorCode == ERROR_NO_MORE_ITEMS)
 			printf("Alt Setting number %02Xh does not exists.\n", ALT_SETTING_NUMBER);
 		else
-			printf("UsbK_QueryInterfaceSettings failed. ErrorCode: %08Xh\n",  errorCode);
+			printf("Usb.QueryInterfaceSettings failed. ErrorCode: %08Xh\n",  errorCode);
 
 		goto Done;
 	}
@@ -91,7 +100,7 @@ DWORD __cdecl main(int argc, char* argv[])
 	*/
 	memset(&readInfo, 0, sizeof(readInfo));
 	memset(&writeInfo, 0, sizeof(writeInfo));
-	while (UsbK_QueryPipe(handle, ALT_SETTING_NUMBER, pipeIndex++, &pipeInfo))
+	while (Usb.QueryPipe(handle, ALT_SETTING_NUMBER, pipeIndex++, &pipeInfo))
 	{
 		if (pipeInfo.PipeId == EP_READ)
 			memcpy(&readInfo, &pipeInfo, sizeof(readInfo));
@@ -120,10 +129,10 @@ DWORD __cdecl main(int argc, char* argv[])
 	alternate settings, but it is a standard request and all usb devices must
 	support it to be compliant with usb specs.
 	*/
-	if (!UsbK_SetCurrentAlternateSetting(handle, interfaceInfo.bAlternateSetting))
+	if (!Usb.SetCurrentAlternateSetting(handle, interfaceInfo.bAlternateSetting))
 	{
 		errorCode = GetLastError();
-		printf("UsbK_SetCurrentAlternateSetting failed. bAlternateSetting: %u, ErrorCode: %08Xh\n",
+		printf("Usb.SetCurrentAlternateSetting failed. bAlternateSetting: %u, ErrorCode: %08Xh\n",
 		       interfaceInfo.bAlternateSetting, errorCode);
 
 		goto Done;
@@ -138,9 +147,10 @@ DWORD __cdecl main(int argc, char* argv[])
 	*/
 
 Done:
-	// Close/free the device handle
-	// if handle is invalid (NULL), has no effect
-	UsbK_Free(handle);
+	/*!
+	Close the usb handle. If usbHandle is invalid (NULL), has no effect.
+	*/
+	if (usbHandle) Usb.Free(usbHandle);
 
 	// Free the device list
 	// if deviceList is invalid (NULL), has no effect
