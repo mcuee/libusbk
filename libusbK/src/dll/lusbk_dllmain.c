@@ -33,25 +33,30 @@ BOOL WINAPI DllMain(HANDLE module, DWORD reason, LPVOID reserved)
 	switch (reason)
 	{
 	case DLL_PROCESS_ATTACH:
+		if (!CheckLibInit())
+		{
+			return FALSE;
+		}
 		break;
 	case DLL_PROCESS_DETACH:
-#ifdef DEBUG_LOGGING_ENABLED
-		POOLHANDLE_LIB_EXIT_CHECK(HotK);
-		POOLHANDLE_LIB_EXIT_CHECK(LstK);
-		POOLHANDLE_LIB_EXIT_CHECK(LstInfoK);
-		POOLHANDLE_LIB_EXIT_CHECK(UsbK);
-		POOLHANDLE_LIB_EXIT_CHECK(DevK);
-		POOLHANDLE_LIB_EXIT_CHECK(OvlK);
-		POOLHANDLE_LIB_EXIT_CHECK(OvlPoolK);
-		POOLHANDLE_LIB_EXIT_CHECK(StmK);
-#endif
-
-		if (AllK && AllK->Heap)
+		if (AllK)
 		{
-			if (GetProcessHeap() == AllK->Heap)
+#ifdef DEBUG_LOGGING_ENABLED
+			POOLHANDLE_LIB_EXIT_CHECK(HotK);
+			POOLHANDLE_LIB_EXIT_CHECK(LstK);
+			POOLHANDLE_LIB_EXIT_CHECK(LstInfoK);
+			POOLHANDLE_LIB_EXIT_CHECK(UsbK);
+			POOLHANDLE_LIB_EXIT_CHECK(DevK);
+			POOLHANDLE_LIB_EXIT_CHECK(OvlK);
+			POOLHANDLE_LIB_EXIT_CHECK(OvlPoolK);
+			POOLHANDLE_LIB_EXIT_CHECK(StmK);
+#endif
+			if (AllK->ProcessHeap == AllK->Heap)
 				HeapFree(AllK->Heap, 0, AllK);
 			else
 				HeapDestroy(AllK->Heap);
+
+			AllK = NULL;
 		}
 		break;
 	case DLL_THREAD_ATTACH:
