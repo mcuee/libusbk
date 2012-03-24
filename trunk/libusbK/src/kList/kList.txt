@@ -1,1 +1,18 @@
 
+USAGE: kList [disconnect] [help]
+             [interfaceguid <guid>] [instanceid <instanceid>]
+                 
+Commands:
+  help (/?)  : Show this help text.
+  disconnect : Include devices that are not currently connected.
+                        
+Switches:
+  interfaceguid : Include only devices matching the specified
+                  'DeviceInterfaceGUID'
+  instanceid    : Include only devices matching the specified
+                  'InstanceID'
+          
+Examples:
+
+kList disconnect instanceid "USB\VID_04D8*" 
+kList interfaceguid "{F676DCF6-FDFE-E0A9-FC12-8057DBE8E4B8}"
