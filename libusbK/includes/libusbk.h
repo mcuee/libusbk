@@ -342,16 +342,15 @@ typedef enum _KLST_FLAG
     //! No flags (or 0)
     KLST_FLAG_NONE = 0L,
 
-    //! Enable listings for the raw device interface GUID.{A5DCBF10-6530-11D2-901F-00C04FB951ED}
+    //! Enable listings for the raw device interface GUID \b only. {A5DCBF10-6530-11D2-901F-00C04FB951ED}
     KLST_FLAG_INCLUDE_RAWGUID = 0x0001,
 
-    //! List libusbK devices that not currently connected.
+    //! List all libusbK devices including those not currently connected.
     KLST_FLAG_INCLUDE_DISCONNECT = 0x0002,
 
 } KLST_FLAG;
 
-
-//! Hot plug parameter structure.
+//! Device list/hot-plug pattern match structure.
 /*!
 * \fixedstruct{1024}
 *
