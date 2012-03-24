@@ -38,6 +38,10 @@
 // Number of xfer pairs that must be outstanding before wait operations.
 #define MAX_PENDING_IO	3
 
+// Globals:
+
+KUSB_DRIVER_API Usb;
+
 /*
 The running loop counter. When it hits MAX_XFERS, no more
 transfers are submitted and the remaining complete.
@@ -130,17 +134,17 @@ BOOL Xfer_Submit(KUSB_HANDLE usbHandle,
 	if (USB_ENDPOINT_DIRECTION_IN(PipeID))
 	{
 		move->Length = XFER_LENGTH;
-		UsbK_ReadPipe(usbHandle, PipeID, move->Buffer, move->Length, NULL, move->Ovl);
+		Usb.ReadPipe(usbHandle, PipeID, move->Buffer, move->Length, NULL, move->Ovl);
 	}
 	else
 	{
 		OnDataNeeded(move, PipeID);
-		UsbK_WritePipe(usbHandle, PipeID, move->Buffer, move->Length, NULL, move->Ovl);
+		Usb.WritePipe(usbHandle, PipeID, move->Buffer, move->Length, NULL, move->Ovl);
 	}
 	if ((move->ErrorCode = GetLastError()) != ERROR_IO_PENDING)
 	{
 		g_ErrorCode = move->ErrorCode;
-		printf("UsbK_WritePipe failed on pipe-id %02Xh. ErrorCode: %08Xh\n",
+		printf("Usb.WritePipe failed on pipe-id %02Xh. ErrorCode: %08Xh\n",
 		       PipeID, g_ErrorCode);
 
 		// Abort the test.
@@ -253,11 +257,17 @@ DWORD __cdecl main(int argc, char* argv[])
 	if (!Examples_GetTestDevice(&deviceList, &deviceInfo, argc, argv))
 		return GetLastError();
 
+	/*
+	This example will use the dynamic driver api so that it can be used
+	with all supported drivers.
+	*/
+	LibK_LoadDriverAPI(&Usb, deviceInfo->DriverID);
+
 	// Initialize the device
-	if (!UsbK_Init(&usbHandle, deviceInfo))
+	if (!Usb.Init(&usbHandle, deviceInfo))
 	{
 		g_ErrorCode = GetLastError();
-		printf("UsbK_Init failed. ErrorCode: %08Xh\n", g_ErrorCode);
+		printf("Usb.Init failed. ErrorCode: %08Xh\n", g_ErrorCode);
 		goto Done;
 	}
 
@@ -266,7 +276,7 @@ DWORD __cdecl main(int argc, char* argv[])
 	If the test is isochronous, there is often more configuration steps.
 	e.g. The alternate interface may need to be selected.
 
-	UsbK_SetCurrentAlternateSetting(usbHandle, ALT_INTF_SETTING);
+	Usb.SetCurrentAlternateSetting(usbHandle, ALT_INTF_SETTING);
 
 	To meet Windows Logo Specifications, when any device has an interface
 	that consumes isochronous bandwidth, that device must support multiple
@@ -330,7 +340,7 @@ DWORD __cdecl main(int argc, char* argv[])
 
 Done:
 	// Close the usb handle.
-	UsbK_Free(usbHandle);
+	Usb.Free(usbHandle);
 
 	// Free the device list.
 	LstK_Free(deviceList);
