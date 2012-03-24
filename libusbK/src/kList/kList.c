@@ -288,14 +288,44 @@ int __cdecl main(int argc, char** argv)
 	LONG devicePos = 0;
 	LONG_PTR selection;
 	UINT count = 0;
+	int iArg;
 	KLST_FLAG lstFlags = KLST_FLAG_NONE;
+	KLST_PATTERN_MATCH patternMatch;
+	PKLST_PATTERN_MATCH pPatternMatch = NULL;
 
 	UNREFERENCED_PARAMETER(argc);
 	UNREFERENCED_PARAMETER(argv);
 
-	UsbIdsText = LoadResourceUsbIds();
+	memset(&patternMatch, 0, sizeof(patternMatch));
 
-	if (!LstK_Init(&deviceList, lstFlags))
+	for (iArg = 1; iArg < argc; iArg++)
+	{
+		if (_stricmp(argv[iArg], "DISCONNECT") == 0)
+			lstFlags |= KLST_FLAG_INCLUDE_DISCONNECT;
+		else if (_stricmp(argv[iArg], "RAWGUID") == 0)
+			lstFlags |= KLST_FLAG_INCLUDE_RAWGUID;
+		else if ((iArg + 1 < argc) && _stricmp(argv[iArg], "InterfaceGUID") == 0)
+			strcpy(patternMatch.DeviceInterfaceGUID, argv[++iArg]);
+		else if ((iArg + 1 < argc) && _stricmp(argv[iArg], "InstanceID") == 0)
+			strcpy(patternMatch.InstanceID, argv[++iArg]);
+		else
+		{
+			if (_stricmp(argv[iArg], "/?") != 0 && _stricmp(argv[iArg], "HELP") != 0)
+				printf("Invalid argument: '%s'\n", argv[iArg]);
+
+			ShowHelp();
+			return -1;
+		}
+
+	}
+	printf("\n");
+	printf("Loading USB ID's maintained by Stephen J. Gowdy <linux.usb.ids@gmail.com>..\n");
+	UsbIdsText = LoadResourceUsbIds();
+	printf("\n");
+
+	pPatternMatch = &patternMatch;
+
+	if (!LstK_InitEx(&deviceList, lstFlags, pPatternMatch))
 	{
 		printf("failed getting device list.\n");
 		ec = WinError(0);
@@ -1118,5 +1148,5 @@ void ShowCopyright(void)
 	       RC_VERSION_STR,
 	       DEFINE_TO_STR(VERSION_DATE));
 
-	printf("%s", "Copyright (c) 2012 Travis Lee Robinson. <libusbdotnet@gmail.com>\n\n");
+	printf("%s", "Copyright (c) 2011-2012 Travis Lee Robinson. <libusbdotnet@gmail.com>\n\n");
 }
