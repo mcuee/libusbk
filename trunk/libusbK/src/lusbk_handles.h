@@ -158,13 +158,17 @@ binary distributions.
 * \param[in] SyncFlags
 * One or more \ref KLST_SYNC_FLAG.
 *
+* \param[in] SlaveListPatternMatch
+* IF SlaveList is not specified, a temporary list is created using this 'PatternMatch'.
+*
 * \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 *
 */
 KUSB_EXP BOOL KUSB_API LstK_Sync(
     _in KLST_HANDLE MasterList,
-    _in KLST_HANDLE SlaveList,
-    _inopt KLST_SYNC_FLAG SyncFlags);
+    _inopt KLST_HANDLE SlaveList,
+    _inopt KLST_SYNC_FLAG SyncFlags,
+    _inopt PKLST_PATTERN_MATCH SlaveListPatternMatch);
 
 //! Creates a copy of an existing device list.
 /*!
@@ -641,11 +645,17 @@ typedef KSTM_HANDLE_INTERNAL* PKSTM_HANDLE_INTERNAL;
 // structure of all static libusbK handle pools.
 typedef struct
 {
-	HANDLE ProcessHeap;
-	HANDLE Heap;
+	HANDLE HeapProcess;
+	HANDLE HeapDynamic;
 
+	// Dyanmic DLLs:
+	struct
+	{
+		HMODULE hShlwapi;
+		HMODULE hWinTrust;
+	} Dlls;
+	// Dynamic Function:
 	BOOL (WINAPI* CancelIoEx)(HANDLE DeviceHandle, KOVL_HANDLE Overlapped);
-
 	KDYN_PathMatchSpec* PathMatchSpec;
 
 	DEF_POOLED_HANDLE_STRUCT(HotK,		KHOT_HANDLE_INTERNAL,			KHOT_HANDLE_COUNT);
@@ -667,7 +677,7 @@ extern PALLK_CONTEXT AllK;
 
 FORCEINLINE PVOID KUSB_API Mem_Alloc(__in size_t size)
 {
-	PVOID memory = HeapAlloc(AllK->Heap, HEAP_ZERO_MEMORY, size);
+	PVOID memory = HeapAlloc(AllK->HeapDynamic, HEAP_ZERO_MEMORY, size);
 	if (!memory) LusbwError(ERROR_NOT_ENOUGH_MEMORY);
 	return memory;
 }
@@ -677,7 +687,7 @@ FORCEINLINE VOID KUSB_API Mem_Free(__deref_inout_opt PVOID* memoryRef)
 	if (memoryRef)
 	{
 		if (IsHandleValid(*memoryRef))
-			HeapFree(AllK->Heap, 0, *memoryRef);
+			HeapFree(AllK->HeapDynamic, 0, *memoryRef);
 
 		*memoryRef = NULL;
 	}

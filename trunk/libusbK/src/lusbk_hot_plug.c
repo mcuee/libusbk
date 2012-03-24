@@ -44,9 +44,6 @@ binary distributions.
 
 #define hotk_CmpBroadcastGuid(BroadcastEL, DevIntfGUID) memcmp(&BroadcastEL->InterfaceGUID,&DevIntfGUID,sizeof(GUID))
 
-#define HOTWND_LOCK_ACQUIRE()
-#define HOTWND_LOCK_RELEASE()
-
 typedef struct _KHOT_BROADCAST_EL
 {
 	HDEVNOTIFY NotifyHandle;
@@ -74,7 +71,6 @@ typedef struct _KHOT_NOTIFIER_LIST
 {
 	volatile HWND Hwnd;
 	volatile long HotLockCount;
-	volatile long DevNodesChangePending;
 
 	ATOM WindowAtom;
 
@@ -95,7 +91,7 @@ typedef struct _KHOT_NOTIFIER_LIST
 typedef KHOT_NOTIFIER_LIST* PKHOT_NOTIFIER_LIST;
 
 static LPCSTR g_WindowClassHotK = "HotK_NotificationWindowClass";
-static KHOT_NOTIFIER_LIST g_HotNotifierList = {NULL, 0, 0, 0, NULL, 1000, NULL, {0}, NULL, NULL, 0, NULL};
+static KHOT_NOTIFIER_LIST g_HotNotifierList = {NULL, 0, 0, NULL, 1000, NULL, {0}, NULL, NULL, 0, NULL};
 
 static LRESULT CALLBACK h_WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 static unsigned _stdcall h_ThreadProc(PKHOT_NOTIFIER_LIST NotifierList);
@@ -198,14 +194,14 @@ static BOOL h_Guid_To_String(__in GUID* Guid, __inout LPSTR GuidString)
 {
 	int guidLen;
 
-	sprintf_s(GuidString, GUID_MAXSIZE, "{"GUID_FORMAT_STRING"}",
-	          Guid->Data1,
-	          Guid->Data2,
-	          Guid->Data3,
-	          Guid->Data4[0], Guid->Data4[1], Guid->Data4[2], Guid->Data4[3],
-	          Guid->Data4[4], Guid->Data4[5], Guid->Data4[6], Guid->Data4[7]);
+	guidLen = sprintf(GuidString, "{"GUID_FORMAT_STRING"}",
+	                  Guid->Data1,
+	                  Guid->Data2,
+	                  Guid->Data3,
+	                  Guid->Data4[0], Guid->Data4[1], Guid->Data4[2], Guid->Data4[3],
+	                  Guid->Data4[4], Guid->Data4[5], Guid->Data4[6], Guid->Data4[7]);
 
-	return (guidLen == GUID_MAXSIZE - 1);
+	return (guidLen == GUID_STRING_LENGTH);
 }
 
 static BOOL h_Wait_Hwnd(BOOL WaitForExit)
@@ -399,6 +395,7 @@ static LRESULT CALLBACK h_WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
 	PKHOT_HANDLE_INTERNAL handleTmp = NULL;
 	PKHOT_HANDLE_INTERNAL* handleRef;
 	KHOT_PARAMS* InitParams;
+	PKLST_PATTERN_MATCH patternMatch;
 
 	switch(msg)
 	{
@@ -449,24 +446,29 @@ static LRESULT CALLBACK h_WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
 		case IDT_KHOT_DBT_DEVICEARRIVAL:
 			KillTimer(hwnd, wParam);	// !!Kill Timer!!
 
-			HOTWND_LOCK_ACQUIRE();
+			// If we only have one hot handle then we can pass the PatternMatch to the list and improve performance.
+			if (g_HotNotifierList.HotLockCount == 1)
+				patternMatch = &g_HotNotifierList.Items->Public.PatternMatch;
+			else
+				patternMatch = NULL;
 
 			// re/sync the device list
-			LstK_Sync(g_HotNotifierList.DeviceList, NULL, KLST_SYNC_FLAG_MASK);
+			LstK_Sync(g_HotNotifierList.DeviceList, NULL, KLST_SYNC_FLAG_MASK, patternMatch);
 
 			// notify hot handle waiters
 			h_NotifyWaiters(NULL, TRUE);
 
-			HOTWND_LOCK_RELEASE();
 			break;
 		case IDT_KHOT_DBT_DEVNODES_CHANGED:
 			KillTimer(hwnd, wParam);	// !!Kill Timer!!
-			HOTWND_LOCK_ACQUIRE();
 
-			InterlockedExchange(&g_HotNotifierList.DevNodesChangePending, 0);
+			if (g_HotNotifierList.HotLockCount == 1)
+				patternMatch = &g_HotNotifierList.Items->Public.PatternMatch;
+			else
+				patternMatch = NULL;
 
 			// re/sync the device list
-			LstK_Sync(g_HotNotifierList.DeviceList, NULL, KLST_SYNC_FLAG_MASK);
+			LstK_Sync(g_HotNotifierList.DeviceList, NULL, KLST_SYNC_FLAG_MASK, patternMatch);
 
 			// notify hot handle waiters
 			h_NotifyWaiters(NULL, TRUE);
@@ -475,17 +477,13 @@ static LRESULT CALLBACK h_WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
 			h_RegisterForBroadcast(NULL);
 			USBDBGN("h_RegisterForBroadcast(NULL):IDT_KHOT_DBT_DEVNODES_CHANGED");
 
-			HOTWND_LOCK_RELEASE();
 			break;
 		case IDT_KHOT_DBT_DEVICEREMOVAL:
 			KillTimer(hwnd, wParam);	// !!Kill Timer!!
 
-			HOTWND_LOCK_ACQUIRE();
-
 			// notify hot handle waiters
 			h_NotifyWaiters(NULL, TRUE);
 
-			HOTWND_LOCK_RELEASE();
 			break;
 
 		default:
@@ -505,12 +503,10 @@ static LRESULT CALLBACK h_WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
 		case DBT_DEVICEARRIVAL:
 			if (!devInterface || devInterface->dbcc_devicetype != DBT_DEVTYP_DEVICEINTERFACE)
 				break;
-			// 1 second minimum DEVICEARRIVAL delay.
-			HOTWND_LOCK_ACQUIRE();
 
+			// MaxRefreshMS (1 second) minimum DEVICEARRIVAL delay.
 			SetTimer(hwnd, IDT_KHOT_DBT_DEVICEARRIVAL, g_HotNotifierList.MaxRefreshMS, (TIMERPROC) NULL);
 
-			HOTWND_LOCK_RELEASE();
 			break;
 
 		case DBT_DEVICEREMOVECOMPLETE:
@@ -524,32 +520,14 @@ static LRESULT CALLBACK h_WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
 			}
 			USBDBGN("[DBT_DEVICEREMOVECOMPLETE] dbcc_name: %s", devInterface->dbcc_name);
 
-			HOTWND_LOCK_ACQUIRE();
-
 			LstK_Enumerate(g_HotNotifierList.DeviceList, h_DevEnum_UpdateForRemoval, devInterface);
 			SetTimer(hwnd, IDT_KHOT_DBT_DEVICEREMOVAL, 1, (TIMERPROC) NULL);
-
-			HOTWND_LOCK_RELEASE();
-
 
 			break;
 #endif
 		case DBT_DEVNODES_CHANGED:
 			// 2 second minimum DEVNODES_CHANGED delay.
-			HOTWND_LOCK_ACQUIRE();
-#ifdef DEFER_THRU_TIMER
-			if (IncLock(g_HotNotifierList.DevNodesChangePending) == 1)
-			{
-				SetTimer(hwnd, IDT_KHOT_DBT_DEVNODES_CHANGED, 2000, (TIMERPROC) NULL);
-			}
-#else
-			h_RegisterForBroadcast(NULL);
-			// re/sync the device list
-			LstK_Sync(g_HotNotifierList.DeviceList, NULL, KLST_SYNC_FLAG_MASK);
-			// notify hot handle waiters
-			h_NotifyWaiters(NULL, TRUE);
-#endif
-			HOTWND_LOCK_RELEASE();
+			SetTimer(hwnd, IDT_KHOT_DBT_DEVNODES_CHANGED, 2000, (TIMERPROC) NULL);
 			break;
 		default:
 			break;
@@ -719,14 +697,18 @@ KUSB_EXP BOOL KUSB_API HotK_Init(
 {
 	DWORD errorCode;
 	BOOL success;
+	PKLST_PATTERN_MATCH patternMatch;
 
 	// Create the top-level window for monitoring. WM_DEVICE_CHANGE.
 	if (IncLock(g_HotNotifierList.HotLockCount) == 1)
 	{
-		g_HotNotifierList.DevNodesChangePending = 0;
+		patternMatch = &InitParams->PatternMatch;
+		if (!patternMatch->DeviceInterfaceGUID[0] && !patternMatch->InstanceID[0] && !patternMatch->SymbolicLink[0])
+			patternMatch = NULL;
+
 		if (!g_HotNotifierList.hAppInstance) g_HotNotifierList.hAppInstance = GetModuleHandle(NULL);
 
-		success = LstK_InitEx(&g_HotNotifierList.DeviceList, KLST_FLAG_NONE, NULL);
+		success = LstK_InitEx(&g_HotNotifierList.DeviceList, KLST_FLAG_NONE, patternMatch);
 		ErrorNoSet(!success, Error, "Failed creating master device list.");
 
 		success = h_Create_Thread(&g_HotNotifierList);

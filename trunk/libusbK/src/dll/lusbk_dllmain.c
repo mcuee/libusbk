@@ -21,6 +21,8 @@ binary distributions.
 
 #if defined(DYNAMIC_DLL)
 
+VOID WINAPI AllK_Context_Free(VOID);
+
 // warning C4127: conditional expression is constant.
 #pragma warning(disable: 4127)
 
@@ -39,25 +41,7 @@ BOOL WINAPI DllMain(HANDLE module, DWORD reason, LPVOID reserved)
 		}
 		break;
 	case DLL_PROCESS_DETACH:
-		if (AllK)
-		{
-#ifdef DEBUG_LOGGING_ENABLED
-			POOLHANDLE_LIB_EXIT_CHECK(HotK);
-			POOLHANDLE_LIB_EXIT_CHECK(LstK);
-			POOLHANDLE_LIB_EXIT_CHECK(LstInfoK);
-			POOLHANDLE_LIB_EXIT_CHECK(UsbK);
-			POOLHANDLE_LIB_EXIT_CHECK(DevK);
-			POOLHANDLE_LIB_EXIT_CHECK(OvlK);
-			POOLHANDLE_LIB_EXIT_CHECK(OvlPoolK);
-			POOLHANDLE_LIB_EXIT_CHECK(StmK);
-#endif
-			if (AllK->ProcessHeap == AllK->Heap)
-				HeapFree(AllK->Heap, 0, AllK);
-			else
-				HeapDestroy(AllK->Heap);
-
-			AllK = NULL;
-		}
+		AllK_Context_Free();
 		break;
 	case DLL_THREAD_ATTACH:
 		break;

@@ -25,8 +25,6 @@ volatile long AllKInitLock = 0;
 
 PALLK_CONTEXT AllK = NULL;
 
-#define ALLK_LOCKEX_HANDLE(HandlePtr,Required)	SpinLock_AcquireEx(&(HandlePtr)->Base.Lock, Required)
-#define ALLK_UNLOCK_HANDLE(HandlePtr)			SpinLock_ReleaseEx(&(HandlePtr)->Base.Lock)
 #define ALLK_INCREF_HANDLE(HandlePtr)			InterlockedIncrement(&ALLK_GETREF_HANDLE(HandlePtr))
 #define ALLK_DECREF_HANDLE(HandlePtr)			InterlockedDecrement(&ALLK_GETREF_HANDLE(HandlePtr))
 
@@ -39,43 +37,69 @@ PALLK_CONTEXT AllK = NULL;
 		memset(AllK->AllKSection.Handles, 0, sizeof(AllK->AllKSection.Handles));	\
 	}while(0)
 
-#if 0
-#define ALLK_INIT_SECTION(AllKSection) 	\
-	/* AllKSection			= */{			\
-		/* Index				= */	-1,		\
-		/* Handles				= */	{0}, 	\
-	}
-ALLK_CONTEXT AllK =
+VOID WINAPI AllK_Context_Free(VOID)
 {
-	/* Valid			= */	FALSE,
-	/* InitLock			= */	0,
-	/* Heap				= */	NULL,
+	if (AllK == NULL) return;
 
-	/* CancelIoEx		= */	(KDYN_CancelIoEx*)NULL,
-	/* PathMatchSpec	= */	(KDYN_PathMatchSpec*)NULL,
-
-	ALLK_INIT_SECTION(HotK),
-	ALLK_INIT_SECTION(LstK),
-	ALLK_INIT_SECTION(LstInfoK),
-	ALLK_INIT_SECTION(UsbK),
-	ALLK_INIT_SECTION(DevK),
-	ALLK_INIT_SECTION(OvlK),
-	ALLK_INIT_SECTION(OvlPoolK),
-	ALLK_INIT_SECTION(StmK),
-};
+#ifdef DEBUG_LOGGING_ENABLED
+	POOLHANDLE_LIB_EXIT_CHECK(HotK);
+	POOLHANDLE_LIB_EXIT_CHECK(LstK);
+	POOLHANDLE_LIB_EXIT_CHECK(LstInfoK);
+	POOLHANDLE_LIB_EXIT_CHECK(UsbK);
+	POOLHANDLE_LIB_EXIT_CHECK(DevK);
+	POOLHANDLE_LIB_EXIT_CHECK(OvlK);
+	POOLHANDLE_LIB_EXIT_CHECK(OvlPoolK);
+	POOLHANDLE_LIB_EXIT_CHECK(StmK);
 #endif
 
-static BOOL AllK_Context_Initialize(PALLK_CONTEXT* AllKRef, HANDLE Heap)
-{
-	HMODULE shlwapi_dll		= LoadLibraryA("shlwapi");
-	HMODULE kernel32_dll	= GetModuleHandleA("kernel32");
-	PALLK_CONTEXT AllK;
+	if (AllK->Dlls.hShlwapi)
+	{
+		FreeLibrary(AllK->Dlls.hShlwapi);
+		AllK->Dlls.hShlwapi = NULL;
+	}
+	if (AllK->Dlls.hWinTrust)
+	{
+		FreeLibrary(AllK->Dlls.hWinTrust);
+		AllK->Dlls.hWinTrust = NULL;
+	}
 
-	AllK = HeapAlloc(Heap, HEAP_ZERO_MEMORY, sizeof(ALLK_CONTEXT));
+	if (AllK->HeapDynamic != NULL)
+	{
+		if (AllK->HeapProcess == AllK->HeapDynamic)
+		{
+			HeapFree(AllK->HeapDynamic, 0, AllK);
+		}
+		else
+		{
+			HeapDestroy(AllK->HeapDynamic);
+		}
+	}
+
+	AllK = NULL;
+}
+
+BOOL WINAPI AllK_Context_Init(HANDLE Heap, PVOID Reserved)
+{
+	HMODULE kernel32_dll;
+	HANDLE processHeap;
+	UNREFERENCED_PARAMETER(Reserved);
+
+	kernel32_dll = GetModuleHandleA("kernel32");
+
+	if (AllK) AllK_Context_Free();
+
+	processHeap = GetProcessHeap();
+	ErrorMemory(processHeap == NULL, Error);
+
+	AllK = HeapAlloc(processHeap, HEAP_ZERO_MEMORY, sizeof(ALLK_CONTEXT));
 	ErrorMemory(AllK == NULL, Error);
 
-	AllK->ProcessHeap = GetProcessHeap();
-	AllK->Heap = Heap;
+	AllK->HeapProcess = processHeap;
+	AllK->HeapDynamic = Heap;
+	if (AllK->HeapDynamic == NULL) AllK->HeapDynamic = AllK->HeapProcess;
+
+	AllK->Dlls.hShlwapi = LoadLibraryA("shlwapi");
+	AllK->Dlls.hWinTrust = LoadLibraryA("wintrust");
 
 	// one-time AllK initialize
 	USBLOG_PRINTLN("");
@@ -99,16 +123,25 @@ static BOOL AllK_Context_Initialize(PALLK_CONTEXT* AllKRef, HANDLE Heap)
 	ALLK_HANDLES_INIT(OvlPoolK);
 	ALLK_HANDLES_INIT(StmK);
 
-	AllK->PathMatchSpec = (KDYN_PathMatchSpec*)GetProcAddress(shlwapi_dll, "PathMatchSpecA");
+	AllK->PathMatchSpec = (KDYN_PathMatchSpec*)GetProcAddress(AllK->Dlls.hShlwapi, "PathMatchSpecA");
 	AllK->CancelIoEx	= (KDYN_CancelIoEx*)GetProcAddress(kernel32_dll, "CancelIoEx");
 
-	USBLOG_PRINTLN("KLST_DEVINFO = %u bytes", sizeof(KLST_DEVINFO));
+	AllK->DevK.Index = -1;
+	AllK->HotK.Index = -1;
+	AllK->LstInfoK.Index = -1;
+	AllK->LstK.Index = -1;
+	AllK->OvlK.Index = -1;
+	AllK->OvlPoolK.Index = -1;
+	AllK->StmK.Index = -1;
+	AllK->UsbK.Index = -1;
 
-	*AllKRef = AllK;
+	USBLOG_PRINTLN("Dynamically allocated as needed:");
+	USBLOG_PRINTLN("\tKLST_DEVINFO = %u bytes each", sizeof(KLST_DEVINFO));
+
 	return TRUE;
 
 Error:
-	*AllKRef = NULL;
+	AllK = NULL;
 	return FALSE;
 }
 
@@ -117,7 +150,7 @@ BOOL CheckLibInit()
 	if (AllK) return TRUE;
 
 	mSpin_Acquire(&AllKInitLock);
-	if (!AllK_Context_Initialize(&AllK, GetProcessHeap()))
+	if (!AllK_Context_Init(NULL, NULL))
 	{
 		USBERRN("Failed initializing default context. ErrorCode=%08Xh", GetLastError());
 		mSpin_Release(&AllKInitLock);
@@ -145,7 +178,7 @@ BOOL CheckLibInit()
 			(ReturnHandle) = NULL;																							\
 			nextPos = (IncLock(AllK->AllKSection.Index)) % ALLK_HANDLE_COUNT(AllKSection);   								\
 		}while(nextPos!=startPos);																							\
-		\
+																															\
 		if (!(ReturnHandle))  																								\
 		{ 																													\
 			USBERRN("no more internal " DEFINE_TO_STR(AllKSection) " handles! (max=%d)",  ALLK_HANDLE_COUNT(AllKSection));	\
@@ -208,28 +241,6 @@ BOOL CheckLibInit()
 		}																				\
 		return TRUE;																	\
 	}
-
-/*
-	BOOL PoolHandle_Acquire_Spin_##AllKSection(P##HandleType PoolHandle, BOOL Required)	\
-	{																					\
-		if (PoolHandle->Base.Disposing)													\
-			return PoolHandle->Base.Disposing == GetCurrentThreadId() ? TRUE : FALSE;	\
-		if (!PoolHandle_Inc_##AllKSection(PoolHandle)) return FALSE;					\
-		if (!ALLK_LOCKEX_HANDLE(PoolHandle,Required))									\
-		{																				\
-			PoolHandle_Dec_##AllKSection(PoolHandle);									\
-			return FALSE;																\
-		}																				\
-		return TRUE;																	\
-	}																					\
-	BOOL PoolHandle_Release_Spin_##AllKSection(P##HandleType PoolHandle)				\
-	{																					\
-		if (PoolHandle->Base.Disposing)													\
-			return PoolHandle->Base.Disposing == GetCurrentThreadId() ? TRUE : FALSE;	\
-		ALLK_UNLOCK_HANDLE(PoolHandle);													\
-		return PoolHandle_Dec_##AllKSection(PoolHandle);								\
-	}
-*/
 
 FN_POOLHANDLE(HotK, KHOT_HANDLE_INTERNAL)
 FN_POOLHANDLE(LstK, KLST_HANDLE_INTERNAL)

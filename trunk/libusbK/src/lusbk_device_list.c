@@ -25,14 +25,65 @@ binary distributions.
 // warning C4127: conditional expression is constant.
 #pragma warning(disable: 4127)
 
-#define GetRegDevNodeString(DeviceInterfaceElement,ValuenNameString,Key,ValueDataString)	\
-	(_stricmp(ValuenNameString,DEFINE_TO_STR(Key))==0 ? l_Str_CopyLast(';',DeviceInterfaceElement->Key,ValueDataString):NULL)
-
 #define lstk_DL_MatchSymbolicLink(PatternEL, MatchEL) (AllK->PathMatchSpec((MatchEL)->Public.SymbolicLink, (PatternEL)->Public.SymbolicLink)?0:-1)
 
 #define Match_DevItem_SymbolicLink(check, find)	strcmp(check->Public.SymbolicLink, find)
 
 #define KEY_DEVICECLASSES "SYSTEM\\CurrentControlSet\\Control\\DeviceClasses"
+
+#define mLst_Get_InterfaceDetail(mRegEnumParamsPtr, mhDevInfo_Interface, mOutDevInfoDataPtr, mOutDevicePathLen, mErrorAction)do { \
+		/* This aligns the 'DevicePath' in PSP_DEVICE_INTERFACE_DETAIL_DATA to mRegEnumParamsPtr->TempItem->DevicePath */													\
+		PSP_DEVICE_INTERFACE_DETAIL_DATA m_pDevInterfaceDetailData = (PSP_DEVICE_INTERFACE_DETAIL_DATA)((&(mRegEnumParamsPtr)->TempItem->DevicePath[0]) - sizeof(DWORD));	\
+		m_pDevInterfaceDetailData->cbSize = sizeof(SP_DEVICE_INTERFACE_DETAIL_DATA); 																						\
+		mOutDevicePathLen = sizeof(SP_DEVICE_INTERFACE_DETAIL_DATA) + sizeof((mRegEnumParamsPtr)->TempItem->DevicePath) - 2; 												\
+ 																																											\
+		/* Get the DevicePath/SymbolicLink */																																\
+		if (!SetupDiGetDeviceInterfaceDetailA(   																															\
+					mhDevInfo_Interface, 																																	\
+					&(mRegEnumParamsPtr)->DevInterfaceData,  																												\
+					m_pDevInterfaceDetailData,   																															\
+					mOutDevicePathLen,   																																	\
+					&mOutDevicePathLen,  																																	\
+					mOutDevInfoDataPtr)) 																																	\
+		{																																									\
+			USBERRN("SetupDiGetDeviceInterfaceDetail Failed. ErrorCode:%08Xh", GetLastError());  																			\
+			{mErrorAction;}  																																				\
+		}																																									\
+		 																																									\
+		memset((mRegEnumParamsPtr)->TempItem->DevicePath - sizeof(SP_DEVICE_INTERFACE_DETAIL_DATA), 0, sizeof(SP_DEVICE_INTERFACE_DETAIL_DATA)); 							\
+		mOutDevicePathLen = (DWORD)strlen((mRegEnumParamsPtr)->TempItem->DevicePath);																						\
+		memcpy((mRegEnumParamsPtr)->TempItem->SymbolicLink, (mRegEnumParamsPtr)->TempItem->DevicePath, mOutDevicePathLen);   												\
+		(mRegEnumParamsPtr)->TempItem->DevicePath[mOutDevicePathLen] = (CHAR)0;  																							\
+		(mRegEnumParamsPtr)->TempItem->SymbolicLink[mOutDevicePathLen] = (CHAR)0;																							\
+}																																											\
+while(0)
+
+#define mLst_ApplyPatternMatch(mRegEnumParamsPtr, mPatternMatchItem, mErrorAction)do { \
+	if ((mRegEnumParamsPtr)->PatternMatch && (mRegEnumParamsPtr)->PatternMatch->mPatternMatchItem[0])										\
+	{																																		\
+		if (!AllK->PathMatchSpec((mRegEnumParamsPtr)->TempItem->mPatternMatchItem, (mRegEnumParamsPtr)->PatternMatch->mPatternMatchItem))	\
+		{																																	\
+			USBDBGN("Skipping for " DEFINE_TO_STR(mPatternMatchItem) " pattern match failure: %s (%s)",  									\
+					(mRegEnumParamsPtr)->TempItem->DeviceInterfaceGUID, (mRegEnumParamsPtr)->TempItem->InstanceID);  						\
+			{mErrorAction;}  																												\
+		}																																	\
+	}																																		\
+}																																			\
+while(0)
+
+#define mLst_HandleConnectScenario(mRegEnumParamsPtr, mErrorAction)do { \
+	if ((mRegEnumParamsPtr)->DevInterfaceData.Flags & SPINT_REMOVED)   																	\
+	{  																																	\
+		mErrorAction;  																													\
+	}  																																	\
+	/* If we are not including disconnected devices and the driver has not enabled the interface guid for this devices then skip it. */	\
+	(mRegEnumParamsPtr)->TempItem->Connected = ((mRegEnumParamsPtr)->DevInterfaceData.Flags & SPINT_ACTIVE) ? TRUE : FALSE;				\
+	if ((mRegEnumParamsPtr)->TempItem->Connected == FALSE && !((mRegEnumParamsPtr)->Flags & KLST_FLAG_INCLUDE_DISCONNECT)) 				\
+	{  																																	\
+		mErrorAction;  																													\
+	}  																																	\
+}  																																		\
+while(0)
 
 typedef struct _KUSB_ENUM_REGKEY_PARAMS
 {
@@ -42,22 +93,26 @@ typedef struct _KUSB_ENUM_REGKEY_PARAMS
 
 	KLST_FLAG Flags;
 	KLST_PATTERN_MATCH* PatternMatch;
-	// required before calling l_Enum_RegKey
-	HKEY hParentKey;
-	BOOL (*EnumRegKeyCB) (LPCSTR, struct _KUSB_ENUM_REGKEY_PARAMS* RegEnumParams);
 
-	// optional
-	LPCSTR SubKey;
-	LPCSTR CurrentGUID;
+	GUID DevInterfaceGuid;
 
 	// optional
 	PVOID Context;
 	DWORD ErrorCode;
 
-	// managed by l_Enum_RegKey
-	HKEY hOpenedKey;
+	struct
+	{
+		BOOL DevInterfaceGuid;
+		BOOL InstanceID;
+	} Exclusive;
 
 	KLST_DEVINFO_HANDLE TempItem;
+
+	// SetupAPI
+	HDEVINFO DevInfoSet;
+	SP_DEVINFO_DATA DevInfoData;
+	SP_DEVICE_INTERFACE_DATA DevInterfaceData;
+	DWORD DigcFlags;
 
 } KUSB_ENUM_REGKEY_PARAMS;
 
@@ -109,7 +164,25 @@ static LPCSTR lusbK_DevGuidNames[] =
 	NULL
 };
 
-static const SERVICE_DRVID_MAP ServiceDrvIdMap[] =
+#define  mLst_Assign_DrvId_From_Map(mOutDrvId, mInDrvMapValueToFind, mInServiceDrvIdMap) {		\
+	PSERVICE_DRVID_MAP _serviceMap = (PSERVICE_DRVID_MAP)mInServiceDrvIdMap;   					\
+	while((mOutDrvId) == -1 && _serviceMap->DriverID != -1)  									\
+	{																							\
+		LPCSTR* _mapName = _serviceMap->MapNames;												\
+		while(*_mapName) 																		\
+		{																						\
+			if (_stricmp((mInDrvMapValueToFind), *_mapName) == 0)								\
+			{																					\
+				(mOutDrvId) = _serviceMap->DriverID; 											\
+				break;   																		\
+			}																					\
+			_mapName++;  																		\
+		}																						\
+		_serviceMap++;   																		\
+	}																							\
+}																								\
+ 
+static const SERVICE_DRVID_MAP DrvIdMap_Services[] =
 {
 	{KUSB_DRVID_LIBUSBK,	lusbk_Services},
 	{KUSB_DRVID_LIBUSB0,	lusb0_Services},
@@ -117,6 +190,8 @@ static const SERVICE_DRVID_MAP ServiceDrvIdMap[] =
 
 	{ -1,	NULL}
 };
+#define  mLst_Assign_DrvId_From_Service(mOutDrvId, mInServiceToFind) mLst_Assign_DrvId_From_Map(mOutDrvId, mInServiceToFind, DrvIdMap_Services)
+
 
 static const SERVICE_DRVID_MAP DevGuidDrvIdMap[] =
 {
@@ -126,6 +201,7 @@ static const SERVICE_DRVID_MAP DevGuidDrvIdMap[] =
 
 	{ -1,	NULL}
 };
+#define  mLst_Assign_DrvId_From_InterfaceGuid(mOutDrvId, mInInterFaceGuidToFind) mLst_Assign_DrvId_From_Map(mOutDrvId, mInInterFaceGuidToFind, DevGuidDrvIdMap)
 
 static BOOL l_String_To_Guid(_out GUID* GuidVal, __in LPCSTR GuidString)
 {
@@ -136,143 +212,17 @@ static BOOL l_String_To_Guid(_out GUID* GuidVal, __in LPCSTR GuidString)
 
 	if (GuidString[0] == '{') GuidString++;
 
-	scanCount = sscanf_s(GuidString, GUID_FORMAT_STRING,
-	                     &Guid->Data1,
-	                     &Guid->Data2,
-	                     &Guid->Data3,
-	                     &Guid->Data4[0], &Guid->Data4[1], &Guid->Data4[2], &Guid->Data4[3],
-	                     &Guid->Data4[4], &Guid->Data4[5], &Guid->Data4[6], &Guid->Data4[7]);
+	scanCount = sscanf(GuidString, GUID_FORMAT_STRING,
+	                   &Guid->Data1,
+	                   &Guid->Data2,
+	                   &Guid->Data3,
+	                   &Guid->Data4[0], &Guid->Data4[1], &Guid->Data4[2], &Guid->Data4[3],
+	                   &Guid->Data4[4], &Guid->Data4[5], &Guid->Data4[6], &Guid->Data4[7]);
 
 	if (scanCount == 11)
 		memcpy(GuidVal, &guidChars, sizeof(GUID));
 
 	return (scanCount == 11);
-}
-
-static LONG l_GetReg_String(__in HKEY hKeyParent,
-                            __in LPCSTR keyBasePath,
-                            __in_opt LPCSTR keySubPath,
-                            __in LPCSTR valueName,
-                            __inout LPSTR devInstElementStringData)
-{
-	CHAR keyPath[1024];
-	LONG status = ERROR_SUCCESS;
-	HKEY hKey = NULL;
-	DWORD valueType;
-	DWORD valueDataSize = KLST_STRING_MAX_LEN;
-
-	memset(keyPath, 0, sizeof(keyPath));
-	if ((status = (LONG)strcat_s(keyPath, sizeof(keyPath) - 1, keyBasePath)) != ERROR_SUCCESS)
-		goto Error;
-
-	if (keySubPath)
-	{
-		if ((status = (LONG)strcat_s(keyPath, sizeof(keyPath) - 1, keySubPath)) != ERROR_SUCCESS)
-			goto Error;
-	}
-
-	if ((status = RegOpenKeyExA(hKeyParent, keyPath, 0, KEY_READ, &hKey)) != ERROR_SUCCESS)
-		goto Error;
-
-	status = RegQueryValueExA(hKey, valueName, 0, &valueType, (LPBYTE)devInstElementStringData, &valueDataSize);
-	if (status == ERROR_SUCCESS)
-		devInstElementStringData[valueDataSize] = '\0';
-
-Error:
-	if (hKey)
-		RegCloseKey(hKey);
-
-	return status;
-}
-
-static LONG l_GetReg_DWord(
-    __in HKEY hKeyParent,
-    __in LPCSTR keyBasePath,
-    __in_opt LPCSTR keySubPath,
-    __in LPCSTR valueName,
-    __inout LPDWORD value)
-{
-	CHAR keyPath[1024];
-	LONG status = ERROR_SUCCESS;
-	HKEY hKey = NULL;
-	DWORD valueType;
-	DWORD valueDataSize = sizeof(DWORD);
-
-	memset(keyPath, 0, sizeof(keyPath));
-	if ((status = (LONG)strcat_s(keyPath, sizeof(keyPath) - 1, keyBasePath)) != ERROR_SUCCESS)
-		goto Error;
-
-	if (keySubPath)
-	{
-		if ((status = (LONG)strcat_s(keyPath, sizeof(keyPath) - 1, keySubPath)) != ERROR_SUCCESS)
-			goto Error;
-	}
-
-	if ((status = RegOpenKeyExA(hKeyParent, keyPath, 0, KEY_READ, &hKey)) != ERROR_SUCCESS)
-		goto Error;
-
-	status = RegQueryValueExA(hKey, valueName, 0, &valueType, (LPBYTE)value, &valueDataSize);
-
-Error:
-	if (hKey)
-		RegCloseKey(hKey);
-
-	return status;
-}
-
-static BOOL l_IsUsb_RegKey(__in LPCSTR keyName)
-{
-	LPCSTR keyPathPartsNext;
-	LPCSTR keyPathParts = keyName;
-	while((keyPathPartsNext = strchr(keyPathParts, '#')) != NULL)
-	{
-		if (_strnicmp(&keyPathPartsNext[1], "usb", 3) == 0)
-			return TRUE;
-		keyPathParts = keyPathPartsNext + 1;
-	}
-	return FALSE;
-}
-
-static PCHAR l_Str_CopyLast(
-    __in CHAR sep,
-    __out PCHAR dst,
-    __in PCHAR src)
-{
-	PCHAR next = src;
-	while((next = strchr(src, sep)) != NULL)
-	{
-		src = next + 1;
-	}
-	strcpy_s(dst, KLST_STRING_MAX_LEN, src);
-	return dst;
-}
-
-static BOOL l_Enum_RegKey(KUSB_ENUM_REGKEY_PARAMS* params)
-{
-	LONG status;
-	DWORD keyIndex = (DWORD) - 1;
-	CHAR keyName[1024];
-
-	params->hOpenedKey = NULL;
-
-	status = RegOpenKeyExA(params->hParentKey, params->SubKey, 0, KEY_READ, &params->hOpenedKey);
-	if (status != ERROR_SUCCESS)
-		return FALSE;
-
-	while(RegEnumKeyA(params->hOpenedKey, ++keyIndex, keyName, sizeof(keyName) - 1) == ERROR_SUCCESS)
-	{
-		if (!params->EnumRegKeyCB(keyName, params))
-			goto Done;
-	}
-
-Done:
-	// close the key
-	if (IsHandleValid(params->hOpenedKey))
-		RegCloseKey(params->hOpenedKey);
-
-	params->hOpenedKey = NULL;
-
-	return params->ErrorCode == ERROR_SUCCESS;
 }
 
 static BOOL KUSB_API l_DevEnum_Free_All(
@@ -498,110 +448,6 @@ Error:
 	return GetLastError();
 }
 
-static BOOL l_Build_AssignDriver(KLST_DEVINFO_HANDLE devItem)
-{
-
-	PSERVICE_DRVID_MAP map;
-
-	// find driver type by device interface guid
-	devItem->DriverID = -1;
-	map = (PSERVICE_DRVID_MAP)DevGuidDrvIdMap;
-	while(devItem->DriverID == -1 && map->DriverID != -1)
-	{
-		LPCSTR* devGuid = map->MapNames;
-		while(*devGuid)
-		{
-			if (_stricmp(devItem->DeviceInterfaceGUID, *devGuid) == 0)
-			{
-				devItem->DriverID = map->DriverID;
-				break;
-			}
-			devGuid++;
-		}
-		map++;
-	}
-
-	// find driver type by service name (if not found)
-	map = (PSERVICE_DRVID_MAP)ServiceDrvIdMap;
-	while(devItem->DriverID == -1 && map->DriverID != -1)
-	{
-		LPCSTR* serviceName = map->MapNames;
-		while(*serviceName)
-		{
-			if (_stricmp(devItem->Service, *serviceName) == 0)
-			{
-				devItem->DriverID = map->DriverID;
-				break;
-			}
-			serviceName++;
-		}
-		map++;
-	}
-
-	if (devItem->DriverID != -1)
-	{
-		if (devItem->DriverID == KUSB_DRVID_LIBUSB0_FILTER ||
-		        devItem->DriverID == KUSB_DRVID_LIBUSB0 )
-		{
-			if (devItem->LUsb0FilterIndex > 255 || devItem->LUsb0FilterIndex < 0) return FALSE;
-
-			// libusb-win32 filter driver is active on this device.
-			sprintf_s(devItem->DevicePath, sizeof(devItem->DevicePath) - 1,
-			          "\\\\.\\libusb0-%04d", devItem->LUsb0FilterIndex);
-
-		}
-		// new device with  an assigned driver (ready for device list)
-		return TRUE;
-	}
-	return FALSE;
-}
-
-static BOOL l_Build_FillProperties(KLST_DEVINFO_HANDLE devItem)
-{
-	CHAR devRegEnumKey[1024];
-	CHAR valueName[KLST_STRING_MAX_LEN];
-	CHAR valueData[KLST_STRING_MAX_LEN];
-
-	DWORD valueNameLength, valueDataLength;
-	HKEY hDevRegEnumKey = NULL;
-	DWORD devRegEnumKeyIndex = (DWORD)(-1);
-	DWORD valueType;
-
-	memset(devRegEnumKey, 0, sizeof(devRegEnumKey));
-	strcat_s(devRegEnumKey, sizeof(devRegEnumKey), "SYSTEM\\CurrentControlSet\\Enum\\");
-	strcat_s(devRegEnumKey, sizeof(devRegEnumKey), devItem->InstanceID);
-
-	// opening device instance reg key node
-	// e.g. HKLM\SYSTEM\CurrentControlSet\Enum\USB\VID_1234&PID_0001&MI_00\7&15c836fa&2&0000
-	if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, devRegEnumKey, 0, KEY_READ, &hDevRegEnumKey) != ERROR_SUCCESS)
-		return FALSE;
-
-	memset(valueName, 0, sizeof(valueName));
-	memset(valueData, 0, sizeof(valueData));
-	valueNameLength = sizeof(valueName) - 1;
-	valueDataLength = sizeof(valueData) - 1;
-
-	while(RegEnumValueA(hDevRegEnumKey, ++devRegEnumKeyIndex, valueName, &valueNameLength, 0, &valueType, (LPBYTE)valueData, &valueDataLength) == ERROR_SUCCESS)
-	{
-
-		// e.g. HKLM\SYSTEM\CurrentControlSet\Enum\USB\VID_1234&PID_0001&MI_00\7&15c836fa&2&0000\[ValueNames]
-
-		if (GetRegDevNodeString(devItem, valueName, ClassGUID, valueData)) {}
-		else if (GetRegDevNodeString(devItem, valueName, DeviceDesc, valueData)) {}
-		else if (GetRegDevNodeString(devItem, valueName, Mfg, valueData)) {}
-		else if (GetRegDevNodeString(devItem, valueName, Service, valueData)) {}
-
-		memset(valueName, 0, sizeof(valueName));
-		memset(valueData, 0, sizeof(valueData));
-		valueNameLength = sizeof(valueName) - 1;
-		valueDataLength = sizeof(valueData) - 1;
-	}
-
-	RegCloseKey(hDevRegEnumKey);
-
-	return (strlen(devItem->Service) > 0);
-}
-
 static void l_Build_Common_Info(__in PKLST_DEVINFO_EL devItem)
 {
 	PKLST_DEV_COMMON_INFO commonInfo = &devItem->Public.Common;
@@ -655,236 +501,499 @@ static void l_Build_Common_Info(__in PKLST_DEVINFO_EL devItem)
 		commonInfo->MI &= 0x7F;
 }
 
-static BOOL l_EnumKey_Instances(LPCSTR Name, KUSB_ENUM_REGKEY_PARAMS* RegEnumParams)
+
+static BOOL l_EnumKey_Instances(KUSB_ENUM_REGKEY_PARAMS* RegEnumParams)
 {
 	LONG status;
-	// DWORD referenceCount;
 	BOOL isNewItem;
 	PKLST_DEVINFO_EL newDevItem = NULL;
-	GUID guidDevInterface;
 	HDEVINFO hDevInfo;
-	SP_DEVICE_INTERFACE_DATA deviceInterfaceData;
-	SP_DEVINFO_DATA deviceInfoData;
-	DWORD digcFlags = DIGCF_DEVICEINTERFACE;
 	DWORD length;
-	HKEY hKey;
+	// PSP_DEVICE_INTERFACE_DETAIL_DATA_A pDevInterfaceDetailData;
+	DWORD iDeviceInterface = (DWORD) - 1;
 
-	if (!l_IsUsb_RegKey(Name)) return TRUE;
-
-	Mem_Zero(RegEnumParams->TempItem, sizeof(*RegEnumParams->TempItem));
-
-	strcpy_s(RegEnumParams->TempItem->DeviceInterfaceGUID, sizeof(RegEnumParams->TempItem->DeviceInterfaceGUID), RegEnumParams->CurrentGUID);
-
-	// query device instance id
-	// e.g. HKLM\SYSTEM\CurrentControlSet\Control\DeviceClasses\{20343a29-6da1-4db8-8a3c-16e774057bf5}\##?#USB#VID_1234&PID_0001#BMD001#{20343a29-6da1-4db8-8a3c-16e774057bf5}\DeviceInstance
-	//status = l_GetReg_String(RegEnumParams->hOpenedKey, Name, NULL, "DeviceInstance", RegEnumParams->TempItem->InstanceID);
-	//if (status != ERROR_SUCCESS)
-	//	return TRUE;
-
-	// Query DeviceInstance
-	status = RegOpenKeyExA(RegEnumParams->hOpenedKey, Name, 0, KEY_READ, &hKey);
-	if (status != ERROR_SUCCESS)
+	if (!RegEnumParams->Exclusive.DevInterfaceGuid)
 	{
-		return TRUE;
+		// Apply DeviceInterfaceGUID filter:
+		mLst_ApplyPatternMatch(RegEnumParams, DeviceInterfaceGUID, return TRUE);
 	}
-	status = RegQueryValueExA(hKey, "DeviceInstance", 0, NULL, (LPBYTE)RegEnumParams->TempItem->InstanceID, &length);
-	if (status != ERROR_SUCCESS)
-	{
-		RegCloseKey(hKey);
-		return TRUE;
-	}
-	RegEnumParams->TempItem->InstanceID[length]=(CHAR)0;
-	RegCloseKey(hKey);
 
-	// apply PatternMatch->InstanceID
-	if (RegEnumParams->PatternMatch && RegEnumParams->PatternMatch->InstanceID[0])
+	if (RegEnumParams->Exclusive.DevInterfaceGuid == FALSE)
 	{
-		if (!AllK->PathMatchSpec(RegEnumParams->TempItem->InstanceID, RegEnumParams->PatternMatch->InstanceID))
+		hDevInfo = SetupDiGetClassDevsA(&RegEnumParams->DevInterfaceGuid, RegEnumParams->TempItem->InstanceID, NULL, RegEnumParams->DigcFlags | DIGCF_DEVICEINTERFACE);
+		if (!IsHandleValid(hDevInfo))
+		{
+			USBDBGN("SetupDiGetClassDevsA Failed. ErrorCode:%08Xh", GetLastError());
 			return TRUE;
+		}
 	}
-
-	// query symbolic link value
-	// e.g. HKLM\SYSTEM\CurrentControlSet\Control\DeviceClasses\{20343a29-6da1-4db8-8a3c-16e774057bf5}\##?#USB#VID_1234&PID_0001#BMD001#{20343a29-6da1-4db8-8a3c-16e774057bf5}\#\SymbolicLink
-	
-	//status = l_GetReg_String(RegEnumParams->hOpenedKey, Name, "\\#", "SymbolicLink",  RegEnumParams->TempItem->SymbolicLink);
-	//if (status != ERROR_SUCCESS)
-	//{
-		if (_strnicmp(Name, "##?#", 4) != 0)
-			return TRUE;
-
-		RegEnumParams->TempItem->SymbolicLink[0] = '\\';
-		RegEnumParams->TempItem->SymbolicLink[1] = '\\';
-		RegEnumParams->TempItem->SymbolicLink[2] = '?';
-		RegEnumParams->TempItem->SymbolicLink[3] = '\\';
-		RegEnumParams->TempItem->SymbolicLink[4] = (CHAR)0;
-		strcat_s(RegEnumParams->TempItem->SymbolicLink, sizeof(RegEnumParams->TempItem->SymbolicLink), &Name[4]);
-	//}
-
-
-	// apply PatternMatch->SymbolicLink
-	if (RegEnumParams->PatternMatch && RegEnumParams->PatternMatch->SymbolicLink[0])
+	else
 	{
-		if (!AllK->PathMatchSpec(RegEnumParams->TempItem->SymbolicLink, RegEnumParams->PatternMatch->SymbolicLink))
-			return TRUE;
+		hDevInfo = RegEnumParams->DevInfoSet;
 	}
 
-
-	if (!l_String_To_Guid(&guidDevInterface, RegEnumParams->TempItem->DeviceInterfaceGUID))
+	do
 	{
-		USBERRN("Failed converting GUID string:%s", RegEnumParams->TempItem->DeviceInterfaceGUID);
-		return TRUE;
+		if (hDevInfo != RegEnumParams->DevInfoSet)
+		{
+			RegEnumParams->DevInterfaceData.cbSize = sizeof(RegEnumParams->DevInterfaceData);
+			if (!SetupDiEnumDeviceInterfaces(hDevInfo, NULL, &RegEnumParams->DevInterfaceGuid, ++iDeviceInterface, &RegEnumParams->DevInterfaceData))
+				goto Done;
+		}
+		else
+		{
+			iDeviceInterface++;
+			if (iDeviceInterface > 0) break;
+		}
+
+		if (!RegEnumParams->Exclusive.DevInterfaceGuid)
+		{
+			// Update 'Connected' from DevInterfaceData.Flags
+			mLst_HandleConnectScenario(RegEnumParams, goto NextInstance);
+		}
+
+		// Disconnected filter devices are never listed regardless of the KLST_FLAG_INCLUDE_DISCONNECT flag.
+		if (RegEnumParams->TempItem->Connected == FALSE && RegEnumParams->TempItem->DriverID == KUSB_DRVID_LIBUSB0_FILTER)
+		{
+			USBDBGN("Skipping disconnected filter device: %s (%s)",
+			        RegEnumParams->TempItem->DeviceInterfaceGUID, RegEnumParams->TempItem->InstanceID);
+
+			goto NextInstance;
+		}
+
+		if (hDevInfo != RegEnumParams->DevInfoSet)
+		{
+			mLst_Get_InterfaceDetail(RegEnumParams, hDevInfo, NULL, length, goto NextInstance);
+		}
+
+		// Apply PatternMatch->SymbolicLink
+		mLst_ApplyPatternMatch(RegEnumParams, SymbolicLink, goto NextInstance);
+
+		// Since the 'LUsb0FilterIndex' is assigned when the device is connected, there is no point in getting it until it is.
+		// IE: It is invalid even if it exists.
+		RegEnumParams->TempItem->LUsb0FilterIndex = -1;
+		if ((RegEnumParams->TempItem->Connected) && (RegEnumParams->TempItem->DriverID == KUSB_DRVID_LIBUSB0 || RegEnumParams->TempItem->DriverID == KUSB_DRVID_LIBUSB0_FILTER))
+		{
+			HKEY hKeyDevInterface;
+
+			// 'LUsb0FilterIndex' is stored in the device interface key
+			hKeyDevInterface = SetupDiOpenDeviceInterfaceRegKey(hDevInfo, &RegEnumParams->DevInterfaceData, 0, KEY_QUERY_VALUE);
+			if (!IsHandleValid(hKeyDevInterface))
+			{
+				USBERRN("SetupDiOpenDeviceInterfaceRegKey Failed. ErrorCode:%08Xh", GetLastError());
+				goto NextInstance;
+			}
+
+			length = sizeof(RegEnumParams->TempItem->LUsb0FilterIndex);
+			status = RegQueryValueExA(hKeyDevInterface, "LUsb0", 0, NULL, (LPBYTE)&RegEnumParams->TempItem->LUsb0FilterIndex, &length);
+
+			RegCloseKey(hKeyDevInterface);
+
+			if (status != ERROR_SUCCESS)
+			{
+				USBWRNN("Failed getting 'Lusb0' index for device: %s (%s)",
+				        RegEnumParams->TempItem->DeviceInterfaceGUID, RegEnumParams->TempItem->InstanceID);
+			}
+			else if (RegEnumParams->TempItem->LUsb0FilterIndex > 255 || RegEnumParams->TempItem->LUsb0FilterIndex < 0)
+			{
+				USBWRNN("Invalid 'Lusb0' index for device: %s (%s)",
+				        RegEnumParams->TempItem->DeviceInterfaceGUID, RegEnumParams->TempItem->InstanceID);
+
+				status = ERROR_RANGE_NOT_FOUND;
+			}
+
+			if (status == ERROR_SUCCESS)
+			{
+				sprintf(RegEnumParams->TempItem->DevicePath, "\\\\.\\libusb0-%04d", RegEnumParams->TempItem->LUsb0FilterIndex);
+			}
+		}
+
+		// Get SPDRP_DEVICEDESC
+		if (!SetupDiGetDeviceRegistryPropertyA(RegEnumParams->DevInfoSet, &RegEnumParams->DevInfoData, SPDRP_DEVICEDESC, NULL, (PBYTE)RegEnumParams->TempItem->DeviceDesc, sizeof(RegEnumParams->TempItem->DeviceDesc) - 1, &length))
+			length = 0;
+		RegEnumParams->TempItem->DeviceDesc[length] = (CHAR)0;
+
+		// Get SPDRP_MFG
+		if (!SetupDiGetDeviceRegistryPropertyA(RegEnumParams->DevInfoSet, &RegEnumParams->DevInfoData, SPDRP_MFG, NULL, (PBYTE)RegEnumParams->TempItem->Mfg, sizeof(RegEnumParams->TempItem->Mfg) - 1, &length))
+			length = 0;
+		RegEnumParams->TempItem->Mfg[length] = (CHAR)0;
+
+		// Get SPDRP_CLASSGUID
+		if (!SetupDiGetDeviceRegistryPropertyA(RegEnumParams->DevInfoSet, &RegEnumParams->DevInfoData, SPDRP_CLASSGUID, NULL, (PBYTE)RegEnumParams->TempItem->ClassGUID, sizeof(RegEnumParams->TempItem->ClassGUID) - 1, &length))
+			length = 0;
+		RegEnumParams->TempItem->ClassGUID[length] = (CHAR)0;
+
+		RegEnumParams->ErrorCode = l_Build_AddElement(RegEnumParams->DeviceList, RegEnumParams->TempItem, &newDevItem, &isNewItem);
+		if (RegEnumParams->ErrorCode != ERROR_SUCCESS)
+		{
+			goto Error;
+		}
+
+		if (isNewItem)
+			l_Build_Common_Info(newDevItem);
+
+NextInstance:
+		if (RegEnumParams->Exclusive.DevInterfaceGuid && RegEnumParams->Exclusive.InstanceID)
+			goto Done;
+
+	}
+	while(TRUE);
+
+Done:
+	if (hDevInfo && hDevInfo != RegEnumParams->DevInfoSet)
+		SetupDiDestroyDeviceInfoList(hDevInfo);
+	return TRUE;
+Error:
+	if (hDevInfo && hDevInfo != RegEnumParams->DevInfoSet)
+		SetupDiDestroyDeviceInfoList(hDevInfo);
+	return FALSE;
+}
+
+static BOOL l_EnumKey_Guids(KUSB_ENUM_REGKEY_PARAMS* RegEnumParams)
+{
+	DWORD devInfoDataIndex		= (DWORD) - 1;
+	DWORD length;
+	DWORD status;
+	CHAR devInterfaceGuidArray[1024];
+	BOOL success;
+
+	LPSTR setupEnumerator = "USB";
+	GUID* setupClassGuid = NULL;
+	DWORD setupAddFlags = DIGCF_ALLCLASSES;
+
+	if (RegEnumParams->PatternMatch)
+	{
+		// If a specific DeviceInterfaceGUID or InstanceID (or both) is set in the pattern match then we can
+		// use these value(s) to dramatically improve performance.
+		if (RegEnumParams->PatternMatch->DeviceInterfaceGUID[0] &&
+		        strlen(RegEnumParams->PatternMatch->DeviceInterfaceGUID) == GUID_STRING_LENGTH &&
+		        l_String_To_Guid(&RegEnumParams->DevInterfaceGuid, RegEnumParams->PatternMatch->DeviceInterfaceGUID))
+		{
+			// PatternMatch.DeviceInterfaceGUID specifies an *exact* DeviceInterfaceGUID.
+			RegEnumParams->Exclusive.DevInterfaceGuid = TRUE;
+
+			setupClassGuid	= &RegEnumParams->DevInterfaceGuid;
+			setupEnumerator = NULL;
+			setupAddFlags	= DIGCF_DEVICEINTERFACE;
+			strcpy(RegEnumParams->TempItem->DeviceInterfaceGUID, RegEnumParams->PatternMatch->DeviceInterfaceGUID);
+
+			/*
+			This is the 2nd best case performance scenario.  The result is:
+			Number of Calls  | Function
+			-----------------|----------------------------------------------------
+			1                | SetupDiGetClassDevs()
+			1-Per-Instance   | SetupDiEnumDeviceInterfaces()
+			4-Per-Interface  | SetupDiGetDeviceRegistryProperty()
+			1-Per-Interface  | SetupDiGetDeviceInterfaceDetail()
+			1-Per-Interface  | [libusb0 only] SetupDiOpenDeviceInterfaceRegKey()
+			1-Per-Interface  | [libusb0 only] RegQueryValueEx()
+			*/
+		}
+
+		if (RegEnumParams->PatternMatch->InstanceID[0] &&
+		        strchr(RegEnumParams->PatternMatch->InstanceID, '?') == NULL &&
+		        strchr(RegEnumParams->PatternMatch->InstanceID, '*') == NULL &&
+		        sscanf(RegEnumParams->PatternMatch->InstanceID, "USB\\VID_%04X&PID_%04X", &length, &status) == 2)
+		{
+			// PatternMatch.InstanceID specifies an *exact* InstanceID.
+			RegEnumParams->Exclusive.InstanceID = TRUE;
+
+			if (RegEnumParams->Exclusive.DevInterfaceGuid)
+			{
+				setupEnumerator = RegEnumParams->PatternMatch->InstanceID;
+
+				/*
+				This is the best case performance scenario.  The result is:
+				Number of Calls  | Function
+				-----------------|----------------------------------------------------
+				1                | SetupDiGetClassDevs()
+				1                | SetupDiEnumDeviceInterfaces()
+				4                | SetupDiGetDeviceRegistryProperty()
+				1                | SetupDiGetDeviceInterfaceDetail()
+				1                | [libusb0 only] SetupDiOpenDeviceInterfaceRegKey()
+				1                | [libusb0 only] RegQueryValueEx()
+				*/
+			}
+			else
+			{
+				setupClassGuid	= NULL;
+				setupEnumerator = RegEnumParams->TempItem->InstanceID;
+				setupAddFlags	= DIGCF_DEVICEINTERFACE | DIGCF_ALLCLASSES;
+				strcpy(RegEnumParams->TempItem->InstanceID, RegEnumParams->PatternMatch->InstanceID);
+
+				/*
+				This is the 3rd best case performance scenario.  The result is:
+				Number of Calls  | Function
+				-----------------|----------------------------------------------------
+				1                | SetupDiGetClassDevs()
+				1                | SetupDiEnumDeviceInfo()
+				1-Per-Interface  | SetupDiEnumDeviceInterfaces()
+				4-Per-Interface  | SetupDiGetDeviceRegistryProperty()
+				4-Per-Interface	 | SetupDiGetDeviceInterfaceDetail()
+				4-Per-Interface	 | [libusb0 only] SetupDiOpenDeviceInterfaceRegKey()
+				4-Per-Interface	 | [libusb0 only] RegQueryValueEx()
+				*/
+
+			}
+		}
 	}
 
-	if (!(RegEnumParams->Flags & KLST_FLAG_INCLUDE_DISCONNECT))
-		digcFlags |= DIGCF_PRESENT;
-
-	hDevInfo = SetupDiGetClassDevsA(&guidDevInterface, RegEnumParams->TempItem->InstanceID, NULL, digcFlags);
-	if (!IsHandleValid(hDevInfo))
+	RegEnumParams->DevInfoSet = SetupDiGetClassDevsA(setupClassGuid, setupEnumerator, NULL, RegEnumParams->DigcFlags | setupAddFlags);
+	if (!IsHandleValid(RegEnumParams->DevInfoSet))
 	{
 		USBDBGN("SetupDiGetClassDevs Failed. ErrorCode:%08Xh", GetLastError());
 		return TRUE;
 	}
 
-	memset(&deviceInterfaceData, 0, sizeof(deviceInterfaceData));
-	deviceInterfaceData.cbSize = sizeof(deviceInterfaceData);
-	if (!SetupDiEnumDeviceInterfaces(hDevInfo, NULL, &guidDevInterface, 0, &deviceInterfaceData))
+	RegEnumParams->DevInfoData.cbSize = sizeof(RegEnumParams->DevInfoData);
+	RegEnumParams->DevInterfaceData.cbSize = sizeof(RegEnumParams->DevInterfaceData);
+
+	do
 	{
-		USBDBGN("SetupDiEnumDeviceInterfaces Failed. ErrorCode:%08Xh", GetLastError());
-		SetupDiDestroyDeviceInfoList(hDevInfo);
-		return TRUE;
+		if (RegEnumParams->Exclusive.DevInterfaceGuid)
+		{
+			// If the DeviceInterfaceGUID is exclusive, go directly to SetupDiEnumDeviceInterfaces.
+			success = SetupDiEnumDeviceInterfaces(RegEnumParams->DevInfoSet, NULL, &RegEnumParams->DevInterfaceGuid, ++devInfoDataIndex, &RegEnumParams->DevInterfaceData);
+			if (!success) break;
+
+			// Get the DevicePath/SymbolicLink.
+			// SetupDiGetDeviceInterfaceDetail will also return the DevInfoData (Instance Information) for the interface.
+
+			// NOTE: This is also done in l_EnumKey_Instances for listings that do *not* use an exclusive DevInterfaceGuid.
+			mLst_Get_InterfaceDetail(RegEnumParams, RegEnumParams->DevInfoSet, (&RegEnumParams->DevInfoData), length, goto NextInstance);
+
+			// Update 'Connected' from DevInterfaceData.Flags
+			mLst_HandleConnectScenario(RegEnumParams, goto NextInstance);
+
+		}
+		else
+		{
+			success = SetupDiEnumDeviceInfo(RegEnumParams->DevInfoSet, ++devInfoDataIndex, &RegEnumParams->DevInfoData);
+			if (!success) break;
+		}
+
+		// Get the Device InstanceID
+		if (!SetupDiGetDeviceInstanceIdA(RegEnumParams->DevInfoSet, &RegEnumParams->DevInfoData, RegEnumParams->TempItem->InstanceID, sizeof(RegEnumParams->TempItem->InstanceID), NULL))
+		{
+			USBERRN("SetupDiGetDeviceInstanceId failed. ErrorCode:%08Xh", GetLastError());
+			goto NextInstance;
+		}
+
+		if (!RegEnumParams->Exclusive.InstanceID)
+		{
+			// We are only interested in *usb device* instances; not root hubs (or anything else)
+			if (_strnicmp(&RegEnumParams->TempItem->InstanceID[4], "VID_", 4) != 0)
+			{
+				USBDBGN("Skipping %s..", RegEnumParams->TempItem->InstanceID);
+				goto NextInstance;
+			}
+
+			// Apply PatternMatch->InstanceID
+			mLst_ApplyPatternMatch(RegEnumParams, InstanceID, goto NextInstance);
+		}
+
+		// Get SPDRP_SERVICE
+		if (!SetupDiGetDeviceRegistryPropertyA(RegEnumParams->DevInfoSet, &RegEnumParams->DevInfoData, SPDRP_SERVICE, NULL, (PBYTE)RegEnumParams->TempItem->Service, sizeof(RegEnumParams->TempItem->Service) - 1, NULL))
+		{
+			USBDBGN("SetupDiGetDeviceRegistryProperty SPDRP_SERVICE Failed. ErrorCode:%08Xh", GetLastError());
+			goto NextInstance;
+		}
+
+		RegEnumParams->TempItem->DriverID = -1;
+		mLst_Assign_DrvId_From_Service(RegEnumParams->TempItem->DriverID, RegEnumParams->TempItem->Service);
+
+		if (RegEnumParams->Exclusive.DevInterfaceGuid)
+		{
+			if (!l_EnumKey_Instances(RegEnumParams))
+			{
+				goto Error;
+			}
+		}
+		else if (RegEnumParams->TempItem->DriverID == -1)
+		{
+			// We only care about the libusb0 filter GUID for this device instance
+			memcpy(&RegEnumParams->DevInterfaceGuid, &Libusb0FilterGuid, sizeof(GUID));
+			strcpy(RegEnumParams->TempItem->DeviceInterfaceGUID, Libusb0FilterGuidA);
+			RegEnumParams->TempItem->DriverID = KUSB_DRVID_LIBUSB0_FILTER;
+
+			if (!l_EnumKey_Instances(RegEnumParams))
+			{
+				goto Error;
+			}
+		}
+		else
+		{
+			INT devInterfaceGuidArrayPos;
+			// The servicename matched a supported driver. EG: (libusbK, WinUSB, or libusb0)
+			// We care about the 'DeviceIntefaceGUIDs' multi-sz registry key.
+			HKEY hkeyDevInfo = SetupDiOpenDevRegKey(RegEnumParams->DevInfoSet, &RegEnumParams->DevInfoData, DICS_FLAG_GLOBAL, 0, DIREG_DEV, KEY_QUERY_VALUE);
+			if (!IsHandleValid(hkeyDevInfo))
+			{
+				USBERRN("SetupDiOpenDevRegKey Failed. ErrorCode:%08Xh", GetLastError());
+				goto NextInstance;
+			}
+
+			length = sizeof(devInterfaceGuidArray);
+			status = RegQueryValueExA(hkeyDevInfo, "DeviceInterfaceGUIDs", NULL, NULL, (LPBYTE)devInterfaceGuidArray, &length);
+			if (status != ERROR_SUCCESS)
+			{
+				USBERRN("RegQueryValueExA Failed. ErrorCode:%08Xh", GetLastError());
+				RegCloseKey(hkeyDevInfo);
+				goto NextInstance;
+			}
+			RegCloseKey(hkeyDevInfo);
+
+			devInterfaceGuidArrayPos = 0;
+			while(devInterfaceGuidArray[devInterfaceGuidArrayPos])
+			{
+				length = (DWORD)strlen(&devInterfaceGuidArray[devInterfaceGuidArrayPos]);
+				strcpy(RegEnumParams->TempItem->DeviceInterfaceGUID, &devInterfaceGuidArray[devInterfaceGuidArrayPos]);
+				if (l_String_To_Guid(&RegEnumParams->DevInterfaceGuid, RegEnumParams->TempItem->DeviceInterfaceGUID))
+				{
+					if (!l_EnumKey_Instances(RegEnumParams))
+					{
+						goto Error;
+					}
+				}
+				devInterfaceGuidArrayPos += length + 1;
+			}
+		}
+
+NextInstance:
+		;
 	}
+	while(success);
 
-	if (deviceInterfaceData.Flags & SPINT_REMOVED)
-	{
-		USBDBGN("SPINT_REMOVED: %s", RegEnumParams->TempItem->DeviceInterfaceGUID);
-		SetupDiDestroyDeviceInfoList(hDevInfo);
-		return TRUE;
-	}
+Error:
+	SetupDiDestroyDeviceInfoList(RegEnumParams->DevInfoSet);
+	return RegEnumParams->ErrorCode == ERROR_SUCCESS;
+}
 
-	RegEnumParams->TempItem->Connected = (deviceInterfaceData.Flags & SPINT_ACTIVE) ? TRUE : FALSE;
+#if 0
 
-	if (RegEnumParams->TempItem->Connected == FALSE && !(RegEnumParams->Flags & KLST_FLAG_INCLUDE_DISCONNECT))
-	{
-		USBDBGN("Excluding in-active device interface: %s", RegEnumParams->TempItem->DeviceInterfaceGUID);
-		SetupDiDestroyDeviceInfoList(hDevInfo);
-		return TRUE;
-	}
+static BOOL l_EnumKey_Guids_Direct(KUSB_ENUM_REGKEY_PARAMS* RegEnumParams)
+{
+	DWORD length;
+	DWORD status;
+	HKEY hKeyDeviceClassRoot;
+	DWORD iDeviceInterfaceGUID = (DWORD) - 1;
 
-	memset(&deviceInfoData, 0, sizeof(deviceInfoData));
-	deviceInfoData.cbSize = sizeof(deviceInfoData);
-	if (!SetupDiEnumDeviceInfo(hDevInfo, 0, &deviceInfoData))
-	{
-		USBDBGN("SetupDiEnumDeviceInfo Failed. ErrorCode:%08Xh", GetLastError());
-		SetupDiDestroyDeviceInfoList(hDevInfo);
-		return TRUE;
-	}
-
-	// DevicePath is equal to SymbolicLink unless it ends up being a libusb0 filter device
-	strcpy_s(RegEnumParams->TempItem->DevicePath, sizeof(RegEnumParams->TempItem->DevicePath), RegEnumParams->TempItem->SymbolicLink);
-
-	// query LUsb0
-	RegEnumParams->TempItem->LUsb0FilterIndex = (ULONG) - 1;
-	// e.g. HKLM\SYSTEM\CurrentControlSet\Control\DeviceClasses\{20343a29-6da1-4db8-8a3c-16e774057bf5}\##?#USB#VID_1234&PID_0001#BMD001#{20343a29-6da1-4db8-8a3c-16e774057bf5}\#\Device Parameters\LUsb0
-	status = l_GetReg_DWord(RegEnumParams->hOpenedKey, Name, "\\#\\Device Parameters", "LUsb0", (LPDWORD)&RegEnumParams->TempItem->LUsb0FilterIndex);
-
-	// Get SPDRP_SERVICE
-	if (!SetupDiGetDeviceRegistryPropertyA(hDevInfo, &deviceInfoData, SPDRP_SERVICE, NULL, (PBYTE)RegEnumParams->TempItem->Service, sizeof(RegEnumParams->TempItem->Service)-1, NULL))
-	{
-		USBDBGN("SetupDiGetDeviceRegistryPropertyA SPDRP_SERVICE Failed. ErrorCode:%08Xh", GetLastError());
-		SetupDiDestroyDeviceInfoList(hDevInfo);
-		return TRUE;
-	}
-
-	// Assign a supported driver
-	if (!l_Build_AssignDriver(RegEnumParams->TempItem))
-	{
-		SetupDiDestroyDeviceInfoList(hDevInfo);
-		return TRUE;
-	}
-
-	// Get SPDRP_DEVICEDESC
-	if (!SetupDiGetDeviceRegistryPropertyA(hDevInfo, &deviceInfoData, SPDRP_DEVICEDESC, NULL, (PBYTE)RegEnumParams->TempItem->DeviceDesc, sizeof(RegEnumParams->TempItem->DeviceDesc)-1, &length))
-		length = 0;
-	RegEnumParams->TempItem->DeviceDesc[length]=(CHAR)0;
-
-	// Get SPDRP_MFG
-	if (!SetupDiGetDeviceRegistryPropertyA(hDevInfo, &deviceInfoData, SPDRP_MFG, NULL, (PBYTE)RegEnumParams->TempItem->Mfg, sizeof(RegEnumParams->TempItem->Mfg)-1, &length))
-		length = 0;
-	RegEnumParams->TempItem->Mfg[length]=(CHAR)0;
-
-	// Get SPDRP_CLASSGUID
-	if (!SetupDiGetDeviceRegistryPropertyA(hDevInfo, &deviceInfoData, SPDRP_CLASSGUID, NULL, (PBYTE)RegEnumParams->TempItem->ClassGUID, sizeof(RegEnumParams->TempItem->ClassGUID)-1, &length))
-		length = 0;
-	RegEnumParams->TempItem->ClassGUID[length]=(CHAR)0;
-
-
-	/*
-	// query reference count (connected device instance id count)
-	// e.g. HKLM\SYSTEM\CurrentControlSet\Control\DeviceClasses\{20343a29-6da1-4db8-8a3c-16e774057bf5}\##?#USB#VID_1234&PID_0001#BMD001#{20343a29-6da1-4db8-8a3c-16e774057bf5}\Control\ReferenceCount
-	status = l_GetReg_DWord(RegEnumParams->hOpenedKey, Name, "\\Control", "ReferenceCount", &referenceCount);
+	status = RegOpenKeyExA(HKEY_LOCAL_MACHINE, KEY_DEVICECLASSES, 0, KEY_READ, &hKeyDeviceClassRoot);
 	if (status != ERROR_SUCCESS)
-		return TRUE;
-
-	if (!referenceCount && (!(RegEnumParams->Flags & KLST_FLAG_INCLUDE_DISCONNECT)))
-		return TRUE;
-
-	RegEnumParams->TempItem->Connected = referenceCount > 0;
-
-	if (!l_Build_FillProperties(RegEnumParams->TempItem))
 	{
-		SetupDiDestroyDeviceInfoList(hDevInfo);
-		return TRUE;
-	}
-	*/
-
-	RegEnumParams->ErrorCode = l_Build_AddElement(RegEnumParams->DeviceList, RegEnumParams->TempItem, &newDevItem, &isNewItem);
-	if (RegEnumParams->ErrorCode != ERROR_SUCCESS)
-	{
-		SetupDiDestroyDeviceInfoList(hDevInfo);
+		USBERRN("Opening 'DeviceClasses' registry key failed. ErrorCode=%08Xh", status);
 		return FALSE;
 	}
 
-	if (isNewItem)
-		l_Build_Common_Info(newDevItem);
-
-	SetupDiDestroyDeviceInfoList(hDevInfo);
-	return TRUE;
-}
-
-static BOOL l_EnumKey_Guids(LPCSTR Name, KUSB_ENUM_REGKEY_PARAMS* RegEnumParams)
-{
-	// enumeration device interface instances
-	// e.g. HKLM\SYSTEM\CurrentControlSet\Control\DeviceClasses\{20343a29-6da1-4db8-8a3c-16e774057bf5}\##?#USB#VID_1234&PID_0001#BMD001#{20343a29-6da1-4db8-8a3c-16e774057bf5}
-
-	KUSB_ENUM_REGKEY_PARAMS enumParamsInterfaceGUIDs;
-	BOOL success;
-
-	// If a Class guild was set, we
-	if (RegEnumParams->PatternMatch && RegEnumParams->PatternMatch->DeviceInterfaceGUID[0])
+	while(RegEnumKeyA(hKeyDeviceClassRoot, ++iDeviceInterfaceGUID, RegEnumParams->TempItem->DeviceInterfaceGUID, sizeof(RegEnumParams->TempItem->DeviceInterfaceGUID)) == ERROR_SUCCESS)
 	{
-		if (!AllK->PathMatchSpec(Name, RegEnumParams->PatternMatch->DeviceInterfaceGUID))
-			return TRUE;
+		HKEY hKeyDeviceInterfaceGUID;
+
+		if (!(RegEnumParams->Flags & KLST_FLAG_INCLUDE_RAWGUID))
+		{
+			if (_stricmp(RegEnumParams->TempItem->DeviceInterfaceGUID, RawDeviceGuidA) == 0) continue;
+		}
+
+		status = RegOpenKeyA(hKeyDeviceClassRoot, RegEnumParams->TempItem->DeviceInterfaceGUID, &hKeyDeviceInterfaceGUID);
+		if (status == ERROR_SUCCESS)
+		{
+			DWORD iSymbolicLink = (DWORD) - 1;
+
+			while(RegEnumKeyA(hKeyDeviceInterfaceGUID, ++iSymbolicLink, RegEnumParams->TempItem->SymbolicLink, sizeof(RegEnumParams->TempItem->SymbolicLink)) == ERROR_SUCCESS)
+			{
+				HKEY hKeySymbolicLink;
+
+				if (_strnicmp(RegEnumParams->TempItem->SymbolicLink, "##?#USB#VID_", 12) != 0) break;
+
+				status = RegOpenKeyA(hKeyDeviceInterfaceGUID, RegEnumParams->TempItem->SymbolicLink, &hKeySymbolicLink);
+				if (status == ERROR_SUCCESS)
+				{
+					length = sizeof(RegEnumParams->TempItem->InstanceID) - 1;
+					status = RegQueryValueExA(hKeySymbolicLink, "DeviceInstance", 0, NULL, (LPBYTE)RegEnumParams->TempItem->InstanceID, &length);
+					if (status == ERROR_SUCCESS)
+					{
+						HKEY hKeyDeviceParameters;
+						HDEVINFO hDevInfo;
+
+						RegEnumParams->TempItem->InstanceID[length] = '\0';
+
+						status = RegOpenKeyA(hKeySymbolicLink, "#\\Device Parameters", &hKeyDeviceParameters);
+						if (status == ERROR_SUCCESS)
+						{
+							length = sizeof(RegEnumParams->TempItem->LUsb0FilterIndex);
+							status = RegQueryValueExA(hKeyDeviceParameters, "LUsb0", 0, NULL, (LPBYTE)RegEnumParams->TempItem->LUsb0FilterIndex, &length);
+
+							RegCloseKey(hKeyDeviceParameters);
+
+							if (status != ERROR_SUCCESS || RegEnumParams->TempItem->LUsb0FilterIndex > 255 || RegEnumParams->TempItem->LUsb0FilterIndex < 0)
+								RegEnumParams->TempItem->LUsb0FilterIndex = -1;
+						}
+
+						RegEnumParams->TempItem->DriverID = -1;
+						mLst_Assign_DrvId_From_InterfaceGuid(RegEnumParams->TempItem->DriverID, RegEnumParams->TempItem->DeviceInterfaceGUID);
+
+						RegEnumParams->TempItem->SymbolicLink[0] = '\\';
+						RegEnumParams->TempItem->SymbolicLink[1] = '\\';
+						RegEnumParams->TempItem->SymbolicLink[2] = '?';
+						RegEnumParams->TempItem->SymbolicLink[3] = '\\';
+
+						strcpy(RegEnumParams->TempItem->DevicePath, RegEnumParams->TempItem->SymbolicLink);
+
+						RegEnumParams->TempItem->Connected = FALSE;
+
+						l_String_To_Guid(&RegEnumParams->DevInterfaceGuid, RegEnumParams->TempItem->DeviceInterfaceGUID);
+
+						hDevInfo = SetupDiGetClassDevsA(&RegEnumParams->DevInterfaceGuid, RegEnumParams->TempItem->InstanceID, NULL, DIGCF_PRESENT | DIGCF_DEVICEINTERFACE);
+						if (IsHandleValid(hDevInfo))
+						{
+							RegEnumParams->DevInterfaceData.cbSize = sizeof(RegEnumParams->DevInterfaceData);
+							if (SetupDiEnumDeviceInterfaces(hDevInfo, NULL, &RegEnumParams->DevInterfaceGuid, 0, &RegEnumParams->DevInterfaceData))
+							{
+								if (RegEnumParams->DevInterfaceData.Flags & SPINT_ACTIVE)
+								{
+									RegEnumParams->TempItem->Connected = TRUE;
+								}
+							}
+							SetupDiDestroyDeviceInfoList(hDevInfo);
+						}
+
+						USBDBGN("%s (%s) Connected:%u",
+						        RegEnumParams->TempItem->DeviceInterfaceGUID, RegEnumParams->TempItem->InstanceID, RegEnumParams->TempItem->Connected);
+
+#if 0
+						if (!RegEnumParams->TempItem->Connected)
+						{
+							DEVINST hDevInst;
+							if (CM_Locate_DevNodeA(&hDevInst, RegEnumParams->TempItem->InstanceID, CM_LOCATE_DEVNODE_NORMAL) == CR_SUCCESS)
+							{
+								// DWORD dnStatus;
+								// DWORD dnProblem;
+
+								RegEnumParams->TempItem->Connected = TRUE;
+
+								USBMSGN("%s (%s) Connected:TUE\n",
+								        RegEnumParams->TempItem->DeviceInterfaceGUID, RegEnumParams->TempItem->InstanceID);
+								if (CM_Get_DevNode_Status(&dnStatus, &dnProblem, hDevInst, 0) == CR_SUCCESS)
+								{
+									printf("%s (%s) Status:%08Xh Problem:%08Xh\n",
+									       RegEnumParams->TempItem->DeviceInterfaceGUID, RegEnumParams->TempItem->InstanceID, dnStatus, dnProblem);
+								}
+							}
+						}
+#endif
+					}
+					RegCloseKey(hKeySymbolicLink);
+				}
+			}
+			RegCloseKey(hKeyDeviceInterfaceGUID);
+		}
 	}
+	RegCloseKey(hKeyDeviceClassRoot);
 
-	if (!(RegEnumParams->Flags & KLST_FLAG_INCLUDE_RAWGUID))
-	{
-		if (_stricmp(Name, RawDeviceGuidA) == 0)
-			return TRUE;
-	}
-
-	memcpy(&enumParamsInterfaceGUIDs, RegEnumParams, sizeof(enumParamsInterfaceGUIDs));
-
-	enumParamsInterfaceGUIDs.EnumRegKeyCB	= l_EnumKey_Instances;
-	enumParamsInterfaceGUIDs.hParentKey		= RegEnumParams->hOpenedKey;
-	enumParamsInterfaceGUIDs.SubKey			= Name;
-	enumParamsInterfaceGUIDs.CurrentGUID    = Name;
-	enumParamsInterfaceGUIDs.TempItem		= RegEnumParams->TempItem;
-
-	success = l_Enum_RegKey(&enumParamsInterfaceGUIDs);
-	RegEnumParams->ErrorCode = enumParamsInterfaceGUIDs.ErrorCode;
-
-	return success;
+	//return RegEnumParams->ErrorCode == ERROR_SUCCESS;
+	return FALSE;
 }
+#endif
 
 KUSB_EXP BOOL KUSB_API LstK_Count(
     _in KLST_HANDLE DeviceList,
@@ -942,14 +1051,20 @@ KUSB_EXP BOOL KUSB_API LstK_InitEx(
 	enumParams.DeviceList		= handle;
 	enumParams.Flags			= Flags;
 	enumParams.PatternMatch		= PatternMatch;
-	enumParams.EnumRegKeyCB		= l_EnumKey_Guids;
-	enumParams.hParentKey		= HKEY_LOCAL_MACHINE;
-	enumParams.SubKey			= KEY_DEVICECLASSES;
 	enumParams.TempItem			= &TempItem;
 
-	// enumerate device interface guids
-	// e.g. HKLM\SYSTEM\CurrentControlSet\Control\DeviceClasses\{20343a29-6da1-4db8-8a3c-16e774057bf5}
-	if (l_Enum_RegKey(&enumParams))
+	if (!(Flags & KLST_FLAG_INCLUDE_DISCONNECT))
+		enumParams.DigcFlags |= DIGCF_PRESENT;
+
+#ifdef LSTK_TEST_MODE
+	if (!l_EnumKey_Guids_Direct(&enumParams))
+	{
+		success = FALSE;
+		goto Done;
+	}
+#endif
+
+	if (l_EnumKey_Guids(&enumParams))
 	{
 		PKLST_DEVINFO_EL devEL;
 		DL_FOREACH(handle->head, devEL)
@@ -958,7 +1073,9 @@ KUSB_EXP BOOL KUSB_API LstK_InitEx(
 		}
 		success = TRUE;
 	}
+	goto Done;
 
+Done:
 	if (success)
 	{
 		*DeviceList = (KLST_HANDLE)handle;
@@ -1150,8 +1267,9 @@ Error:
 
 KUSB_EXP BOOL KUSB_API LstK_Sync(
     _in KLST_HANDLE MasterList,
-    _in KLST_HANDLE SlaveList,
-    _inopt KLST_SYNC_FLAG SyncFlags)
+    _inopt KLST_HANDLE SlaveList,
+    _inopt KLST_SYNC_FLAG SyncFlags,
+    _inopt PKLST_PATTERN_MATCH SlaveListPatternMatch)
 {
 	KLST_SYNC_CONTEXT context;
 
@@ -1166,7 +1284,7 @@ KUSB_EXP BOOL KUSB_API LstK_Sync(
 	{
 		// Use a new list for the slave list
 		KLST_FLAG slaveListInit = KLST_FLAG_NONE;
-		ErrorNoSetAction(!LstK_Init(&SlaveList, slaveListInit), goto Error_IncRefSlave, "->PoolHandle_Inc_LstK");
+		ErrorNoSetAction(!LstK_InitEx(&SlaveList, slaveListInit, SlaveListPatternMatch), goto Error_IncRefSlave, "->PoolHandle_Inc_LstK");
 		context.Slave = (PKLST_HANDLE_INTERNAL)SlaveList;
 	}
 	else
