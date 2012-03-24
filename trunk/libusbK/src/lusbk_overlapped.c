@@ -27,8 +27,6 @@ binary distributions.
 #define mOvlK_IsComplete(mOverlappedK)	\
 	(WaitForSingleObject(((PKOVL_HANDLE_INTERNAL)mOverlappedK)->Overlapped.hEvent, 0) != WAIT_TIMEOUT)
 
-#define Ovl_SafeMemAlloc(mHeap,mSize) HeapAlloc(mHeap,HEAP_ZERO_MEMORY,mSize)
-
 static void KUSB_API Cleanup_OvlPoolK(PKOVL_POOL_HANDLE_INTERNAL handle)
 {
 	int i;
@@ -55,7 +53,7 @@ static void KUSB_API Cleanup_OvlK(PKOVL_HANDLE_INTERNAL handle)
 	{
 		if (DecLock(handle->Pool->MasterListCount) == 0)
 		{
-			HeapFree(AllK->Heap, 0, handle->Pool->MasterArray);
+			Mem_Free(&handle->Pool->MasterArray);
 			handle->Pool->AcquiredList = NULL;
 			handle->Pool->ReleasedList = NULL;
 			handle->Pool->MasterListCount = 0;
@@ -165,7 +163,7 @@ KUSB_EXP BOOL KUSB_API OvlK_Init(
 	ErrorSet(!PoolHandle_Inc_UsbK(usbHandle), UsbHandleError, ERROR_RESOURCE_NOT_AVAILABLE, "->PoolHandle_Inc_UsbK");
 	handle->UsbHandle	= usbHandle;
 
-	handle->MasterArray		= Ovl_SafeMemAlloc(AllK->Heap, MaxOverlappedCount * sizeof(KOVL_EL));
+	handle->MasterArray		= Mem_Alloc(sizeof(KOVL_EL));
 	ErrorMemory(!handle->MasterArray, Error);
 	handle->MasterListCount = MaxOverlappedCount;
 
