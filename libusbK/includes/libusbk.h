@@ -332,6 +332,13 @@ typedef struct _KLST_DEVINFO
 	//! Synchronization flags. (internal use only)
 	KLST_SYNC_FLAG SyncFlags;
 
+	INT BusNumber;
+
+	INT DeviceAddress;
+
+	//! If the the device is serialized, represents the string value of \ref USB_DEVICE_DESCRIPTOR::iSerialNumber. For Devices without a \b iSerialNumber, represents the unique \b InstanceID assigned by \b Windows.
+	CHAR SerialNumber[KLST_STRING_MAX_LEN];
+
 } KLST_DEVINFO;
 //! Pointer to a \ref KLST_DEVINFO structure. (semi-opaque)
 typedef KLST_DEVINFO* KLST_DEVINFO_HANDLE;
@@ -1937,6 +1944,37 @@ extern "C" {
 	*/
 	KUSB_EXP KLIB_USER_CONTEXT KUSB_API LibK_GetDefaultContext(
 	    _in KLIB_HANDLE_TYPE HandleType);
+
+//! Initializes the global libusbK process context.
+	/*!
+	*
+	* If this function is not called at startup, libusbK initializes the global libusbK process context automatically.
+	*
+	* \param[in] Heap
+	* A handle to the memory heap libusbK will use for dynamic memory allocation.
+	* \note The process context itself is always allocated from the proccess heap.
+	* \note If \b Heap is \b NULL, dynamic memory is allocated from the proccess heap.
+	*
+	* \param[in] Reserved
+	* Reserved for future use.  Must set to \b NULL.
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
+	*/
+	KUSB_EXP BOOL KUSB_API LibK_Context_Init(
+	    _inopt HANDLE Heap,
+	    _in PVOID Reserved);
+
+//! Frees the global libusbK process context.
+	/*!
+	*
+	* If this function is not called on exit, libusbK frees the global libusbK process context automatically when it terminates.
+	*
+	* \returns NONE.
+	*
+	*/
+	KUSB_EXP VOID KUSB_API LibK_Context_Free(VOID);
+
 
 	/**@}*/
 #endif

@@ -10,6 +10,8 @@ EXPORTS
     LibK_GetProcAddress
     LibK_SetDefaultContext
     LibK_GetDefaultContext
+    LibK_Context_Init
+    LibK_Context_Free
     
     UsbK_Init
     UsbK_ClaimInterface

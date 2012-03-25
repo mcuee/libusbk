@@ -65,6 +65,12 @@ typedef BOOL KUSB_API LibK_SetDefaultContext_T(
 typedef KLIB_USER_CONTEXT KUSB_API LibK_GetDefaultContext_T(
     _in KLIB_HANDLE_TYPE HandleType);
 
+typedef BOOL KUSB_API LibK_Context_Init_T(
+    _inopt HANDLE Heap,
+    _in PVOID Reserved);
+
+typedef VOID KUSB_API LibK_Context_Free_T(VOID);
+
 typedef BOOL KUSB_API UsbK_Init_T (
     _out KUSB_HANDLE* InterfaceHandle,
     _in KLST_DEVINFO_HANDLE DevInfo);
@@ -435,6 +441,10 @@ static LibK_SetDefaultContext_T* pLibK_SetDefaultContext = NULL;
 
 static LibK_GetDefaultContext_T* pLibK_GetDefaultContext = NULL;
 
+static LibK_Context_Init_T* pLibK_Context_Init = NULL;
+
+static LibK_Context_Free_T* pLibK_Context_Free = NULL;
+
 static UsbK_Init_T* pUsbK_Init = NULL;
 
 static UsbK_Free_T* pUsbK_Free = NULL;
@@ -606,6 +616,10 @@ VOID LibusbK_DynApi_Free(VOID)
 		pLibK_SetDefaultContext = NULL;
 
 		pLibK_GetDefaultContext = NULL;
+
+		pLibK_Context_Init = NULL;
+
+		pLibK_Context_Free = NULL;
 
 		pUsbK_Init = NULL;
 
@@ -822,6 +836,18 @@ INT LibusbK_DynApi_Init(_inopt LPCSTR DllFullPathName)
 	{
 		funcLoadFailCount++;
 		OutputDebugStringA("Failed loading function LibK_GetDefaultContext.\n");
+	}
+
+	if ((pLibK_Context_Init = (LibK_Context_Init_T*)GetProcAddress(mLibusbK_ModuleHandle, "LibK_Context_Init")) == NULL)
+	{
+		funcLoadFailCount++;
+		OutputDebugStringA("Failed loading function LibK_Context_Init.\n");
+	}
+
+	if ((pLibK_Context_Free = (LibK_Context_Free_T*)GetProcAddress(mLibusbK_ModuleHandle, "LibK_Context_Free")) == NULL)
+	{
+		funcLoadFailCount++;
+		OutputDebugStringA("Failed loading function LibK_Context_Free.\n");
 	}
 
 	if ((pUsbK_Init = (UsbK_Init_T*)GetProcAddress(mLibusbK_ModuleHandle, "UsbK_Init")) == NULL)
@@ -1314,6 +1340,18 @@ KUSB_EXP KLIB_USER_CONTEXT KUSB_API LibK_GetDefaultContext(
     _in KLIB_HANDLE_TYPE HandleType)
 {
 	return pLibK_GetDefaultContext(HandleType);
+}
+
+KUSB_EXP BOOL KUSB_API LibK_Context_Init(
+    _inopt HANDLE Heap,
+    _in PVOID Reserved)
+{
+	return pLibK_Context_Init(Heap, Reserved);
+}
+
+KUSB_EXP VOID KUSB_API LibK_Context_Free(VOID)
+{
+	pLibK_Context_Free();
 }
 
 KUSB_EXP BOOL KUSB_API UsbK_Init (
