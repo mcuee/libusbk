@@ -252,6 +252,7 @@ static LPCSTR DescriptorTypeString[] =
 	_TAB_DEC();								\
 	WRITERAW(DESC_MARK_END KLIST_CATEGORY_FORMAT format KLIST_LN,CategoryName,__VA_ARGS__) \
  
+#define PrintfDeviceElementEx(DeviceListFieldName,mFieldFormat) printf("    %-21s: " DEFINE_TO_STR(mFieldFormat) "\n",DEFINE_TO_STR(DeviceListFieldName),deviceElement->DeviceListFieldName)
 #define PrintfDeviceElement(DeviceListFieldName) printf("    %-21s: %s\n",DEFINE_TO_STR(DeviceListFieldName),deviceElement->DeviceListFieldName)
 
 #define IsDescValid(DescriptorPtr, RemainingTotalSize)\
@@ -292,6 +293,7 @@ int __cdecl main(int argc, char** argv)
 	KLST_FLAG lstFlags = KLST_FLAG_NONE;
 	KLST_PATTERN_MATCH patternMatch;
 	PKLST_PATTERN_MATCH pPatternMatch = NULL;
+	HANDLE hHeap = NULL;
 
 	UNREFERENCED_PARAMETER(argc);
 	UNREFERENCED_PARAMETER(argv);
@@ -327,10 +329,15 @@ int __cdecl main(int argc, char** argv)
 
 	pPatternMatch = &patternMatch;
 
+	hHeap = HeapCreate(HEAP_NO_SERIALIZE, 0, 0);
+
+	LibK_Context_Init(hHeap, NULL);
+
 	if (!LstK_InitEx(&deviceList, lstFlags, pPatternMatch))
 	{
 		printf("failed getting device list.\n");
 		ec = WinError(0);
+		HeapDestroy(hHeap);
 		return ec;
 	}
 
@@ -356,6 +363,10 @@ int __cdecl main(int argc, char** argv)
 		PrintfDeviceElement(DeviceInterfaceGUID);
 		PrintfDeviceElement(SymbolicLink);
 		PrintfDeviceElement(DevicePath);
+		PrintfDeviceElement(SerialNumber);
+		PrintfDeviceElementEx(BusNumber, % u);
+		PrintfDeviceElementEx(DeviceAddress, % u);
+
 		printf("\n");
 
 		devicePos++;
@@ -411,6 +422,9 @@ int __cdecl main(int argc, char** argv)
 
 Done:
 	LstK_Free(deviceList);
+	LibK_Context_Free();
+	if (hHeap) HeapDestroy(hHeap);
+
 	return ec;
 }
 

@@ -380,21 +380,11 @@ Error:
 static DWORD l_Build_AddElement(
     PKLST_HANDLE_INTERNAL DeviceList,
     KLST_DEVINFO_HANDLE SrcDevInfo,
-    PKLST_DEVINFO_EL* clonedDevInfo,
-    PBOOL IsNew)
+    PKLST_DEVINFO_EL* clonedDevInfo)
 {
 	PKLST_DEVINFO_HANDLE_INTERNAL clonedHandle = NULL;
-	KLST_DEVINFO_EL* existingEntry;
 
 	*clonedDevInfo = NULL;
-
-	DL_SEARCH(DeviceList->head, existingEntry, SrcDevInfo->SymbolicLink, Match_DevItem_SymbolicLink);
-	if (existingEntry)
-	{
-		*IsNew = FALSE;
-		*clonedDevInfo = existingEntry;
-		return ERROR_SUCCESS;
-	}
 
 	if (!l_Alloc_DevInfo(&clonedHandle)) goto Error;
 	memcpy(&clonedHandle->DevInfoEL->Public, SrcDevInfo, sizeof(clonedHandle->DevInfoEL->Public));
@@ -406,7 +396,6 @@ static DWORD l_Build_AddElement(
 	clonedHandle->DevInfoEL->DevInfoHandle = clonedHandle;
 	DL_APPEND(DeviceList->head, clonedHandle->DevInfoEL);
 
-	*IsNew = TRUE;
 	*clonedDevInfo = clonedHandle->DevInfoEL;
 	return ERROR_SUCCESS;
 
@@ -471,11 +460,9 @@ static void l_Build_Common_Info(__in PKLST_DEVINFO_EL devItem)
 static BOOL l_EnumKey_Instances(KUSB_ENUM_REGKEY_PARAMS* RegEnumParams)
 {
 	LONG status;
-	BOOL isNewItem;
 	PKLST_DEVINFO_EL newDevItem = NULL;
 	HDEVINFO hDevInfo = NULL;
 	DWORD length;
-	// PSP_DEVICE_INTERFACE_DETAIL_DATA_A pDevInterfaceDetailData;
 	DWORD iDeviceInterface = (DWORD) - 1;
 
 	if (!RegEnumParams->Exclusive.DevInterfaceGuid)
@@ -578,14 +565,45 @@ static BOOL l_EnumKey_Instances(KUSB_ENUM_REGKEY_PARAMS* RegEnumParams)
 			length = 0;
 		RegEnumParams->TempItem->Mfg[length] = (CHAR)0;
 
-		RegEnumParams->ErrorCode = l_Build_AddElement(RegEnumParams->DeviceList, RegEnumParams->TempItem, &newDevItem, &isNewItem);
+		// Get SPDRP_BUSNUMBER
+		if (!SetupDiGetDeviceRegistryPropertyA(RegEnumParams->DevInfoSet, &RegEnumParams->DevInfoData, SPDRP_BUSNUMBER, NULL, (PBYTE)&RegEnumParams->TempItem->BusNumber, sizeof(RegEnumParams->TempItem->BusNumber), &length))
+			RegEnumParams->TempItem->BusNumber = -1;
+
+		// Get SPDRP_ADDRESS
+		if (!SetupDiGetDeviceRegistryPropertyA(RegEnumParams->DevInfoSet, &RegEnumParams->DevInfoData, SPDRP_ADDRESS, NULL, (PBYTE)&RegEnumParams->TempItem->DeviceAddress, sizeof(RegEnumParams->TempItem->DeviceAddress), &length))
+			RegEnumParams->TempItem->DeviceAddress = -1;
+
+		RegEnumParams->ErrorCode = l_Build_AddElement(RegEnumParams->DeviceList, RegEnumParams->TempItem, &newDevItem);
 		if (RegEnumParams->ErrorCode != ERROR_SUCCESS)
 		{
 			goto Error;
 		}
 
-		if (isNewItem)
-			l_Build_Common_Info(newDevItem);
+		l_Build_Common_Info(newDevItem);
+
+		strcpy(newDevItem->Public.SerialNumber, newDevItem->Public.DeviceID);
+		_strupr(newDevItem->Public.SerialNumber);
+		if (strstr(newDevItem->Public.SerialNumber, "&MI_") != NULL)
+		{
+			// This is a composite device.  The 'SerialNumber' will come from the parent device.
+
+			DWORD hParentInst;
+			if (AllK->CM_Get_Parent(&hParentInst, RegEnumParams->DevInfoData.DevInst, 0) == ERROR_SUCCESS)
+			{
+				if (AllK->CM_Get_Device_ID(hParentInst, newDevItem->Public.SerialNumber, sizeof(newDevItem->Public.SerialNumber) - 1, 0) == ERROR_SUCCESS)
+				{
+					PCHAR sep = newDevItem->Public.SerialNumber;
+					PCHAR sepNext;
+					while( (sepNext = strchr(sep, '\\')) != NULL )
+						sep = sepNext + 1;
+
+					strcpy(newDevItem->Public.SerialNumber, sep);
+					goto NextInstance;
+				}
+			}
+		}
+
+		strcpy(newDevItem->Public.SerialNumber, newDevItem->Public.Common.InstanceID);
 
 NextInstance:
 		;

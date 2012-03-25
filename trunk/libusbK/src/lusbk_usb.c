@@ -23,6 +23,8 @@ binary distributions.
 // Default loggging level
 ULONG DebugLevel = 4;
 
+volatile long AllKInitLock = 0;
+
 // warning C4127: conditional expression is constant.
 #pragma warning(disable: 4127)
 
@@ -35,6 +37,9 @@ ULONG DebugLevel = 4;
 	else																						\
 		fnIdCount++;																			\
 	break
+
+#define ALLK_DBG_PRINT_SECTION(AllKSection)	\
+	USBLOG_PRINTLN("  %u %s Handles: HandleSize %u PoolSize %u (bytes)",(sizeof(AllK->AllKSection.Handles)/sizeof(AllK->AllKSection.Handles[0])),DEFINE_TO_STR(AllKSection),sizeof(AllK->AllKSection.Handles[0]), sizeof(AllK->AllKSection))
 
 VOID WUsb_Init_Library();
 BOOL GetProcAddress_Base(__out KPROC* ProcAddress, __in LONG FunctionID);
@@ -466,4 +471,138 @@ KUSB_EXP BOOL KUSB_API LibK_SetDefaultContext(
 
 	LusbwError(ERROR_INVALID_HANDLE);
 	return FALSE;
+}
+
+KUSB_EXP BOOL KUSB_API LibK_Context_Init(
+    _inopt HANDLE Heap,
+    _in PVOID Reserved)
+{
+	HMODULE kernel32_dll;
+	HANDLE processHeap;
+	UNREFERENCED_PARAMETER(Reserved);
+
+	if (AllK) return TRUE;
+
+	mSpin_Acquire(&AllKInitLock);
+	if (AllK)
+	{
+		mSpin_Release(&AllKInitLock);
+		return TRUE;
+	}
+
+	kernel32_dll = GetModuleHandleA("kernel32");
+
+	processHeap = GetProcessHeap();
+	ErrorMemory(processHeap == NULL, Error);
+
+	AllK = HeapAlloc(processHeap, HEAP_ZERO_MEMORY, sizeof(ALLK_CONTEXT));
+	ErrorMemory(AllK == NULL, Error);
+
+	AllK->HeapProcess = processHeap;
+	AllK->HeapDynamic = Heap;
+	if (AllK->HeapDynamic == NULL) AllK->HeapDynamic = AllK->HeapProcess;
+
+	AllK->Dlls.hShlwapi = LoadLibraryA("shlwapi");
+	AllK->Dlls.hWinTrust = LoadLibraryA("wintrust");
+	AllK->Dlls.hCfgMgr32 = LoadLibraryA("cfgmgr32");
+
+	// one-time AllK initialize
+	USBLOG_PRINTLN("");
+	USBLOG_PRINTLN("AllK required contiguous memory = %u (%sbit)", sizeof(ALLK_CONTEXT), sizeof(PVOID) == 8 ? "64" : "32");
+	ALLK_DBG_PRINT_SECTION(HotK);
+	ALLK_DBG_PRINT_SECTION(LstK);
+	ALLK_DBG_PRINT_SECTION(LstInfoK);
+	ALLK_DBG_PRINT_SECTION(UsbK);
+	ALLK_DBG_PRINT_SECTION(DevK);
+	ALLK_DBG_PRINT_SECTION(OvlK);
+	ALLK_DBG_PRINT_SECTION(OvlPoolK);
+	ALLK_DBG_PRINT_SECTION(StmK);
+	USBLOG_PRINTLN("");
+
+	AllK->PathMatchSpec = (KDYN_PathMatchSpec*)GetProcAddress(AllK->Dlls.hShlwapi, "PathMatchSpecA");
+	AllK->CancelIoEx	= (KDYN_CancelIoEx*)GetProcAddress(kernel32_dll, "CancelIoEx");
+
+	AllK->CM_Get_Device_ID	= (KDYN_CM_Get_Device_ID*)GetProcAddress(AllK->Dlls.hCfgMgr32, "CM_Get_Device_IDA");
+	AllK->CM_Get_Parent		= (KDYN_CM_Get_Parent*)GetProcAddress(AllK->Dlls.hCfgMgr32, "CM_Get_Parent");
+
+	AllK->DevK.Index = -1;
+	AllK->HotK.Index = -1;
+	AllK->LstInfoK.Index = -1;
+	AllK->LstK.Index = -1;
+	AllK->OvlK.Index = -1;
+	AllK->OvlPoolK.Index = -1;
+	AllK->StmK.Index = -1;
+	AllK->UsbK.Index = -1;
+
+	USBLOG_PRINTLN("Dynamically allocated as needed:");
+	USBLOG_PRINTLN("\tKLST_DEVINFO = %u bytes each", sizeof(KLST_DEVINFO));
+
+	mSpin_Release(&AllKInitLock);
+	return TRUE;
+
+Error:
+	AllK = NULL;
+	mSpin_Release(&AllKInitLock);
+	return FALSE;
+}
+
+KUSB_EXP VOID KUSB_API LibK_Context_Free(VOID)
+{
+	if (!AllK) return;
+
+	mSpin_Acquire(&AllKInitLock);
+	if (!AllK)
+	{
+		mSpin_Release(&AllKInitLock);
+		return;
+	}
+
+#ifdef DEBUG_LOGGING_ENABLED
+	POOLHANDLE_LIB_EXIT_CHECK(HotK);
+	POOLHANDLE_LIB_EXIT_CHECK(LstK);
+	POOLHANDLE_LIB_EXIT_CHECK(LstInfoK);
+	POOLHANDLE_LIB_EXIT_CHECK(UsbK);
+	POOLHANDLE_LIB_EXIT_CHECK(DevK);
+	POOLHANDLE_LIB_EXIT_CHECK(OvlK);
+	POOLHANDLE_LIB_EXIT_CHECK(OvlPoolK);
+	POOLHANDLE_LIB_EXIT_CHECK(StmK);
+#endif
+
+	if (AllK->Dlls.hShlwapi)
+	{
+		FreeLibrary(AllK->Dlls.hShlwapi);
+		AllK->Dlls.hShlwapi = NULL;
+	}
+	if (AllK->Dlls.hCfgMgr32)
+	{
+		FreeLibrary(AllK->Dlls.hCfgMgr32);
+		AllK->Dlls.hCfgMgr32 = NULL;
+	}
+
+	// WinTrust is used dynamically by the SetupAPI, libusbK does not use it.
+	// It is loaded to prevent excessive loading/unloading when using LstK.
+	if (AllK->Dlls.hWinTrust)
+	{
+		FreeLibrary(AllK->Dlls.hWinTrust);
+		AllK->Dlls.hWinTrust = NULL;
+	}
+
+	// We do not destroy the dynamic heap, this was passed via
+	// LibK_Init_Context.  IE: It was allocated by the user
+	// so the user is responsible for freeing it.
+	AllK->HeapDynamic = NULL;
+
+	if (AllK->HeapProcess != NULL)
+	{
+		HANDLE heapProcess = AllK->HeapProcess;
+		AllK->HeapProcess = NULL;
+
+		HeapFree(heapProcess, 0, AllK);
+
+	}
+
+	AllK = NULL;
+
+	mSpin_Release(&AllKInitLock);
+
 }

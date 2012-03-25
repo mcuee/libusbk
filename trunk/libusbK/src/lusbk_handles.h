@@ -653,10 +653,14 @@ typedef struct
 	{
 		HMODULE hShlwapi;
 		HMODULE hWinTrust;
+		HMODULE hCfgMgr32;
 	} Dlls;
 	// Dynamic Function:
 	BOOL (WINAPI* CancelIoEx)(HANDLE DeviceHandle, KOVL_HANDLE Overlapped);
 	KDYN_PathMatchSpec* PathMatchSpec;
+
+	KDYN_CM_Get_Device_ID* CM_Get_Device_ID;
+	KDYN_CM_Get_Parent* CM_Get_Parent;
 
 	DEF_POOLED_HANDLE_STRUCT(HotK,		KHOT_HANDLE_INTERNAL,			KHOT_HANDLE_COUNT);
 	DEF_POOLED_HANDLE_STRUCT(LstK,		KLST_HANDLE_INTERNAL,			KLST_HANDLE_COUNT);
@@ -674,21 +678,13 @@ extern PALLK_CONTEXT AllK;
 //////////////////////////////////////////////////////////////////////////////
 // Inline memory allocation functions.
 //
-
-FORCEINLINE PVOID KUSB_API Mem_Alloc(__in size_t size)
-{
-	PVOID memory = HeapAlloc(AllK->HeapDynamic, HEAP_ZERO_MEMORY, size);
-	if (!memory) LusbwError(ERROR_NOT_ENOUGH_MEMORY);
-	return memory;
-}
+#define Mem_Alloc(mAllocSize) HeapAlloc(AllK->HeapDynamic, HEAP_ZERO_MEMORY, mAllocSize)
 
 FORCEINLINE VOID KUSB_API Mem_Free(__deref_inout_opt PVOID* memoryRef)
 {
-	if (memoryRef)
+	if (memoryRef && IsHandleValid(*memoryRef))
 	{
-		if (IsHandleValid(*memoryRef))
-			HeapFree(AllK->HeapDynamic, 0, *memoryRef);
-
+		HeapFree(AllK->HeapDynamic, 0, *memoryRef);
 		*memoryRef = NULL;
 	}
 }

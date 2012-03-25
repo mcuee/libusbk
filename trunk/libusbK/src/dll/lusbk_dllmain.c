@@ -21,7 +21,7 @@ binary distributions.
 
 #if defined(DYNAMIC_DLL)
 
-VOID WINAPI AllK_Context_Free(VOID);
+VOID WINAPI LibK_Context_Free(VOID);
 
 // warning C4127: conditional expression is constant.
 #pragma warning(disable: 4127)
@@ -35,13 +35,9 @@ BOOL WINAPI DllMain(HANDLE module, DWORD reason, LPVOID reserved)
 	switch (reason)
 	{
 	case DLL_PROCESS_ATTACH:
-		if (!CheckLibInit())
-		{
-			return FALSE;
-		}
 		break;
 	case DLL_PROCESS_DETACH:
-		AllK_Context_Free();
+		LibK_Context_Free();
 		break;
 	case DLL_THREAD_ATTACH:
 		break;

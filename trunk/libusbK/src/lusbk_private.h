@@ -108,6 +108,19 @@ typedef struct _USER_PIPE_POLICY
 typedef BOOL WINAPI KDYN_CancelIoEx(HANDLE, KOVL_HANDLE);
 typedef BOOL WINAPI KDYN_PathMatchSpec(__in LPCSTR pszFile, __in LPCSTR pszSpec);
 
+typedef UINT WINAPI KDYN_CM_Get_Device_ID(
+    _in   DWORD dnDevInst,
+    _out  LPSTR Buffer,
+    _in   UINT BufferLen,
+    _in   UINT ulFlags
+);
+
+typedef UINT WINAPI KDYN_CM_Get_Parent(
+    _out  PDWORD pdnDevInst,
+    _in   DWORD dnDevInst,
+    _in   UINT ulFlags
+);
+
 typedef BOOL KUSB_API KOVL_OVERLAPPED_CANCEL_CB (__in KOVL_HANDLE Overlapped);
 
 FORCEINLINE BOOL LusbwError(__in LONG errorCode)
