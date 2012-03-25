@@ -1,5 +1,9 @@
 LIBUSBK RELEASE NOTES
 
+V3.0.5.12 RC12 (03/24/2012)
+==============================================
+- Added support for Windows 8 Consumer Preview
+
 V3.0.5.10 RC10 (03/08/2012)
 ==============================================
 - New 'LibK_SetDefaultContext' function.

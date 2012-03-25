@@ -300,17 +300,19 @@ int __cdecl main(int argc, char** argv)
 
 	for (iArg = 1; iArg < argc; iArg++)
 	{
-		if (_stricmp(argv[iArg], "DISCONNECT") == 0)
+		if (_stricmp(argv[iArg], "A") == 0)
 			lstFlags |= KLST_FLAG_INCLUDE_DISCONNECT;
 		else if (_stricmp(argv[iArg], "RAWGUID") == 0)
 			lstFlags |= KLST_FLAG_INCLUDE_RAWGUID;
-		else if ((iArg + 1 < argc) && _stricmp(argv[iArg], "InterfaceGUID") == 0)
+		else if ((iArg + 1 < argc) && _stricmp(argv[iArg], "/C") == 0)
+			strcpy(patternMatch.ClassGUID, argv[++iArg]);
+		else if ((iArg + 1 < argc) && _stricmp(argv[iArg], "/I") == 0)
 			strcpy(patternMatch.DeviceInterfaceGUID, argv[++iArg]);
-		else if ((iArg + 1 < argc) && _stricmp(argv[iArg], "InstanceID") == 0)
-			strcpy(patternMatch.InstanceID, argv[++iArg]);
+		else if ((iArg + 1 < argc) && _stricmp(argv[iArg], "/D") == 0)
+			strcpy(patternMatch.DeviceID, argv[++iArg]);
 		else
 		{
-			if (_stricmp(argv[iArg], "/?") != 0 && _stricmp(argv[iArg], "HELP") != 0)
+			if (_stricmp(argv[iArg], "?") != 0 && _stricmp(argv[iArg], "/?") != 0 && _stricmp(argv[iArg], "HELP") != 0)
 				printf("Invalid argument: '%s'\n", argv[iArg]);
 
 			ShowHelp();
@@ -350,7 +352,7 @@ int __cdecl main(int argc, char** argv)
 
 		PrintfDeviceElement(Service);
 		PrintfDeviceElement(ClassGUID);
-		PrintfDeviceElement(InstanceID);
+		PrintfDeviceElement(DeviceID);
 		PrintfDeviceElement(DeviceInterfaceGUID);
 		PrintfDeviceElement(SymbolicLink);
 		PrintfDeviceElement(DevicePath);
