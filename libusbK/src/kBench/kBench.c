@@ -1587,7 +1587,7 @@ int GetTestDeviceFromArgs(PBENCHMARK_TEST_PARAM test)
 		LibK_SetContext(deviceInfo, KLIB_HANDLE_TYPE_LSTINFOK, (KLIB_USER_CONTEXT)FALSE);
 
 		memset(id, 0, sizeof(id));
-		strcpy_s(id, MAX_PATH - 1, deviceInfo->InstanceID);
+		strcpy_s(id, MAX_PATH - 1, deviceInfo->DeviceID);
 		_strlwr_s(id, MAX_PATH);
 
 		if ( (chID = strstr(id, "vid_")) != NULL)
@@ -1620,7 +1620,7 @@ int GetTestDeviceFromList(PBENCHMARK_TEST_PARAM test)
 		while (LstK_MoveNext(test->DeviceList, &deviceInfo))
 		{
 			count++;
-			CONMSG("%02u. %s (%s) [%s]\n", count, deviceInfo->DeviceDesc, deviceInfo->InstanceID, GetDrvIdString(deviceInfo->DriverID));
+			CONMSG("%02u. %s (%s) [%s]\n", count, deviceInfo->DeviceDesc, deviceInfo->DeviceID, GetDrvIdString(deviceInfo->DriverID));
 		}
 
 		return ERROR_SUCCESS;
@@ -1629,7 +1629,7 @@ int GetTestDeviceFromList(PBENCHMARK_TEST_PARAM test)
 	{
 		while (LstK_MoveNext(test->DeviceList, &deviceInfo) && count < 9)
 		{
-			CONMSG("%u. %s (%s) [%s]\n", count + 1, deviceInfo->DeviceDesc, deviceInfo->InstanceID, GetDrvIdString(deviceInfo->DriverID));
+			CONMSG("%u. %s (%s) [%s]\n", count + 1, deviceInfo->DeviceDesc, deviceInfo->DeviceID, GetDrvIdString(deviceInfo->DriverID));
 			count++;
 
 			// enabled
@@ -1741,7 +1741,7 @@ int __cdecl main(int argc, char** argv)
 	if (!Bench_Open(&Test))
 		goto Done;
 
-	CONMSG("opened %s (%s)..\n", Test.SelectedDeviceProfile->DeviceDesc, Test.SelectedDeviceProfile->InstanceID);
+	CONMSG("opened %s (%s)..\n", Test.SelectedDeviceProfile->DeviceDesc, Test.SelectedDeviceProfile->DeviceID);
 
 	// If "NoTestSelect" appears in the command line then don't send the control
 	// messages for selecting the test type.

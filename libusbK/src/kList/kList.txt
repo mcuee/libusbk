@@ -1,18 +1,20 @@
 
-USAGE: kList [disconnect] [help]
-             [interfaceguid <guid>] [instanceid <instanceid>]
+USAGE: kList [A] [?]
+             [/C <class-guid>] [/I <interface-guid>] [/D <device-id>]
                  
 Commands:
-  help (/?)  : Show this help text.
-  disconnect : Include devices that are not currently connected.
+  ?    : Show this help text.
+  A    : Show all known supported devices; including devices
+         that are not currently connected.
                         
 Switches:
-  interfaceguid : Include only devices matching the specified
-                  'DeviceInterfaceGUID'
-  instanceid    : Include only devices matching the specified
-                  'InstanceID'
+  /C   : Include only devices matching the specified 'ClassGUID'
+  /I   : Include only devices matching the specified 'DeviceInterfaceGUID'
+  /D   : Include only devices matching the specified 'DeviceID'
           
 Examples:
 
-kList disconnect instanceid "USB\VID_04D8*" 
-kList interfaceguid "{F676DCF6-FDFE-E0A9-FC12-8057DBE8E4B8}"
+kList A /D "USB\VID_04D8*" 
+kList /I "{F676DCF6-FDFE-E0A9-FC12-8057DBE8E4B8}"
+kList /C "{ECFB0CFD-74C4-4F52-BBF7-343461CD72AC}"
+kList /C "{ECFB0CFD-74C4-4F52-BBF7-343461CD72AC}" /D "USB\VID_04D8*"

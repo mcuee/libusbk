@@ -30,11 +30,6 @@ binary distributions.
 #define IDT_KHOT_DBT_DEVICEARRIVAL			0xB
 #define IDT_KHOT_DBT_DEVICEREMOVAL			0xC
 
-#define IsPatternMatch(IsMatch,HotHandle,DeviceInfo,FieldName) if (strlen(HotHandle->Public.PatternMatch.FieldName)) {		\
-		if (!AllK->PathMatchSpec(DeviceInfo->FieldName, HotHandle->Public.PatternMatch.FieldName))										\
-			IsMatch = FALSE;																									\
-	}
-
 #define KUSB_STR_EL_CLEANUP(StrElList, StrEL, StrTmp)	\
 	DL_FOREACH_SAFE(StrElList, StrEL, StrTmp)			\
 	{													\
@@ -168,42 +163,6 @@ static BOOL KUSB_API h_DevEnum_ClearSyncResults(KLST_HANDLE DeviceList, KLST_DEV
 	return TRUE;
 }
 
-static BOOL h_String_To_Guid(__inout GUID* GuidVal, __in LPCSTR GuidString)
-{
-	int scanCount;
-	UCHAR guidChars[11 * sizeof(int)];
-	GUID* Guid = (GUID*)&guidChars;
-
-
-	if (GuidString[0] == '{') GuidString++;
-
-	scanCount = sscanf_s(GuidString, GUID_FORMAT_STRING,
-	                     &Guid->Data1,
-	                     &Guid->Data2,
-	                     &Guid->Data3,
-	                     &Guid->Data4[0], &Guid->Data4[1], &Guid->Data4[2], &Guid->Data4[3],
-	                     &Guid->Data4[4], &Guid->Data4[5], &Guid->Data4[6], &Guid->Data4[7]);
-
-	if (scanCount == 11)
-		memcpy(GuidVal, &guidChars, sizeof(GUID));
-
-	return (scanCount == 11);
-}
-
-static BOOL h_Guid_To_String(__in GUID* Guid, __inout LPSTR GuidString)
-{
-	int guidLen;
-
-	guidLen = sprintf(GuidString, "{"GUID_FORMAT_STRING"}",
-	                  Guid->Data1,
-	                  Guid->Data2,
-	                  Guid->Data3,
-	                  Guid->Data4[0], Guid->Data4[1], Guid->Data4[2], Guid->Data4[3],
-	                  Guid->Data4[4], Guid->Data4[5], Guid->Data4[6], Guid->Data4[7]);
-
-	return (guidLen == GUID_STRING_LENGTH);
-}
-
 static BOOL h_Wait_Hwnd(BOOL WaitForExit)
 {
 	if (WaitForExit)
@@ -236,18 +195,15 @@ static BOOL h_Wait_Hwnd(BOOL WaitForExit)
 
 static BOOL h_IsHotMatch(PKHOT_HANDLE_INTERNAL HotHandle, KLST_DEVINFO_HANDLE DeviceInfo)
 {
-	BOOL isMatch = TRUE;
+	if (g_HotNotifierList.HotLockCount == 1) return TRUE;
 
-	IsPatternMatch(isMatch, HotHandle, DeviceInfo, InstanceID);
-	if (!isMatch) return FALSE;
+	mLst_ApplyPatternMatch(&HotHandle->Public.PatternMatch, DeviceInterfaceGUID, DeviceInfo->DeviceInterfaceGUID, return FALSE);
 
-	IsPatternMatch(isMatch, HotHandle, DeviceInfo, DeviceInterfaceGUID);
-	if (!isMatch) return FALSE;
+	mLst_ApplyPatternMatch(&HotHandle->Public.PatternMatch, ClassGUID, DeviceInfo->ClassGUID, return FALSE);
 
-	IsPatternMatch(isMatch, HotHandle, DeviceInfo, SymbolicLink);
-	if (!isMatch) return FALSE;
+	mLst_ApplyPatternMatch(&HotHandle->Public.PatternMatch, DeviceID, DeviceInfo->DeviceID, return FALSE);
 
-	return isMatch;
+	return TRUE;
 }
 
 static BOOL KUSB_API h_DevEnum_RegisterForBroadcast(KLST_HANDLE DeviceList, KLST_DEVINFO_HANDLE DeviceInfo, PKHOT_HANDLE_INTERNAL Context)
@@ -259,7 +215,7 @@ static BOOL KUSB_API h_DevEnum_RegisterForBroadcast(KLST_HANDLE DeviceList, KLST
 		GUID guid;
 		PKHOT_BROADCAST_EL hotBroadcast;
 		DEV_BROADCAST_DEVICEINTERFACE_A devBroadcast;
-		if (!h_String_To_Guid(&guid, DeviceInfo->DeviceInterfaceGUID))
+		if (!String_To_Guid(&guid, DeviceInfo->DeviceInterfaceGUID))
 		{
 			USBWRNN("h_String_To_Guid failed for %s", DeviceInfo->DeviceInterfaceGUID);
 			return TRUE;
@@ -341,7 +297,7 @@ static BOOL KUSB_API h_DevEnum_PlugWaiters(KLST_HANDLE DeviceList, KLST_DEVINFO_
 			// A device instance will only be notified once per WM_DEVICECHANGE
 			DL_FOREACH(Context->DevInstList, devInstEL)
 			{
-				if (strcmp(devInstEL->Value, DeviceInfo->InstanceID) == 0)
+				if (strcmp(devInstEL->Value, DeviceInfo->DeviceID) == 0)
 					break;
 			}
 
@@ -350,7 +306,7 @@ static BOOL KUSB_API h_DevEnum_PlugWaiters(KLST_HANDLE DeviceList, KLST_DEVINFO_
 			if (!devInstEL)
 			{
 				devInstEL = Mem_Alloc(sizeof(*devInstEL));
-				devInstEL->Value = DeviceInfo->InstanceID;
+				devInstEL->Value = DeviceInfo->DeviceID;
 				DL_APPEND(Context->DevInstList, devInstEL);
 			}
 
@@ -703,7 +659,7 @@ KUSB_EXP BOOL KUSB_API HotK_Init(
 	if (IncLock(g_HotNotifierList.HotLockCount) == 1)
 	{
 		patternMatch = &InitParams->PatternMatch;
-		if (!patternMatch->DeviceInterfaceGUID[0] && !patternMatch->InstanceID[0] && !patternMatch->SymbolicLink[0])
+		if (!patternMatch->DeviceInterfaceGUID[0] && !patternMatch->DeviceID[0] && !patternMatch->ClassGUID[0])
 			patternMatch = NULL;
 
 		if (!g_HotNotifierList.hAppInstance) g_HotNotifierList.hAppInstance = GetModuleHandle(NULL);

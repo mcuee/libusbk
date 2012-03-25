@@ -760,4 +760,53 @@ PROTO_POOLHANDLE(StmK, KSTM_HANDLE_INTERNAL);
 #define PoolHandle_Live_OvlPoolK(KLib_Handle_Internal) PoolHandle_Live(KLib_Handle_Internal,OvlPoolK,KLIB_HANDLE_TYPE_OVLPOOLK)
 #define PoolHandle_Live_StmK(KLib_Handle_Internal) PoolHandle_Live(KLib_Handle_Internal,StmK,KLIB_HANDLE_TYPE_STMK)
 
+
+// Shared device list & hot-plug macros and functions:
+#define mLst_ApplyPatternMatch(mPatternMatchPtr, mPatternMatchItem, mValue, mErrorAction)do {	\
+	if ((mPatternMatchPtr) && (mPatternMatchPtr)->mPatternMatchItem[0])  						\
+	{																							\
+		if (!AllK->PathMatchSpec(mValue, (mPatternMatchPtr)->mPatternMatchItem)) 				\
+		{																						\
+			{mErrorAction;}  																	\
+		}																						\
+	}																							\
+}																								\
+while(0)
+
+
+FORCEINLINE BOOL String_To_Guid(__inout GUID* GuidVal, __in LPCSTR GuidString)
+{
+	int scanCount;
+	UCHAR guidChars[11 * sizeof(int)];
+	GUID* Guid = (GUID*)&guidChars;
+
+
+	if (GuidString[0] == '{') GuidString++;
+
+	scanCount = sscanf_s(GuidString, GUID_FORMAT_STRING,
+	                     &Guid->Data1,
+	                     &Guid->Data2,
+	                     &Guid->Data3,
+	                     &Guid->Data4[0], &Guid->Data4[1], &Guid->Data4[2], &Guid->Data4[3],
+	                     &Guid->Data4[4], &Guid->Data4[5], &Guid->Data4[6], &Guid->Data4[7]);
+
+	if (scanCount == 11)
+		memcpy(GuidVal, &guidChars, sizeof(GUID));
+
+	return (scanCount == 11);
+}
+
+FORCEINLINE BOOL Guid_To_String(__in GUID* Guid, __inout LPSTR GuidString)
+{
+	int guidLen;
+
+	guidLen = sprintf(GuidString, "{"GUID_FORMAT_STRING"}",
+	                  Guid->Data1,
+	                  Guid->Data2,
+	                  Guid->Data3,
+	                  Guid->Data4[0], Guid->Data4[1], Guid->Data4[2], Guid->Data4[3],
+	                  Guid->Data4[4], Guid->Data4[5], Guid->Data4[6], Guid->Data4[7]);
+
+	return (guidLen == GUID_STRING_LENGTH);
+}
 #endif
