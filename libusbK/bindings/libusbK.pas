@@ -856,7 +856,12 @@ interface
       const PipeId: Byte; const PolicyType: Cardinal;
       const ValueLength: Cardinal; const Value): Bool; stdcall;
     UsbK_SetPowerPolicy: function: Bool; stdcall;
-    UsbK_WritePipe: function: Bool; stdcall;
+	
+    UsbK_WritePipe: function(const InterfaceHandle: KUSB_HANDLE;
+      const PipeId: Byte; var Buffer; const BufferLength: Cardinal;
+      const LengthTransferred: PCardinal;
+      const Overlapped: POverlapped): Bool; stdcall;
+
     WinUsb_AbortPipe: function: Bool; stdcall;
     WinUsb_ControlTransfer: function: Bool; stdcall;
     WinUsb_FlushPipe: function: Bool; stdcall;
@@ -1107,8 +1112,13 @@ interface
 
   function UsbK_SetPowerPolicy: Bool; stdcall;
     external LIBUSBK_DLL name 'UsbK_SetPowerPolicy';
-  function UsbK_WritePipe: Bool; stdcall;
+
+  function UsbK_WritePipe(const InterfaceHandle: KUSB_HANDLE; const PipeId: Byte;
+    var Buffer; const BufferLength: Cardinal;
+    const LengthTransferred: PCardinal;
+    const Overlapped: POverlapped): Bool; stdcall;
     external LIBUSBK_DLL name 'UsbK_WritePipe';
+	
   function WinUsb_AbortPipe: Bool; stdcall;
     external LIBUSBK_DLL name 'WinUsb_AbortPipe';
   function WinUsb_ControlTransfer: Bool; stdcall;
