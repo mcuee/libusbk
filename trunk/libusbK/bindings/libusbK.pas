@@ -380,7 +380,7 @@ interface
       PatternMatch: KLST_PATTERN_MATCH;
       OnHotPlug: KHOT_PLUG_CB;
       z_F_i_x_e_d: array [0 .. (2048 - SizeOf(KLST_PATTERN_MATCH) -
-        SizeOf(UINT_PTR) * 2 - (SizeOf(UINT) * 2)) - 1] of Byte;
+        SizeOf(PUINT) * 2 - (SizeOf(UINT) * 2)) - 1] of Byte;
     end;
 
     PKHOT_PARAMS = ^KHOT_PARAMS;
@@ -672,7 +672,7 @@ interface
       Started: KSTM_STARTED_CB;
       Stopped: KSTM_STOPPED_CB;
       BeforeComplete: KSTM_BEFORE_COMPLETE_CB;
-      z_F_i_x_e_d: array [0 .. (64 - SizeOf(pointer) * 5) - 1] of Byte;
+      z_F_i_x_e_d: array [0 .. (64 - SizeOf(pointer) * 6) - 1] of Byte;
     end;
 
     KOVL_POOL_FLAG = (KOVL_POOL_FLAG_NONE);
@@ -1188,7 +1188,6 @@ implementation
     deviceCount: Cardinal;
     lDeviceList: KLST_HANDLE;
     lDeviceInfo: KLST_DEVINFO_HANDLE;
-    CanContinue: Bool;
   begin
     Result:= False;
     if not DllAvailable then
