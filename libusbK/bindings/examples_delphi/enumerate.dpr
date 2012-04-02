@@ -67,7 +67,7 @@ begin
   WriteLn('libusbK Device enumeration demo');
   if not libusbK.DllAvailable then
   begin
-    WriteLn('Error: '+libusbK.DLLName+' not available!');
+	WriteLn('Error: '+libusbK.LIBUSBK_DLL+' not available!');
     Halt(1);
   end;
   EnumerateAttachedDevices;
