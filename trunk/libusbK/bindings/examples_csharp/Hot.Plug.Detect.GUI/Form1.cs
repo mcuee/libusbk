@@ -73,7 +73,7 @@ namespace Hot.Plug.Detect.GUI
             switch (plugType)
             {
                 case KLST_SYNC_FLAG.ADDED:
-                    int iRow = dgvDevices.Rows.Add(new object[] {symbolicLink, deviceInfo.DeviceDesc, deviceInfo.InstanceID});
+                    int iRow = dgvDevices.Rows.Add(new object[] {symbolicLink, deviceInfo.DeviceDesc, deviceInfo.DeviceID});
                     dgvDevices.Rows[iRow].Cells[1].ToolTipText = deviceInfo.ToString();
                     dgvDevices.Rows[iRow].Cells[2].ToolTipText = deviceInfo.Common.ToString();
                     break;
