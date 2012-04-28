@@ -150,7 +150,7 @@ Done:
 	/*!
 	Close the usb handle. If usbHandle is invalid (NULL), has no effect.
 	*/
-	if (usbHandle) Usb.Free(usbHandle);
+	if (handle) Usb.Free(handle);
 
 	// Free the device list
 	// if deviceList is invalid (NULL), has no effect
