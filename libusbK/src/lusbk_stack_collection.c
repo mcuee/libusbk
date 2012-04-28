@@ -29,10 +29,6 @@ typedef struct _DESCRIPTOR_ITERATOR
 {
 	LONG	Remaining;
 
-	UCHAR NextInterfaceIndex;
-	UCHAR NextAltInterfaceIndex;
-	UCHAR NextPipeIndex;
-
 	union
 	{
 		PUCHAR						Offset;
@@ -81,7 +77,7 @@ static void u_Add_Pipe(PKUSB_ALT_INTERFACE_EL altInterfaceEL, PDESCRIPTOR_ITERAT
 
 				pipeEL->Descriptor	= desc->Ptr.Pipe;
 				pipeEL->ID			= pipeEL->Descriptor->bEndpointAddress;
-				pipeEL->Index		= desc->NextPipeIndex++;
+				pipeEL->Index		= altInterfaceEL->PipeCount++;
 
 				DL_APPEND(altInterfaceEL->PipeList, pipeEL);
 			}
@@ -102,13 +98,11 @@ static void u_Add_Interface(PKUSB_HANDLE_INTERNAL Handle, PDESCRIPTOR_ITERATOR d
 		if (!interfaceEL) return;
 
 		interfaceEL->ID		= desc->Ptr.Intf->bInterfaceNumber;
-		interfaceEL->Index	= desc->NextInterfaceIndex++;
+		interfaceEL->Index	= Handle->Device->UsbStack->InterfaceCount++;
 
 		interfaceEL->SharedInterface		= &Get_SharedInterface(Handle, interfaceEL->Index);
 		interfaceEL->SharedInterface->ID	= interfaceEL->ID;
 		interfaceEL->SharedInterface->Index	= interfaceEL->Index;
-
-		desc->NextAltInterfaceIndex = 0;
 
 		DL_APPEND(Handle->Device->UsbStack->InterfaceList,	interfaceEL);
 	}
@@ -121,11 +115,9 @@ static void u_Add_Interface(PKUSB_HANDLE_INTERNAL Handle, PDESCRIPTOR_ITERATOR d
 
 		altInterfaceEL->Descriptor	= desc->Ptr.Intf;
 		altInterfaceEL->ID			= desc->Ptr.Intf->bAlternateSetting;
-		altInterfaceEL->Index		= desc->NextAltInterfaceIndex++;
+		altInterfaceEL->Index		= interfaceEL->AltInterfaceCount++;
 
-		desc->NextPipeIndex			= 0;
-
-		DL_APPEND(Handle->Device->UsbStack->InterfaceList->AltInterfaceList, altInterfaceEL);
+		DL_APPEND(interfaceEL->AltInterfaceList, altInterfaceEL);
 	}
 
 	u_Add_Pipe(altInterfaceEL, desc);
@@ -417,7 +409,7 @@ Error:
 
 BOOL UsbStack_QueryInterfaceSettings (
     __in KUSB_HANDLE Handle,
-    __in UCHAR AltSettingNumber,
+    __in UCHAR AltSettingIndex,
     __out PUSB_INTERFACE_DESCRIPTOR UsbAltInterfaceDescriptor)
 {
 	PKUSB_HANDLE_INTERNAL handle;
@@ -425,7 +417,7 @@ BOOL UsbStack_QueryInterfaceSettings (
 	PKUSB_ALT_INTERFACE_EL altfEL;
 
 	ErrorParamAction(!IsHandleValid(UsbAltInterfaceDescriptor), "UsbAltInterfaceDescriptor", return FALSE);
-	ErrorParamAction(AltSettingNumber > 0x7F, "AltSettingNumber", return FALSE);
+	ErrorParamAction(AltSettingIndex > 0x7F, "AltSettingIndex", return FALSE);
 
 	Pub_To_Priv_UsbK(Handle, handle, return FALSE);
 	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
@@ -433,8 +425,8 @@ BOOL UsbStack_QueryInterfaceSettings (
 	FindInterfaceEL(handle->Device->UsbStack, intfEL, TRUE, handle->Selected_SharedInterface_Index);
 	ErrorSet(!intfEL, Error, ERROR_NO_MORE_ITEMS, "Failed locating interface number %u.", handle->Selected_SharedInterface_Index);
 
-	FindAltInterfaceEL(intfEL, altfEL, FALSE, AltSettingNumber);
-	ErrorSet(!altfEL, Error, ERROR_NO_MORE_ITEMS, "AltSettingNumber %u does not exists.", AltSettingNumber);
+	FindAltInterfaceEL(intfEL, altfEL, TRUE, AltSettingIndex);
+	ErrorSet(!altfEL, Error, ERROR_NO_MORE_ITEMS, "AltSettingIndex %u does not exists.", AltSettingIndex);
 
 	memcpy(UsbAltInterfaceDescriptor, altfEL->Descriptor, sizeof(*UsbAltInterfaceDescriptor));
 	PoolHandle_Dec_UsbK(handle);

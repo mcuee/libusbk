@@ -347,11 +347,11 @@ Error:
 
 KUSB_EXP BOOL KUSB_API UsbK_QueryInterfaceSettings(
     _in KUSB_HANDLE InterfaceHandle,
-    _in UCHAR AltSettingNumber,
+    _in UCHAR AltSettingIndex,
     _out PUSB_INTERFACE_DESCRIPTOR UsbAltInterfaceDescriptor)
 {
 
-	return UsbStack_QueryInterfaceSettings(InterfaceHandle, AltSettingNumber, UsbAltInterfaceDescriptor);
+	return UsbStack_QueryInterfaceSettings(InterfaceHandle, AltSettingIndex, UsbAltInterfaceDescriptor);
 }
 
 KUSB_EXP BOOL KUSB_API UsbK_QueryDeviceInformation(
