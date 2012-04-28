@@ -1,11 +1,11 @@
 ﻿#region Copyright(c) Travis Robinson
 
-// Copyright (c) 2011-2012 Travis Robinson <libusbdotnet@gmail.com>
+// Copyright (c) 2012 Travis Robinson <libusbdotnet@gmail.com>
 // All rights reserved.
 // 
 // Hot.Plug.Detect
 // 
-// Last Updated: 03.08.2012
+// Last Updated: 04.28.2012
 // 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -34,6 +34,15 @@ namespace Hot.Plug.Detect
 {
     internal class Program
     {
+        // ReSharper disable InconsistentNaming
+
+        #region For Window Applications
+        private const int WM_USER = 0x400;
+        private const int WM_USER_HOT_BASE = WM_USER;
+        private const int WM_USER_HOT_REMOVAL = WM_USER_HOT_BASE;
+        private const int WM_USER_HOT_ARRIVAL = WM_USER_HOT_BASE + 1;
+        #endregion
+
         private static void Main()
         {
             KHOT_PARAMS hotInitParams = new KHOT_PARAMS();
@@ -46,31 +55,28 @@ namespace Hot.Plug.Detect
 
             hotInitParams.OnHotPlug = OnHotPlug;
 
+            /* Instead of a callback you can send/post messages directly to a window handle.
+            hotInitParams.UserHwnd = MyForm.Handle;
+            hotInitParams.UserMessage = WM_USER_HOT_BASE;
+            */
+
             Console.WriteLine("Monitoring libusbK arrival/removal events.");
             Console.WriteLine("[PatternMatch]");
             Console.WriteLine(hotInitParams.PatternMatch.ToString());
             Console.WriteLine("Press [ENTER] to exit..");
 
-            /* This example is using the hot handle user context to count connected devices
-             * and detect the first OnHotPlug event (Int32.MaxValue). You can set the default
-             * hot handle user context like this:
-             */
-            AllKFunctions.LibK_SetDefaultContext(KLIB_HANDLE_TYPE.HOTK, new IntPtr(Int32.MaxValue));
-
-            // Create the hot plug handle; notification message will begin arriving immediately. 
-            HotK hot = new HotK(ref hotInitParams);
-
-            // Consume any keys that might have been queued at this point.
             while (Console.KeyAvailable) Console.ReadKey(true);
 
-            // Wait for the user to press enter.
+            // You may set your initial hot handle user context like this.
+            // This example is using it to count connected devices and detect the first OnHotPlug event (Int32.MaxValue).
+            AllKFunctions.LibK_SetDefaultContext(KLIB_HANDLE_TYPE.HOTK, new IntPtr(Int32.MaxValue));
+
+            // Start hot-plug detection.
+            HotK hot = new HotK(ref hotInitParams);
+
             Console.ReadLine();
 
-            /* Free the hot handle. Always do this explicitly with hot handles because they use
-             * an internal thread.  Failure to free (or Dispose) will cause applications to hang
-             * on exit until the garbage collector calls the dispose method for you.
-             */
-            hot.Dispose();
+            hot.Free();
         }
 
         private static void OnHotPlug(KHOT_HANDLE hotHandle,
