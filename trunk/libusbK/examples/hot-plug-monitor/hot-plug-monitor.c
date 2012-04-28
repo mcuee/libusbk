@@ -43,7 +43,7 @@ VOID KUSB_API OnHotPlug(
 	    DeviceInfo->DeviceDesc,
 	    DeviceInfo->Mfg,
 	    DeviceInfo->Service,
-	    DeviceInfo->InstanceID,
+	    DeviceInfo->DeviceID,
 	    DeviceInfo->DeviceInterfaceGUID,
 	    DeviceInfo->DevicePath);
 }
@@ -58,10 +58,13 @@ DWORD __cdecl main(int argc, char* argv[])
 	memset(&hotParams, 0, sizeof(hotParams));
 	hotParams.OnHotPlug = OnHotPlug;
 	hotParams.Flags |= KHOT_FLAG_PLUG_ALL_ON_INIT;
-	strcpy(hotParams.PatternMatch.InstanceID, "*");
+
+	// A "real world" application should set a specific device interface guid if possible.
+	// strcpy(hotParams.PatternMatch.DeviceInterfaceGUID, "{F676DCF6-FDFE-E0A9-FC12-8057DBE8E4B8}");
+	strcpy(hotParams.PatternMatch.DeviceInterfaceGUID, "*");
 
 	printf("Initialize a HotK device notification event monitor..\n");
-	printf("Looking for devices with instances IDs matching the pattern '%s'..\n", hotParams.PatternMatch.InstanceID);
+	printf("Looking for 'DeviceInterfaceGUID's matching the pattern '%s'..\n", hotParams.PatternMatch.DeviceInterfaceGUID);
 
 	// Initializes a new HotK handle.
 	if (!HotK_Init(&hotHandle, &hotParams))
@@ -105,7 +108,7 @@ Done:
 
 /*!
 Initialize a HotK device notification event monitor..
-Looking for devices with instances IDs matching the pattern '*'..
+Looking for devices with DeviceInterfaceGUIDs matching the pattern '*'..
 Press 'q' to exit..
 
 HotK monitor initialized. ErrorCode: 00000000h

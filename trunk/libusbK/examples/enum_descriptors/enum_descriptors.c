@@ -22,6 +22,9 @@
 # THE POSSIBILITY OF SUCH DAMAGE.
 #
 */
+
+#define FETCH_VIRTUAL_CONFIG_DESCRIPTOR
+
 #include "examples.h"
 
 typedef struct _DESCRIPTOR_ITERATOR
@@ -134,6 +137,7 @@ DWORD __cdecl main(int argc, char* argv[])
 	kPkt->ValueLo = 0; // Index
 	kPkt->Length = (USHORT)sizeof(configDescriptorBuffer);
 
+#ifndef FETCH_VIRTUAL_CONFIG_DESCRIPTOR
 	/*
 	Fetch the devices complete config descriptor.  This will send an I/O request directly to the device.
 	*/
@@ -143,6 +147,17 @@ DWORD __cdecl main(int argc, char* argv[])
 		printf("ControlTransfer failed. Win32Error=%u (0x%08X)\n", errorCode, errorCode);
 		goto Done;
 	}
+#else
+	/*
+	Fetch the devices virtual config descriptor.
+	*/
+	if (!Usb.GetDescriptor(usbHandle, USB_DESCRIPTOR_TYPE_CONFIGURATION, 1, 0, configDescriptorBuffer, sizeof(configDescriptorBuffer), &lengthTransferred))
+	{
+		errorCode = GetLastError();
+		printf("GetDescriptor failed. Win32Error=%u (0x%08X)\n", errorCode, errorCode);
+		goto Done;
+	}
+#endif
 
 	/*
 	Initialize the descriptor iterator.
@@ -224,12 +239,22 @@ void PrintInterfaceDescriptor(PUSB_INTERFACE_DESCRIPTOR desc)
 
 void PrintEndpointDescriptor(PUSB_ENDPOINT_DESCRIPTOR desc)
 {
+	WORD baseMaxPacketSize	= desc->wMaxPacketSize & 0x7ff;
+	WORD packetsPerFrame	= ((desc->wMaxPacketSize & 0x1800) >> 11) + 1;
+	WORD maxPacketSize		= baseMaxPacketSize * packetsPerFrame;
+
 	printf("    [Endpoint Descriptor]\n");
 	printf("      bLength          :%d\n", desc->bLength);
 	printf("      bDescriptorType  :0x%02X\n", desc->bDescriptorType);
 
-	printf("      bEndpointAddress :%d\n", desc->bEndpointAddress);
-	printf("      bmAttributes     :%d\n", desc->bmAttributes);
-	printf("      wMaxPacketSize   :%d\n", desc->wMaxPacketSize);
-	printf("      bInterval        :0x%02X\n", desc->bInterval);
+	printf("      bEndpointAddress :0x%02X\n", desc->bEndpointAddress);
+	printf("      bmAttributes     :0x%02X\n", desc->bmAttributes);
+	printf("      wMaxPacketSize   :%d", maxPacketSize);
+
+	if (packetsPerFrame > 1)
+		printf(" (%d x %d) [High-Bandwidth]\n", baseMaxPacketSize, packetsPerFrame);
+	else
+		printf("\n");
+
+	printf("      bInterval        :%d\n", desc->bInterval);
 }
