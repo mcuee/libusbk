@@ -3,14 +3,14 @@ LIBUSBK RELEASE NOTES
 V3.0.5.12 RC12 (04/28/2012)
 ==============================================
 - Fixed internal descriptor parsing issue for devices with multiple 
-  insterfaces. Reported by Peter Wang. 
+  interfaces. Reported by Peter Wang. 
 
 - Fixed driver package installation issue when installing multiple .inf 
   files. Reported By Ekkehard Domning. 
 
 - Added support for Windows 8 Consumer Preview.
 
-- Added user assignable dynamic heap functionality.
+- Added library init/free functions with user assignable dynamic heap.
   - New LibK_Context_Init function.
   - New LibK_Context_Free function.
 
