@@ -73,12 +73,12 @@ namespace libusbK.Examples
             // NOTE: You can use the '*' and '?' chars as wildcards for all chars or a single char (respectively). 
             KLST_PATTERN_MATCH patternMatch = new KLST_PATTERN_MATCH();
             if (MI != -1)
-                patternMatch.InstanceID = String.Format("USB\\VID_{0:X4}&PID_{1:X4}&MI_{2:X2}*",
+                patternMatch.DeviceID = String.Format("USB\\VID_{0:X4}&PID_{1:X4}&MI_{2:X2}*",
                                                         Vid,
                                                         Pid,
                                                         MI);
             else
-                patternMatch.InstanceID = String.Format("USB\\VID_{0:X4}&PID_{1:X4}*",
+                patternMatch.DeviceID = String.Format("USB\\VID_{0:X4}&PID_{1:X4}*",
                                                         Vid,
                                                         Pid);
 
@@ -112,7 +112,7 @@ namespace libusbK.Examples
                                 null))
             {
                 Console.WriteLine("Usb device not found: {0}",
-                                  patternMatch.InstanceID);
+                                  patternMatch.DeviceID);
                 success = false;
                 goto Done;
             }
