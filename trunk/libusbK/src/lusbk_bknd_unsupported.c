@@ -453,11 +453,11 @@ KUSB_EXP BOOL KUSB_API Unsupported_QueryPipe(
 
 KUSB_EXP BOOL KUSB_API Unsupported_QueryInterfaceSettings(
     _in KUSB_HANDLE InterfaceHandle,
-    _in UCHAR AltSettingNumber,
+    _in UCHAR AltSettingIndex,
     _out PUSB_INTERFACE_DESCRIPTOR UsbAltInterfaceDescriptor)
 {
 	UNREFERENCED_PARAMETER(InterfaceHandle);
-	UNREFERENCED_PARAMETER(AltSettingNumber);
+	UNREFERENCED_PARAMETER(AltSettingIndex);
 	UNREFERENCED_PARAMETER(UsbAltInterfaceDescriptor);
 
 	SetLastError(ERROR_NOT_SUPPORTED);

@@ -199,7 +199,7 @@ KUSB_EXP BOOL KUSB_API Unsupported_QueryPipe(
 
 KUSB_EXP BOOL KUSB_API Unsupported_QueryInterfaceSettings(
     _in KUSB_HANDLE InterfaceHandle,
-    _in UCHAR AltSettingNumber,
+    _in UCHAR AltSettingIndex,
     _out PUSB_INTERFACE_DESCRIPTOR UsbAltInterfaceDescriptor);
 
 BOOL GetProcAddress_Unsupported(__out KPROC* ProcAddress, __in LONG FunctionID);
