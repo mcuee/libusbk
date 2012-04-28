@@ -228,7 +228,7 @@ BOOL KINF_API InfK_AddInfFile(PKINF_LIST List, LPCWSTR InfFilename)
 		goto Error;
 	}
 
-	// Move to Version.VendorName
+	// Move to Version.Provider
 	success = SetupFindNextMatchLineW(&infContext, L"Provider", &infContextProperty);
 	if (!success)
 	{

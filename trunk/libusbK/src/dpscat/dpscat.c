@@ -270,7 +270,10 @@ int RunProgram(int argc, LPWSTR* argv)
 
 	DL_FOREACH(infList->Files, infEL)
 	{
-		sprintf(certSubject, "CN=%s (SelfSigned)", WcsToTempMbs(infEL->Provider));
+		length = _snprintf(certSubject, sizeof(certSubject)-1, "CN=%s (%s) [Self]", WcsToTempMbs(infEL->Provider), WcsToTempMbs(infEL->InfTitle));
+		if (length < sizeof(certSubject)-1)
+			certSubject[length]='\0';
+		certSubject[sizeof(certSubject)-1]='\0';
 
 		if (CreateCatEx(infEL))
 			SelfSignFile(WcsToTempMbs(infEL->CatFullPath), certSubject);
