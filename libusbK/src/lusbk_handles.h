@@ -168,7 +168,8 @@ KUSB_EXP BOOL KUSB_API LstK_Sync(
     _in KLST_HANDLE MasterList,
     _inopt KLST_HANDLE SlaveList,
     _inopt KLST_SYNC_FLAG SyncFlags,
-    _inopt PKLST_PATTERN_MATCH SlaveListPatternMatch);
+    _inopt PKLST_PATTERN_MATCH SlaveListPatternMatch,
+    _inopt HANDLE Heap);
 
 //! Creates a copy of an existing device list.
 /*!
@@ -246,7 +247,11 @@ KUSB_EXP BOOL KUSB_API LstK_AttachInfo(
 KUSB_EXP BOOL KUSB_API LstK_FreeInfo(
     _in KLST_DEVINFO_HANDLE DeviceInfo);
 
-
+BOOL KUSB_API LstK_InitInternal(
+    _out KLST_HANDLE* DeviceList,
+    _in KLST_FLAG Flags,
+    _in KLST_PATTERN_MATCH* PatternMatch,
+    _inopt HANDLE Heap);
 
 typedef VOID KUSB_API KOBJ_CB(PVOID Handle);
 typedef KOBJ_CB* PKOBJ_CB;
@@ -294,6 +299,8 @@ typedef struct _KUSB_ALT_INTERFACE_EL
 
 	PKUSB_PIPE_EL PipeList;
 
+	UCHAR PipeCount;
+
 	struct _KUSB_ALT_INTERFACE_EL* next;
 	struct _KUSB_ALT_INTERFACE_EL* prev;
 
@@ -306,6 +313,8 @@ typedef struct _KUSB_INTERFACE_EL
 	PKDEV_SHARED_INTERFACE SharedInterface;
 
 	PKUSB_ALT_INTERFACE_EL AltInterfaceList;
+
+	UCHAR AltInterfaceCount;
 
 	struct _KUSB_INTERFACE_EL* next;
 	struct _KUSB_INTERFACE_EL* prev;
@@ -324,6 +333,7 @@ typedef struct _KUSB_INTERFACE_STACK
 	} Cb;
 
 	PKUSB_INTERFACE_EL InterfaceList;
+	UCHAR InterfaceCount;
 
 } KUSB_INTERFACE_STACK;
 typedef KUSB_INTERFACE_STACK* PKUSB_INTERFACE_STACK;
@@ -575,6 +585,8 @@ typedef struct _KLST_DEVINFO_HANDLE_INTERNAL
 {
 	KOBJ_BASE Base;
 	KLST_DEVINFO_EL* DevInfoEL;
+	HANDLE Heap;
+
 } KLST_DEVINFO_HANDLE_INTERNAL;
 typedef KLST_DEVINFO_HANDLE_INTERNAL* PKLST_DEVINFO_HANDLE_INTERNAL;
 
@@ -651,13 +663,14 @@ typedef struct
 	// Dyanmic DLLs:
 	struct
 	{
-		HMODULE hShlwapi;
+		// HMODULE hShlwapi;
 		HMODULE hWinTrust;
 		HMODULE hCfgMgr32;
 	} Dlls;
 	// Dynamic Function:
 	BOOL (WINAPI* CancelIoEx)(HANDLE DeviceHandle, KOVL_HANDLE Overlapped);
-	KDYN_PathMatchSpec* PathMatchSpec;
+
+	// KDYN_PathMatchSpec* PathMatchSpec;
 
 	KDYN_CM_Get_Device_ID* CM_Get_Device_ID;
 	KDYN_CM_Get_Parent* CM_Get_Parent;
@@ -701,6 +714,69 @@ FORCEINLINE LPSTR Str_Dupe(__in_opt LPCSTR string)
 		memcpy(strDupe, string, len);
 	}
 	return strDupe;
+}
+
+FORCEINLINE BOOL PathMatchSpec(LPCSTR File, LPCSTR Spec)
+{
+
+	int iSpec = 0;
+	int iFile = 0;
+	CHAR chFile;
+	CHAR chSpec;
+
+	if (!File || !Spec) return File == Spec;
+
+	while (Spec[iSpec])
+	{
+		switch (Spec[iSpec])
+		{
+		case '*':
+			if (Spec[iSpec + 1] == '?' && Spec[iSpec + 2] != '\0')
+			{
+				// non-greedy
+				iSpec += 2;
+				while(File[iFile] && File[iFile] != Spec[iSpec]) iFile++;
+				if (!File[iFile]) return FALSE;
+				iSpec++;
+				iFile++;
+			}
+			else
+			{
+				// A lonely '*' is greedy. It will *always* match to the end of line. (including '.')
+				return TRUE;
+			}
+			break;
+		case '?':
+			if (!File[iFile]) return FALSE;
+			iFile++;
+			iSpec++;
+			break;
+		default:
+			if (!File[iFile]) return FALSE;
+			if (File[iFile] == Spec[iSpec])
+			{
+				iFile++;
+				iSpec++;
+			}
+			else
+			{
+				// non-case-sensitive char match
+				chFile = File[iFile];
+				chSpec = Spec[iSpec];
+				if (chFile >= 'a' && chFile <= 'z') chFile -= 32;
+				if (chSpec >= 'a' && chSpec <= 'z') chSpec -= 32;
+
+				if (chSpec != chFile) return FALSE;
+				iFile++;
+				iSpec++;
+
+			}
+			break;
+		}
+	}
+
+	return Spec[iSpec] == '\0';
+
 }
 
 BOOL CheckLibInit();
@@ -761,7 +837,7 @@ PROTO_POOLHANDLE(StmK, KSTM_HANDLE_INTERNAL);
 #define mLst_ApplyPatternMatch(mPatternMatchPtr, mPatternMatchItem, mValue, mErrorAction)do {	\
 	if ((mPatternMatchPtr) && (mPatternMatchPtr)->mPatternMatchItem[0])  						\
 	{																							\
-		if (!AllK->PathMatchSpec(mValue, (mPatternMatchPtr)->mPatternMatchItem)) 				\
+		if (!PathMatchSpec(mValue, (mPatternMatchPtr)->mPatternMatchItem)) 						\
 		{																						\
 			{mErrorAction;}  																	\
 		}																						\
