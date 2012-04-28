@@ -1133,7 +1133,7 @@ typedef BOOL KUSB_API KUSB_Clone (
 
 typedef BOOL KUSB_API KUSB_QueryInterfaceSettings (
     _in KUSB_HANDLE InterfaceHandle,
-    _in UCHAR AltSettingNumber,
+    _in UCHAR AltSettingIndex,
     _out PUSB_INTERFACE_DESCRIPTOR UsbAltInterfaceDescriptor);
 
 typedef BOOL KUSB_API KUSB_QueryDeviceInformation (
@@ -1362,7 +1362,7 @@ typedef struct _KUSB_DRIVER_API
 	*/
 	KUSB_Clone* Clone;
 
-	/*! \fn BOOL KUSB_API QueryInterfaceSettings (_in KUSB_HANDLE InterfaceHandle, _in UCHAR AltSettingNumber, _out PUSB_INTERFACE_DESCRIPTOR UsbAltInterfaceDescriptor)
+	/*! \fn BOOL KUSB_API QueryInterfaceSettings (_in KUSB_HANDLE InterfaceHandle, _in UCHAR AltSettingIndex, _out PUSB_INTERFACE_DESCRIPTOR UsbAltInterfaceDescriptor)
 	* \memberof KUSB_DRIVER_API
 	* \copydoc UsbK_QueryInterfaceSettings
 	*/
@@ -2533,8 +2533,8 @@ extern "C" {
 	* \param[in] InterfaceHandle
 	* An initialized usb handle, see \ref UsbK_Init.
 	*
-	* \param[in] AltSettingNumber
-	* A value that indicates which alternate settings to return. A value of 0 indicates the first alternate
+	* \param[in] AltSettingIndex
+	* A value that indicates which alternate setting index to return. A value of 0 indicates the first alternate
 	* setting, a value of 1 indicates the second alternate setting, and so on.
 	*
 	* \param[out] UsbAltInterfaceDescriptor
@@ -2542,7 +2542,7 @@ extern "C" {
 	* the interface that AltSettingNumber specified.
 	*
 	* The \ref UsbK_QueryInterfaceSettings call searches the current/default interface array for the alternate
-	* interface specified by the caller in the AltSettingNumber. If the specified alternate interface is found,
+	* interface specified by the caller in the AltSettingIndex. If the specified alternate interface is found,
 	* the function populates the caller-allocated USB_INTERFACE_DESCRIPTOR structure. If the specified alternate
 	* interface is not found, then the call fails with the ERROR_NO_MORE_ITEMS code.
 	*
@@ -2553,7 +2553,7 @@ extern "C" {
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_QueryInterfaceSettings (
 	    _in KUSB_HANDLE InterfaceHandle,
-	    _in UCHAR AltSettingNumber,
+	    _in UCHAR AltSettingIndex,
 	    _out PUSB_INTERFACE_DESCRIPTOR UsbAltInterfaceDescriptor);
 
 //! Retrieves information about the physical device that is associated with a libusbK handle.

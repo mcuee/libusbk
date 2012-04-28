@@ -55,7 +55,7 @@ BOOL UsbStack_Rebuild(
 
 BOOL UsbStack_QueryInterfaceSettings (
     __in KUSB_HANDLE Handle,
-    __in UCHAR AltSettingNumber,
+    __in UCHAR AltSettingIndex,
     __out PUSB_INTERFACE_DESCRIPTOR UsbAltInterfaceDescriptor);
 
 BOOL UsbStack_QueryPipe(

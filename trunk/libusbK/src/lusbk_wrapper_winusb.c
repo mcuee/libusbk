@@ -55,10 +55,10 @@ KUSB_EXP BOOL KUSB_API WinUsb_GetDescriptor(
 
 KUSB_EXP BOOL KUSB_API WinUsb_QueryInterfaceSettings(
     _in KUSB_HANDLE InterfaceHandle,
-    _in UCHAR AltSettingNumber,
+    _in UCHAR AltSettingIndex,
     _out PUSB_INTERFACE_DESCRIPTOR UsbAltInterfaceDescriptor)
 {
-	return UsbK_QueryInterfaceSettings (InterfaceHandle, AltSettingNumber, UsbAltInterfaceDescriptor);
+	return UsbK_QueryInterfaceSettings (InterfaceHandle, AltSettingIndex, UsbAltInterfaceDescriptor);
 }
 
 KUSB_EXP BOOL KUSB_API WinUsb_QueryDeviceInformation(
