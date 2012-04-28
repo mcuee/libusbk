@@ -1,28 +1,27 @@
-﻿#region Copyright(c) Travis Robinson
+﻿#region Copyright (c) Travis Robinson
 
-// Copyright (c) 2011-2012 Travis Robinson <libusbdotnet@gmail.com>
+// Copyright (c) 2012 Travis Robinson <libusbdotnet@gmail.com>
 // All rights reserved.
-// 
-// libusbK.cs
-// 
-// Last Updated: 03.08.2012
-// 
+//
+// C# libusbK Bindings
+// Auto-generated on: 04.28.2011
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
-// 
+//
 //     * Redistributions of source code must retain the above copyright
 //       notice, this list of conditions and the following disclaimer.
-// 	  
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS 
-// IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED 
-// TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A 
-// PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL TRAVIS LEE ROBINSON 
-// BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF 
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
-// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN 
-// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
-// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF 
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+// IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+// TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+// PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL TRAVIS LEE ROBINSON
+// BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 // THE POSSIBILITY OF SUCH DAMAGE.
 
 #endregion
@@ -39,14 +38,20 @@ namespace libusbK
 {
     public static class AllKOptions
     {
+        #region Public Members
+
         /// <summary>
         ///   Alternate libusbK library to use.  This must be assigned before any libusbK functions are called and it must be the full path and file name to a libusbK.dll.
         /// </summary>
         public static string LIBUSBK_FULLPATH_TO_ALTERNATE_DLL;
+
+        #endregion
     }
 
     public static class AllKConstants
     {
+        #region Public Members
+
         /// <summary>
         /// Allocated length for all strings in a \ref KLST_DEVINFO structure.
         /// </summary>
@@ -63,14 +68,16 @@ namespace libusbK
         public const byte USB_CONFIG_POWERED_MASK = 0xC0;
 
         /// <summary>
+        /// Endpoint address mask for the \c bEndpointAddress field of a \ref USB_ENDPOINT_DESCRIPTOR
+        /// </summary>
+        public const byte USB_ENDPOINT_ADDRESS_MASK = 0x0F;
+
+        /// <summary>
         /// Endpoint direction mask for the \c bEndpointAddress field of a \ref USB_ENDPOINT_DESCRIPTOR
         /// </summary>
         public const byte USB_ENDPOINT_DIRECTION_MASK = 0x80;
 
-        /// <summary>
-        /// Endpoint address mask for the \c bEndpointAddress field of a \ref USB_ENDPOINT_DESCRIPTOR
-        /// </summary>
-        public const byte USB_ENDPOINT_ADDRESS_MASK = 0x0F;
+        #endregion
     }
 
     public enum PipePolicyType
@@ -133,10 +140,7 @@ namespace libusbK
 
     public static class ErrorCodes
     {
-        /// <summary>
-        ///   The operation completed successfully.
-        /// </summary>
-        public const int Success = 0;
+        #region Public Members
 
         /// <summary>
         ///   Access is denied.
@@ -144,79 +148,9 @@ namespace libusbK
         public const int AccessDenied = 5;
 
         /// <summary>
-        ///   The handle is invalid.
-        /// </summary>
-        public const int InvalidHandle = 6;
-
-        /// <summary>
-        ///   Not enough storage is available to process this command.
-        /// </summary>
-        public const int NotEnoughMemory = 8;
-
-        /// <summary>
-        ///   The request is not supported.
-        /// </summary>
-        public const int NotSupported = 50;
-
-        /// <summary>
-        ///   The parameter is incorrect.
-        /// </summary>
-        public const int InvalidParameter = 87;
-
-        /// <summary>
-        ///   The semaphore timeout period has expired.
-        /// </summary>
-        public const int SemTimeout = 121;
-
-        /// <summary>
         ///   The requested resource is in use.
         /// </summary>
         public const int Busy = 170;
-
-        /// <summary>
-        ///   Too many dynamic-link modules are attached to this program or dynamic-link module.
-        /// </summary>
-        public const int TooManyModules = 214;
-
-        /// <summary>
-        ///   More data is available.
-        /// </summary>
-        public const int MoreData = 234;
-
-        /// <summary>
-        ///   No more data is available.
-        /// </summary>
-        public const int NoMoreItems = 259;
-
-        /// <summary>
-        ///   An attempt was made to operate on a thread within a specific process, but the thread specified is not in the process specified.
-        /// </summary>
-        public const int ThreadNotInProcess = 566;
-
-        /// <summary>
-        ///   A thread termination occurred while the thread was suspended. The thread was resumed, and termination proceeded.
-        /// </summary>
-        public const int ThreadWasSuspended = 699;
-
-        /// <summary>
-        ///   The I/O operation has been aborted because of either a thread exit or an application request.
-        /// </summary>
-        public const int OperationAborted = 995;
-
-        /// <summary>
-        ///   Overlapped I/O event is not in a signaled state.
-        /// </summary>
-        public const int IoIncomplete = 996;
-
-        /// <summary>
-        ///   Overlapped I/O operation is in progress.
-        /// </summary>
-        public const int IoPending = 997;
-
-        /// <summary>
-        ///   Element not found.
-        /// </summary>
-        public const int NotFound = 1168;
 
         /// <summary>
         ///   The operation was canceled by the user.
@@ -229,6 +163,56 @@ namespace libusbK
         public const int Empty = 4306;
 
         /// <summary>
+        ///   The handle is invalid.
+        /// </summary>
+        public const int InvalidHandle = 6;
+
+        /// <summary>
+        ///   The parameter is incorrect.
+        /// </summary>
+        public const int InvalidParameter = 87;
+
+        /// <summary>
+        ///   Overlapped I/O event is not in a signaled state.
+        /// </summary>
+        public const int IoIncomplete = 996;
+
+        /// <summary>
+        ///   Overlapped I/O operation is in progress.
+        /// </summary>
+        public const int IoPending = 997;
+
+        /// <summary>
+        ///   More data is available.
+        /// </summary>
+        public const int MoreData = 234;
+
+        /// <summary>
+        ///   No more data is available.
+        /// </summary>
+        public const int NoMoreItems = 259;
+
+        /// <summary>
+        ///   Not enough storage is available to process this command.
+        /// </summary>
+        public const int NotEnoughMemory = 8;
+
+        /// <summary>
+        ///   Element not found.
+        /// </summary>
+        public const int NotFound = 1168;
+
+        /// <summary>
+        ///   The request is not supported.
+        /// </summary>
+        public const int NotSupported = 50;
+
+        /// <summary>
+        ///   The I/O operation has been aborted because of either a thread exit or an application request.
+        /// </summary>
+        public const int OperationAborted = 995;
+
+        /// <summary>
         ///   The cluster resource is not available.
         /// </summary>
         public const int ResourceNotAvailable = 5006;
@@ -237,28 +221,52 @@ namespace libusbK
         ///   The cluster resource could not be found.
         /// </summary>
         public const int ResourceNotFound = 5007;
+
+        /// <summary>
+        ///   The semaphore timeout period has expired.
+        /// </summary>
+        public const int SemTimeout = 121;
+
+        /// <summary>
+        ///   The operation completed successfully.
+        /// </summary>
+        public const int Success = 0;
+
+        /// <summary>
+        ///   An attempt was made to operate on a thread within a specific process, but the thread specified is not in the process specified.
+        /// </summary>
+        public const int ThreadNotInProcess = 566;
+
+        /// <summary>
+        ///   A thread termination occurred while the thread was suspended. The thread was resumed, and termination proceeded.
+        /// </summary>
+        public const int ThreadWasSuspended = 699;
+
+        /// <summary>
+        ///   Too many dynamic-link modules are attached to this program or dynamic-link module.
+        /// </summary>
+        public const int TooManyModules = 214;
+
+        #endregion
     }
 
     public interface IKLIB_HANDLE
     {
+        #region Public Members
+
+        IntPtr GetContext();
         KLIB_HANDLE_TYPE HandleType { get; }
         IntPtr Pointer { get; }
-        IntPtr GetContext();
-        bool SetContext(IntPtr UserContext);
         bool SetCleanupCallback(KLIB_HANDLE_CLEANUP_CB CleanupCallback);
+        bool SetContext(IntPtr UserContext);
+
+        #endregion
     }
 
     #region Opaque library handles
 
     public struct KLST_HANDLE : IKLIB_HANDLE
     {
-        private readonly IntPtr mHandlePtr;
-
-        public KLST_HANDLE(IntPtr Handle)
-        {
-            mHandlePtr = Handle;
-        }
-
         #region IKLIB_HANDLE Members
 
         public IntPtr Pointer
@@ -293,17 +301,25 @@ namespace libusbK
         }
 
         #endregion
-    }
 
-    public struct KHOT_HANDLE : IKLIB_HANDLE
-    {
-        private readonly IntPtr mHandlePtr;
+        #region Public Members
 
-        public KHOT_HANDLE(IntPtr Handle)
+        public KLST_HANDLE(IntPtr Handle)
         {
             mHandlePtr = Handle;
         }
 
+        #endregion
+
+        #region Private Members
+
+        private readonly IntPtr mHandlePtr;
+
+        #endregion
+    }
+
+    public struct KHOT_HANDLE : IKLIB_HANDLE
+    {
         #region IKLIB_HANDLE Members
 
         public IntPtr Pointer
@@ -338,17 +354,25 @@ namespace libusbK
         }
 
         #endregion
-    }
 
-    public struct KUSB_HANDLE : IKLIB_HANDLE
-    {
-        private readonly IntPtr mHandlePtr;
+        #region Public Members
 
-        public KUSB_HANDLE(IntPtr Handle)
+        public KHOT_HANDLE(IntPtr Handle)
         {
             mHandlePtr = Handle;
         }
 
+        #endregion
+
+        #region Private Members
+
+        private readonly IntPtr mHandlePtr;
+
+        #endregion
+    }
+
+    public struct KUSB_HANDLE : IKLIB_HANDLE
+    {
         #region IKLIB_HANDLE Members
 
         public IntPtr Pointer
@@ -391,28 +415,36 @@ namespace libusbK
             return AllKFunctions.LibK_GetContext(mHandlePtr, KLIB_HANDLE_TYPE.USBSHAREDK);
         }
 
+        public bool SetSharedCleanupCallback(KLIB_HANDLE_CLEANUP_CB CleanupCallback)
+        {
+            return AllKFunctions.LibK_SetCleanupCallback(mHandlePtr, KLIB_HANDLE_TYPE.USBSHAREDK, CleanupCallback);
+        }
+
         public bool SetSharedContext(IntPtr UserContext)
         {
             return AllKFunctions.LibK_SetContext(mHandlePtr, KLIB_HANDLE_TYPE.USBSHAREDK, UserContext);
         }
 
-        public bool SetSharedCleanupCallback(KLIB_HANDLE_CLEANUP_CB CleanupCallback)
+        #endregion
+
+        #region Public Members
+
+        public KUSB_HANDLE(IntPtr Handle)
         {
-            return AllKFunctions.LibK_SetCleanupCallback(mHandlePtr, KLIB_HANDLE_TYPE.USBSHAREDK, CleanupCallback);
+            mHandlePtr = Handle;
         }
+
+        #endregion
+
+        #region Private Members
+
+        private readonly IntPtr mHandlePtr;
 
         #endregion
     }
 
     public struct KOVL_POOL_HANDLE : IKLIB_HANDLE
     {
-        private readonly IntPtr mHandlePtr;
-
-        public KOVL_POOL_HANDLE(IntPtr Handle)
-        {
-            mHandlePtr = Handle;
-        }
-
         #region IKLIB_HANDLE Members
 
         public IntPtr Pointer
@@ -447,17 +479,25 @@ namespace libusbK
         }
 
         #endregion
-    }
 
-    public struct KOVL_HANDLE : IKLIB_HANDLE
-    {
-        private readonly IntPtr mHandlePtr;
+        #region Public Members
 
-        public KOVL_HANDLE(IntPtr Handle)
+        public KOVL_POOL_HANDLE(IntPtr Handle)
         {
             mHandlePtr = Handle;
         }
 
+        #endregion
+
+        #region Private Members
+
+        private readonly IntPtr mHandlePtr;
+
+        #endregion
+    }
+
+    public struct KOVL_HANDLE : IKLIB_HANDLE
+    {
         #region IKLIB_HANDLE Members
 
         public IntPtr Pointer
@@ -492,17 +532,25 @@ namespace libusbK
         }
 
         #endregion
-    }
 
-    public struct KSTM_HANDLE : IKLIB_HANDLE
-    {
-        private readonly IntPtr mHandlePtr;
+        #region Public Members
 
-        public KSTM_HANDLE(IntPtr Handle)
+        public KOVL_HANDLE(IntPtr Handle)
         {
             mHandlePtr = Handle;
         }
 
+        #endregion
+
+        #region Private Members
+
+        private readonly IntPtr mHandlePtr;
+
+        #endregion
+    }
+
+    public struct KSTM_HANDLE : IKLIB_HANDLE
+    {
         #region IKLIB_HANDLE Members
 
         public IntPtr Pointer
@@ -535,6 +583,21 @@ namespace libusbK
         {
             return AllKFunctions.LibK_SetCleanupCallback(mHandlePtr, HandleType, CleanupCallback);
         }
+
+        #endregion
+
+        #region Public Members
+
+        public KSTM_HANDLE(IntPtr Handle)
+        {
+            mHandlePtr = Handle;
+        }
+
+        #endregion
+
+        #region Private Members
+
+        private readonly IntPtr mHandlePtr;
 
         #endregion
     }
@@ -576,6 +639,12 @@ namespace libusbK
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet = CharSet.Ansi, SetLastError = true)]
         public delegate bool IsoK_SetPacketsDelegate([In] KISO_CONTEXT IsoContext, int PacketSize);
+
+        [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet = CharSet.Ansi, SetLastError = true)]
+        public delegate void LibK_Context_FreeDelegate();
+
+        [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet = CharSet.Ansi, SetLastError = true)]
+        public delegate bool LibK_Context_InitDelegate(IntPtr Heap, IntPtr Reserved);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet = CharSet.Ansi, SetLastError = true)]
         public delegate bool LibK_CopyDriverAPIDelegate([Out] out KUSB_DRIVER_API DriverAPI, [In] KUSB_HANDLE UsbHandle);
@@ -668,7 +737,8 @@ namespace libusbK
         public delegate bool StmK_FreeDelegate([In] KSTM_HANDLE StreamHandle);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet = CharSet.Ansi, SetLastError = true)]
-        public delegate bool StmK_InitDelegate([Out] out KSTM_HANDLE StreamHandle, [In] KUSB_HANDLE UsbHandle, byte PipeID, int MaxTransferSize, int MaxPendingTransfers, int MaxPendingIO, [In] ref KSTM_CALLBACK Callbacks, KSTM_FLAG Flags);
+        public delegate bool StmK_InitDelegate(
+            [Out] out KSTM_HANDLE StreamHandle, [In] KUSB_HANDLE UsbHandle, byte PipeID, int MaxTransferSize, int MaxPendingTransfers, int MaxPendingIO, [In] ref KSTM_CALLBACK Callbacks, KSTM_FLAG Flags);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet = CharSet.Ansi, SetLastError = true)]
         public delegate bool StmK_ReadDelegate([In] KSTM_HANDLE StreamHandle, IntPtr Buffer, int Offset, int Length, out int TransferredLength);
@@ -687,55 +757,6 @@ namespace libusbK
 
         #endregion
 
-        private static readonly IntPtr mModuleLibusbK = IntPtr.Zero;
-
-        public static LibK_GetVersionDelegate LibK_GetVersion;
-        public static LibK_GetContextDelegate LibK_GetContext;
-        public static LibK_SetContextDelegate LibK_SetContext;
-        public static LibK_SetCleanupCallbackDelegate LibK_SetCleanupCallback;
-        public static LibK_LoadDriverAPIDelegate LibK_LoadDriverAPI;
-        public static LibK_CopyDriverAPIDelegate LibK_CopyDriverAPI;
-        public static LibK_GetProcAddressDelegate LibK_GetProcAddress;
-        public static LibK_SetDefaultContextDelegate LibK_SetDefaultContext;
-        public static LibK_GetDefaultContextDelegate LibK_GetDefaultContext;
-        public static UsbK_FreeDelegate UsbK_Free;
-        public static LstK_InitDelegate LstK_Init;
-        public static LstK_InitExDelegate LstK_InitEx;
-        public static LstK_FreeDelegate LstK_Free;
-        public static LstK_EnumerateDelegate LstK_Enumerate;
-        public static LstK_CurrentDelegate LstK_Current;
-        public static LstK_MoveNextDelegate LstK_MoveNext;
-        public static LstK_MoveResetDelegate LstK_MoveReset;
-        public static LstK_FindByVidPidDelegate LstK_FindByVidPid;
-        public static LstK_CountDelegate LstK_Count;
-        public static HotK_InitDelegate HotK_Init;
-        public static HotK_FreeDelegate HotK_Free;
-        public static HotK_FreeAllDelegate HotK_FreeAll;
-        public static OvlK_AcquireDelegate OvlK_Acquire;
-        public static OvlK_ReleaseDelegate OvlK_Release;
-        public static OvlK_InitDelegate OvlK_Init;
-        public static OvlK_FreeDelegate OvlK_Free;
-        public static OvlK_GetEventHandleDelegate OvlK_GetEventHandle;
-        public static OvlK_WaitDelegate OvlK_Wait;
-        public static OvlK_WaitOldestDelegate OvlK_WaitOldest;
-        public static OvlK_WaitOrCancelDelegate OvlK_WaitOrCancel;
-        public static OvlK_WaitAndReleaseDelegate OvlK_WaitAndRelease;
-        public static OvlK_IsCompleteDelegate OvlK_IsComplete;
-        public static OvlK_ReUseDelegate OvlK_ReUse;
-        public static StmK_InitDelegate StmK_Init;
-        public static StmK_FreeDelegate StmK_Free;
-        public static StmK_StartDelegate StmK_Start;
-        public static StmK_StopDelegate StmK_Stop;
-        public static StmK_ReadDelegate StmK_Read;
-        public static StmK_WriteDelegate StmK_Write;
-        public static IsoK_InitDelegate IsoK_Init;
-        public static IsoK_FreeDelegate IsoK_Free;
-        public static IsoK_SetPacketsDelegate IsoK_SetPackets;
-        public static IsoK_SetPacketDelegate IsoK_SetPacket;
-        public static IsoK_GetPacketDelegate IsoK_GetPacket;
-        public static IsoK_EnumPacketsDelegate IsoK_EnumPackets;
-        public static IsoK_ReUseDelegate IsoK_ReUse;
-
         static AllKFunctions()
         {
             if (String.IsNullOrEmpty(AllKOptions.LIBUSBK_FULLPATH_TO_ALTERNATE_DLL))
@@ -749,8 +770,77 @@ namespace libusbK
             LoadDynamicFunctions();
         }
 
-        [DllImport("kernel32.dll")]
-        private static extern IntPtr LoadLibraryEx(string lpFileName, IntPtr hReservedNull, LoadLibraryFlags dwFlags);
+        #region Nested Enumerations
+
+        [Flags]
+        private enum LoadLibraryFlags
+        {
+            NONE = 0,
+            DONT_RESOLVE_DLL_REFERENCES = 0x00000001,
+            LOAD_IGNORE_CODE_AUTHZ_LEVEL = 0x00000010,
+            LOAD_LIBRARY_AS_DATAFILE = 0x00000002,
+            LOAD_LIBRARY_AS_DATAFILE_EXCLUSIVE = 0x00000040,
+            LOAD_LIBRARY_AS_IMAGE_RESOURCE = 0x00000020,
+            LOAD_WITH_ALTERED_SEARCH_PATH = 0x00000008
+        }
+
+        #endregion
+
+        #region Public Members
+
+        public static HotK_FreeDelegate HotK_Free;
+        public static HotK_FreeAllDelegate HotK_FreeAll;
+        public static HotK_InitDelegate HotK_Init;
+        public static IsoK_EnumPacketsDelegate IsoK_EnumPackets;
+        public static IsoK_FreeDelegate IsoK_Free;
+        public static IsoK_GetPacketDelegate IsoK_GetPacket;
+        public static IsoK_InitDelegate IsoK_Init;
+        public static IsoK_ReUseDelegate IsoK_ReUse;
+        public static IsoK_SetPacketDelegate IsoK_SetPacket;
+        public static IsoK_SetPacketsDelegate IsoK_SetPackets;
+        public static LibK_Context_FreeDelegate LibK_Context_Free;
+        public static LibK_Context_InitDelegate LibK_Context_Init;
+
+        public static LibK_CopyDriverAPIDelegate LibK_CopyDriverAPI;
+        public static LibK_GetContextDelegate LibK_GetContext;
+        public static LibK_GetDefaultContextDelegate LibK_GetDefaultContext;
+        public static LibK_GetProcAddressDelegate LibK_GetProcAddress;
+        public static LibK_GetVersionDelegate LibK_GetVersion;
+        public static LibK_LoadDriverAPIDelegate LibK_LoadDriverAPI;
+        public static LibK_SetCleanupCallbackDelegate LibK_SetCleanupCallback;
+        public static LibK_SetContextDelegate LibK_SetContext;
+        public static LibK_SetDefaultContextDelegate LibK_SetDefaultContext;
+        public static LstK_CountDelegate LstK_Count;
+        public static LstK_CurrentDelegate LstK_Current;
+        public static LstK_EnumerateDelegate LstK_Enumerate;
+        public static LstK_FindByVidPidDelegate LstK_FindByVidPid;
+        public static LstK_FreeDelegate LstK_Free;
+        public static LstK_InitDelegate LstK_Init;
+        public static LstK_InitExDelegate LstK_InitEx;
+        public static LstK_MoveNextDelegate LstK_MoveNext;
+        public static LstK_MoveResetDelegate LstK_MoveReset;
+        public static OvlK_AcquireDelegate OvlK_Acquire;
+        public static OvlK_FreeDelegate OvlK_Free;
+        public static OvlK_GetEventHandleDelegate OvlK_GetEventHandle;
+        public static OvlK_InitDelegate OvlK_Init;
+        public static OvlK_IsCompleteDelegate OvlK_IsComplete;
+        public static OvlK_ReUseDelegate OvlK_ReUse;
+        public static OvlK_ReleaseDelegate OvlK_Release;
+        public static OvlK_WaitDelegate OvlK_Wait;
+        public static OvlK_WaitAndReleaseDelegate OvlK_WaitAndRelease;
+        public static OvlK_WaitOldestDelegate OvlK_WaitOldest;
+        public static OvlK_WaitOrCancelDelegate OvlK_WaitOrCancel;
+        public static StmK_FreeDelegate StmK_Free;
+        public static StmK_InitDelegate StmK_Init;
+        public static StmK_ReadDelegate StmK_Read;
+        public static StmK_StartDelegate StmK_Start;
+        public static StmK_StopDelegate StmK_Stop;
+        public static StmK_WriteDelegate StmK_Write;
+        public static UsbK_FreeDelegate UsbK_Free;
+
+        #endregion
+
+        #region Private Members
 
         [DllImport("kernel32.dll", CharSet = CharSet.Ansi, ExactSpelling = true, SetLastError = true)]
         private static extern IntPtr GetProcAddress(IntPtr hModule, string procName);
@@ -766,6 +856,8 @@ namespace libusbK
             LibK_GetProcAddress = (LibK_GetProcAddressDelegate) Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, "LibK_GetProcAddress"), typeof (LibK_GetProcAddressDelegate));
             LibK_SetDefaultContext = (LibK_SetDefaultContextDelegate) Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, "LibK_SetDefaultContext"), typeof (LibK_SetDefaultContextDelegate));
             LibK_GetDefaultContext = (LibK_GetDefaultContextDelegate) Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, "LibK_GetDefaultContext"), typeof (LibK_GetDefaultContextDelegate));
+            LibK_Context_Init = (LibK_Context_InitDelegate) Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, "LibK_Context_Init"), typeof (LibK_Context_InitDelegate));
+            LibK_Context_Free = (LibK_Context_FreeDelegate) Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, "LibK_Context_Free"), typeof (LibK_Context_FreeDelegate));
             UsbK_Free = (UsbK_FreeDelegate) Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, "UsbK_Free"), typeof (UsbK_FreeDelegate));
             LstK_Init = (LstK_InitDelegate) Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, "LstK_Init"), typeof (LstK_InitDelegate));
             LstK_InitEx = (LstK_InitExDelegate) Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, "LstK_InitEx"), typeof (LstK_InitExDelegate));
@@ -805,19 +897,10 @@ namespace libusbK
             IsoK_ReUse = (IsoK_ReUseDelegate) Marshal.GetDelegateForFunctionPointer(GetProcAddress(mModuleLibusbK, "IsoK_ReUse"), typeof (IsoK_ReUseDelegate));
         }
 
-        #region Nested type: LoadLibraryFlags
+        [DllImport("kernel32.dll")]
+        private static extern IntPtr LoadLibraryEx(string lpFileName, IntPtr hReservedNull, LoadLibraryFlags dwFlags);
 
-        [Flags]
-        private enum LoadLibraryFlags
-        {
-            NONE = 0,
-            DONT_RESOLVE_DLL_REFERENCES = 0x00000001,
-            LOAD_IGNORE_CODE_AUTHZ_LEVEL = 0x00000010,
-            LOAD_LIBRARY_AS_DATAFILE = 0x00000002,
-            LOAD_LIBRARY_AS_DATAFILE_EXCLUSIVE = 0x00000040,
-            LOAD_LIBRARY_AS_IMAGE_RESOURCE = 0x00000020,
-            LOAD_WITH_ALTERED_SEARCH_PATH = 0x00000008
-        }
+        private static readonly IntPtr mModuleLibusbK = IntPtr.Zero;
 
         #endregion
     }
@@ -913,10 +996,10 @@ namespace libusbK
         /// <Summary>No flags (or 0)</Summary>
         NONE = 0,
 
-        /// <Summary>Enable listings for the raw device interface GUID.{A5DCBF10-6530-11D2-901F-00C04FB951ED}</Summary>
+        /// <Summary>Enable listings for the raw device interface GUID \b only. {A5DCBF10-6530-11D2-901F-00C04FB951ED}</Summary>
         INCLUDE_RAWGUID = 0x0001,
 
-        /// <Summary>List libusbK devices that not currently connected.</Summary>
+        /// <Summary>List all libusbK devices including those not currently connected.</Summary>
         INCLUDE_DISCONNECT = 0x0002,
     }
 
@@ -1258,7 +1341,12 @@ namespace libusbK
 
         public override string ToString()
         {
-            return string.Format("RequestType: {0}\nRequest: {1}\nValue: {2}\nIndex: {3}\nLength: {4}\n", RequestType.ToString("X2") + "h", Request.ToString("X2") + "h", Value.ToString("X4") + "h", Index.ToString("X4") + "h", Length);
+            return string.Format("RequestType: {0}\nRequest: {1}\nValue: {2}\nIndex: {3}\nLength: {4}\n",
+                                 RequestType.ToString("X2") + "h",
+                                 Request.ToString("X2") + "h",
+                                 Value.ToString("X4") + "h",
+                                 Index.ToString("X4") + "h",
+                                 Length);
         }
     };
 
@@ -1379,7 +1467,12 @@ namespace libusbK
 
         public override string ToString()
         {
-            return string.Format("Flags: {0}\nStartFrame: {1}\nErrorCount: {2}\nNumberOfPackets: {3}\nUrbHdrStatus: {4}\n", Flags.ToString(), StartFrame, ErrorCount, NumberOfPackets, UrbHdrStatus.ToString("X8") + "h");
+            return string.Format("Flags: {0}\nStartFrame: {1}\nErrorCount: {2}\nNumberOfPackets: {3}\nUrbHdrStatus: {4}\n",
+                                 Flags.ToString(),
+                                 StartFrame,
+                                 ErrorCount,
+                                 NumberOfPackets,
+                                 UrbHdrStatus.ToString("X8") + "h");
         }
     }
 
@@ -1409,13 +1502,13 @@ namespace libusbK
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
     public struct KLST_DEV_COMMON_INFO
     {
-        /// <Summary>VendorID parsed from \ref KLST_DEVINFO::InstanceID</Summary>
+        /// <Summary>VendorID parsed from \ref KLST_DEVINFO::DeviceID</Summary>
         public int Vid;
 
-        /// <Summary>ProductID parsed from \ref KLST_DEVINFO::InstanceID</Summary>
+        /// <Summary>ProductID parsed from \ref KLST_DEVINFO::DeviceID</Summary>
         public int Pid;
 
-        /// <Summary>Interface number (valid for composite devices only) parsed from \ref KLST_DEVINFO::InstanceID</Summary>
+        /// <Summary>Composite interface number parsed from \ref KLST_DEVINFO::DeviceID.  Set to \b -1 for devices that do not have the composite parent driver.</Summary>
         public int MI;
 
         // An ID that uniquely identifies a USB device.
@@ -1483,7 +1576,7 @@ namespace libusbK
             [MarshalAs(UnmanagedType.ByValTStr, SizeConst = AllKConstants.KLST_STRING_MAX_LEN)] private readonly string DeviceInterfaceGUID;
 
             /// <Summary>Device instance ID.</Summary>
-            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = AllKConstants.KLST_STRING_MAX_LEN)] private readonly string InstanceID;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = AllKConstants.KLST_STRING_MAX_LEN)] private readonly string DeviceID;
 
             /// <Summary>Class GUID.</Summary>
             [MarshalAs(UnmanagedType.ByValTStr, SizeConst = AllKConstants.KLST_STRING_MAX_LEN)] private readonly string ClassGUID;
@@ -1511,12 +1604,19 @@ namespace libusbK
 
             /// <Summary>Synchronization flags. (internal use only)</Summary>
             private readonly KLST_SYNC_FLAG SyncFlags;
+
+            private readonly int BusNumber;
+
+            private readonly int DeviceAddress;
+
+            /// <Summary>If the the device is serialized, represents the string value of \ref USB_DEVICE_DESCRIPTOR::iSerialNumber. For Devices without a \b iSerialNumber, represents the unique \b InstanceID assigned by \b Windows.</Summary>
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = AllKConstants.KLST_STRING_MAX_LEN)] private readonly string SerialNumber;
         };
 
         private static readonly int ofsCommon = Marshal.OffsetOf(typeof (KLST_DEVINFO_MAP), "Common").ToInt32();
         private static readonly int ofsDriverID = Marshal.OffsetOf(typeof (KLST_DEVINFO_MAP), "DriverID").ToInt32();
         private static readonly int ofsDeviceInterfaceGUID = Marshal.OffsetOf(typeof (KLST_DEVINFO_MAP), "DeviceInterfaceGUID").ToInt32();
-        private static readonly int ofsInstanceID = Marshal.OffsetOf(typeof (KLST_DEVINFO_MAP), "InstanceID").ToInt32();
+        private static readonly int ofsDeviceID = Marshal.OffsetOf(typeof (KLST_DEVINFO_MAP), "DeviceID").ToInt32();
         private static readonly int ofsClassGUID = Marshal.OffsetOf(typeof (KLST_DEVINFO_MAP), "ClassGUID").ToInt32();
         private static readonly int ofsMfg = Marshal.OffsetOf(typeof (KLST_DEVINFO_MAP), "Mfg").ToInt32();
         private static readonly int ofsDeviceDesc = Marshal.OffsetOf(typeof (KLST_DEVINFO_MAP), "DeviceDesc").ToInt32();
@@ -1526,6 +1626,9 @@ namespace libusbK
         private static readonly int ofsLUsb0FilterIndex = Marshal.OffsetOf(typeof (KLST_DEVINFO_MAP), "LUsb0FilterIndex").ToInt32();
         private static readonly int ofsConnected = Marshal.OffsetOf(typeof (KLST_DEVINFO_MAP), "Connected").ToInt32();
         private static readonly int ofsSyncFlags = Marshal.OffsetOf(typeof (KLST_DEVINFO_MAP), "SyncFlags").ToInt32();
+        private static readonly int ofsBusNumber = Marshal.OffsetOf(typeof (KLST_DEVINFO_MAP), "BusNumber").ToInt32();
+        private static readonly int ofsDeviceAddress = Marshal.OffsetOf(typeof (KLST_DEVINFO_MAP), "DeviceAddress").ToInt32();
+        private static readonly int ofsSerialNumber = Marshal.OffsetOf(typeof (KLST_DEVINFO_MAP), "SerialNumber").ToInt32();
 
 
         /// <Summary>Common usb device information</Summary>
@@ -1559,11 +1662,11 @@ namespace libusbK
 
 
         /// <Summary>Device instance ID.</Summary>
-        public string InstanceID
+        public string DeviceID
         {
             get
             {
-                return Marshal.PtrToStringAnsi(new IntPtr(mHandlePtr.ToInt64() + ofsInstanceID));
+                return Marshal.PtrToStringAnsi(new IntPtr(mHandlePtr.ToInt64() + ofsDeviceID));
             }
         }
 
@@ -1658,29 +1761,74 @@ namespace libusbK
         }
 
 
+        public int BusNumber
+        {
+            get
+            {
+                return Marshal.ReadInt32(mHandlePtr, ofsBusNumber);
+            }
+        }
+
+
+        public int DeviceAddress
+        {
+            get
+            {
+                return Marshal.ReadInt32(mHandlePtr, ofsDeviceAddress);
+            }
+        }
+
+
+        /// <Summary>If the the device is serialized, represents the string value of \ref USB_DEVICE_DESCRIPTOR::iSerialNumber. For Devices without a \b iSerialNumber, represents the unique \b InstanceID assigned by \b Windows.</Summary>
+        public string SerialNumber
+        {
+            get
+            {
+                return Marshal.PtrToStringAnsi(new IntPtr(mHandlePtr.ToInt64() + ofsSerialNumber));
+            }
+        }
+
+
         public override string ToString()
         {
-            return string.Format("DriverID: {0}\nDeviceInterfaceGUID: {1}\nInstanceID: {2}\nClassGUID: {3}\nMfg: {4}\nDeviceDesc: {5}\nService: {6}\nSymbolicLink: {7}\nDevicePath: {8}\nLUsb0FilterIndex: {9}\nConnected: {10}\nSyncFlags: {11}\n", DriverID, DeviceInterfaceGUID, InstanceID, ClassGUID, Mfg, DeviceDesc, Service, SymbolicLink, DevicePath, LUsb0FilterIndex, Connected, SyncFlags.ToString());
+            return
+                string.Format(
+                              "DriverID: {0}\nDeviceInterfaceGUID: {1}\nDeviceID: {2}\nClassGUID: {3}\nMfg: {4}\nDeviceDesc: {5}\nService: {6}\nSymbolicLink: {7}\nDevicePath: {8}\nLUsb0FilterIndex: {9}\nConnected: {10}\nSyncFlags: {11}\nBusNumber: {12}\nDeviceAddress: {13}\nSerialNumber: {14}\n",
+                              DriverID,
+                              DeviceInterfaceGUID,
+                              DeviceID,
+                              ClassGUID,
+                              Mfg,
+                              DeviceDesc,
+                              Service,
+                              SymbolicLink,
+                              DevicePath,
+                              LUsb0FilterIndex,
+                              Connected,
+                              SyncFlags.ToString(),
+                              BusNumber,
+                              DeviceAddress,
+                              SerialNumber);
         }
     }
 
-    /// <Summary>Hot plug parameter structure.</Summary>
+    /// <Summary>Device list/hot-plug pattern match structure.</Summary>
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Size = 1024)]
     public struct KLST_PATTERN_MATCH
     {
         /// <Summary>Pattern match a device instance id.</Summary>
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = AllKConstants.KLST_STRING_MAX_LEN)] public string InstanceID;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = AllKConstants.KLST_STRING_MAX_LEN)] public string DeviceID;
 
         /// <Summary>Pattern match a device interface guid.</Summary>
         [MarshalAs(UnmanagedType.ByValTStr, SizeConst = AllKConstants.KLST_STRING_MAX_LEN)] public string DeviceInterfaceGUID;
 
         /// <Summary>Pattern match a symbolic link.</Summary>
-        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = AllKConstants.KLST_STRING_MAX_LEN)] public string SymbolicLink;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = AllKConstants.KLST_STRING_MAX_LEN)] public string ClassGUID;
 
 
         public override string ToString()
         {
-            return string.Format("InstanceID: {0}\nDeviceInterfaceGUID: {1}\nSymbolicLink: {2}\n", InstanceID, DeviceInterfaceGUID, SymbolicLink);
+            return string.Format("DeviceID: {0}\nDeviceInterfaceGUID: {1}\nClassGUID: {2}\n", DeviceID, DeviceInterfaceGUID, ClassGUID);
         }
     };
 
@@ -1733,7 +1881,23 @@ namespace libusbK
 
         public override string ToString()
         {
-            return string.Format("bLength: {0}\nbDescriptorType: {1}\nbcdUSB: {2}\nbDeviceClass: {3}\nbDeviceSubClass: {4}\nbDeviceProtocol: {5}\nbMaxPacketSize0: {6}\nidVendor: {7}\nidProduct: {8}\nbcdDevice: {9}\niManufacturer: {10}\niProduct: {11}\niSerialNumber: {12}\nbNumConfigurations: {13}\n", bLength, bDescriptorType.ToString("X2") + "h", bcdUSB.ToString("X4") + "h", bDeviceClass.ToString("X2") + "h", bDeviceSubClass.ToString("X2") + "h", bDeviceProtocol.ToString("X2") + "h", bMaxPacketSize0, idVendor.ToString("X4") + "h", idProduct.ToString("X4") + "h", bcdDevice.ToString("X4") + "h", iManufacturer, iProduct, iSerialNumber, bNumConfigurations);
+            return
+                string.Format(
+                              "bLength: {0}\nbDescriptorType: {1}\nbcdUSB: {2}\nbDeviceClass: {3}\nbDeviceSubClass: {4}\nbDeviceProtocol: {5}\nbMaxPacketSize0: {6}\nidVendor: {7}\nidProduct: {8}\nbcdDevice: {9}\niManufacturer: {10}\niProduct: {11}\niSerialNumber: {12}\nbNumConfigurations: {13}\n",
+                              bLength,
+                              bDescriptorType.ToString("X2") + "h",
+                              bcdUSB.ToString("X4") + "h",
+                              bDeviceClass.ToString("X2") + "h",
+                              bDeviceSubClass.ToString("X2") + "h",
+                              bDeviceProtocol.ToString("X2") + "h",
+                              bMaxPacketSize0,
+                              idVendor.ToString("X4") + "h",
+                              idProduct.ToString("X4") + "h",
+                              bcdDevice.ToString("X4") + "h",
+                              iManufacturer,
+                              iProduct,
+                              iSerialNumber,
+                              bNumConfigurations);
         }
     };
 
@@ -1762,7 +1926,13 @@ namespace libusbK
 
         public override string ToString()
         {
-            return string.Format("bLength: {0}\nbDescriptorType: {1}\nbEndpointAddress: {2}\nbmAttributes: {3}\nwMaxPacketSize: {4}\nbInterval: {5}\n", bLength, bDescriptorType.ToString("X2") + "h", bEndpointAddress.ToString("X2") + "h", bmAttributes.ToString("X2") + "h", wMaxPacketSize, bInterval);
+            return string.Format("bLength: {0}\nbDescriptorType: {1}\nbEndpointAddress: {2}\nbmAttributes: {3}\nwMaxPacketSize: {4}\nbInterval: {5}\n",
+                                 bLength,
+                                 bDescriptorType.ToString("X2") + "h",
+                                 bEndpointAddress.ToString("X2") + "h",
+                                 bmAttributes.ToString("X2") + "h",
+                                 wMaxPacketSize,
+                                 bInterval);
         }
     };
 
@@ -1796,7 +1966,15 @@ namespace libusbK
 
         public override string ToString()
         {
-            return string.Format("bLength: {0}\nbDescriptorType: {1}\nwTotalLength: {2}\nbNumInterfaces: {3}\nbConfigurationValue: {4}\niConfiguration: {5}\nbmAttributes: {6}\nMaxPower: {7}\n", bLength, bDescriptorType.ToString("X2") + "h", wTotalLength, bNumInterfaces, bConfigurationValue, iConfiguration, bmAttributes.ToString("X2") + "h", MaxPower);
+            return string.Format("bLength: {0}\nbDescriptorType: {1}\nwTotalLength: {2}\nbNumInterfaces: {3}\nbConfigurationValue: {4}\niConfiguration: {5}\nbmAttributes: {6}\nMaxPower: {7}\n",
+                                 bLength,
+                                 bDescriptorType.ToString("X2") + "h",
+                                 wTotalLength,
+                                 bNumInterfaces,
+                                 bConfigurationValue,
+                                 iConfiguration,
+                                 bmAttributes.ToString("X2") + "h",
+                                 MaxPower);
         }
     };
 
@@ -1834,7 +2012,18 @@ namespace libusbK
 
         public override string ToString()
         {
-            return string.Format("bLength: {0}\nbDescriptorType: {1}\nbInterfaceNumber: {2}\nbAlternateSetting: {3}\nbNumEndpoints: {4}\nbInterfaceClass: {5}\nbInterfaceSubClass: {6}\nbInterfaceProtocol: {7}\niInterface: {8}\n", bLength, bDescriptorType.ToString("X2") + "h", bInterfaceNumber, bAlternateSetting, bNumEndpoints, bInterfaceClass.ToString("X2") + "h", bInterfaceSubClass.ToString("X2") + "h", bInterfaceProtocol.ToString("X2") + "h", iInterface);
+            return
+                string.Format(
+                              "bLength: {0}\nbDescriptorType: {1}\nbInterfaceNumber: {2}\nbAlternateSetting: {3}\nbNumEndpoints: {4}\nbInterfaceClass: {5}\nbInterfaceSubClass: {6}\nbInterfaceProtocol: {7}\niInterface: {8}\n",
+                              bLength,
+                              bDescriptorType.ToString("X2") + "h",
+                              bInterfaceNumber,
+                              bAlternateSetting,
+                              bNumEndpoints,
+                              bInterfaceClass.ToString("X2") + "h",
+                              bInterfaceSubClass.ToString("X2") + "h",
+                              bInterfaceProtocol.ToString("X2") + "h",
+                              iInterface);
         }
     };
 
@@ -1906,7 +2095,15 @@ namespace libusbK
 
         public override string ToString()
         {
-            return string.Format("bLength: {0}\nbDescriptorType: {1}\nbFirstInterface: {2}\nbInterfaceCount: {3}\nbFunctionClass: {4}\nbFunctionSubClass: {5}\nbFunctionProtocol: {6}\niFunction: {7}\n", bLength, bDescriptorType.ToString("X2") + "h", bFirstInterface, bInterfaceCount, bFunctionClass.ToString("X2") + "h", bFunctionSubClass.ToString("X2") + "h", bFunctionProtocol.ToString("X2") + "h", iFunction);
+            return string.Format("bLength: {0}\nbDescriptorType: {1}\nbFirstInterface: {2}\nbInterfaceCount: {3}\nbFunctionClass: {4}\nbFunctionSubClass: {5}\nbFunctionProtocol: {6}\niFunction: {7}\n",
+                                 bLength,
+                                 bDescriptorType.ToString("X2") + "h",
+                                 bFirstInterface,
+                                 bInterfaceCount,
+                                 bFunctionClass.ToString("X2") + "h",
+                                 bFunctionSubClass.ToString("X2") + "h",
+                                 bFunctionProtocol.ToString("X2") + "h",
+                                 iFunction);
         }
     };
 
@@ -2325,7 +2522,15 @@ namespace libusbK
 
         public override string ToString()
         {
-            return string.Format("UsbHandle: {0}\nPipeID: {1}\nMaxPendingTransfers: {2}\nMaxTransferSize: {3}\nMaxPendingIO: {4}\nDeviceHandle: {5}\nStreamHandle: {6}\nUserState: {7}\n", UsbHandle.ToString("X16") + "h", PipeID.ToString("X2") + "h", MaxPendingTransfers, MaxTransferSize, MaxPendingIO, DeviceHandle.ToString("X16") + "h", StreamHandle.ToString("X16") + "h", UserState.ToString("X16") + "h");
+            return string.Format("UsbHandle: {0}\nPipeID: {1}\nMaxPendingTransfers: {2}\nMaxTransferSize: {3}\nMaxPendingIO: {4}\nDeviceHandle: {5}\nStreamHandle: {6}\nUserState: {7}\n",
+                                 UsbHandle.ToString("X16") + "h",
+                                 PipeID.ToString("X2") + "h",
+                                 MaxPendingTransfers,
+                                 MaxTransferSize,
+                                 MaxPendingIO,
+                                 DeviceHandle.ToString("X16") + "h",
+                                 StreamHandle.ToString("X16") + "h",
+                                 UserState.ToString("X16") + "h");
         }
     }
 
@@ -2417,7 +2622,7 @@ namespace libusbK
     public delegate bool KUSB_CloneDelegate([In] KUSB_HANDLE InterfaceHandle, [Out] out KUSB_HANDLE DstInterfaceHandle);
 
     [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet = CharSet.Ansi, SetLastError = true)]
-    public delegate bool KUSB_QueryInterfaceSettingsDelegate([In] KUSB_HANDLE InterfaceHandle, byte AltSettingNumber, [Out] out USB_INTERFACE_DESCRIPTOR UsbAltInterfaceDescriptor);
+    public delegate bool KUSB_QueryInterfaceSettingsDelegate([In] KUSB_HANDLE InterfaceHandle, byte AltSettingIndex, [Out] out USB_INTERFACE_DESCRIPTOR UsbAltInterfaceDescriptor);
 
     [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet = CharSet.Ansi, SetLastError = true)]
     public delegate bool KUSB_QueryDeviceInformationDelegate([In] KUSB_HANDLE InterfaceHandle, int InformationType, ref int BufferLength, IntPtr Buffer);
@@ -2499,35 +2704,6 @@ namespace libusbK
         {
         }
 
-        /// <Summary>Initializes a new usb device list containing all supported devices.</Summary>
-        public LstK(KLST_FLAG Flags)
-        {
-            bool success = AllKFunctions.LstK_Init(out mHandleStruct, Flags);
-
-            if (!success) throw new Exception(string.Format("{0} failed initializing. ErrorCode={1:X8}h", GetType().Name, Marshal.GetLastWin32Error()));
-
-            Debug.Print("{0} Init: handle 0x{1:X16}", GetType().Name, mHandleStruct.Pointer.ToInt64());
-        }
-
-        /// <Summary>Initializes a new usb device list containing only devices matching a specific class GUID.</Summary>
-        public LstK(KLST_FLAG Flags, ref KLST_PATTERN_MATCH PatternMatch)
-        {
-            bool success = AllKFunctions.LstK_InitEx(out mHandleStruct, Flags, ref PatternMatch);
-
-            if (!success) throw new Exception(string.Format("{0} failed initializing. ErrorCode={1:X8}h", GetType().Name, Marshal.GetLastWin32Error()));
-
-            Debug.Print("{0} Init: handle 0x{1:X16}", GetType().Name, mHandleStruct.Pointer.ToInt64());
-        }
-
-        /// <summary>Gets the handle class structure.</summary>
-        public KLST_HANDLE Handle
-        {
-            get
-            {
-                return mHandleStruct;
-            }
-        }
-
         #region IDisposable Members
 
         /// <summary>Explicitly closes and frees the handle.</summary>
@@ -2542,12 +2718,6 @@ namespace libusbK
         ~LstK()
         {
             Dispose(false);
-        }
-
-        /// <summary>Calls the dispose method.</summary>
-        public virtual void Free()
-        {
-            Dispose();
         }
 
         protected virtual void Dispose(bool disposing)
@@ -2589,16 +2759,65 @@ namespace libusbK
             return true;
         }
 
-        /// <Summary>Enumerates \ref KLST_DEVINFO elements of a \ref KLST_HANDLE.</Summary>
-        public virtual bool Enumerate(KLST_ENUM_DEVINFO_CB EnumDevListCB, IntPtr Context)
+        #region Public Members
+
+        /// <Summary>Initializes a new usb device list containing all supported devices.</Summary>
+        public LstK(KLST_FLAG Flags)
         {
-            return AllKFunctions.LstK_Enumerate(mHandleStruct, EnumDevListCB, Context);
+            bool success = AllKFunctions.LstK_Init(out mHandleStruct, Flags);
+
+            if (!success) throw new Exception(string.Format("{0} failed initializing. ErrorCode={1:X8}h", GetType().Name, Marshal.GetLastWin32Error()));
+
+            Debug.Print("{0} Init: handle 0x{1:X16}", GetType().Name, mHandleStruct.Pointer.ToInt64());
+        }
+
+        /// <Summary>Initializes a new usb device list containing only devices matching a specific class GUID.</Summary>
+        public LstK(KLST_FLAG Flags, ref KLST_PATTERN_MATCH PatternMatch)
+        {
+            bool success = AllKFunctions.LstK_InitEx(out mHandleStruct, Flags, ref PatternMatch);
+
+            if (!success) throw new Exception(string.Format("{0} failed initializing. ErrorCode={1:X8}h", GetType().Name, Marshal.GetLastWin32Error()));
+
+            Debug.Print("{0} Init: handle 0x{1:X16}", GetType().Name, mHandleStruct.Pointer.ToInt64());
+        }
+
+        /// <Summary>Counts the number of device info elements in a device list.</Summary>
+        public virtual bool Count(ref int Count)
+        {
+            return AllKFunctions.LstK_Count(mHandleStruct, ref Count);
         }
 
         /// <Summary>Gets the \ref KLST_DEVINFO element for the current position.</Summary>
         public virtual bool Current(out KLST_DEVINFO_HANDLE DeviceInfo)
         {
             return AllKFunctions.LstK_Current(mHandleStruct, out DeviceInfo);
+        }
+
+        /// <Summary>Enumerates \ref KLST_DEVINFO elements of a \ref KLST_HANDLE.</Summary>
+        public virtual bool Enumerate(KLST_ENUM_DEVINFO_CB EnumDevListCB, IntPtr Context)
+        {
+            return AllKFunctions.LstK_Enumerate(mHandleStruct, EnumDevListCB, Context);
+        }
+
+        /// <Summary>Find a device by vendor and product id</Summary>
+        public virtual bool FindByVidPid(int Vid, int Pid, out KLST_DEVINFO_HANDLE DeviceInfo)
+        {
+            return AllKFunctions.LstK_FindByVidPid(mHandleStruct, Vid, Pid, out DeviceInfo);
+        }
+
+        /// <summary>Calls the dispose method.</summary>
+        public virtual void Free()
+        {
+            Dispose();
+        }
+
+        /// <summary>Gets the handle class structure.</summary>
+        public KLST_HANDLE Handle
+        {
+            get
+            {
+                return mHandleStruct;
+            }
         }
 
         /// <Summary>Advances the device list current \ref KLST_DEVINFO position.</Summary>
@@ -2613,17 +2832,7 @@ namespace libusbK
             AllKFunctions.LstK_MoveReset(mHandleStruct);
         }
 
-        /// <Summary>Find a device by vendor and product id</Summary>
-        public virtual bool FindByVidPid(int Vid, int Pid, out KLST_DEVINFO_HANDLE DeviceInfo)
-        {
-            return AllKFunctions.LstK_FindByVidPid(mHandleStruct, Vid, Pid, out DeviceInfo);
-        }
-
-        /// <Summary>Counts the number of device info elements in a device list.</Summary>
-        public virtual bool Count(ref int Count)
-        {
-            return AllKFunctions.LstK_Count(mHandleStruct, ref Count);
-        }
+        #endregion
     }
 
     public class HotK : IDisposable
@@ -2633,25 +2842,6 @@ namespace libusbK
 
         protected HotK()
         {
-        }
-
-        /// <Summary>Creates a new hot-plug handle for USB device arrival/removal event monitoring.</Summary>
-        public HotK(ref KHOT_PARAMS InitParams)
-        {
-            bool success = AllKFunctions.HotK_Init(out mHandleStruct, ref InitParams);
-
-            if (!success) throw new Exception(string.Format("{0} failed initializing. ErrorCode={1:X8}h", GetType().Name, Marshal.GetLastWin32Error()));
-
-            Debug.Print("{0} Init: handle 0x{1:X16}", GetType().Name, mHandleStruct.Pointer.ToInt64());
-        }
-
-        /// <summary>Gets the handle class structure.</summary>
-        public KHOT_HANDLE Handle
-        {
-            get
-            {
-                return mHandleStruct;
-            }
         }
 
         #region IDisposable Members
@@ -2668,12 +2858,6 @@ namespace libusbK
         ~HotK()
         {
             Dispose(false);
-        }
-
-        /// <summary>Calls the dispose method.</summary>
-        public virtual void Free()
-        {
-            Dispose();
         }
 
         protected virtual void Dispose(bool disposing)
@@ -2704,11 +2888,40 @@ namespace libusbK
             return true;
         }
 
+        #region Public Members
+
+        /// <Summary>Creates a new hot-plug handle for USB device arrival/removal event monitoring.</Summary>
+        public HotK(ref KHOT_PARAMS InitParams)
+        {
+            bool success = AllKFunctions.HotK_Init(out mHandleStruct, ref InitParams);
+
+            if (!success) throw new Exception(string.Format("{0} failed initializing. ErrorCode={1:X8}h", GetType().Name, Marshal.GetLastWin32Error()));
+
+            Debug.Print("{0} Init: handle 0x{1:X16}", GetType().Name, mHandleStruct.Pointer.ToInt64());
+        }
+
+        /// <summary>Calls the dispose method.</summary>
+        public virtual void Free()
+        {
+            Dispose();
+        }
+
         /// <Summary>Frees all hot-plug handles initialized with \ref HotK_Init.</Summary>
         public virtual void FreeAll()
         {
             AllKFunctions.HotK_FreeAll();
         }
+
+        /// <summary>Gets the handle class structure.</summary>
+        public KHOT_HANDLE Handle
+        {
+            get
+            {
+                return mHandleStruct;
+            }
+        }
+
+        #endregion
     }
 
     public class UsbK : IDisposable
@@ -2719,45 +2932,6 @@ namespace libusbK
 
         protected UsbK()
         {
-        }
-
-        /// <Summary>Creates/opens a libusbK interface handle from the device list. This is a preferred method.</Summary>
-        public UsbK(KLST_DEVINFO_HANDLE DevInfo)
-        {
-            bool success = AllKFunctions.LibK_LoadDriverAPI(out driverAPI, DevInfo.DriverID);
-
-            if (!success) throw new Exception(string.Format("{0} failed loading Driver API. ErrorCode={1:X8}h", GetType().Name, Marshal.GetLastWin32Error()));
-
-            success = driverAPI.Init(out mHandleStruct, DevInfo);
-
-            if (!success)
-                throw new Exception(string.Format("{0} failed initializing usb device. ErrorCode={1:X8}h", GetType().Name, Marshal.GetLastWin32Error()));
-
-            Debug.Print("{0} Init: handle 0x{1:X16}", GetType().Name, mHandleStruct.Pointer.ToInt64());
-        }
-
-        /// <Summary>Creates a libusbK handle for the device specified by a file handle.</Summary>
-        public UsbK(IntPtr DeviceHandle, KUSB_DRVID driverID)
-        {
-            bool success = AllKFunctions.LibK_LoadDriverAPI(out driverAPI, (int) driverID);
-
-            if (!success) throw new Exception(string.Format("{0} failed loading Driver API. ErrorCode={1:X8}h", GetType().Name, Marshal.GetLastWin32Error()));
-
-            success = driverAPI.Initialize(DeviceHandle, out mHandleStruct);
-
-            if (!success)
-                throw new Exception(string.Format("{0} failed initializing usb device. ErrorCode={1:X8}h", GetType().Name, Marshal.GetLastWin32Error()));
-
-            Debug.Print("{0} Init: handle 0x{1:X16}", GetType().Name, mHandleStruct.Pointer.ToInt64());
-        }
-
-        /// <summary>Gets the handle class structure.</summary>
-        public KUSB_HANDLE Handle
-        {
-            get
-            {
-                return mHandleStruct;
-            }
         }
 
         #region IDisposable Members
@@ -2774,12 +2948,6 @@ namespace libusbK
         ~UsbK()
         {
             Dispose(false);
-        }
-
-        /// <summary>Calls the dispose method.</summary>
-        public virtual void Free()
-        {
-            Dispose();
         }
 
         protected virtual void Dispose(bool disposing)
@@ -2815,40 +2983,70 @@ namespace libusbK
             return true;
         }
 
+        /// <Summary>Creates a libusbK handle for the device specified by a file handle.</Summary>
+        protected bool Initialize(IntPtr DeviceHandle, KUSB_DRVID driverID)
+        {
+            bool success = AllKFunctions.LibK_LoadDriverAPI(out driverAPI, (int) driverID);
+
+            if (!success) throw new Exception(string.Format("{0} failed loading Driver API. ErrorCode={1:X8}h", GetType().Name, Marshal.GetLastWin32Error()));
+
+            success = driverAPI.Initialize(DeviceHandle, out mHandleStruct);
+
+            if (!success)
+                throw new Exception(string.Format("{0} failed initializing usb device. ErrorCode={1:X8}h", GetType().Name, Marshal.GetLastWin32Error()));
+
+            Debug.Print("{0} Init: handle 0x{1:X16}", GetType().Name, mHandleStruct.Pointer.ToInt64());
+            return true;
+        }
+
+        #region Public Members
+
+        /// <Summary>Creates/opens a libusbK interface handle from the device list. This is a preferred method.</Summary>
+        public UsbK(KLST_DEVINFO_HANDLE DevInfo)
+        {
+            bool success = AllKFunctions.LibK_LoadDriverAPI(out driverAPI, DevInfo.DriverID);
+
+            if (!success) throw new Exception(string.Format("{0} failed loading Driver API. ErrorCode={1:X8}h", GetType().Name, Marshal.GetLastWin32Error()));
+
+            success = driverAPI.Init(out mHandleStruct, DevInfo);
+
+            if (!success)
+                throw new Exception(string.Format("{0} failed initializing usb device. ErrorCode={1:X8}h", GetType().Name, Marshal.GetLastWin32Error()));
+
+            Debug.Print("{0} Init: handle 0x{1:X16}", GetType().Name, mHandleStruct.Pointer.ToInt64());
+        }
+
+        /// <Summary>Creates a libusbK handle for the device specified by a file handle.</Summary>
+        public UsbK(IntPtr DeviceHandle, KUSB_DRVID driverID)
+        {
+            bool success = AllKFunctions.LibK_LoadDriverAPI(out driverAPI, (int) driverID);
+
+            if (!success) throw new Exception(string.Format("{0} failed loading Driver API. ErrorCode={1:X8}h", GetType().Name, Marshal.GetLastWin32Error()));
+
+            success = driverAPI.Initialize(DeviceHandle, out mHandleStruct);
+
+            if (!success)
+                throw new Exception(string.Format("{0} failed initializing usb device. ErrorCode={1:X8}h", GetType().Name, Marshal.GetLastWin32Error()));
+
+            Debug.Print("{0} Init: handle 0x{1:X16}", GetType().Name, mHandleStruct.Pointer.ToInt64());
+        }
+
+        /// <Summary>Aborts all of the pending transfers for a pipe.</Summary>
+        public virtual bool AbortPipe(byte PipeID)
+        {
+            return driverAPI.AbortPipe(mHandleStruct, PipeID);
+        }
+
         /// <Summary>Claims the specified interface by number or index.</Summary>
         public virtual bool ClaimInterface(byte NumberOrIndex, bool IsIndex)
         {
             return driverAPI.ClaimInterface(mHandleStruct, NumberOrIndex, IsIndex);
         }
 
-        /// <Summary>Releases the specified interface by number or index.</Summary>
-        public virtual bool ReleaseInterface(byte NumberOrIndex, bool IsIndex)
+        /// <Summary>Clones the specified interface handle.</Summary>
+        public virtual bool Clone(out KUSB_HANDLE DstInterfaceHandle)
         {
-            return driverAPI.ReleaseInterface(mHandleStruct, NumberOrIndex, IsIndex);
-        }
-
-        /// <Summary>Sets the alternate setting of the specified interface.</Summary>
-        public virtual bool SetAltInterface(byte NumberOrIndex, bool IsIndex, byte AltSettingNumber)
-        {
-            return driverAPI.SetAltInterface(mHandleStruct, NumberOrIndex, IsIndex, AltSettingNumber);
-        }
-
-        /// <Summary>Gets the alternate setting for the specified interface.</Summary>
-        public virtual bool GetAltInterface(byte NumberOrIndex, bool IsIndex, out byte AltSettingNumber)
-        {
-            return driverAPI.GetAltInterface(mHandleStruct, NumberOrIndex, IsIndex, out AltSettingNumber);
-        }
-
-        /// <Summary>Gets the requested descriptor. This is a synchronous operation.</Summary>
-        public virtual bool GetDescriptor(byte DescriptorType, byte Index, int LanguageID, IntPtr Buffer, int BufferLength, out int LengthTransferred)
-        {
-            return driverAPI.GetDescriptor(mHandleStruct, DescriptorType, Index, (ushort) LanguageID, Buffer, BufferLength, out LengthTransferred);
-        }
-
-        /// <Summary>Gets the requested descriptor. This is a synchronous operation.</Summary>
-        public virtual bool GetDescriptor(byte DescriptorType, byte Index, int LanguageID, Array Buffer, int BufferLength, out int LengthTransferred)
-        {
-            return driverAPI.GetDescriptor(mHandleStruct, DescriptorType, Index, (ushort) LanguageID, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, out LengthTransferred);
+            return driverAPI.Clone(mHandleStruct, out DstInterfaceHandle);
         }
 
         /// <Summary>Transmits control data over a default control endpoint.</Summary>
@@ -2875,68 +3073,22 @@ namespace libusbK
             return driverAPI.ControlTransfer(mHandleStruct, SetupPacket, Buffer, BufferLength, out LengthTransferred, Overlapped.Pointer);
         }
 
-        /// <Summary>Sets the power policy for a device.</Summary>
-        public virtual bool SetPowerPolicy(int PolicyType, int ValueLength, IntPtr Value)
+        /// <Summary>Discards any data that is cached in a pipe.</Summary>
+        public virtual bool FlushPipe(byte PipeID)
         {
-            return driverAPI.SetPowerPolicy(mHandleStruct, PolicyType, ValueLength, Value);
+            return driverAPI.FlushPipe(mHandleStruct, PipeID);
         }
 
-        /// <Summary>Sets the power policy for a device.</Summary>
-        public virtual bool SetPowerPolicy(int PolicyType, int ValueLength, Array Value)
+        /// <summary>Calls the dispose method.</summary>
+        public virtual void Free()
         {
-            return driverAPI.SetPowerPolicy(mHandleStruct, PolicyType, ValueLength, Marshal.UnsafeAddrOfPinnedArrayElement(Value, 0));
+            Dispose();
         }
 
-        /// <Summary>Gets the power policy for a device.</Summary>
-        public virtual bool GetPowerPolicy(int PolicyType, ref int ValueLength, IntPtr Value)
+        /// <Summary>Gets the alternate setting for the specified interface.</Summary>
+        public virtual bool GetAltInterface(byte NumberOrIndex, bool IsIndex, out byte AltSettingNumber)
         {
-            return driverAPI.GetPowerPolicy(mHandleStruct, PolicyType, ref ValueLength, Value);
-        }
-
-        /// <Summary>Gets the power policy for a device.</Summary>
-        public virtual bool GetPowerPolicy(int PolicyType, ref int ValueLength, Array Value)
-        {
-            return driverAPI.GetPowerPolicy(mHandleStruct, PolicyType, ref ValueLength, Marshal.UnsafeAddrOfPinnedArrayElement(Value, 0));
-        }
-
-        /// <Summary>Sets the device configuration number.</Summary>
-        public virtual bool SetConfiguration(byte ConfigurationNumber)
-        {
-            return driverAPI.SetConfiguration(mHandleStruct, ConfigurationNumber);
-        }
-
-        /// <Summary>Gets the device current configuration number.</Summary>
-        public virtual bool GetConfiguration(out byte ConfigurationNumber)
-        {
-            return driverAPI.GetConfiguration(mHandleStruct, out ConfigurationNumber);
-        }
-
-        /// <Summary>Resets the usb device of the specified interface handle. (port cycle).</Summary>
-        public virtual bool ResetDevice()
-        {
-            return driverAPI.ResetDevice(mHandleStruct);
-        }
-
-        /// <Summary>Creates a libusbK handle for the device specified by a file handle.</Summary>
-        protected bool Initialize(IntPtr DeviceHandle, KUSB_DRVID driverID)
-        {
-            bool success = AllKFunctions.LibK_LoadDriverAPI(out driverAPI, (int) driverID);
-
-            if (!success) throw new Exception(string.Format("{0} failed loading Driver API. ErrorCode={1:X8}h", GetType().Name, Marshal.GetLastWin32Error()));
-
-            success = driverAPI.Initialize(DeviceHandle, out mHandleStruct);
-
-            if (!success)
-                throw new Exception(string.Format("{0} failed initializing usb device. ErrorCode={1:X8}h", GetType().Name, Marshal.GetLastWin32Error()));
-
-            Debug.Print("{0} Init: handle 0x{1:X16}", GetType().Name, mHandleStruct.Pointer.ToInt64());
-            return true;
-        }
-
-        /// <Summary>Selects the specified interface by number or index as the current interface.</Summary>
-        public virtual bool SelectInterface(byte NumberOrIndex, bool IsIndex)
-        {
-            return driverAPI.SelectInterface(mHandleStruct, NumberOrIndex, IsIndex);
+            return driverAPI.GetAltInterface(mHandleStruct, NumberOrIndex, IsIndex, out AltSettingNumber);
         }
 
         /// <Summary>Retrieves a handle for an associated interface.</Summary>
@@ -2945,28 +3097,10 @@ namespace libusbK
             return driverAPI.GetAssociatedInterface(mHandleStruct, AssociatedInterfaceIndex, out AssociatedInterfaceHandle);
         }
 
-        /// <Summary>Clones the specified interface handle.</Summary>
-        public virtual bool Clone(out KUSB_HANDLE DstInterfaceHandle)
+        /// <Summary>Gets the device current configuration number.</Summary>
+        public virtual bool GetConfiguration(out byte ConfigurationNumber)
         {
-            return driverAPI.Clone(mHandleStruct, out DstInterfaceHandle);
-        }
-
-        /// <Summary>Retrieves the interface descriptor for the specified alternate interface settings for a particular interface handle.</Summary>
-        public virtual bool QueryInterfaceSettings(byte AltSettingNumber, out USB_INTERFACE_DESCRIPTOR UsbAltInterfaceDescriptor)
-        {
-            return driverAPI.QueryInterfaceSettings(mHandleStruct, AltSettingNumber, out UsbAltInterfaceDescriptor);
-        }
-
-        /// <Summary>Retrieves information about the physical device that is associated with a libusbK handle.</Summary>
-        public virtual bool QueryDeviceInformation(int InformationType, ref int BufferLength, IntPtr Buffer)
-        {
-            return driverAPI.QueryDeviceInformation(mHandleStruct, InformationType, ref BufferLength, Buffer);
-        }
-
-        /// <Summary>Sets the alternate setting of an interface.</Summary>
-        public virtual bool SetCurrentAlternateSetting(byte AltSettingNumber)
-        {
-            return driverAPI.SetCurrentAlternateSetting(mHandleStruct, AltSettingNumber);
+            return driverAPI.GetConfiguration(mHandleStruct, out ConfigurationNumber);
         }
 
         /// <Summary>Gets the current alternate interface setting for an interface.</Summary>
@@ -2975,22 +3109,34 @@ namespace libusbK
             return driverAPI.GetCurrentAlternateSetting(mHandleStruct, out AltSettingNumber);
         }
 
-        /// <Summary>Retrieves information about a pipe that is associated with an interface.</Summary>
-        public virtual bool QueryPipe(byte AltSettingNumber, byte PipeIndex, out WINUSB_PIPE_INFORMATION PipeInformation)
+        /// <Summary>Retrieves the current USB frame number.</Summary>
+        public virtual bool GetCurrentFrameNumber(out int FrameNumber)
         {
-            return driverAPI.QueryPipe(mHandleStruct, AltSettingNumber, PipeIndex, out PipeInformation);
+            return driverAPI.GetCurrentFrameNumber(mHandleStruct, out FrameNumber);
         }
 
-        /// <Summary>Sets the policy for a specific pipe associated with an endpoint on the device. This is a synchronous operation.</Summary>
-        public virtual bool SetPipePolicy(byte PipeID, int PolicyType, int ValueLength, IntPtr Value)
+        /// <Summary>Gets the requested descriptor. This is a synchronous operation.</Summary>
+        public virtual bool GetDescriptor(byte DescriptorType, byte Index, int LanguageID, IntPtr Buffer, int BufferLength, out int LengthTransferred)
         {
-            return driverAPI.SetPipePolicy(mHandleStruct, PipeID, PolicyType, ValueLength, Value);
+            return driverAPI.GetDescriptor(mHandleStruct, DescriptorType, Index, (ushort) LanguageID, Buffer, BufferLength, out LengthTransferred);
         }
 
-        /// <Summary>Sets the policy for a specific pipe associated with an endpoint on the device. This is a synchronous operation.</Summary>
-        public virtual bool SetPipePolicy(byte PipeID, int PolicyType, int ValueLength, Array Value)
+        /// <Summary>Gets the requested descriptor. This is a synchronous operation.</Summary>
+        public virtual bool GetDescriptor(byte DescriptorType, byte Index, int LanguageID, Array Buffer, int BufferLength, out int LengthTransferred)
         {
-            return driverAPI.SetPipePolicy(mHandleStruct, PipeID, PolicyType, ValueLength, Marshal.UnsafeAddrOfPinnedArrayElement(Value, 0));
+            return driverAPI.GetDescriptor(mHandleStruct, DescriptorType, Index, (ushort) LanguageID, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, out LengthTransferred);
+        }
+
+        /// <Summary>Retrieves the results of an overlapped operation on the specified libusbK handle.</Summary>
+        public virtual bool GetOverlappedResult(IntPtr Overlapped, out int lpNumberOfBytesTransferred, bool bWait)
+        {
+            return driverAPI.GetOverlappedResult(mHandleStruct, Overlapped, out lpNumberOfBytesTransferred, bWait);
+        }
+
+        /// <Summary>Retrieves the results of an overlapped operation on the specified libusbK handle.</Summary>
+        public virtual bool GetOverlappedResult(KOVL_HANDLE Overlapped, out int lpNumberOfBytesTransferred, bool bWait)
+        {
+            return driverAPI.GetOverlappedResult(mHandleStruct, Overlapped.Pointer, out lpNumberOfBytesTransferred, bWait);
         }
 
         /// <Summary>Gets the policy for a specific pipe (endpoint).</Summary>
@@ -3005,70 +3151,37 @@ namespace libusbK
             return driverAPI.GetPipePolicy(mHandleStruct, PipeID, PolicyType, ref ValueLength, Marshal.UnsafeAddrOfPinnedArrayElement(Value, 0));
         }
 
-        /// <Summary>Reads data from the specified pipe.</Summary>
-        public virtual bool ReadPipe(byte PipeID, IntPtr Buffer, int BufferLength, out int LengthTransferred, IntPtr Overlapped)
+        /// <Summary>Gets the power policy for a device.</Summary>
+        public virtual bool GetPowerPolicy(int PolicyType, ref int ValueLength, IntPtr Value)
         {
-            return driverAPI.ReadPipe(mHandleStruct, PipeID, Buffer, BufferLength, out LengthTransferred, Overlapped);
+            return driverAPI.GetPowerPolicy(mHandleStruct, PolicyType, ref ValueLength, Value);
         }
 
-        /// <Summary>Reads data from the specified pipe.</Summary>
-        public virtual bool ReadPipe(byte PipeID, Array Buffer, int BufferLength, out int LengthTransferred, IntPtr Overlapped)
+        /// <Summary>Gets the power policy for a device.</Summary>
+        public virtual bool GetPowerPolicy(int PolicyType, ref int ValueLength, Array Value)
         {
-            return driverAPI.ReadPipe(mHandleStruct, PipeID, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, out LengthTransferred, Overlapped);
+            return driverAPI.GetPowerPolicy(mHandleStruct, PolicyType, ref ValueLength, Marshal.UnsafeAddrOfPinnedArrayElement(Value, 0));
         }
 
-        /// <Summary>Reads data from the specified pipe.</Summary>
-        public virtual bool ReadPipe(byte PipeID, Array Buffer, int BufferLength, out int LengthTransferred, KOVL_HANDLE Overlapped)
+        /// <Summary>Gets a USB device (driver specific) property from usb handle.</Summary>
+        public virtual bool GetProperty(KUSB_PROPERTY PropertyType, ref int PropertySize, IntPtr Value)
         {
-            return driverAPI.ReadPipe(mHandleStruct, PipeID, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, out LengthTransferred, Overlapped.Pointer);
+            return driverAPI.GetProperty(mHandleStruct, PropertyType, ref PropertySize, Value);
         }
 
-        /// <Summary>Reads data from the specified pipe.</Summary>
-        public virtual bool ReadPipe(byte PipeID, IntPtr Buffer, int BufferLength, out int LengthTransferred, KOVL_HANDLE Overlapped)
+        /// <Summary>Gets a USB device (driver specific) property from usb handle.</Summary>
+        public virtual bool GetProperty(KUSB_PROPERTY PropertyType, ref int PropertySize, Array Value)
         {
-            return driverAPI.ReadPipe(mHandleStruct, PipeID, Buffer, BufferLength, out LengthTransferred, Overlapped.Pointer);
+            return driverAPI.GetProperty(mHandleStruct, PropertyType, ref PropertySize, Marshal.UnsafeAddrOfPinnedArrayElement(Value, 0));
         }
 
-        /// <Summary>Writes data to a pipe.</Summary>
-        public virtual bool WritePipe(byte PipeID, IntPtr Buffer, int BufferLength, out int LengthTransferred, IntPtr Overlapped)
+        /// <summary>Gets the handle class structure.</summary>
+        public KUSB_HANDLE Handle
         {
-            return driverAPI.WritePipe(mHandleStruct, PipeID, Buffer, BufferLength, out LengthTransferred, Overlapped);
-        }
-
-        /// <Summary>Writes data to a pipe.</Summary>
-        public virtual bool WritePipe(byte PipeID, Array Buffer, int BufferLength, out int LengthTransferred, IntPtr Overlapped)
-        {
-            return driverAPI.WritePipe(mHandleStruct, PipeID, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, out LengthTransferred, Overlapped);
-        }
-
-        /// <Summary>Writes data to a pipe.</Summary>
-        public virtual bool WritePipe(byte PipeID, Array Buffer, int BufferLength, out int LengthTransferred, KOVL_HANDLE Overlapped)
-        {
-            return driverAPI.WritePipe(mHandleStruct, PipeID, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, out LengthTransferred, Overlapped.Pointer);
-        }
-
-        /// <Summary>Writes data to a pipe.</Summary>
-        public virtual bool WritePipe(byte PipeID, IntPtr Buffer, int BufferLength, out int LengthTransferred, KOVL_HANDLE Overlapped)
-        {
-            return driverAPI.WritePipe(mHandleStruct, PipeID, Buffer, BufferLength, out LengthTransferred, Overlapped.Pointer);
-        }
-
-        /// <Summary>Resets the data toggle and clears the stall condition on a pipe.</Summary>
-        public virtual bool ResetPipe(byte PipeID)
-        {
-            return driverAPI.ResetPipe(mHandleStruct, PipeID);
-        }
-
-        /// <Summary>Aborts all of the pending transfers for a pipe.</Summary>
-        public virtual bool AbortPipe(byte PipeID)
-        {
-            return driverAPI.AbortPipe(mHandleStruct, PipeID);
-        }
-
-        /// <Summary>Discards any data that is cached in a pipe.</Summary>
-        public virtual bool FlushPipe(byte PipeID)
-        {
-            return driverAPI.FlushPipe(mHandleStruct, PipeID);
+            get
+            {
+                return mHandleStruct;
+            }
         }
 
         /// <Summary>Reads from an isochronous pipe.</Summary>
@@ -3119,35 +3232,139 @@ namespace libusbK
             return driverAPI.IsoWritePipe(mHandleStruct, PipeID, Buffer, BufferLength, Overlapped.Pointer, IsoContext);
         }
 
-        /// <Summary>Retrieves the current USB frame number.</Summary>
-        public virtual bool GetCurrentFrameNumber(out int FrameNumber)
+        /// <Summary>Retrieves information about the physical device that is associated with a libusbK handle.</Summary>
+        public virtual bool QueryDeviceInformation(int InformationType, ref int BufferLength, IntPtr Buffer)
         {
-            return driverAPI.GetCurrentFrameNumber(mHandleStruct, out FrameNumber);
+            return driverAPI.QueryDeviceInformation(mHandleStruct, InformationType, ref BufferLength, Buffer);
         }
 
-        /// <Summary>Retrieves the results of an overlapped operation on the specified libusbK handle.</Summary>
-        public virtual bool GetOverlappedResult(IntPtr Overlapped, out int lpNumberOfBytesTransferred, bool bWait)
+        /// <Summary>Retrieves the interface descriptor for the specified alternate interface settings for a particular interface handle.</Summary>
+        public virtual bool QueryInterfaceSettings(byte AltSettingIndex, out USB_INTERFACE_DESCRIPTOR UsbAltInterfaceDescriptor)
         {
-            return driverAPI.GetOverlappedResult(mHandleStruct, Overlapped, out lpNumberOfBytesTransferred, bWait);
+            return driverAPI.QueryInterfaceSettings(mHandleStruct, AltSettingIndex, out UsbAltInterfaceDescriptor);
         }
 
-        /// <Summary>Retrieves the results of an overlapped operation on the specified libusbK handle.</Summary>
-        public virtual bool GetOverlappedResult(KOVL_HANDLE Overlapped, out int lpNumberOfBytesTransferred, bool bWait)
+        /// <Summary>Retrieves information about a pipe that is associated with an interface.</Summary>
+        public virtual bool QueryPipe(byte AltSettingNumber, byte PipeIndex, out WINUSB_PIPE_INFORMATION PipeInformation)
         {
-            return driverAPI.GetOverlappedResult(mHandleStruct, Overlapped.Pointer, out lpNumberOfBytesTransferred, bWait);
+            return driverAPI.QueryPipe(mHandleStruct, AltSettingNumber, PipeIndex, out PipeInformation);
         }
 
-        /// <Summary>Gets a USB device (driver specific) property from usb handle.</Summary>
-        public virtual bool GetProperty(KUSB_PROPERTY PropertyType, ref int PropertySize, IntPtr Value)
+        /// <Summary>Reads data from the specified pipe.</Summary>
+        public virtual bool ReadPipe(byte PipeID, IntPtr Buffer, int BufferLength, out int LengthTransferred, IntPtr Overlapped)
         {
-            return driverAPI.GetProperty(mHandleStruct, PropertyType, ref PropertySize, Value);
+            return driverAPI.ReadPipe(mHandleStruct, PipeID, Buffer, BufferLength, out LengthTransferred, Overlapped);
         }
 
-        /// <Summary>Gets a USB device (driver specific) property from usb handle.</Summary>
-        public virtual bool GetProperty(KUSB_PROPERTY PropertyType, ref int PropertySize, Array Value)
+        /// <Summary>Reads data from the specified pipe.</Summary>
+        public virtual bool ReadPipe(byte PipeID, Array Buffer, int BufferLength, out int LengthTransferred, IntPtr Overlapped)
         {
-            return driverAPI.GetProperty(mHandleStruct, PropertyType, ref PropertySize, Marshal.UnsafeAddrOfPinnedArrayElement(Value, 0));
+            return driverAPI.ReadPipe(mHandleStruct, PipeID, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, out LengthTransferred, Overlapped);
         }
+
+        /// <Summary>Reads data from the specified pipe.</Summary>
+        public virtual bool ReadPipe(byte PipeID, Array Buffer, int BufferLength, out int LengthTransferred, KOVL_HANDLE Overlapped)
+        {
+            return driverAPI.ReadPipe(mHandleStruct, PipeID, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, out LengthTransferred, Overlapped.Pointer);
+        }
+
+        /// <Summary>Reads data from the specified pipe.</Summary>
+        public virtual bool ReadPipe(byte PipeID, IntPtr Buffer, int BufferLength, out int LengthTransferred, KOVL_HANDLE Overlapped)
+        {
+            return driverAPI.ReadPipe(mHandleStruct, PipeID, Buffer, BufferLength, out LengthTransferred, Overlapped.Pointer);
+        }
+
+        /// <Summary>Releases the specified interface by number or index.</Summary>
+        public virtual bool ReleaseInterface(byte NumberOrIndex, bool IsIndex)
+        {
+            return driverAPI.ReleaseInterface(mHandleStruct, NumberOrIndex, IsIndex);
+        }
+
+        /// <Summary>Resets the usb device of the specified interface handle. (port cycle).</Summary>
+        public virtual bool ResetDevice()
+        {
+            return driverAPI.ResetDevice(mHandleStruct);
+        }
+
+        /// <Summary>Resets the data toggle and clears the stall condition on a pipe.</Summary>
+        public virtual bool ResetPipe(byte PipeID)
+        {
+            return driverAPI.ResetPipe(mHandleStruct, PipeID);
+        }
+
+        /// <Summary>Selects the specified interface by number or index as the current interface.</Summary>
+        public virtual bool SelectInterface(byte NumberOrIndex, bool IsIndex)
+        {
+            return driverAPI.SelectInterface(mHandleStruct, NumberOrIndex, IsIndex);
+        }
+
+        /// <Summary>Sets the alternate setting of the specified interface.</Summary>
+        public virtual bool SetAltInterface(byte NumberOrIndex, bool IsIndex, byte AltSettingNumber)
+        {
+            return driverAPI.SetAltInterface(mHandleStruct, NumberOrIndex, IsIndex, AltSettingNumber);
+        }
+
+        /// <Summary>Sets the device configuration number.</Summary>
+        public virtual bool SetConfiguration(byte ConfigurationNumber)
+        {
+            return driverAPI.SetConfiguration(mHandleStruct, ConfigurationNumber);
+        }
+
+        /// <Summary>Sets the alternate setting of an interface.</Summary>
+        public virtual bool SetCurrentAlternateSetting(byte AltSettingNumber)
+        {
+            return driverAPI.SetCurrentAlternateSetting(mHandleStruct, AltSettingNumber);
+        }
+
+        /// <Summary>Sets the policy for a specific pipe associated with an endpoint on the device. This is a synchronous operation.</Summary>
+        public virtual bool SetPipePolicy(byte PipeID, int PolicyType, int ValueLength, IntPtr Value)
+        {
+            return driverAPI.SetPipePolicy(mHandleStruct, PipeID, PolicyType, ValueLength, Value);
+        }
+
+        /// <Summary>Sets the policy for a specific pipe associated with an endpoint on the device. This is a synchronous operation.</Summary>
+        public virtual bool SetPipePolicy(byte PipeID, int PolicyType, int ValueLength, Array Value)
+        {
+            return driverAPI.SetPipePolicy(mHandleStruct, PipeID, PolicyType, ValueLength, Marshal.UnsafeAddrOfPinnedArrayElement(Value, 0));
+        }
+
+        /// <Summary>Sets the power policy for a device.</Summary>
+        public virtual bool SetPowerPolicy(int PolicyType, int ValueLength, IntPtr Value)
+        {
+            return driverAPI.SetPowerPolicy(mHandleStruct, PolicyType, ValueLength, Value);
+        }
+
+        /// <Summary>Sets the power policy for a device.</Summary>
+        public virtual bool SetPowerPolicy(int PolicyType, int ValueLength, Array Value)
+        {
+            return driverAPI.SetPowerPolicy(mHandleStruct, PolicyType, ValueLength, Marshal.UnsafeAddrOfPinnedArrayElement(Value, 0));
+        }
+
+        /// <Summary>Writes data to a pipe.</Summary>
+        public virtual bool WritePipe(byte PipeID, IntPtr Buffer, int BufferLength, out int LengthTransferred, IntPtr Overlapped)
+        {
+            return driverAPI.WritePipe(mHandleStruct, PipeID, Buffer, BufferLength, out LengthTransferred, Overlapped);
+        }
+
+        /// <Summary>Writes data to a pipe.</Summary>
+        public virtual bool WritePipe(byte PipeID, Array Buffer, int BufferLength, out int LengthTransferred, IntPtr Overlapped)
+        {
+            return driverAPI.WritePipe(mHandleStruct, PipeID, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, out LengthTransferred, Overlapped);
+        }
+
+        /// <Summary>Writes data to a pipe.</Summary>
+        public virtual bool WritePipe(byte PipeID, Array Buffer, int BufferLength, out int LengthTransferred, KOVL_HANDLE Overlapped)
+        {
+            return driverAPI.WritePipe(mHandleStruct, PipeID, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), BufferLength, out LengthTransferred, Overlapped.Pointer);
+        }
+
+        /// <Summary>Writes data to a pipe.</Summary>
+        public virtual bool WritePipe(byte PipeID, IntPtr Buffer, int BufferLength, out int LengthTransferred, KOVL_HANDLE Overlapped)
+        {
+            return driverAPI.WritePipe(mHandleStruct, PipeID, Buffer, BufferLength, out LengthTransferred, Overlapped.Pointer);
+        }
+
+        #endregion
     }
 
     public class OvlK : IDisposable
@@ -3157,25 +3374,6 @@ namespace libusbK
 
         protected OvlK()
         {
-        }
-
-        /// <Summary>Creates a new overlapped pool.</Summary>
-        public OvlK(KUSB_HANDLE UsbHandle, int MaxOverlappedCount, KOVL_POOL_FLAG Flags)
-        {
-            bool success = AllKFunctions.OvlK_Init(out mHandleStruct, UsbHandle, MaxOverlappedCount, Flags);
-
-            if (!success) throw new Exception(string.Format("{0} failed initializing. ErrorCode={1:X8}h", GetType().Name, Marshal.GetLastWin32Error()));
-
-            Debug.Print("{0} Init: handle 0x{1:X16}", GetType().Name, mHandleStruct.Pointer.ToInt64());
-        }
-
-        /// <summary>Gets the handle class structure.</summary>
-        public KOVL_POOL_HANDLE Handle
-        {
-            get
-            {
-                return mHandleStruct;
-            }
         }
 
         #region IDisposable Members
@@ -3192,12 +3390,6 @@ namespace libusbK
         ~OvlK()
         {
             Dispose(false);
-        }
-
-        /// <summary>Calls the dispose method.</summary>
-        public virtual void Free()
-        {
-            Dispose();
         }
 
         protected virtual void Dispose(bool disposing)
@@ -3217,18 +3409,6 @@ namespace libusbK
             }
         }
 
-        /// <Summary>Gets a preallocated \c OverlappedK structure from the specified/default pool.</Summary>
-        public virtual bool Acquire(out KOVL_HANDLE OverlappedK)
-        {
-            return AllKFunctions.OvlK_Acquire(out OverlappedK, mHandleStruct);
-        }
-
-        /// <Summary>Returns an \c OverlappedK structure to it's pool.</Summary>
-        public virtual bool Release(KOVL_HANDLE OverlappedK)
-        {
-            return AllKFunctions.OvlK_Release(OverlappedK);
-        }
-
         /// <Summary>Creates a new overlapped pool.</Summary>
         protected bool Init(KUSB_HANDLE UsbHandle, int MaxOverlappedCount, KOVL_POOL_FLAG Flags)
         {
@@ -3240,16 +3420,73 @@ namespace libusbK
             return true;
         }
 
+        #region Public Members
+
+        /// <Summary>Creates a new overlapped pool.</Summary>
+        public OvlK(KUSB_HANDLE UsbHandle, int MaxOverlappedCount, KOVL_POOL_FLAG Flags)
+        {
+            bool success = AllKFunctions.OvlK_Init(out mHandleStruct, UsbHandle, MaxOverlappedCount, Flags);
+
+            if (!success) throw new Exception(string.Format("{0} failed initializing. ErrorCode={1:X8}h", GetType().Name, Marshal.GetLastWin32Error()));
+
+            Debug.Print("{0} Init: handle 0x{1:X16}", GetType().Name, mHandleStruct.Pointer.ToInt64());
+        }
+
+        /// <Summary>Gets a preallocated \c OverlappedK structure from the specified/default pool.</Summary>
+        public virtual bool Acquire(out KOVL_HANDLE OverlappedK)
+        {
+            return AllKFunctions.OvlK_Acquire(out OverlappedK, mHandleStruct);
+        }
+
+        /// <summary>Calls the dispose method.</summary>
+        public virtual void Free()
+        {
+            Dispose();
+        }
+
         /// <Summary>Returns the internal event handle used to signal IO operations.</Summary>
         public virtual IntPtr GetEventHandle(KOVL_HANDLE OverlappedK)
         {
             return AllKFunctions.OvlK_GetEventHandle(OverlappedK);
         }
 
+        /// <summary>Gets the handle class structure.</summary>
+        public KOVL_POOL_HANDLE Handle
+        {
+            get
+            {
+                return mHandleStruct;
+            }
+        }
+
+        /// <Summary>Checks for i/o completion; returns immediately. (polling)</Summary>
+        public virtual bool IsComplete(KOVL_HANDLE OverlappedK)
+        {
+            return AllKFunctions.OvlK_IsComplete(OverlappedK);
+        }
+
+        /// <Summary>Initializes an overlappedK for re-use. The overlappedK is not return to its pool.</Summary>
+        public virtual bool ReUse(KOVL_HANDLE OverlappedK)
+        {
+            return AllKFunctions.OvlK_ReUse(OverlappedK);
+        }
+
+        /// <Summary>Returns an \c OverlappedK structure to it's pool.</Summary>
+        public virtual bool Release(KOVL_HANDLE OverlappedK)
+        {
+            return AllKFunctions.OvlK_Release(OverlappedK);
+        }
+
         /// <Summary>Waits for overlapped I/O completion, and performs actions specified in \c WaitFlags.</Summary>
         public virtual bool Wait(KOVL_HANDLE OverlappedK, int TimeoutMS, KOVL_WAIT_FLAG WaitFlags, out int TransferredLength)
         {
             return AllKFunctions.OvlK_Wait(OverlappedK, TimeoutMS, WaitFlags, out TransferredLength);
+        }
+
+        /// <Summary>Waits for overlapped I/O completion, cancels on a timeout error and always releases the OvlK handle back to its pool.</Summary>
+        public virtual bool WaitAndRelease(KOVL_HANDLE OverlappedK, int TimeoutMS, out int TransferredLength)
+        {
+            return AllKFunctions.OvlK_WaitAndRelease(OverlappedK, TimeoutMS, out TransferredLength);
         }
 
         /// <Summary>Waits for overlapped I/O completion on the oldest acquired OverlappedK handle and performs actions specified in \c WaitFlags.</Summary>
@@ -3264,23 +3501,7 @@ namespace libusbK
             return AllKFunctions.OvlK_WaitOrCancel(OverlappedK, TimeoutMS, out TransferredLength);
         }
 
-        /// <Summary>Waits for overlapped I/O completion, cancels on a timeout error and always releases the OvlK handle back to its pool.</Summary>
-        public virtual bool WaitAndRelease(KOVL_HANDLE OverlappedK, int TimeoutMS, out int TransferredLength)
-        {
-            return AllKFunctions.OvlK_WaitAndRelease(OverlappedK, TimeoutMS, out TransferredLength);
-        }
-
-        /// <Summary>Checks for i/o completion; returns immediately. (polling)</Summary>
-        public virtual bool IsComplete(KOVL_HANDLE OverlappedK)
-        {
-            return AllKFunctions.OvlK_IsComplete(OverlappedK);
-        }
-
-        /// <Summary>Initializes an overlappedK for re-use. The overlappedK is not return to its pool.</Summary>
-        public virtual bool ReUse(KOVL_HANDLE OverlappedK)
-        {
-            return AllKFunctions.OvlK_ReUse(OverlappedK);
-        }
+        #endregion
     }
 
     public class StmK : IDisposable
@@ -3290,25 +3511,6 @@ namespace libusbK
 
         protected StmK()
         {
-        }
-
-        /// <Summary>Initializes a new uni-directional pipe stream.</Summary>
-        public StmK(KUSB_HANDLE UsbHandle, byte PipeID, int MaxTransferSize, int MaxPendingTransfers, int MaxPendingIO, ref KSTM_CALLBACK Callbacks, KSTM_FLAG Flags)
-        {
-            bool success = AllKFunctions.StmK_Init(out mHandleStruct, UsbHandle, PipeID, MaxTransferSize, MaxPendingTransfers, MaxPendingIO, ref Callbacks, Flags);
-
-            if (!success) throw new Exception(string.Format("{0} failed initializing. ErrorCode={1:X8}h", GetType().Name, Marshal.GetLastWin32Error()));
-
-            Debug.Print("{0} Init: handle 0x{1:X16}", GetType().Name, mHandleStruct.Pointer.ToInt64());
-        }
-
-        /// <summary>Gets the handle class structure.</summary>
-        public KSTM_HANDLE Handle
-        {
-            get
-            {
-                return mHandleStruct;
-            }
         }
 
         #region IDisposable Members
@@ -3325,12 +3527,6 @@ namespace libusbK
         ~StmK()
         {
             Dispose(false);
-        }
-
-        /// <summary>Calls the dispose method.</summary>
-        public virtual void Free()
-        {
-            Dispose();
         }
 
         protected virtual void Dispose(bool disposing)
@@ -3361,16 +3557,31 @@ namespace libusbK
             return true;
         }
 
-        /// <Summary>Starts the internal stream thread.</Summary>
-        public virtual bool Start()
+        #region Public Members
+
+        /// <Summary>Initializes a new uni-directional pipe stream.</Summary>
+        public StmK(KUSB_HANDLE UsbHandle, byte PipeID, int MaxTransferSize, int MaxPendingTransfers, int MaxPendingIO, ref KSTM_CALLBACK Callbacks, KSTM_FLAG Flags)
         {
-            return AllKFunctions.StmK_Start(mHandleStruct);
+            bool success = AllKFunctions.StmK_Init(out mHandleStruct, UsbHandle, PipeID, MaxTransferSize, MaxPendingTransfers, MaxPendingIO, ref Callbacks, Flags);
+
+            if (!success) throw new Exception(string.Format("{0} failed initializing. ErrorCode={1:X8}h", GetType().Name, Marshal.GetLastWin32Error()));
+
+            Debug.Print("{0} Init: handle 0x{1:X16}", GetType().Name, mHandleStruct.Pointer.ToInt64());
         }
 
-        /// <Summary>Stops the internal stream thread.</Summary>
-        public virtual bool Stop(int TimeoutCancelMS)
+        /// <summary>Calls the dispose method.</summary>
+        public virtual void Free()
         {
-            return AllKFunctions.StmK_Stop(mHandleStruct, TimeoutCancelMS);
+            Dispose();
+        }
+
+        /// <summary>Gets the handle class structure.</summary>
+        public KSTM_HANDLE Handle
+        {
+            get
+            {
+                return mHandleStruct;
+            }
         }
 
         /// <Summary>Reads data from the stream buffer.</Summary>
@@ -3385,6 +3596,18 @@ namespace libusbK
             return AllKFunctions.StmK_Read(mHandleStruct, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), Offset, Length, out TransferredLength);
         }
 
+        /// <Summary>Starts the internal stream thread.</Summary>
+        public virtual bool Start()
+        {
+            return AllKFunctions.StmK_Start(mHandleStruct);
+        }
+
+        /// <Summary>Stops the internal stream thread.</Summary>
+        public virtual bool Stop(int TimeoutCancelMS)
+        {
+            return AllKFunctions.StmK_Stop(mHandleStruct, TimeoutCancelMS);
+        }
+
         /// <Summary>Writes data to the stream buffer.</Summary>
         public virtual bool Write(IntPtr Buffer, int Offset, int Length, out int TransferredLength)
         {
@@ -3396,109 +3619,17 @@ namespace libusbK
         {
             return AllKFunctions.StmK_Write(mHandleStruct, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0), Offset, Length, out TransferredLength);
         }
+
+        #endregion
     }
 
     public class IsoK : IDisposable
     {
-        private static readonly int ofsFlags = Marshal.OffsetOf(typeof (KISO_CONTEXT_MAP), "Flags").ToInt32();
-        private static readonly int ofsStartFrame = Marshal.OffsetOf(typeof (KISO_CONTEXT_MAP), "StartFrame").ToInt32();
-        private static readonly int ofsErrorCount = Marshal.OffsetOf(typeof (KISO_CONTEXT_MAP), "ErrorCount").ToInt32();
-        private static readonly int ofsNumberOfPackets = Marshal.OffsetOf(typeof (KISO_CONTEXT_MAP), "NumberOfPackets").ToInt32();
-        private static readonly int ofsUrbHdrStatus = Marshal.OffsetOf(typeof (KISO_CONTEXT_MAP), "UrbHdrStatus").ToInt32();
         protected KISO_CONTEXT mHandleStruct;
         protected bool mbDisposed;
 
         protected IsoK()
         {
-        }
-
-        /// <Summary>Creates a new isochronous transfer context.</Summary>
-        public IsoK(int NumberOfPackets, int StartFrame)
-        {
-            bool success = AllKFunctions.IsoK_Init(out mHandleStruct, NumberOfPackets, StartFrame);
-
-            if (!success) throw new Exception(string.Format("{0} failed initializing. ErrorCode={1:X8}h", GetType().Name, Marshal.GetLastWin32Error()));
-
-            Debug.Print("{0} Init: handle 0x{1:X16}", GetType().Name, mHandleStruct.Pointer.ToInt64());
-        }
-
-        /// <summary>Gets the handle class structure.</summary>
-        public KISO_CONTEXT Handle
-        {
-            get
-            {
-                return mHandleStruct;
-            }
-        }
-
-
-        /// <Summary>Additional ISO transfer flags. See \ref KISO_FLAG.</Summary>
-        public KISO_FLAG Flags
-        {
-            get
-            {
-                return (KISO_FLAG) Marshal.ReadInt32(mHandleStruct.Pointer, ofsFlags);
-            }
-            set
-            {
-                Marshal.WriteInt32(mHandleStruct.Pointer, ofsFlags, (int) value);
-            }
-        }
-
-
-        /// <Summary>Specifies the frame number that the transfer should begin on (0 for ASAP).</Summary>
-        public int StartFrame
-        {
-            get
-            {
-                return Marshal.ReadInt32(mHandleStruct.Pointer, ofsStartFrame);
-            }
-            set
-            {
-                Marshal.WriteInt32(mHandleStruct.Pointer, ofsStartFrame, value);
-            }
-        }
-
-
-        /// <Summary>Contains the number of packets that completed with an error condition on return from the host controller driver.</Summary>
-        public short ErrorCount
-        {
-            get
-            {
-                return Marshal.ReadInt16(mHandleStruct.Pointer, ofsErrorCount);
-            }
-            set
-            {
-                Marshal.WriteInt16(mHandleStruct.Pointer, ofsErrorCount, value);
-            }
-        }
-
-
-        /// <Summary>Specifies the number of packets that are described by the variable-length array member \c IsoPacket.</Summary>
-        public short NumberOfPackets
-        {
-            get
-            {
-                return Marshal.ReadInt16(mHandleStruct.Pointer, ofsNumberOfPackets);
-            }
-            set
-            {
-                Marshal.WriteInt16(mHandleStruct.Pointer, ofsNumberOfPackets, value);
-            }
-        }
-
-
-        /// <Summary>Contains the URB Hdr.Status value on return from the host controller driver.</Summary>
-        public int UrbHdrStatus
-        {
-            get
-            {
-                return Marshal.ReadInt32(mHandleStruct.Pointer, ofsUrbHdrStatus);
-            }
-            set
-            {
-                Marshal.WriteInt32(mHandleStruct.Pointer, ofsUrbHdrStatus, value);
-            }
         }
 
         #region IDisposable Members
@@ -3515,12 +3646,6 @@ namespace libusbK
         ~IsoK()
         {
             Dispose(false);
-        }
-
-        /// <summary>Calls the dispose method.</summary>
-        public virtual void Free()
-        {
-            Dispose();
         }
 
         protected virtual void Dispose(bool disposing)
@@ -3540,7 +3665,6 @@ namespace libusbK
             }
         }
 
-
         /// <Summary>Creates a new isochronous transfer context.</Summary>
         protected bool Init(int NumberOfPackets, int StartFrame)
         {
@@ -3552,37 +3676,7 @@ namespace libusbK
             return true;
         }
 
-        /// <Summary>Convenience function for setting the offset of all ISO packets of an isochronous transfer context.</Summary>
-        public virtual bool SetPackets(int PacketSize)
-        {
-            return AllKFunctions.IsoK_SetPackets(mHandleStruct, PacketSize);
-        }
-
-        /// <Summary>Convenience function for setting all fields of a \ref KISO_PACKET.</Summary>
-        public virtual bool SetPacket(int PacketIndex, ref KISO_PACKET IsoPacket)
-        {
-            return AllKFunctions.IsoK_SetPacket(mHandleStruct, PacketIndex, ref IsoPacket);
-        }
-
-        /// <Summary>Convenience function for getting all fields of a \ref KISO_PACKET.</Summary>
-        public virtual bool GetPacket(int PacketIndex, out KISO_PACKET IsoPacket)
-        {
-            return AllKFunctions.IsoK_GetPacket(mHandleStruct, PacketIndex, out IsoPacket);
-        }
-
-        /// <Summary>Convenience function for enumerating ISO packets of an isochronous transfer context.</Summary>
-        public virtual bool EnumPackets(KISO_ENUM_PACKETS_CB EnumPackets, int StartPacketIndex, IntPtr UserState)
-        {
-            return AllKFunctions.IsoK_EnumPackets(mHandleStruct, EnumPackets, StartPacketIndex, UserState);
-        }
-
-        /// <Summary>Convenience function for re-using an isochronous transfer context in a subsequent request.</Summary>
-        public virtual bool ReUse()
-        {
-            return AllKFunctions.IsoK_ReUse(mHandleStruct);
-        }
-
-        #region Nested type: KISO_CONTEXT_MAP
+        #region Nested Structs
 
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
         private struct KISO_CONTEXT_MAP
@@ -3602,6 +3696,140 @@ namespace libusbK
             /// <Summary>Contains the URB Hdr.Status value on return from the host controller driver.</Summary>
             private readonly int UrbHdrStatus;
         };
+
+        #endregion
+
+        #region Public Members
+
+        /// <Summary>Creates a new isochronous transfer context.</Summary>
+        public IsoK(int NumberOfPackets, int StartFrame)
+        {
+            bool success = AllKFunctions.IsoK_Init(out mHandleStruct, NumberOfPackets, StartFrame);
+
+            if (!success) throw new Exception(string.Format("{0} failed initializing. ErrorCode={1:X8}h", GetType().Name, Marshal.GetLastWin32Error()));
+
+            Debug.Print("{0} Init: handle 0x{1:X16}", GetType().Name, mHandleStruct.Pointer.ToInt64());
+        }
+
+        /// <Summary>Convenience function for enumerating ISO packets of an isochronous transfer context.</Summary>
+        public virtual bool EnumPackets(KISO_ENUM_PACKETS_CB EnumPackets, int StartPacketIndex, IntPtr UserState)
+        {
+            return AllKFunctions.IsoK_EnumPackets(mHandleStruct, EnumPackets, StartPacketIndex, UserState);
+        }
+
+        /// <Summary>Contains the number of packets that completed with an error condition on return from the host controller driver.</Summary>
+        public short ErrorCount
+        {
+            get
+            {
+                return Marshal.ReadInt16(mHandleStruct.Pointer, ofsErrorCount);
+            }
+            set
+            {
+                Marshal.WriteInt16(mHandleStruct.Pointer, ofsErrorCount, value);
+            }
+        }
+
+        /// <Summary>Additional ISO transfer flags. See \ref KISO_FLAG.</Summary>
+        public KISO_FLAG Flags
+        {
+            get
+            {
+                return (KISO_FLAG) Marshal.ReadInt32(mHandleStruct.Pointer, ofsFlags);
+            }
+            set
+            {
+                Marshal.WriteInt32(mHandleStruct.Pointer, ofsFlags, (int) value);
+            }
+        }
+
+        /// <summary>Calls the dispose method.</summary>
+        public virtual void Free()
+        {
+            Dispose();
+        }
+
+        /// <Summary>Convenience function for getting all fields of a \ref KISO_PACKET.</Summary>
+        public virtual bool GetPacket(int PacketIndex, out KISO_PACKET IsoPacket)
+        {
+            return AllKFunctions.IsoK_GetPacket(mHandleStruct, PacketIndex, out IsoPacket);
+        }
+
+        /// <summary>Gets the handle class structure.</summary>
+        public KISO_CONTEXT Handle
+        {
+            get
+            {
+                return mHandleStruct;
+            }
+        }
+
+        /// <Summary>Specifies the number of packets that are described by the variable-length array member \c IsoPacket.</Summary>
+        public short NumberOfPackets
+        {
+            get
+            {
+                return Marshal.ReadInt16(mHandleStruct.Pointer, ofsNumberOfPackets);
+            }
+            set
+            {
+                Marshal.WriteInt16(mHandleStruct.Pointer, ofsNumberOfPackets, value);
+            }
+        }
+
+        /// <Summary>Convenience function for re-using an isochronous transfer context in a subsequent request.</Summary>
+        public virtual bool ReUse()
+        {
+            return AllKFunctions.IsoK_ReUse(mHandleStruct);
+        }
+
+        /// <Summary>Convenience function for setting all fields of a \ref KISO_PACKET.</Summary>
+        public virtual bool SetPacket(int PacketIndex, ref KISO_PACKET IsoPacket)
+        {
+            return AllKFunctions.IsoK_SetPacket(mHandleStruct, PacketIndex, ref IsoPacket);
+        }
+
+        /// <Summary>Convenience function for setting the offset of all ISO packets of an isochronous transfer context.</Summary>
+        public virtual bool SetPackets(int PacketSize)
+        {
+            return AllKFunctions.IsoK_SetPackets(mHandleStruct, PacketSize);
+        }
+
+        /// <Summary>Specifies the frame number that the transfer should begin on (0 for ASAP).</Summary>
+        public int StartFrame
+        {
+            get
+            {
+                return Marshal.ReadInt32(mHandleStruct.Pointer, ofsStartFrame);
+            }
+            set
+            {
+                Marshal.WriteInt32(mHandleStruct.Pointer, ofsStartFrame, value);
+            }
+        }
+
+        /// <Summary>Contains the URB Hdr.Status value on return from the host controller driver.</Summary>
+        public int UrbHdrStatus
+        {
+            get
+            {
+                return Marshal.ReadInt32(mHandleStruct.Pointer, ofsUrbHdrStatus);
+            }
+            set
+            {
+                Marshal.WriteInt32(mHandleStruct.Pointer, ofsUrbHdrStatus, value);
+            }
+        }
+
+        #endregion
+
+        #region Private Members
+
+        private static readonly int ofsErrorCount = Marshal.OffsetOf(typeof (KISO_CONTEXT_MAP), "ErrorCount").ToInt32();
+        private static readonly int ofsFlags = Marshal.OffsetOf(typeof (KISO_CONTEXT_MAP), "Flags").ToInt32();
+        private static readonly int ofsNumberOfPackets = Marshal.OffsetOf(typeof (KISO_CONTEXT_MAP), "NumberOfPackets").ToInt32();
+        private static readonly int ofsStartFrame = Marshal.OffsetOf(typeof (KISO_CONTEXT_MAP), "StartFrame").ToInt32();
+        private static readonly int ofsUrbHdrStatus = Marshal.OffsetOf(typeof (KISO_CONTEXT_MAP), "UrbHdrStatus").ToInt32();
 
         #endregion
     }
