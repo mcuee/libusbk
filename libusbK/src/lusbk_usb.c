@@ -502,7 +502,7 @@ KUSB_EXP BOOL KUSB_API LibK_Context_Init(
 	AllK->HeapDynamic = Heap;
 	if (AllK->HeapDynamic == NULL) AllK->HeapDynamic = AllK->HeapProcess;
 
-	AllK->Dlls.hShlwapi = LoadLibraryA("shlwapi");
+	// AllK->Dlls.hShlwapi = LoadLibraryA("shlwapi");
 	AllK->Dlls.hWinTrust = LoadLibraryA("wintrust");
 	AllK->Dlls.hCfgMgr32 = LoadLibraryA("cfgmgr32");
 
@@ -519,7 +519,7 @@ KUSB_EXP BOOL KUSB_API LibK_Context_Init(
 	ALLK_DBG_PRINT_SECTION(StmK);
 	USBLOG_PRINTLN("");
 
-	AllK->PathMatchSpec = (KDYN_PathMatchSpec*)GetProcAddress(AllK->Dlls.hShlwapi, "PathMatchSpecA");
+	// AllK->PathMatchSpec = (KDYN_PathMatchSpec*)GetProcAddress(AllK->Dlls.hShlwapi, "PathMatchSpecA");
 	AllK->CancelIoEx	= (KDYN_CancelIoEx*)GetProcAddress(kernel32_dll, "CancelIoEx");
 
 	AllK->CM_Get_Device_ID	= (KDYN_CM_Get_Device_ID*)GetProcAddress(AllK->Dlls.hCfgMgr32, "CM_Get_Device_IDA");
@@ -568,11 +568,12 @@ KUSB_EXP VOID KUSB_API LibK_Context_Free(VOID)
 	POOLHANDLE_LIB_EXIT_CHECK(StmK);
 #endif
 
-	if (AllK->Dlls.hShlwapi)
-	{
-		FreeLibrary(AllK->Dlls.hShlwapi);
-		AllK->Dlls.hShlwapi = NULL;
-	}
+	//if (AllK->Dlls.hShlwapi)
+	//{
+	//	FreeLibrary(AllK->Dlls.hShlwapi);
+	//	AllK->Dlls.hShlwapi = NULL;
+	//}
+
 	if (AllK->Dlls.hCfgMgr32)
 	{
 		FreeLibrary(AllK->Dlls.hCfgMgr32);
