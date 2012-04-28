@@ -1273,7 +1273,7 @@ void FreeTransferParam(PBENCHMARK_TRANSFER_PARAM* testTransferRef)
 
 PBENCHMARK_TRANSFER_PARAM CreateTransferParam(PBENCHMARK_TEST_PARAM test, int endpointID)
 {
-	PBENCHMARK_TRANSFER_PARAM transferParam;
+	PBENCHMARK_TRANSFER_PARAM transferParam = NULL;
 	int i;
 	int allocSize;
 
@@ -1304,7 +1304,6 @@ PBENCHMARK_TRANSFER_PARAM CreateTransferParam(PBENCHMARK_TEST_PARAM test, int en
 	if (!pipeInfo)
 	{
 		CONERR("failed locating EP%02Xh!\n", endpointID);
-		FreeTransferParam(&transferParam);
 		goto Done;
 	}
 
