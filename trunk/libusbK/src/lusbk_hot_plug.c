@@ -30,11 +30,16 @@ binary distributions.
 #define IDT_KHOT_DBT_DEVICEARRIVAL			0xB
 #define IDT_KHOT_DBT_DEVICEREMOVAL			0xC
 
+// Dyanmic HotK memory is only accessed from the internal hot thread.  It uses it's own
+// private non-serialized heap.
+#define Hot_Mem_Alloc(mSize) HeapAlloc(g_HotNotifierList.ActiveHeap, HEAP_ZERO_MEMORY, mSize)
+#define Hot_Mem_Free(mMemory) HeapFree(g_HotNotifierList.ActiveHeap, 0, mMemory)
+
 #define KUSB_STR_EL_CLEANUP(StrElList, StrEL, StrTmp)	\
 	DL_FOREACH_SAFE(StrElList, StrEL, StrTmp)			\
 	{													\
 		DL_DELETE(StrElList, StrEL);					\
-		Mem_Free(&StrEL);								\
+		Hot_Mem_Free(StrEL);							\
 	}
 
 #define hotk_CmpBroadcastGuid(BroadcastEL, DevIntfGUID) memcmp(&BroadcastEL->InterfaceGUID,&DevIntfGUID,sizeof(GUID))
@@ -66,6 +71,7 @@ typedef struct _KHOT_NOTIFIER_LIST
 {
 	volatile HWND Hwnd;
 	volatile long HotLockCount;
+	volatile long HotInitCount;
 
 	ATOM WindowAtom;
 
@@ -82,11 +88,14 @@ typedef struct _KHOT_NOTIFIER_LIST
 
 	PKHOT_BROADCAST_EL BroadcastList;
 
+	HANDLE Heap;
+	HANDLE ActiveHeap;
+
 } KHOT_NOTIFIER_LIST;
 typedef KHOT_NOTIFIER_LIST* PKHOT_NOTIFIER_LIST;
 
 static LPCSTR g_WindowClassHotK = "HotK_NotificationWindowClass";
-static KHOT_NOTIFIER_LIST g_HotNotifierList = {NULL, 0, 0, NULL, 1000, NULL, {0}, NULL, NULL, 0, NULL};
+static KHOT_NOTIFIER_LIST g_HotNotifierList = {NULL, 0, 0, 0, NULL, 1000, NULL, {0}, NULL, NULL, 0, NULL, NULL, NULL};
 
 static LRESULT CALLBACK h_WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 static unsigned _stdcall h_ThreadProc(PKHOT_NOTIFIER_LIST NotifierList);
@@ -142,7 +151,7 @@ static BOOL KUSB_API h_DevEnum_UpdateForRemoval(KLST_HANDLE DeviceList, KLST_DEV
 	UNREFERENCED_PARAMETER(DeviceList);
 
 	if (!DeviceInfo->Connected) return TRUE;
-	if (AllK->PathMatchSpec(Context->dbcc_name, DeviceInfo->SymbolicLink))
+	if (PathMatchSpec(Context->dbcc_name, DeviceInfo->SymbolicLink))
 	{
 		DeviceInfo->SyncFlags = KLST_SYNC_FLAG_REMOVED;
 		DeviceInfo->Connected = FALSE;
@@ -195,7 +204,7 @@ static BOOL h_Wait_Hwnd(BOOL WaitForExit)
 
 static BOOL h_IsHotMatch(PKHOT_HANDLE_INTERNAL HotHandle, KLST_DEVINFO_HANDLE DeviceInfo)
 {
-	if (g_HotNotifierList.HotLockCount == 1) return TRUE;
+	if (g_HotNotifierList.HotInitCount == 1) return TRUE;
 
 	mLst_ApplyPatternMatch(&HotHandle->Public.PatternMatch, DeviceInterfaceGUID, DeviceInfo->DeviceInterfaceGUID, return FALSE);
 
@@ -226,7 +235,7 @@ static BOOL KUSB_API h_DevEnum_RegisterForBroadcast(KLST_HANDLE DeviceList, KLST
 		memset(&devBroadcast, 0, sizeof(devBroadcast));
 
 		// New broadcast interface
-		hotBroadcast = Mem_Alloc(sizeof(KHOT_BROADCAST_EL));
+		hotBroadcast = Hot_Mem_Alloc(sizeof(KHOT_BROADCAST_EL));
 		ErrorMemory(!IsHandleValid(hotBroadcast), Error);
 
 		memcpy(&hotBroadcast->InterfaceGUID, &guid, sizeof(guid));
@@ -239,7 +248,7 @@ static BOOL KUSB_API h_DevEnum_RegisterForBroadcast(KLST_HANDLE DeviceList, KLST
 		if (!hotBroadcast->NotifyHandle)
 		{
 			USBWRNN("h_String_To_Guid failed for %s", DeviceInfo->DeviceInterfaceGUID);
-			Mem_Free(&hotBroadcast);
+			Hot_Mem_Free(hotBroadcast);
 			return TRUE;
 		}
 		USBDBGN("Registered:hotBroadcast->NotifyHandle = %p", hotBroadcast->NotifyHandle);
@@ -260,7 +269,7 @@ static BOOL h_RegisterForBroadcast(PKHOT_HANDLE_INTERNAL HotHandle)
 	if (HotHandle)
 		return LstK_Enumerate(g_HotNotifierList.DeviceList, h_DevEnum_RegisterForBroadcast, HotHandle);
 
-	USBDBGN("Global %s broadcast re-registration. hot-count=%d", g_HotNotifierList.WindowName, g_HotNotifierList.HotLockCount);
+	USBDBGN("Global %s broadcast re-registration. hot-count=%d", g_HotNotifierList.WindowName, g_HotNotifierList.HotInitCount);
 
 	DL_FOREACH(g_HotNotifierList.Items, HotHandle)
 	{
@@ -305,7 +314,7 @@ static BOOL KUSB_API h_DevEnum_PlugWaiters(KLST_HANDLE DeviceList, KLST_DEVINFO_
 
 			if (!devInstEL)
 			{
-				devInstEL = Mem_Alloc(sizeof(*devInstEL));
+				devInstEL = Hot_Mem_Alloc(sizeof(*devInstEL));
 				devInstEL->Value = DeviceInfo->DeviceID;
 				DL_APPEND(Context->DevInstList, devInstEL);
 			}
@@ -351,7 +360,6 @@ static LRESULT CALLBACK h_WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
 	PKHOT_HANDLE_INTERNAL handleTmp = NULL;
 	PKHOT_HANDLE_INTERNAL* handleRef;
 	KHOT_PARAMS* InitParams;
-	PKLST_PATTERN_MATCH patternMatch;
 
 	switch(msg)
 	{
@@ -370,6 +378,11 @@ static LRESULT CALLBACK h_WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
 
 		// Add to the list and set the cleaunup callback for the hot handle
 		handle->Base.Evt.Cleanup = Cleanup_HotK;
+
+		if (IncLock(g_HotNotifierList.HotInitCount) == 1)
+		{
+		}
+
 		DL_APPEND(g_HotNotifierList.Items, handle);
 
 		h_RegisterForBroadcast(handle);
@@ -387,6 +400,8 @@ static LRESULT CALLBACK h_WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
 		Pub_To_Priv_HotK(Handle, handle, return (LRESULT)FALSE);
 		ErrorNoSetAction(!PoolHandle_Inc_HotK(handle), return (LRESULT)FALSE, "->PoolHandle_Inc_HotK");
 
+		DecLock(g_HotNotifierList.HotInitCount);
+
 		PoolHandle_Dec_HotK(handle);
 		PoolHandle_Dec_HotK(handle);
 		return (LRESULT)TRUE;
@@ -402,14 +417,11 @@ static LRESULT CALLBACK h_WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
 		case IDT_KHOT_DBT_DEVICEARRIVAL:
 			KillTimer(hwnd, wParam);	// !!Kill Timer!!
 
-			// If we only have one hot handle then we can pass the PatternMatch to the list and improve performance.
-			if (g_HotNotifierList.HotLockCount == 1)
-				patternMatch = &g_HotNotifierList.Items->Public.PatternMatch;
-			else
-				patternMatch = NULL;
-
-			// re/sync the device list
-			LstK_Sync(g_HotNotifierList.DeviceList, NULL, KLST_SYNC_FLAG_MASK, patternMatch);
+			/*
+			Sync the current device list with a new one.
+			If we only have one hot handle, then we can pass the PatternMatch to the list and improve performance.
+			*/
+			LstK_Sync(g_HotNotifierList.DeviceList, NULL, KLST_SYNC_FLAG_MASK, g_HotNotifierList.HotInitCount == 1 ? &g_HotNotifierList.Items->Public.PatternMatch : NULL, g_HotNotifierList.ActiveHeap);
 
 			// notify hot handle waiters
 			h_NotifyWaiters(NULL, TRUE);
@@ -418,13 +430,11 @@ static LRESULT CALLBACK h_WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
 		case IDT_KHOT_DBT_DEVNODES_CHANGED:
 			KillTimer(hwnd, wParam);	// !!Kill Timer!!
 
-			if (g_HotNotifierList.HotLockCount == 1)
-				patternMatch = &g_HotNotifierList.Items->Public.PatternMatch;
-			else
-				patternMatch = NULL;
-
-			// re/sync the device list
-			LstK_Sync(g_HotNotifierList.DeviceList, NULL, KLST_SYNC_FLAG_MASK, patternMatch);
+			/*
+			Sync the current device list with a new one.
+			If we only have one hot handle, then we can pass the PatternMatch to the list and improve performance.
+			*/
+			LstK_Sync(g_HotNotifierList.DeviceList, NULL, KLST_SYNC_FLAG_MASK, g_HotNotifierList.HotInitCount == 1 ? &g_HotNotifierList.Items->Public.PatternMatch : NULL, g_HotNotifierList.ActiveHeap);
 
 			// notify hot handle waiters
 			h_NotifyWaiters(NULL, TRUE);
@@ -515,7 +525,7 @@ static LRESULT CALLBACK h_WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
 			}
 
 			DL_DELETE(g_HotNotifierList.BroadcastList, hotBroadcast);
-			Mem_Free(&hotBroadcast);
+			Hot_Mem_Free(hotBroadcast);
 		}
 
 		// free the master device list
@@ -612,6 +622,8 @@ static unsigned _stdcall h_ThreadProc(PKHOT_NOTIFIER_LIST NotifierList)
 	MSG msg;
 	DWORD exitCode = 0;
 
+	g_HotNotifierList.ActiveHeap = g_HotNotifierList.Heap;
+
 	if (!h_Register_Atom(NotifierList))
 	{
 		exitCode = GetLastError();
@@ -631,6 +643,8 @@ static unsigned _stdcall h_ThreadProc(PKHOT_NOTIFIER_LIST NotifierList)
 
 Done:
 	g_HotNotifierList.ThreadHandle = NULL;
+	HeapDestroy(g_HotNotifierList.ActiveHeap);
+
 	_endthreadex(exitCode);
 	return exitCode;
 }
@@ -664,7 +678,9 @@ KUSB_EXP BOOL KUSB_API HotK_Init(
 
 		if (!g_HotNotifierList.hAppInstance) g_HotNotifierList.hAppInstance = GetModuleHandle(NULL);
 
-		success = LstK_InitEx(&g_HotNotifierList.DeviceList, KLST_FLAG_NONE, patternMatch);
+		g_HotNotifierList.Heap = HeapCreate(HEAP_NO_SERIALIZE | HEAP_GENERATE_EXCEPTIONS, 16384, 0);
+
+		success = LstK_InitInternal(&g_HotNotifierList.DeviceList, KLST_FLAG_NONE, patternMatch, g_HotNotifierList.Heap);
 		ErrorNoSet(!success, Error, "Failed creating master device list.");
 
 		success = h_Create_Thread(&g_HotNotifierList);
@@ -717,7 +733,7 @@ KUSB_EXP BOOL KUSB_API HotK_Free(
 
 	if (lockCnt == 0)
 	{
-		USBMSGN("All not handles freed; closing notifier window...");
+		USBMSGN("All HotK handles freed; closing notifier thread..");
 		HotK_FreeAll();
 
 		// wait for the window to exit

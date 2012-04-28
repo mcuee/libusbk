@@ -25,9 +25,7 @@ binary distributions.
 // warning C4127: conditional expression is constant.
 #pragma warning(disable: 4127)
 
-#define lstk_DL_MatchSymbolicLink(PatternEL, MatchEL) (AllK->PathMatchSpec((MatchEL)->Public.SymbolicLink, (PatternEL)->Public.SymbolicLink)?0:-1)
-
-#define Match_DevItem_SymbolicLink(check, find)	strcmp(check->Public.SymbolicLink, find)
+#define mLst_DL_Match_SymbolicLink(PatternEL, MatchEL) (PathMatchSpec((MatchEL)->Public.SymbolicLink, (PatternEL)->Public.SymbolicLink)?0:-1)
 
 #define KEY_DEVICECLASSES "SYSTEM\\CurrentControlSet\\Control\\DeviceClasses"
 
@@ -77,6 +75,9 @@ typedef struct _KUSB_ENUM_REGKEY_PARAMS
 	// assigned by LstK_Init, copied by sub enumeration routines
 	// (global)
 	PKLST_HANDLE_INTERNAL DeviceList;
+
+	// Heap used for device info allocation
+	HANDLE Heap;
 
 	KLST_FLAG Flags;
 	KLST_PATTERN_MATCH* PatternMatch;
@@ -231,7 +232,17 @@ static void KUSB_API Cleanup_DeviceList(__in PKLST_HANDLE_INTERNAL handle)
 static void KUSB_API Cleanup_DevInfo(__in PKLST_DEVINFO_HANDLE_INTERNAL handle)
 {
 	PoolHandle_Dead_LstInfoK(handle);
-	Mem_Free(&handle->DevInfoEL);
+	if (handle->Heap)
+	{
+		HeapFree(handle->Heap, 0, handle->DevInfoEL);
+		handle->DevInfoEL = NULL;
+		handle->Heap = NULL;
+	}
+	else
+	{
+		USBERRN("BugCheck! handle->Heap == NULL");
+		Mem_Free(&handle->DevInfoEL);
+	}
 }
 
 static BOOL KUSB_API l_DevEnum_SyncPrep(
@@ -259,7 +270,7 @@ static BOOL KUSB_API l_DevEnum_Sync_Master(
 
 	// Skip elements already processed by previous sync operations.
 	if (masterDevInfo->Public.SyncFlags != KLST_SYNC_FLAG_NONE) return TRUE;
-	DL_SEARCH(Context->Slave->head, slaveDevInfo, masterDevInfo, lstk_DL_MatchSymbolicLink);
+	DL_SEARCH(Context->Slave->head, slaveDevInfo, masterDevInfo, mLst_DL_Match_SymbolicLink);
 	if (slaveDevInfo)
 	{
 		// This element exists in the slave and master list.
@@ -294,9 +305,6 @@ static BOOL KUSB_API l_DevEnum_Sync_Master(
 		{
 			masterDevInfo->Public.SyncFlags = KLST_SYNC_FLAG_UNCHANGED;
 		}
-
-		// LstK_DetachInfo(DeviceList, DeviceInfo);
-		// LstK_FreeInfo(DeviceInfo);
 	}
 
 	return TRUE;
@@ -312,9 +320,11 @@ static BOOL KUSB_API l_DevEnum_Sync_Slave(
 
 	UNREFERENCED_PARAMETER(DeviceList);
 
-	DL_SEARCH(Context->Master->head, masterDevInfo, slaveDevInfo, lstk_DL_MatchSymbolicLink);
+	DL_SEARCH(Context->Master->head, masterDevInfo, slaveDevInfo, mLst_DL_Match_SymbolicLink);
 	if (masterDevInfo)
 	{
+		// This element exists on both lists.
+
 		// Skip elements already processed by previous sync operations.
 		if (masterDevInfo->Public.SyncFlags != KLST_SYNC_FLAG_NONE) return TRUE;
 
@@ -339,24 +349,25 @@ static BOOL KUSB_API l_DevEnum_Sync_Slave(
 	}
 	else
 	{
+		// This element exists in the slave but not in the master
 		if ((KLST_SYNC_FLAG_ADDED & Context->SyncFlags))
 		{
-			// Added.
-			if (LstK_CloneInfo((KLST_DEVINFO_HANDLE)slaveDevInfo, (KLST_DEVINFO_HANDLE*)&masterDevInfo))
-			{
-				LstK_AttachInfo((KLST_HANDLE)Context->Master, (KLST_DEVINFO_HANDLE)masterDevInfo);
-				if (slaveDevInfo->Public.Connected)
-					masterDevInfo->Public.SyncFlags = KLST_SYNC_FLAG_ADDED;
-				else
-					masterDevInfo->Public.SyncFlags = KLST_SYNC_FLAG_UNCHANGED;
-			}
+			// Move it to the master list
+			LstK_DetachInfo(DeviceList, (KLST_DEVINFO_HANDLE)slaveDevInfo);
+			LstK_AttachInfo((KLST_HANDLE)Context->Master, (KLST_DEVINFO_HANDLE)slaveDevInfo);
+
+			// Update 'SyncFlags'
+			if (slaveDevInfo->Public.Connected)
+				slaveDevInfo->Public.SyncFlags = KLST_SYNC_FLAG_ADDED;
+			else
+				slaveDevInfo->Public.SyncFlags = KLST_SYNC_FLAG_UNCHANGED;
 		}
 	}
 
 	return TRUE;
 }
 
-static BOOL l_Alloc_DevInfo(__out PKLST_DEVINFO_HANDLE_INTERNAL* handleRef)
+static BOOL l_Alloc_DevInfo(_out PKLST_DEVINFO_HANDLE_INTERNAL* handleRef, _inopt HANDLE Heap)
 {
 	PKLST_DEVINFO_HANDLE_INTERNAL handle;
 
@@ -365,7 +376,17 @@ static BOOL l_Alloc_DevInfo(__out PKLST_DEVINFO_HANDLE_INTERNAL* handleRef)
 	handle = PoolHandle_Acquire_LstInfoK(Cleanup_DevInfo);
 	ErrorNoSetAction(!IsHandleValid(handle), return FALSE, "->PoolHandle_Acquire_LstInfoK");
 
-	handle->DevInfoEL = Mem_Alloc(sizeof(*handle->DevInfoEL));
+	if (Heap)
+	{
+		handle->DevInfoEL = HeapAlloc(Heap, HEAP_ZERO_MEMORY, sizeof(*handle->DevInfoEL));
+		handle->Heap = Heap;
+	}
+	else
+	{
+		handle->DevInfoEL = Mem_Alloc(sizeof(*handle->DevInfoEL));
+		handle->Heap = AllK->HeapDynamic;
+	}
+
 	ErrorMemory(!IsHandleValid(handle->DevInfoEL), Error);
 
 	handle->DevInfoEL->DevInfoHandle = handle;
@@ -378,23 +399,23 @@ Error:
 }
 
 static DWORD l_Build_AddElement(
-    PKLST_HANDLE_INTERNAL DeviceList,
-    KLST_DEVINFO_HANDLE SrcDevInfo,
+    KUSB_ENUM_REGKEY_PARAMS* RegEnumParams,
     PKLST_DEVINFO_EL* clonedDevInfo)
 {
 	PKLST_DEVINFO_HANDLE_INTERNAL clonedHandle = NULL;
 
 	*clonedDevInfo = NULL;
 
-	if (!l_Alloc_DevInfo(&clonedHandle)) goto Error;
-	memcpy(&clonedHandle->DevInfoEL->Public, SrcDevInfo, sizeof(clonedHandle->DevInfoEL->Public));
+
+	if (!l_Alloc_DevInfo(&clonedHandle, RegEnumParams->Heap)) goto Error;
+	memcpy(&clonedHandle->DevInfoEL->Public, RegEnumParams->TempItem, sizeof(clonedHandle->DevInfoEL->Public));
 
 	// LstInfoK + 1
 	PoolHandle_Inc_LstInfoK(clonedHandle);
 
-	clonedHandle->DevInfoEL->DevListHandle = DeviceList;
+	clonedHandle->DevInfoEL->DevListHandle = RegEnumParams->DeviceList;
 	clonedHandle->DevInfoEL->DevInfoHandle = clonedHandle;
-	DL_APPEND(DeviceList->head, clonedHandle->DevInfoEL);
+	DL_APPEND(RegEnumParams->DeviceList->head, clonedHandle->DevInfoEL);
 
 	*clonedDevInfo = clonedHandle->DevInfoEL;
 	return ERROR_SUCCESS;
@@ -573,7 +594,7 @@ static BOOL l_EnumKey_Instances(KUSB_ENUM_REGKEY_PARAMS* RegEnumParams)
 		if (!SetupDiGetDeviceRegistryPropertyA(RegEnumParams->DevInfoSet, &RegEnumParams->DevInfoData, SPDRP_ADDRESS, NULL, (PBYTE)&RegEnumParams->TempItem->DeviceAddress, sizeof(RegEnumParams->TempItem->DeviceAddress), &length))
 			RegEnumParams->TempItem->DeviceAddress = -1;
 
-		RegEnumParams->ErrorCode = l_Build_AddElement(RegEnumParams->DeviceList, RegEnumParams->TempItem, &newDevItem);
+		RegEnumParams->ErrorCode = l_Build_AddElement(RegEnumParams, &newDevItem);
 		if (RegEnumParams->ErrorCode != ERROR_SUCCESS)
 		{
 			goto Error;
@@ -981,10 +1002,11 @@ KUSB_EXP BOOL KUSB_API LstK_Free(
 	return TRUE;
 }
 
-KUSB_EXP BOOL KUSB_API LstK_InitEx(
+BOOL KUSB_API LstK_InitInternal(
     _out KLST_HANDLE* DeviceList,
     _in KLST_FLAG Flags,
-    _in KLST_PATTERN_MATCH* PatternMatch)
+    _in KLST_PATTERN_MATCH* PatternMatch,
+    _inopt HANDLE Heap)
 {
 	KUSB_ENUM_REGKEY_PARAMS enumParams;
 	BOOL success = FALSE;
@@ -1001,17 +1023,10 @@ KUSB_EXP BOOL KUSB_API LstK_InitEx(
 	enumParams.Flags			= Flags;
 	enumParams.PatternMatch		= PatternMatch;
 	enumParams.TempItem			= &TempItem;
+	enumParams.Heap				= Heap;
 
 	if (!(Flags & KLST_FLAG_INCLUDE_DISCONNECT))
 		enumParams.DigcFlags |= DIGCF_PRESENT;
-
-#ifdef LSTK_TEST_MODE
-	if (!l_EnumKey_Guids_Direct(&enumParams))
-	{
-		success = FALSE;
-		goto Done;
-	}
-#endif
 
 	if (l_EnumKey_Guids(&enumParams))
 	{
@@ -1038,12 +1053,21 @@ Done:
 	return success;
 }
 
+KUSB_EXP BOOL KUSB_API LstK_InitEx(
+    _out KLST_HANDLE* DeviceList,
+    _in KLST_FLAG Flags,
+    _in KLST_PATTERN_MATCH* PatternMatch)
+{
+	return LstK_InitInternal(DeviceList, Flags, PatternMatch, NULL);
+}
+
+
 
 KUSB_EXP BOOL KUSB_API LstK_Init(
     _out KLST_HANDLE* DeviceList,
     _in KLST_FLAG Flags)
 {
-	return LstK_InitEx(DeviceList, Flags, NULL);
+	return LstK_InitInternal(DeviceList, Flags, NULL, NULL);
 }
 
 KUSB_EXP BOOL KUSB_API LstK_MoveNext(
@@ -1218,7 +1242,8 @@ KUSB_EXP BOOL KUSB_API LstK_Sync(
     _in KLST_HANDLE MasterList,
     _inopt KLST_HANDLE SlaveList,
     _inopt KLST_SYNC_FLAG SyncFlags,
-    _inopt PKLST_PATTERN_MATCH SlaveListPatternMatch)
+    _inopt PKLST_PATTERN_MATCH SlaveListPatternMatch,
+    _inopt HANDLE Heap)
 {
 	KLST_SYNC_CONTEXT context;
 
@@ -1233,7 +1258,7 @@ KUSB_EXP BOOL KUSB_API LstK_Sync(
 	{
 		// Use a new list for the slave list
 		KLST_FLAG slaveListInit = KLST_FLAG_NONE;
-		ErrorNoSetAction(!LstK_InitEx(&SlaveList, slaveListInit, SlaveListPatternMatch), goto Error_IncRefSlave, "->PoolHandle_Inc_LstK");
+		ErrorNoSetAction(!LstK_InitInternal(&SlaveList, slaveListInit, SlaveListPatternMatch, Heap), goto Error_IncRefSlave, "->PoolHandle_Inc_LstK");
 		context.Slave = (PKLST_HANDLE_INTERNAL)SlaveList;
 	}
 	else
@@ -1273,7 +1298,7 @@ KUSB_EXP BOOL KUSB_API LstK_CloneInfo(
 	Pub_To_Priv_LstInfoK(((PKLST_DEVINFO_EL)SrcInfo)->DevInfoHandle, handle, return FALSE);
 	ErrorSetAction(!PoolHandle_Inc_LstInfoK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_LstInfoK");
 
-	ErrorNoSet(!l_Alloc_DevInfo(&clonedHandle), Error, "->LstK_CloneInfo");
+	ErrorNoSet(!l_Alloc_DevInfo(&clonedHandle, AllK->HeapDynamic), Error, "->LstK_CloneInfo");
 	memcpy(&clonedHandle->DevInfoEL->Public, &handle->DevInfoEL->Public, sizeof(clonedHandle->DevInfoEL->Public));
 
 	clonedHandle->DevInfoEL->DevListHandle = NULL;
