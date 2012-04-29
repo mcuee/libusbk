@@ -151,7 +151,7 @@ DWORD __cdecl main(int argc, char* argv[])
 	/*
 	Fetch the devices virtual config descriptor.
 	*/
-	if (!Usb.GetDescriptor(usbHandle, USB_DESCRIPTOR_TYPE_CONFIGURATION, 1, 0, configDescriptorBuffer, sizeof(configDescriptorBuffer), &lengthTransferred))
+	if (!Usb.GetDescriptor(usbHandle, USB_DESCRIPTOR_TYPE_CONFIGURATION, 0, 0, configDescriptorBuffer, sizeof(configDescriptorBuffer), &lengthTransferred))
 	{
 		errorCode = GetLastError();
 		printf("GetDescriptor failed. Win32Error=%u (0x%08X)\n", errorCode, errorCode);
