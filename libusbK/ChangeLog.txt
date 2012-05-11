@@ -1,5 +1,9 @@
 LIBUSBK RELEASE NOTES
 
+V3.0.5.13 RC13 (05/11/2012)
+==============================================
+- Fixed OvlK memory allocation issue. Reported by Peter Wang. 
+
 V3.0.5.12 RC12 (04/28/2012)
 ==============================================
 - Fixed internal descriptor parsing issue for devices with multiple 
