@@ -163,7 +163,7 @@ KUSB_EXP BOOL KUSB_API OvlK_Init(
 	ErrorSet(!PoolHandle_Inc_UsbK(usbHandle), UsbHandleError, ERROR_RESOURCE_NOT_AVAILABLE, "->PoolHandle_Inc_UsbK");
 	handle->UsbHandle	= usbHandle;
 
-	handle->MasterArray		= Mem_Alloc(sizeof(KOVL_EL));
+	handle->MasterArray		= Mem_Alloc(sizeof(KOVL_EL) * MaxOverlappedCount);
 	ErrorMemory(!handle->MasterArray, Error);
 	handle->MasterListCount = MaxOverlappedCount;
 
