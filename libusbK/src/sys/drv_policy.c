@@ -105,7 +105,7 @@ VOID Policy_InitPipe(
 	}
 }
 
-NTSTATUS NONPAGABLE Policy_GetPipe(__in PDEVICE_CONTEXT deviceContext,
+NTSTATUS Policy_GetPipe(__in PDEVICE_CONTEXT deviceContext,
                                    __in UCHAR pipeID,
                                    __in ULONG policyType,
                                    __out PVOID value,

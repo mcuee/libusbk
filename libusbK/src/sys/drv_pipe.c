@@ -418,7 +418,8 @@ NTSTATUS Pipe_InitContext(__in PDEVICE_CONTEXT deviceContext,
                           __in PPIPE_CONTEXT pipeContext)
 {
 	NTSTATUS status = STATUS_INVALID_HANDLE;
-	WDFQUEUE queue	= pipeContext->Queue;
+	WDFQUEUE queueOld	= pipeContext->Queue;
+	WDFQUEUE queueNew	= NULL;
 
 	if (!pipeContext->Pipe && pipeContext->PipeInformation.PipeType != WdfUsbPipeTypeControl)
 	{
@@ -426,32 +427,36 @@ NTSTATUS Pipe_InitContext(__in PDEVICE_CONTEXT deviceContext,
 		goto Done;
 	}
 
-	if (!queue || ((pipeContext->PipeInformation.EndpointAddress & 0xF) && pipeContext->IsQueueDirty))
+	if (queueOld == NULL || ((pipeContext->PipeInformation.EndpointAddress & 0xF) && pipeContext->IsQueueDirty))
 	{
 		pipeContext->IsQueueDirty = FALSE;
+		if (queueOld != NULL)
+		{
+			// We need to delete the old pipe queue.
+			USBDBGN("pipeID=%02Xh Destroying old pipe queue.", pipeContext->PipeInformation.EndpointAddress);
+			WdfObjectDelete(queueOld);
+			queueOld = NULL;
+		}
 		USBDBGN("pipeID=%02Xh Creating pipe queue.", pipeContext->PipeInformation.EndpointAddress);
-		status = Pipe_InitQueue(deviceContext, pipeContext, &queue);
+		status = Pipe_InitQueue(deviceContext, pipeContext, &queueNew);
 		if (!NT_SUCCESS(status))
 		{
+			pipeContext->Queue = NULL;
+			pipeContext->IsValid = FALSE;
 			USBERRN("Pipe_InitQueue failed. pipeID=%02Xh status=%08Xh", pipeContext->PipeInformation.EndpointAddress, status);
 			goto Done;
 		}
 
-		queue = InterlockedExchangePointer(&pipeContext->Queue, queue);
-		if (queue)
-		{
-			USBDBGN("pipeID=%02Xh Destroying old pipe queue.", pipeContext->PipeInformation.EndpointAddress);
-			WdfObjectDelete(queue);
-		}
-		queue = pipeContext->Queue;
-
+		pipeContext->Queue = queueNew;
+		
 	}
 	else
 	{
 		// Queue is already created and does not need to be updated.
 		status = STATUS_SUCCESS;
+		queueNew = queueOld;
 	}
-	if (!queue && NT_SUCCESS(status))
+	if (!queueNew && NT_SUCCESS(status))
 		status = STATUS_INVALID_PIPE_STATE;
 
 	if (NT_SUCCESS(status))
@@ -463,8 +468,6 @@ NTSTATUS Pipe_InitContext(__in PDEVICE_CONTEXT deviceContext,
 			status = PipeStart(pipeContext);
 			if (!NT_SUCCESS(status))
 			{
-				WdfObjectDelete(queue);
-				queue = NULL;
 				pipeContext->IsValid = FALSE;
 				USBERR("WdfIoTargetStart failed. status=%Xh\n", status);
 				goto Done;
@@ -473,7 +476,7 @@ NTSTATUS Pipe_InitContext(__in PDEVICE_CONTEXT deviceContext,
 
 		// start queue
 		USBDBG("pipeID=%02Xh queue starting..\n", pipeContext->PipeInformation.EndpointAddress);
-		WdfIoQueueStart(queue);
+		WdfIoQueueStart(queueNew);
 		pipeContext->IsValid = TRUE;
 
 	}

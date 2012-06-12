@@ -108,10 +108,6 @@ extern CONST PCHAR BoolStrings[2];
 #define PAGED_CODE() NOP_FUNCTION
 #endif
 
-// Some function are marked with this to indicate they cannot be paged,
-// or are called from function that cannot be paged.
-#define NONPAGABLE
-
 typedef struct _DEVICE_REGSETTINGS
 {
 	// This feature is controlled by the SystemWakeEnabled DWORD registry setting. This value value indicates whether or not the device

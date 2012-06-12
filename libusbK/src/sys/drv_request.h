@@ -77,6 +77,6 @@ NTSTATUS Request_Vendor(__in PDEVICE_CONTEXT deviceContext,
                         __in INT timeout,
                         __out PULONG transferred);
 
-VOID Request_PreIoInitialize(__in WDFDEVICE Device,
-                             __in WDFREQUEST Request);
+EVT_WDF_IO_IN_CALLER_CONTEXT Request_PreIoInitialize;
+
 #endif

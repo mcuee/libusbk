@@ -1,5 +1,10 @@
 LIBUSBK RELEASE NOTES
 
+V3.0.5.14 RC14 (06/12/2012)
+==============================================
+- Fixed 'WdfDeviceInitFree' not being called when 'WdfDeviceCreate'
+  succeeds and 'Device_OnAdd' ultimately fails.
+
 V3.0.5.13 RC13 (05/11/2012)
 ==============================================
 - Fixed OvlK memory allocation issue. Reported by Peter Wang. 
