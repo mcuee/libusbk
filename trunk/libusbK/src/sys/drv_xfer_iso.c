@@ -131,38 +131,15 @@ WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(SUB_REQUEST_CONTEXT, GetSubRequestContext)
 
 typedef struct _ISO_URB_PACKET_CALC
 {
-	float	dist;
-	float	distPos;
-	INT		minBytesPerPacket;
-	BOOLEAN	morePlusOneBytes;
 	INT		offset;
 	INT		remBytes;
-	INT		remPackets;
+	INT		minBytesPerPacket;
 } ISO_URB_PACKET_CALC;
 
-VOID XferIsoWrComplete(
-    __in WDFREQUEST Request,
-    __in WDFIOTARGET Target,
-    __in PWDF_REQUEST_COMPLETION_PARAMS CompletionParams,
-    __in PREQUEST_CONTEXT requestContext);
-
-VOID XferIsoRdComplete(
-    __in WDFREQUEST Request,
-    __in WDFIOTARGET Target,
-    __in PWDF_REQUEST_COMPLETION_PARAMS CompletionParams,
-    __in PREQUEST_CONTEXT requestContext);
-
-VOID XferAutoIsoExComplete(
-    __in WDFREQUEST Request,
-    __in WDFIOTARGET Target,
-    __in PWDF_REQUEST_COMPLETION_PARAMS CompletionParams,
-    __in PREQUEST_CONTEXT requestContext);
-
-VOID XferIsoExComplete(
-    __in WDFREQUEST Request,
-    __in WDFIOTARGET Target,
-    __in PWDF_REQUEST_COMPLETION_PARAMS CompletionParams,
-    __in PKISO_CONTEXT IsoContext);
+EVT_WDF_REQUEST_COMPLETION_ROUTINE XferIsoWrComplete;
+EVT_WDF_REQUEST_COMPLETION_ROUTINE XferIsoRdComplete;
+EVT_WDF_REQUEST_COMPLETION_ROUTINE XferAutoIsoExComplete;
+EVT_WDF_REQUEST_COMPLETION_ROUTINE XferIsoExComplete;
 
 VOID XferIsoEx(__in WDFQUEUE Queue,
                __in WDFREQUEST Request)
@@ -651,7 +628,6 @@ VOID XferIsoWrite(
 		goto Exit;
 	}
 	isHS = IsHighSpeedDevice(deviceContext);
-	RtlZeroMemory(&calc, sizeof(calc));
 
 	usbdPipeHandle = WdfUsbTargetPipeWdmGetPipeHandle(queueContext->PipeHandle);
 	if (!usbdPipeHandle)
@@ -679,8 +655,8 @@ VOID XferIsoWrite(
 
 		if (isHS)
 		{
-			calc.remPackets = numberOfPackets % 8;
-			if (calc.remPackets > 0) numberOfPackets += (8 - calc.remPackets);
+			int remPackets = numberOfPackets % 8;
+			if (remPackets > 0) numberOfPackets += (8 - remPackets);
 
 			if (numberOfPackets > 1024)
 			{
@@ -691,7 +667,6 @@ VOID XferIsoWrite(
 		}
 		else
 		{
-			calc.remPackets = 0;
 			if (numberOfPackets > 256)
 			{
 				status = STATUS_INVALID_BUFFER_SIZE;
@@ -710,17 +685,9 @@ VOID XferIsoWrite(
 
 	///////////////////////////////////////////////////////////////////
 	calc.minBytesPerPacket = requestContext->Length / numberOfPackets;
-
 	calc.remBytes = requestContext->Length - (calc.minBytesPerPacket * numberOfPackets);
 	ASSERT(calc.remBytes >= 0);
-
 	calc.offset = 0;
-	calc.morePlusOneBytes = calc.remBytes >= (numberOfPackets / 2) ? 1 : 0;
-
-	calc.dist = calc.remBytes / (float)numberOfPackets;
-	if (calc.morePlusOneBytes) calc.dist = 1.0F - calc.dist;
-
-	calc.distPos = calc.morePlusOneBytes ? 0.0F : 1.0F;
 	///////////////////////////////////////////////////////////////////
 
 	status = GetTransferMdl(Request, requestContext->ActualRequestType, &mdl);
@@ -752,36 +719,19 @@ VOID XferIsoWrite(
 
 	// Init URB iso packets ///////////////////////////////////////////
 
-	// When iso packets are created for writes, the lengths are kept as even as
-	// possible.
+	// Assign the ISO packet offset/lengths.
 	for (posPacket = 0; posPacket < numberOfPackets; posPacket++)
 	{
 		urb->UrbIsochronousTransfer.IsoPacket[posPacket].Offset = calc.offset;
-		calc.offset += calc.minBytesPerPacket;
-		if (calc.remBytes <= 0) continue;
-
-		calc.distPos += calc.dist;
-
-		if (calc.morePlusOneBytes)
+		if (calc.remBytes < 1) 
 		{
-			if (calc.distPos <= 1.0F)
-			{
-				calc.offset++;
-				calc.remBytes--;
-			}
-			else
-			{
-				calc.distPos -= 1.0F;
-			}
+			calc.offset += calc.minBytesPerPacket;
 		}
 		else
 		{
-			if (calc.distPos >= 1.0F)
-			{
-				calc.offset++;
-				calc.remBytes--;
-				calc.distPos -= 1.0F;
-			}
+			// While there are extra bytes, add them to the head packet.
+			calc.offset += calc.minBytesPerPacket + 1;
+			calc.remBytes--;
 		}
 	}
 	///////////////////////////////////////////////////////////////////

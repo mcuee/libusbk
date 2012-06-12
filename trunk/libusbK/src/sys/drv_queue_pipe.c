@@ -24,11 +24,11 @@ binary distributions.
 //#pragma alloc_text(PAGE, PipeQueue_OnWrite)
 #endif
 
-VOID NONPAGABLE PipeQueue_OnIoControl(__in WDFQUEUE Queue,
-                                      __in WDFREQUEST Request,
-                                      __in size_t OutputBufferLength,
-                                      __in size_t InputBufferLength,
-                                      __in ULONG IoControlCode)
+VOID PipeQueue_OnIoControl(__in WDFQUEUE Queue,
+						   __in WDFREQUEST Request,
+						   __in size_t OutputBufferLength,
+						   __in size_t InputBufferLength,
+						   __in ULONG IoControlCode)
 {
 	NTSTATUS status;
 	ULONG length = 0;
@@ -138,9 +138,9 @@ Done:
 	return;
 
 }
-VOID NONPAGABLE PipeQueue_OnRead(__in WDFQUEUE Queue,
-                                 __in WDFREQUEST Request,
-                                 __in size_t OutputBufferLength)
+VOID PipeQueue_OnRead(__in WDFQUEUE Queue,
+					  __in WDFREQUEST Request,
+					  __in size_t OutputBufferLength)
 {
 	NTSTATUS				status = STATUS_SUCCESS;
 	PDEVICE_CONTEXT         deviceContext;
@@ -203,9 +203,9 @@ Done:
 
 }
 
-VOID NONPAGABLE PipeQueue_OnWrite(__in WDFQUEUE Queue,
-                                  __in WDFREQUEST Request,
-                                  __in size_t InputBufferLength)
+VOID PipeQueue_OnWrite(__in WDFQUEUE Queue,
+					   __in WDFREQUEST Request,
+					   __in size_t InputBufferLength)
 {
 	NTSTATUS				status = STATUS_SUCCESS;
 	PDEVICE_CONTEXT         deviceContext;
@@ -315,6 +315,36 @@ VOID Queue_OnIsoStop(
 	}
 }
 
+VOID Queue_OnReadBulkRawStop(
+    __in WDFQUEUE Queue,
+    __in WDFREQUEST Request,
+    __in ULONG ActionFlags)
+{
+	PQUEUE_CONTEXT queueContext;
+
+	if ((queueContext = GetQueueContext(Queue)) == NULL)
+	{
+		USBERRN("Invalid queue context.");
+		WdfRequestCancelSentRequest(Request);
+		return;
+	}
+
+	if (ActionFlags & WdfRequestStopActionSuspend )
+	{
+		USBDBGN("pipeID=%02Xh StopAcknowledge request for suspend. Requeue=FALSE", queueContext->Info.EndpointAddress);
+		queueContext->ResetPipeForResume = TRUE;
+		WdfRequestStopAcknowledge(Request, FALSE);
+
+		return;
+	}
+
+	if(ActionFlags & WdfRequestStopActionPurge)
+	{
+		USBDBGN("pipeID=%02Xh CancelSentRequest for purge.", queueContext->Info.EndpointAddress);
+		WdfRequestCancelSentRequest(Request);
+		return;
+	}
+}
 VOID Queue_OnReadBulkStop(
     __in WDFQUEUE Queue,
     __in WDFREQUEST Request,

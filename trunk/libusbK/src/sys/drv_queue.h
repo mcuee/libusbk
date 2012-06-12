@@ -21,7 +21,7 @@ EVT_WDF_IO_QUEUE_IO_DEVICE_CONTROL DefaultQueue_OnIoControl;
 
 EVT_WDF_IO_QUEUE_IO_STOP Queue_OnIsoStop;
 EVT_WDF_IO_QUEUE_IO_STOP Queue_OnReadBulkStop;
-#define Queue_OnReadBulkRawStop Queue_OnIsoStop
+EVT_WDF_IO_QUEUE_IO_STOP Queue_OnReadBulkRawStop;
 
 EVT_WDF_IO_QUEUE_IO_READ PipeQueue_OnRead;
 EVT_WDF_IO_QUEUE_IO_WRITE PipeQueue_OnWrite;

@@ -170,7 +170,7 @@ Return Value:
 	if (!NT_SUCCESS(status))
 	{
 		USBERR("Registry_ReadAllDeviceKeys failed. status=%Xh\n", status);
-		return status;
+		goto Error;
 	}
 
 	/* create the libusb-win32 legacy symbolic link */
@@ -199,7 +199,7 @@ Return Value:
 	if (!NT_SUCCESS(status))
 	{
 		USBERR("[dev-id=#%d] creating symbolic link failed. status=%Xh\n", deviceContext->InstanceNumber, status);
-		return status;
+		goto Error;
 	}
 
 	//
@@ -229,7 +229,7 @@ Return Value:
 	if (!NT_SUCCESS(status))
 	{
 		USBERR("WdfIoQueueCreate failed  for Default Queue. status=%Xh\n", status);
-		return status;
+		goto Error;
 	}
 
 	USBD_GetUSBDIVersion(&deviceContext->UsbVersionInfo);
@@ -256,7 +256,7 @@ Return Value:
 					if (!NT_SUCCESS(status))
 					{
 						USBERR("WdfDeviceCreateDeviceInterface failed. status=%Xh\n", status);
-						return status;
+						goto Error;
 					}
 					else
 					{
@@ -274,6 +274,15 @@ Return Value:
 	}
 
 	return status;
+
+Error:
+	if (DeviceInit)
+	{
+		WdfDeviceInitFree(DeviceInit);
+		DeviceInit = NULL;
+	}
+	return status;
+
 }
 
 NTSTATUS
