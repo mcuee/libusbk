@@ -318,7 +318,6 @@ VOID XferIsoExComplete(
 	{
 		USBERRN("[Failure] PipeID=%02Xh Status=%08Xh USBD-Status=%08Xh ErrorCount=%u",
 		        requestContext->QueueContext->Info.EndpointAddress, status, urb->UrbHeader.Status, urb->UrbIsochronousTransfer.ErrorCount);
-		\
 	}
 
 	mXfer_HandlePipeResetScenariosForComplete(status, requestContext->QueueContext, requestContext);
