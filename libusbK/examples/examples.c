@@ -141,6 +141,8 @@ BOOL Bench_Configure(KUSB_HANDLE UsbHandle,
 		success = DriverAPI->ControlTransfer(UsbHandle, Pkt, (PUCHAR)TestType, 1, &transferred, NULL);
 	else
 		success = UsbK_ControlTransfer(UsbHandle, Pkt, (PUCHAR)TestType, 1, &transferred, NULL);
+
+	return success;
 #else
 	UNREFERENCED_PARAMETER(UsbHandle);
 	UNREFERENCED_PARAMETER(Command);
@@ -150,6 +152,4 @@ BOOL Bench_Configure(KUSB_HANDLE UsbHandle,
 
 	return TRUE;
 #endif
-
-	return success;
 }
