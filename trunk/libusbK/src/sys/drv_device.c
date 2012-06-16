@@ -636,7 +636,7 @@ Return Value:
 	//
 	WDF_OBJECT_ATTRIBUTES_INIT(&attributes);
 
-	attributes.ParentObject = deviceContext->WdfUsbTargetDevice;
+	attributes.ParentObject = deviceContext->WdfDevice;
 	deviceContext->ConfigurationDescriptorSize = 0;
 
 	status = WdfMemoryCreate(&attributes,
