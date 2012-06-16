@@ -25,11 +25,15 @@
 #include "examples.h"
 
 // Example configuration:
-#define EP_READ						0x81
+#define EP_ALTF						(-1)	// first interface found
+#define EP_READ						(-1)	// first IN EP found
 
 #define MAX_OUTSTANDING_TRANSFERS	8
 #define MAX_TRANSFERS_TOTAL			24
-#define ISO_PACKETS_PER_TRANSFER	128
+#define ISO_PACKETS_PER_TRANSFER	32
+
+// Remove this define to disable logging.
+#define ISO_LOG_FILENAME "xfer-iso-read.txt"
 
 typedef struct _MY_ISO_BUFFER_EL
 {
@@ -79,33 +83,35 @@ VOID IsoXferComplete(PMY_ISO_XFERS myXfers, PMY_ISO_BUFFER_EL myBufferEL, ULONG 
 	int packetPos;
 	mDcs_MarkStop(&Dcs, transferLength);
 
-	if (!myXfers->LastStartFrame)
+	if (gOutFile)
 	{
-		fprintf(gOutFile, "#%u: StartFrame=%08Xh TransferLength=%u BPS-average:%.2f\n",
-		        myXfers->CompletedCount, myBufferEL->IsoContext->StartFrame, transferLength, Dcs.Bps);
-	}
-	else
-	{
-		ULONG lastFrameCount = myBufferEL->IsoContext->StartFrame - myXfers->LastStartFrame;
-		fprintf(gOutFile, "#%u: StartFrame=%08Xh LastFrameCount=%u TransferLength=%u BPS-average:%.2f\n",
-		        myXfers->CompletedCount, myBufferEL->IsoContext->StartFrame, lastFrameCount, transferLength, Dcs.Bps);
-	}
-
-	for (packetPos = 0; packetPos < myBufferEL->IsoContext->NumberOfPackets; packetPos++)
-	{
-		KISO_PACKET isoPacket = myBufferEL->IsoPackets[packetPos];
-		if (isoPacket.Length > 1)
+		if (!myXfers->LastStartFrame)
 		{
-			UCHAR firstPacketByte = myBufferEL->DataBuffer[isoPacket.Offset];
-			UCHAR secondPacketByte = myBufferEL->DataBuffer[isoPacket.Offset + 1];
-			fprintf(gOutFile, "  #%04u: Length=%u %02Xh %02Xh\n", packetPos, isoPacket.Length, firstPacketByte, secondPacketByte);
+			fprintf(gOutFile, "#%u: StartFrame=%08Xh TransferLength=%u BPS-average:%.2f\n",
+					myXfers->CompletedCount, myBufferEL->IsoContext->StartFrame, transferLength, Dcs.Bps);
 		}
 		else
 		{
-			fprintf(gOutFile, "  #%04u: Empty Packet\n", packetPos);
+			ULONG lastFrameCount = myBufferEL->IsoContext->StartFrame - myXfers->LastStartFrame;
+			fprintf(gOutFile, "#%u: StartFrame=%08Xh LastFrameCount=%u TransferLength=%u BPS-average:%.2f\n",
+					myXfers->CompletedCount, myBufferEL->IsoContext->StartFrame, lastFrameCount, transferLength, Dcs.Bps);
+		}
+
+		for (packetPos = 0; packetPos < myBufferEL->IsoContext->NumberOfPackets; packetPos++)
+		{
+			KISO_PACKET isoPacket = myBufferEL->IsoPackets[packetPos];
+			if (isoPacket.Length > 1)
+			{
+				UCHAR firstPacketByte = myBufferEL->DataBuffer[isoPacket.Offset];
+				UCHAR secondPacketByte = myBufferEL->DataBuffer[isoPacket.Offset + 1];
+				fprintf(gOutFile, "  #%04u: Length=%u %02Xh %02Xh\n", packetPos, isoPacket.Length, firstPacketByte, secondPacketByte);
+			}
+			else
+			{
+				fprintf(gOutFile, "  #%04u: Empty Packet\n", packetPos);
+			}
 		}
 	}
-
 	myXfers->CompletedCount++;
 	myXfers->LastStartFrame = myBufferEL->IsoContext->StartFrame;
 }
@@ -128,9 +134,13 @@ DWORD __cdecl main(int argc, char* argv[])
 
 	memset(&gXfers, 0, sizeof(gXfers));
 
+	#ifdef ISO_LOG_FILENAME
 	// Create a new log file.
 	gOutFile = fopen("xfer-iso-read.txt", "w");
-
+	#else
+	gOutFile = NULL;
+	#endif
+	
 	/*
 	Find the test device. Uses "vid=hhhh pid=hhhh" arguments supplied on the
 	command line. (default is: vid=04D8 pid=FA2E)
@@ -161,14 +171,18 @@ DWORD __cdecl main(int argc, char* argv[])
 		while(UsbK_QueryInterfaceSettings(usbHandle, ++gAltsettingNumber, &gInterfaceDescriptor))
 		{
 			UCHAR pipeIndex = (UCHAR) - 1;
-			while(UsbK_QueryPipe(usbHandle, gAltsettingNumber, ++pipeIndex, &gPipeInfo))
-			{
-				if (gPipeInfo.PipeId == EP_READ &&
-				        gPipeInfo.PipeType == UsbdPipeTypeIsochronous &&
-				        gPipeInfo.MaximumPacketSize)
-					break;
 
-				memset(&gPipeInfo, 0, sizeof(gPipeInfo));
+			if (EP_ALTF == -1 || gInterfaceDescriptor.bAlternateSetting == EP_ALTF)
+			{
+				while(UsbK_QueryPipe(usbHandle, gAltsettingNumber, ++pipeIndex, &gPipeInfo))
+				{
+					if (gPipeInfo.PipeType == UsbdPipeTypeIsochronous && gPipeInfo.MaximumPacketSize && (gPipeInfo.PipeId & 0x80))
+					{
+						if (EP_READ== -1 || EP_READ == gPipeInfo.PipeId) break;
+					}
+
+					memset(&gPipeInfo, 0, sizeof(gPipeInfo));
+				}
 			}
 			if (gPipeInfo.PipeId) break;
 			memset(&gInterfaceDescriptor, 0, sizeof(gInterfaceDescriptor));
