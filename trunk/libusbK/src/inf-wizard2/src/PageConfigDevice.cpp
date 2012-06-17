@@ -221,6 +221,7 @@ void CPageConfigDevice::OnLvnEndlabeleditDevList(NMHDR* pNMHDR, LRESULT* pResult
 
 		case DEVCFG_FIELD_DESC:
 			g_App->Wdi.Session()->desc = fieldValue;
+			g_App->Wdi.Session()->SetPackageName(fieldValue);
 			break;
 
 		case DEVCFG_FIELD_GUID:
