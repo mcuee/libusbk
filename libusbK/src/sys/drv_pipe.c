@@ -170,7 +170,7 @@ NTSTATUS Pipe_Stop(__in PPIPE_CONTEXT pipeContext,
 	}
 	else
 	{
-		USBE_PARAM("pipeContext is not valid!");
+		USBERRN("Invalid pipeContext");
 		status = STATUS_INVALID_PIPE_STATE;
 	}
 	return status;
@@ -511,8 +511,9 @@ NTSTATUS Pipe_Start(__in PDEVICE_CONTEXT deviceContext,
 		}
 	}
 	else
-		USBE_PARAM("pipeContext already valid!");
-
+	{
+		USBERRN("pipeContext already valid!");
+	}
 	return status;
 }
 
