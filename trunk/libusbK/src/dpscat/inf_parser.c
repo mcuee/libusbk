@@ -12,14 +12,14 @@ BOOL KINF_API InfK_Init(PKINF_LIST* List)
 
 	if ((heap = HeapCreate(HEAP_NO_SERIALIZE, 0, 0)) == NULL)
 	{
-		USBERRN("HeapCreate Failed. ErrorCode=%08Xh", GetLastError());
+		USBERRN(L"HeapCreate Failed. ErrorCode=%08Xh", GetLastError());
 		return FALSE;
 	}
 
 	list = HeapAlloc(heap, HEAP_ZERO_MEMORY, sizeof(KINF_LIST));
 	if (list == NULL)
 	{
-		USBERRN("HeapAlloc Failed. ErrorCode=%08Xh", GetLastError());
+		USBERRN(L"HeapAlloc Failed. ErrorCode=%08Xh", GetLastError());
 		return FALSE;
 	}
 
@@ -41,7 +41,7 @@ BOOL KINF_API InfK_Free(PKINF_LIST List)
 }
 
 #define MAX_TEMP_BUFFERS 4
-CHAR* WcsToTempMbs(WCHAR* str)
+LPCSTR WcsToTempMbs(LPCWSTR str)
 {
 	static CHAR _strTempA[MAX_TEMP_BUFFERS][1024];
 	static unsigned long _bufIndexA = 0;
@@ -59,7 +59,7 @@ CHAR* WcsToTempMbs(WCHAR* str)
 	return pStrTempA;
 }
 
-WCHAR* MbsToTempWcs(CHAR* str)
+LPCWSTR MbsToTempWcs(LPCSTR str)
 {
 	static WCHAR _strTempW[MAX_TEMP_BUFFERS][1024];
 	static unsigned long _bufIndexW = 0;
@@ -77,24 +77,6 @@ WCHAR* MbsToTempWcs(CHAR* str)
 	return pStrTempW;
 }
 
-CHAR* TcsToTempMbs(TCHAR* str)
-{
-#ifdef UNICODE
-	return WcsToTempMbs(str);
-#else
-	return str;
-#endif
-}
-
-WCHAR* TcsToTempWcs(TCHAR* str)
-{
-#ifdef UNICODE
-	return str;
-#else
-	return MbsToTempWcs(str);
-#endif
-}
-
 static BOOL KINF_API inf_AddSourceFiles(PKINF_LIST List, PKINF_EL infFileEL, HINF infHandle, INFCONTEXT* infContext, LPWSTR extension)
 {
 	BOOL success;
@@ -102,7 +84,7 @@ static BOOL KINF_API inf_AddSourceFiles(PKINF_LIST List, PKINF_EL infFileEL, HIN
 	static WCHAR sectionName[MAX_PATH_LENGTH];
 	static WCHAR sourceFile[MAX_PATH];
 
-	wcscpy_s(sectionName, sizeof(sectionName), L"SourceDisksFiles");
+	wcscpy_s(sectionName, _countof(sectionName), L"SourceDisksFiles");
 	if (extension)
 	{
 		if (_wcsnicmp(extension, L"NT", 2) == 0)
@@ -115,7 +97,7 @@ static BOOL KINF_API inf_AddSourceFiles(PKINF_LIST List, PKINF_EL infFileEL, HIN
 	success = SetupFindFirstLineW(infHandle, sectionName, NULL, infContext);
 	while (success)
 	{
-		if (SetupGetStringFieldW(infContext, 0, sourceFile, sizeof(sourceFile), &length))
+		if (SetupGetStringFieldW(infContext, 0, sourceFile, _countof(sourceFile), &length))
 		{
 			PKINF_FILE_EL fileCheckEL;
 			PKINF_FILE_EL fileEL;
@@ -124,13 +106,13 @@ static BOOL KINF_API inf_AddSourceFiles(PKINF_LIST List, PKINF_EL infFileEL, HIN
 			fileEL = HeapAlloc(List->HeapHandle, HEAP_ZERO_MEMORY, size);
 			if (!fileEL)
 			{
-				USBERRN("Memory allocation failure. 0x%08", GetLastError());
+				USBERRN(L"Memory allocation failure. 0x%08", GetLastError());
 				return FALSE;
 			}
 
 			wcscpy(fileEL->Filename, sourceFile);
 			_wcslwr(fileEL->Filename);
-			SetupGetStringFieldW(infContext, 2, fileEL->SubDir, sizeof(fileEL->SubDir), &length);
+			SetupGetStringFieldW(infContext, 2, fileEL->SubDir, _countof(fileEL->SubDir), &length);
 
 			DL_FOREACH(infFileEL->Files, fileCheckEL)
 			{
@@ -171,7 +153,7 @@ BOOL KINF_API InfK_AddInfFile(PKINF_LIST List, LPCWSTR InfFilename)
 	memset(&infContext, 0, sizeof(infContext));
 	if (!InfFilename)
 	{
-		USBERRN("Inf filename is NULL.");
+		USBERRN(L"Inf filename is NULL.");
 		errorCode = ERROR_EMPTY;
 		goto Error;
 	}
@@ -189,7 +171,7 @@ BOOL KINF_API InfK_AddInfFile(PKINF_LIST List, LPCWSTR InfFilename)
 	infFileEL = HeapAlloc(List->HeapHandle, HEAP_ZERO_MEMORY, sizeof(KINF_EL));
 	if (!infFileEL)
 	{
-		USBERRN("Memory allocation failure.");
+		USBERRN(L"Memory allocation failure.");
 		goto Error;
 	}
 
@@ -208,7 +190,7 @@ BOOL KINF_API InfK_AddInfFile(PKINF_LIST List, LPCWSTR InfFilename)
 	success = SetupFindFirstLineW(infHandle, L"Version", NULL, &infContext);
 	if (!success)
 	{
-		USBERRN("SetupFindFirstLineW Failed. ErrorCode=%08Xh", GetLastError());
+		USBERRN(L"SetupFindFirstLineW Failed. ErrorCode=%08Xh", GetLastError());
 		goto Error;
 	}
 
@@ -216,15 +198,15 @@ BOOL KINF_API InfK_AddInfFile(PKINF_LIST List, LPCWSTR InfFilename)
 	success = SetupFindNextMatchLineW(&infContext, L"CatalogFile", &infContextProperty);
 	if (!success)
 	{
-		USBERRN("SetupFindNextMatchLineW Failed. ErrorCode=%08Xh", GetLastError());
+		USBERRN(L"SetupFindNextMatchLineW Failed. ErrorCode=%08Xh", GetLastError());
 		goto Error;
 	}
 
 	// Get CatalogFile name
-	success = SetupGetStringFieldW(&infContextProperty, 1, infFileEL->CatTitle, sizeof(infFileEL->CatTitle), &sectionSize);
+	success = SetupGetStringFieldW(&infContextProperty, 1, infFileEL->CatTitle, _countof(infFileEL->CatTitle), &sectionSize);
 	if (!success)
 	{
-		USBERRN("SetupGetStringFieldW Failed. ErrorCode=%08Xh", GetLastError());
+		USBERRN(L"SetupGetStringFieldW Failed. ErrorCode=%08Xh", GetLastError());
 		goto Error;
 	}
 
@@ -232,15 +214,15 @@ BOOL KINF_API InfK_AddInfFile(PKINF_LIST List, LPCWSTR InfFilename)
 	success = SetupFindNextMatchLineW(&infContext, L"Provider", &infContextProperty);
 	if (!success)
 	{
-		USBERRN("SetupFindNextMatchLineW Failed. ErrorCode=%08Xh", GetLastError());
+		USBERRN(L"SetupFindNextMatchLineW Failed. ErrorCode=%08Xh", GetLastError());
 		goto Error;
 	}
 
 	// Get Provider
-	success = SetupGetStringFieldW(&infContextProperty, 1, infFileEL->Provider, sizeof(infFileEL->Provider), &sectionSize);
+	success = SetupGetStringFieldW(&infContextProperty, 1, infFileEL->Provider, _countof(infFileEL->Provider), &sectionSize);
 	if (!success)
 	{
-		USBERRN("SetupGetStringFieldW Failed. ErrorCode=%08Xh", GetLastError());
+		USBERRN(L"SetupGetStringFieldW Failed. ErrorCode=%08Xh", GetLastError());
 		goto Error;
 	}
 
@@ -252,34 +234,34 @@ BOOL KINF_API InfK_AddInfFile(PKINF_LIST List, LPCWSTR InfFilename)
 	success = SetupFindFirstLineW(infHandle, L"Manufacturer", NULL, &infContext);
 	if (!success)
 	{
-		USBERRN("SetupFindFirstLineW Failed. ErrorCode=%08Xh", GetLastError());
+		USBERRN(L"SetupFindFirstLineW Failed. ErrorCode=%08Xh", GetLastError());
 		goto Error;
 	}
 
 	while(success)
 	{
 		// Get the models-section-name
-		success = SetupGetStringFieldW(&infContext, 1, sectionName, sizeof(sectionName), &sectionSize);
+		success = SetupGetStringFieldW(&infContext, 1, sectionName, _countof(sectionName), &sectionSize);
 		if (success)
 		{
 			WCHAR sectionNameWithExt[MAX_PATH];
 			LPWSTR sectionNameExt = NULL;
 			// Get the full models-section-name for the current PC
-			success = SetupDiGetActualSectionToInstallExW(infHandle, sectionName, &platFormInfo, sectionNameWithExt, sizeof(sectionNameWithExt), &sectionSize, &sectionNameExt, NULL);
+			success = SetupDiGetActualSectionToInstallExW(infHandle, sectionName, &platFormInfo, sectionNameWithExt, _countof(sectionNameWithExt), &sectionSize, &sectionNameExt, NULL);
 			if (success)
 			{
-				USBDBGN("Actual section to install: %s", WcsToTempMbs(sectionNameWithExt));
+				USBDBGN(L"Actual section to install: %s", sectionNameWithExt);
 				success = SetupFindFirstLineW(infHandle, sectionNameWithExt, NULL, &infContextProperty);
 				while (success)
 				{
 					sectionIndex = 1;
 
 					// Get all the hardware ids for this section line
-					while(SetupGetStringFieldW(&infContextProperty, ++sectionIndex, sectionName, sizeof(sectionName), &sectionSize))
+					while(SetupGetStringFieldW(&infContextProperty, ++sectionIndex, sectionName, _countof(sectionName), &sectionSize))
 					{
 						PKINF_DEVICE_EL deviceEL = HeapAlloc(List->HeapHandle, HEAP_ZERO_MEMORY, sizeof(KINF_DEVICE_EL));
-						USBMSGN("Found Hwid: %s", WcsToTempMbs(sectionName));
-						wcscpy_s(deviceEL->HardwareID, sizeof(deviceEL->HardwareID), sectionName);
+						USBMSGN(L"Found Hwid: %s", sectionName);
+						wcscpy_s(deviceEL->HardwareID, _countof(deviceEL->HardwareID), sectionName);
 						DL_APPEND(infFileEL->Devices, deviceEL);
 					}
 

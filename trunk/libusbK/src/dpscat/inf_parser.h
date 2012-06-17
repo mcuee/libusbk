@@ -60,13 +60,10 @@ BOOL KINF_API InfK_Init(PKINF_LIST* List);
 BOOL KINF_API InfK_Free(PKINF_LIST List);
 BOOL KINF_API InfK_AddInfFile(PKINF_LIST List, LPCWSTR InfFilename);
 
-CHAR* WcsToTempMbs(WCHAR* str);
-WCHAR* MbsToTempWcs(CHAR* str);
+LPCSTR WcsToTempMbs(LPCWSTR str);
+LPCWSTR MbsToTempWcs(LPCSTR str);
 
-CHAR* TcsToTempMbs(TCHAR* str);
-WCHAR* TcsToTempWcs(TCHAR* str);
-
-BOOL SelfSignFile(LPCSTR szFileName, LPCSTR szCertSubject);
+BOOL SelfSignFile(LPCWSTR szFileName, LPCWSTR szCertSubject);
 BOOL CreateCatEx(PKINF_EL infEL);
 
 #endif
