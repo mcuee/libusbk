@@ -70,39 +70,34 @@ static BOOL WINAPI WriteConW(
 	return bSuccess;
 }
 
-VOID WriteInfStatus(CONST CHAR* fmt, ...)
+VOID WriteInfStatus(CONST WCHAR* fmt, ...)
 {
-	static CHAR buf[256];
+	static WCHAR buf[4096];
 	INT len;
 	va_list args;
 
 	va_start(args, fmt);
-#if __STDC_WANT_SECURE_LIB__
-	len = _vsnprintf_s(buf, sizeof(buf), sizeof(buf) - 1, fmt, args);
-#else
-	len = _vsnprintf(buf, sizeof(buf) - 1, fmt, args);
-#endif
+	len = _vsnwprintf(buf, _countof(buf), fmt, args);
 	va_end(args);
 
-	if (len < 0)
-		len = sizeof(buf) - 1;
+	if (len < 0 || len >= _countof(buf)) len = _countof(buf) - 1;
 	buf[len] = '\0';
 
 	if (g_ConsoleAttached && HANDLE_IS_VALID(g_hConsoleOutput))
 	{
-		if (WriteConA(buf, len, (LPDWORD)&len))
+		if (WriteConW(buf, len, (LPDWORD)&len))
 			return;
 
 	}
-	OutputDebugStringA(buf);
+	OutputDebugStringW(buf);
 }
 
 int APIENTRY _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdLine, int nCmdShow)
 {
 	int argCount = 0;
 	int ret = 0;
-	static TCHAR _lineBuffer[1024];
-	static TCHAR _spaceBuffer[1024];
+	static WCHAR _lineBuffer[1024];
+	static WCHAR _spaceBuffer[1024];
 	DWORD numChars;
 
 	LPWSTR lpCmdLineW		= GetCommandLineW();
@@ -114,8 +109,8 @@ int APIENTRY _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
 	UNREFERENCED_PARAMETER(nCmdShow);
 
 	memset(_lineBuffer, 0, sizeof(_lineBuffer));
-	memset(_spaceBuffer, ' ', sizeof(_lineBuffer));
-	_spaceBuffer[sizeof(_lineBuffer) - 1] = '\0';
+	_wcsnset(_spaceBuffer, ' ', _countof(_spaceBuffer) - 1);
+	_spaceBuffer[_countof(_spaceBuffer) - 1] = '\0';
 
 	if ((g_ConsoleAttached = AttachConsole(ATTACH_PARENT_PROCESS)) != FALSE)
 	{
@@ -132,20 +127,20 @@ int APIENTRY _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
 			if (numChars)
 			{
 				posCursorOrig.X = 0;
-				if (!ReadConsoleOutputCharacter(g_hConsoleOutput, _lineBuffer, numChars, posCursorOrig, &numChars))
+				if (!ReadConsoleOutputCharacterW(g_hConsoleOutput, _lineBuffer, numChars, posCursorOrig, &numChars))
 					numChars = 0;
 				else
 				{
 					g_CursorPos.X = 0;
 					SetConsoleCursorPosition(g_hConsoleOutput, g_CursorPos);
-					WriteConA(_spaceBuffer, numChars, &numChars);
+					WriteConW(_spaceBuffer, numChars, &numChars);
 					if (--g_CursorPos.Y & 0x80000000)
 						g_CursorPos.Y = 0;
 
 					SetConsoleCursorPosition(g_hConsoleOutput, g_CursorPos);
 				}
 			}
-			_lineBuffer[numChars] = (TCHAR)0;
+			_lineBuffer[numChars] = (WCHAR)0;
 
 		}
 		else
@@ -162,7 +157,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
 
 	if (g_ConsoleAttached)
 	{
-		if (HANDLE_IS_VALID(g_hConsoleOutput) && _lineBuffer[0] != (TCHAR)0)
+		if (HANDLE_IS_VALID(g_hConsoleOutput) && _lineBuffer[0] != (WCHAR)0)
 		{
 			numChars = (DWORD)_tcslen(_lineBuffer);
 			WriteConW(_lineBuffer, numChars, &numChars);
@@ -179,7 +174,7 @@ int RunProgram(int argc, LPWSTR* argv)
 	DWORD length;
 	WCHAR searchPath[MAX_PATH_LENGTH];
 	WCHAR infPathName[MAX_PATH_LENGTH];
-	CHAR certSubject[MAX_PATH_LENGTH];
+	WCHAR certSubject[MAX_PATH_LENGTH];
 	DWORD returnCode = ERROR_SUCCESS;
 	WIN32_FIND_DATAW findFileData;
 	HANDLE hFind;
@@ -197,12 +192,12 @@ int RunProgram(int argc, LPWSTR* argv)
 	// arg parsing
 	if (argc == 3)
 	{
-		USBMSGN("");
+		USBMSGN(L"");
 		if (_wcsicmp(argv[1], L"/path") != 0)
 		{
 			returnCode = ERROR_INVALID_PARAMETER;
 			SetLastError(returnCode);
-			USBERRN("Invalid parameter: %s", WcsToTempMbs(argv[1]));
+			USBERRN(L"Invalid parameter: %s",argv[1]);
 			goto Error;
 		}
 		if (PathFileExistsW(argv[2]))
@@ -215,7 +210,7 @@ int RunProgram(int argc, LPWSTR* argv)
 		{
 			returnCode = ERROR_PATH_NOT_FOUND;
 			SetLastError(returnCode);
-			USBERRN("searchPath does not exists.");
+			USBERRN(L"searchPath does not exists.");
 			goto Error;
 		}
 	}
@@ -227,13 +222,13 @@ int RunProgram(int argc, LPWSTR* argv)
 	}
 	else
 	{
-		USBMSGN("");
+		USBMSGN(L"");
 		// Set the .inf search path to the current directory.
-		length = GetCurrentDirectoryW(sizeof(searchPath), searchPath);
+		length = GetCurrentDirectoryW(_countof(searchPath), searchPath);
 		if (!length)
 		{
 			returnCode = GetLastError();
-			USBERRN("GetCurrentDirectory Failed. ErrorCode=%08Xh", returnCode);
+			USBERRN(L"GetCurrentDirectory Failed. ErrorCode=%08Xh", returnCode);
 			goto Error;
 		}
 
@@ -247,7 +242,7 @@ int RunProgram(int argc, LPWSTR* argv)
 	{
 		returnCode = ERROR_FILE_NOT_FOUND;
 		SetLastError(returnCode);
-		USBERRN("%s does not exist.", WcsToTempMbs(searchPath));
+		USBERRN(L"%s does not exist.", searchPath);
 		goto Error;
 	}
 
@@ -270,17 +265,16 @@ int RunProgram(int argc, LPWSTR* argv)
 
 	DL_FOREACH(infList->Files, infEL)
 	{
-		length = _snprintf(certSubject, sizeof(certSubject) - 1, "CN=%s (%s) [Self]", WcsToTempMbs(infEL->Provider), WcsToTempMbs(infEL->InfTitle));
-		if (length < sizeof(certSubject) - 1)
-			certSubject[length] = '\0';
-		certSubject[sizeof(certSubject) - 1] = '\0';
+		int lenSubject = _snwprintf(certSubject, _countof(certSubject), L"CN=%s (%s) [Self]", infEL->Provider, infEL->InfTitle);
+		if (lenSubject < 0 || lenSubject >= _countof(certSubject)) lenSubject = _countof(certSubject) - 1;
+		certSubject[lenSubject] = '\0';
 
 		if (CreateCatEx(infEL))
-			SelfSignFile(WcsToTempMbs(infEL->CatFullPath), certSubject);
+			SelfSignFile(infEL->CatFullPath, certSubject);
 	}
 
 Error:
-	USBMSG("\n");
+	USBMSG(L"\n");
 	InfK_Free(infList);
 	return (int)returnCode;
 
@@ -291,30 +285,32 @@ Error:
 //////////////////////////////////////////////////////////////////////////////
 void ShowCopyright(void)
 {
-	USBMSGN("Copyright(c) 2012 Travis Lee Robinson. (DUAL BSD/GPL)");
-	USBMSGN("Portions Copyright(c) Pete Batard. (LGPL)");
+	USBMSGN(L"Copyright(c) 2012 Travis Lee Robinson. (DUAL BSD/GPL)");
+	USBMSGN(L"Portions Copyright(c) Pete Batard. (LGPL)");
 }
 
 void ShowHelp(void)
 {
-	CONST CHAR* src;
+	CONST WCHAR* src;
 	DWORD src_count, charsWritten;
 	HGLOBAL res_data;
 	HRSRC hSrc;
 
-	USBMSGN("");
+	USBMSGN(L"");
 
 	hSrc = FindResourceA(NULL, MAKEINTRESOURCEA(ID_HELP_TEXT), MAKEINTRESOURCEA(ID_DOS_TEXT));
 	if (!hSrc)	return;
 
 	src_count = SizeofResource(NULL, hSrc);
+	if (!src_count)	return;
+
+	src_count /= sizeof(WCHAR);
 
 	res_data = LoadResource(NULL, hSrc);
 	if (!res_data)	return;
 
-	src = (char*) LockResource(res_data);
+	src = (WCHAR*) LockResource(res_data);
 	if (!src) return;
 
-	WriteConA(src, src_count, &charsWritten);
+	WriteConW(src, src_count, &charsWritten);
 }
-

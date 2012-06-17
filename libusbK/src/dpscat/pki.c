@@ -36,18 +36,27 @@
 
 #define CATSIGN_STANDALONE
 
-static char* windows_error_str(unsigned int retval)
+static WCHAR* windows_error_str(unsigned int retval)
 {
-	static char err_string[20];
+	static WCHAR err_string[1024];
 	unsigned int error_code;
+	int len;
+
 	error_code = retval ? retval : GetLastError();
-	_snprintf(err_string, MAX_PATH, "errcode #%X", error_code);
+	len = _snwprintf(err_string, _countof(err_string), L"ErrorCode(%08Xh):", error_code);
+	if (FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM, NULL, error_code, 0, &err_string[len], _countof(err_string) - len, NULL) > 0)
+	{
+		return err_string;
+	}
+	_snwprintf(err_string, _countof(err_string), L"ErrorCode(%08Xh)", error_code);
+	err_string[_countof(err_string) - 1] = 0;
+
 	return err_string;
 }
 
 #define PF_INIT_OR_OUT(proc, dllname) \
 	PF_INIT(proc, dllname); if (pf##proc == NULL) { \
-		USBWRNN("unable to access %s DLL", #dllname); goto out; }
+		USBWRNN(L"unable to access %s DLL", L#dllname); goto out; }
 
 #define KEY_CONTAINER L"libwdi key container"
 #ifndef CERT_STORE_PROV_SYSTEM_A
@@ -134,14 +143,14 @@ typedef BOOL (WINAPI* CryptDecodeObject_t)(
     DWORD* pcbStructInfo
 );
 
-typedef BOOL (WINAPI* CertStrToNameA_t)(
+typedef BOOL (WINAPI* CertStrToNameW_t)(
     DWORD dwCertEncodingType,
-    LPCSTR pszX500,
+    LPCWSTR pszX500,
     DWORD dwStrType,
     void* pvReserved,
     BYTE* pbEncoded,
     DWORD* pcbEncoded,
-    LPCTSTR* ppszError
+    LPCWSTR* ppszError
 );
 
 typedef BOOL (WINAPI* CryptAcquireCertificatePrivateKey_t)(
@@ -422,19 +431,19 @@ BOOL AddCertToStore(PCCERT_CONTEXT pCertContext, LPCSTR szStoreName)
 	                               0, CERT_SYSTEM_STORE_LOCAL_MACHINE, szStoreName);
 	if (hSystemStore == NULL)
 	{
-		USBWRNN("failed to open system store '%s': %s", szStoreName, windows_error_str(0));
+		USBWRNN(L"failed to open system store '%S': %s", szStoreName, windows_error_str(0));
 		goto out;
 	}
 
 	if (!pfCertSetCertificateContextProperty(pCertContext, CERT_FRIENDLY_NAME_PROP_ID, 0, &libwdiNameBlob))
 	{
-		USBWRNN("coud not set friendly name: %s", windows_error_str(0));
+		USBWRNN(L"coud not set friendly name: %s", windows_error_str(0));
 		goto out;
 	}
 
 	if (!pfCertAddCertificateContextToStore(hSystemStore, pCertContext, CERT_STORE_ADD_REPLACE_EXISTING, NULL))
 	{
-		USBWRNN("failed to add certificate to system store '%s': %s", szStoreName, windows_error_str(0));
+		USBWRNN(L"failed to add certificate to system store '%S': %s", szStoreName, windows_error_str(0));
 		goto out;
 	}
 	r = TRUE;
@@ -447,13 +456,13 @@ out:
 /*
  * Remove a certificate, identified by its subject, to the system store 'szStoreName'
  */
-BOOL RemoveCertFromStore(LPCSTR szCertSubject, LPCSTR szStoreName)
+BOOL RemoveCertFromStore(LPCWSTR szCertSubject, LPCSTR szStoreName)
 {
 	PF_DECL(CertOpenStore);
 	PF_DECL(CertFindCertificateInStore);
 	PF_DECL(CertDeleteCertificateFromStore);
 	PF_DECL(CertCloseStore);
-	PF_DECL(CertStrToNameA);
+	PF_DECL(CertStrToNameW);
 	HCERTSTORE hSystemStore = NULL;
 	PCCERT_CONTEXT pCertContext;
 	CERT_NAME_BLOB certNameBlob = {0, NULL};
@@ -463,22 +472,22 @@ BOOL RemoveCertFromStore(LPCSTR szCertSubject, LPCSTR szStoreName)
 	PF_INIT_OR_OUT(CertFindCertificateInStore, crypt32);
 	PF_INIT_OR_OUT(CertDeleteCertificateFromStore, crypt32);
 	PF_INIT_OR_OUT(CertCloseStore, crypt32);
-	PF_INIT_OR_OUT(CertStrToNameA, crypt32);
+	PF_INIT_OR_OUT(CertStrToNameW, crypt32);
 
 	hSystemStore = pfCertOpenStore(CERT_STORE_PROV_SYSTEM_A, X509_ASN_ENCODING,
 	                               0, CERT_SYSTEM_STORE_LOCAL_MACHINE, szStoreName);
 	if (hSystemStore == NULL)
 	{
-		USBWRNN("failed to open system store '%s': %s", szStoreName, windows_error_str(0));
+		USBWRNN(L"failed to open system store '%S': %s", szStoreName, windows_error_str(0));
 		goto out;
 	}
 
 	// Encode Cert Name
-	if ( (!pfCertStrToNameA(X509_ASN_ENCODING, szCertSubject, CERT_X500_NAME_STR, NULL, NULL, &certNameBlob.cbData, NULL))
+	if ( (!pfCertStrToNameW(X509_ASN_ENCODING, szCertSubject, CERT_X500_NAME_STR, NULL, NULL, &certNameBlob.cbData, NULL))
 	        || ((certNameBlob.pbData = (BYTE*)malloc(certNameBlob.cbData)) == NULL)
-	        || (!pfCertStrToNameA(X509_ASN_ENCODING, szCertSubject, CERT_X500_NAME_STR, NULL, certNameBlob.pbData, &certNameBlob.cbData, NULL)) )
+	        || (!pfCertStrToNameW(X509_ASN_ENCODING, szCertSubject, CERT_X500_NAME_STR, NULL, certNameBlob.pbData, &certNameBlob.cbData, NULL)) )
 	{
-		USBWRNN("failed to encode'%s': %s", szCertSubject, windows_error_str(0));
+		USBWRNN(L"failed to encode'%s': %s", szCertSubject, windows_error_str(0));
 		goto out;
 	}
 
@@ -487,7 +496,7 @@ BOOL RemoveCertFromStore(LPCSTR szCertSubject, LPCSTR szStoreName)
 	                       CERT_FIND_SUBJECT_NAME, (const void*)&certNameBlob, NULL)) != NULL)
 	{
 		pfCertDeleteCertificateFromStore(pCertContext);
-		USBMSGN("Deleted existing certificate: %s (%s store)", szCertSubject, szStoreName);
+		USBMSGN(L"Deleted existing certificate: %s (%s store)", szCertSubject, MbsToTempWcs(szStoreName));
 	}
 	r = TRUE;
 
@@ -530,7 +539,7 @@ BOOL AddCertToTrustedPublisher(BYTE* pbCertData, DWORD dwCertSize, BOOL bDisable
 
 	if (hSystemStore == NULL)
 	{
-		USBWRNN("unable to open system store: %s", windows_error_str(0));
+		USBWRNN(L"unable to open system store: %s", windows_error_str(0));
 		goto out;
 	}
 
@@ -542,7 +551,7 @@ BOOL AddCertToTrustedPublisher(BYTE* pbCertData, DWORD dwCertSize, BOOL bDisable
 
 	if (pCertContext == NULL)
 	{
-		USBWRNN("could not create context for certificate: %s", windows_error_str(0));
+		USBWRNN(L"could not create context for certificate: %s", windows_error_str(0));
 		pfCertCloseStore(hSystemStore, 0);
 		goto out;
 	}
@@ -569,13 +578,13 @@ BOOL AddCertToTrustedPublisher(BYTE* pbCertData, DWORD dwCertSize, BOOL bDisable
 		}
 		if (user_input != IDOK)
 		{
-			USBMSGN("operation cancelled by the user");
+			USBMSGN(L"operation cancelled by the user");
 		}
 		else
 		{
 			if (!pfCertAddCertificateContextToStore(hSystemStore, pCertContext, CERT_STORE_ADD_NEWER, NULL))
 			{
-				USBWRNN("could not add certificate: %s", windows_error_str(0));
+				USBWRNN(L"could not add certificate: %s", windows_error_str(0));
 			}
 			else
 			{
@@ -598,10 +607,10 @@ out:
 /*
  * Create a self signed certificate for code signing
  */
-PCCERT_CONTEXT CreateSelfSignedCert(LPCSTR szCertSubject)
+PCCERT_CONTEXT CreateSelfSignedCert(LPCWSTR szCertSubject)
 {
 	PF_DECL(CryptEncodeObject);
-	PF_DECL(CertStrToNameA);
+	PF_DECL(CertStrToNameW);
 	PF_DECL(CertCreateSelfSignCertificate);
 	PF_DECL(CertFreeCertificateContext);
 
@@ -649,7 +658,7 @@ PCCERT_CONTEXT CreateSelfSignedCert(LPCSTR szCertSubject)
 	certPolicyInfoArray.rgPolicyInfo		= &certPolicyInfo;
 
 	PF_INIT_OR_OUT(CryptEncodeObject, crypt32);
-	PF_INIT_OR_OUT(CertStrToNameA, crypt32);
+	PF_INIT_OR_OUT(CertStrToNameW, crypt32);
 	PF_INIT_OR_OUT(CertCreateSelfSignCertificate, crypt32);
 	PF_INIT_OR_OUT(CertFreeCertificateContext, crypt32);
 
@@ -658,7 +667,7 @@ PCCERT_CONTEXT CreateSelfSignedCert(LPCSTR szCertSubject)
 	        || ((pbEnhKeyUsage = (BYTE*)malloc(dwSize)) == NULL)
 	        || (!pfCryptEncodeObject(X509_ASN_ENCODING, X509_ENHANCED_KEY_USAGE, (LPVOID)&certEnhKeyUsage, pbEnhKeyUsage, &dwSize)) )
 	{
-		USBWRNN("could not setup EKU for code signing: %s", windows_error_str(0));
+		USBWRNN(L"could not setup EKU for code signing: %s", windows_error_str(0));
 		goto out;
 	}
 	certExtension[0].pszObjId = szOID_ENHANCED_KEY_USAGE;
@@ -671,7 +680,7 @@ PCCERT_CONTEXT CreateSelfSignedCert(LPCSTR szCertSubject)
 	        || ((pbAltNameInfo = (BYTE*)malloc(dwSize)) == NULL)
 	        || (!pfCryptEncodeObject(X509_ASN_ENCODING, X509_ALTERNATE_NAME, (LPVOID)&certAltNameInfo, pbAltNameInfo, &dwSize)) )
 	{
-		USBWRNN("could not setup URL: %s", windows_error_str(0));
+		USBWRNN(L"could not setup URL: %s", windows_error_str(0));
 		goto out;
 	}
 	certExtension[1].pszObjId = szOID_SUBJECT_ALT_NAME;
@@ -687,7 +696,7 @@ PCCERT_CONTEXT CreateSelfSignedCert(LPCSTR szCertSubject)
 	        || ((pbCPSNotice = (BYTE*)malloc(dwSize)) == NULL)
 	        || (!pfCryptEncodeObject(X509_ASN_ENCODING, X509_NAME_VALUE, (LPVOID)&certCPSValue, pbCPSNotice, &dwSize)) )
 	{
-		USBWRNN("could not setup CPS: %s", windows_error_str(0));
+		USBWRNN(L"could not setup CPS: %s", windows_error_str(0));
 		goto out;
 	}
 
@@ -698,7 +707,7 @@ PCCERT_CONTEXT CreateSelfSignedCert(LPCSTR szCertSubject)
 	        || ((pbPolicyInfo = (BYTE*)malloc(dwSize)) == NULL)
 	        || (!pfCryptEncodeObject(X509_ASN_ENCODING, X509_CERT_POLICIES, (LPVOID)&certPolicyInfoArray, pbPolicyInfo, &dwSize)) )
 	{
-		USBWRNN("could not setup Certificate Policies: %s", windows_error_str(0));
+		USBWRNN(L"could not setup Certificate Policies: %s", windows_error_str(0));
 		goto out;
 	}
 	certExtension[2].pszObjId = szOID_CERT_POLICIES;
@@ -708,37 +717,37 @@ PCCERT_CONTEXT CreateSelfSignedCert(LPCSTR szCertSubject)
 
 	certExtensionsArray.cExtension = ARRAYSIZE(certExtension);
 	certExtensionsArray.rgExtension = certExtension;
-	USBDBGN("Set Enhanced Key Usage, URL and CPS..");
+	USBDBGN(L"Set Enhanced Key Usage, URL and CPS..");
 
 	if (CryptAcquireContextW(&hCSP, wszKeyContainer, NULL, PROV_RSA_FULL, CRYPT_MACHINE_KEYSET | CRYPT_SILENT))
 	{
-		USBDBGN("Acquired existing key container..");
+		USBDBGN(L"Acquired existing key container..");
 	}
 	else if ( (GetLastError() == NTE_BAD_KEYSET)
 	          && (CryptAcquireContextW(&hCSP, wszKeyContainer, NULL, PROV_RSA_FULL, CRYPT_NEWKEYSET | CRYPT_MACHINE_KEYSET | CRYPT_SILENT)) )
 	{
-		USBDBGN("Created new key container..");
+		USBDBGN(L"Created new key container..");
 	}
 	else
 	{
-		USBWRNN("could not obtain a key container: %s", windows_error_str(0));
+		USBWRNN(L"could not obtain a key container: %s", windows_error_str(0));
 		goto out;
 	}
 
 	// Generate key pair (0x0400XXXX = RSA 1024 bit)
 	if (!CryptGenKey(hCSP, AT_SIGNATURE, 0x04000000 | CRYPT_EXPORTABLE, &hKey))
 	{
-		USBDBGN("could not generate keypair: %s", windows_error_str(0));
+		USBDBGN(L"could not generate keypair: %s", windows_error_str(0));
 		goto out;
 	}
-	USBDBGN("Generated new keypair.");
+	USBDBGN(L"Generated new keypair.");
 
 	// Set the subject
-	if ( (!pfCertStrToNameA(X509_ASN_ENCODING, szCertSubject, CERT_X500_NAME_STR, NULL, NULL, &SubjectIssuerBlob.cbData, NULL))
+	if ( (!pfCertStrToNameW(X509_ASN_ENCODING, szCertSubject, CERT_X500_NAME_STR, NULL, NULL, &SubjectIssuerBlob.cbData, NULL))
 	        || ((SubjectIssuerBlob.pbData = (BYTE*)malloc(SubjectIssuerBlob.cbData)) == NULL)
-	        || (!pfCertStrToNameA(X509_ASN_ENCODING, szCertSubject, CERT_X500_NAME_STR, NULL, SubjectIssuerBlob.pbData, &SubjectIssuerBlob.cbData, NULL)) )
+	        || (!pfCertStrToNameW(X509_ASN_ENCODING, szCertSubject, CERT_X500_NAME_STR, NULL, SubjectIssuerBlob.pbData, &SubjectIssuerBlob.cbData, NULL)) )
 	{
-		USBWRNN("could not encode subject name for self signed cert: %s", windows_error_str(0));
+		USBWRNN(L"could not encode subject name for self signed cert: %s", windows_error_str(0));
 		goto out;
 	}
 
@@ -761,10 +770,10 @@ PCCERT_CONTEXT CreateSelfSignedCert(LPCSTR szCertSubject)
 	               &SubjectIssuerBlob, 0, &KeyProvInfo, &SignatureAlgorithm, NULL, &sExpirationDate, &certExtensionsArray);
 	if (pCertContext == NULL)
 	{
-		USBWRNN("could not create self signed certificate: %s", windows_error_str(0));
+		USBWRNN(L"could not create self signed certificate: %s", windows_error_str(0));
 		goto out;
 	}
-	USBMSGN("Created new self-signed certificate: %s", szCertSubject);
+	USBMSGN(L"Created new self-signed certificate: %s", szCertSubject);
 	success = TRUE;
 
 out:
@@ -814,13 +823,13 @@ BOOL DeletePrivateKey(PCCERT_CONTEXT pCertContext)
 
 	if (!pfCryptAcquireCertificatePrivateKey(pCertContext, CRYPT_ACQUIRE_SILENT_FLAG, NULL, &hCSP, &dwKeySpec, &bFreeCSP))
 	{
-		USBWRNN("error getting CSP: %s", windows_error_str(0));
+		USBWRNN(L"error getting CSP: %s", windows_error_str(0));
 		goto out;
 	}
 
 	if (!CryptAcquireContextW(&hCSP, wszKeyContainer, NULL, PROV_RSA_FULL, CRYPT_MACHINE_KEYSET | CRYPT_SILENT | CRYPT_DELETEKEYSET))
 	{
-		USBWRNN("failed to delete private key: %s", windows_error_str(0));
+		USBWRNN(L"failed to delete private key: %s", windows_error_str(0));
 	}
 
 	// This is optional, but unless we don't reimport the cert data after having deleted the key
@@ -834,13 +843,13 @@ BOOL DeletePrivateKey(PCCERT_CONTEXT pCertContext)
 		if (!pfCertAddEncodedCertificateToStore(hSystemStore, X509_ASN_ENCODING, pCertContext->pbCertEncoded,
 		                                        pCertContext->cbCertEncoded, CERT_STORE_ADD_REPLACE_EXISTING, &pCertContextUpdate))
 		{
-			USBWRNN("failed to update '%s': %s", szStoresToUpdate[i], windows_error_str(0));
+			USBWRNN(L"failed to update '%s': %s", MbsToTempWcs(szStoresToUpdate[i]), windows_error_str(0));
 		}
 
 		// The friendly name is lost in this operation - restore it
 		if (!pfCertSetCertificateContextProperty(pCertContextUpdate, CERT_FRIENDLY_NAME_PROP_ID, 0, &libwdiNameBlob))
 		{
-			USBWRNN("coud not set friendly name: %s", windows_error_str(0));
+			USBWRNN(L"coud not set friendly name: %s", windows_error_str(0));
 		}
 
 		pfCertFreeCertificateContext(pCertContextUpdate);
@@ -865,10 +874,8 @@ out:
  * - signing the file provided
  * - deleting the self signed certificate private key so that it cannot be reused
  */
-BOOL SelfSignFile(LPCSTR szFileName, LPCSTR szCertSubject)
+BOOL SelfSignFile(LPCWSTR szFileName, LPCWSTR szCertSubject)
 {
-	static WCHAR FileNameW[MAX_PATH];
-
 	PF_DECL(SignerSignEx);
 	PF_DECL(SignerFreeSignerContext);
 	PF_DECL(CertFreeCertificateContext);
@@ -910,17 +917,11 @@ BOOL SelfSignFile(LPCSTR szFileName, LPCSTR szCertSubject)
 	{
 		goto out;
 	}
-	USBMSGN("Added certificate to 'Root' and 'TrustedPublisher' stores..", szCertSubject);
+	USBMSGN(L"Added %s certificate to 'Root' and 'TrustedPublisher' stores..", szCertSubject);
 
 	// Setup SIGNER_FILE_INFO struct
 	signerFileInfo.cbSize = sizeof(SIGNER_FILE_INFO);
-	memset(FileNameW, 0, sizeof(FileNameW));
-	if (mbstowcs(FileNameW, szFileName, _countof(FileNameW) - 1) == (size_t) - 1)
-	{
-		USBWRNN("unable to convert '%s' to UTF16", szFileName);
-		goto out;
-	}
-	signerFileInfo.pwszFileName = FileNameW;
+	signerFileInfo.pwszFileName = szFileName;
 	signerFileInfo.hFile = NULL;
 
 	// Prepare SIGNER_SUBJECT_INFO struct
@@ -968,11 +969,11 @@ BOOL SelfSignFile(LPCSTR szFileName, LPCSTR szCertSubject)
 	hResult = pfSignerSignEx(0, &signerSubjectInfo, &signerCert, &signerSignatureInfo, NULL, NULL, NULL, NULL, &pSignerContext);
 	if (hResult != S_OK)
 	{
-		USBWRNN("SignerSignEx failed. hResult #%X, error %s", hResult, windows_error_str(0));
+		USBWRNN(L"SignerSignEx failed. hResult #%X, error %s", hResult, windows_error_str(0));
 		goto out;
 	}
 	r = TRUE;
-	USBMSGN("Signed file: %s", szFileName);
+	USBMSGN(L"Signed file: %s", szFileName);
 
 	// Clean up
 out:
@@ -983,12 +984,12 @@ out:
 	 */
 	if ((pCertContext != NULL) && (DeletePrivateKey(pCertContext)))
 	{
-		USBMSGN("Deleted private key..");
+		USBMSGN(L"Deleted private key..");
 	}
 
 	if (r == TRUE)
 	{
-		USBMSGN("Success!");
+		USBMSGN(L"Success!");
 	}
 	if (pSignerContext != NULL) pfSignerFreeSignerContext(pSignerContext);
 	if (pCertContext != NULL) pfCertFreeCertificateContext(pCertContext);
@@ -1000,10 +1001,8 @@ out:
 /*
  * Opens a file and computes the SHA1 Authenticode Hash
  */
-static BOOL CalcHash(BYTE* pbHash, LPCSTR szfilePath)
+static BOOL CalcHash(BYTE* pbHash, LPCWSTR szfilePath)
 {
-	static WCHAR FilePathW[MAX_PATH];
-
 	PF_DECL(CryptCATAdminCalcHashFromFileHandle);
 	BOOL r = FALSE;
 	HANDLE hFile = NULL;
@@ -1011,14 +1010,8 @@ static BOOL CalcHash(BYTE* pbHash, LPCSTR szfilePath)
 
 	PF_INIT_OR_OUT(CryptCATAdminCalcHashFromFileHandle, wintrust);
 
-	memset(FilePathW, 0, sizeof(FilePathW));
-	if (mbstowcs(FilePathW, szfilePath, _countof(FilePathW) - 1) == (size_t) - 1)
-	{
-		USBWRNN("unable to convert '%s' to UTF16", szfilePath);
-		return FALSE;
-	}
 	// Compute the SHA1 hash
-	hFile = CreateFileW(FilePathW, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	hFile = CreateFileW(szfilePath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (hFile == INVALID_HANDLE_VALUE) goto out;
 	if ( (!pfCryptCATAdminCalcHashFromFileHandle(hFile, &cbHash, pbHash, 0)) ) goto out;
 	r = TRUE;
@@ -1031,10 +1024,8 @@ out:
 /*
  * Add a new member to a cat file, containing the hash for the relevant file
  */
-static BOOL AddFileHash(HANDLE hCat, LPCSTR szFileName, BYTE* pbFileHash)
+static BOOL AddFileHash(HANDLE hCat, LPCWSTR szFileName, BYTE* pbFileHash)
 {
-	static WCHAR FileNameW[MAX_PATH];
-
 	const GUID inf_guid = {0xDE351A42, 0x8E59, 0x11D0, {0x8C, 0x47, 0x00, 0xC0, 0x4F, 0xC2, 0x95, 0xEE}};
 	const GUID pe_guid = {0xC689AAB8, 0x8E78, 0x11D0, {0x8C, 0x47, 0x00, 0xC0, 0x4F, 0xC2, 0x95, 0xEE}};
 	const BYTE fImageData = 0xA0;		// Flags used for the SPC_PE_IMAGE_DATA "<<<Obsolete>>>" link
@@ -1065,29 +1056,22 @@ static BOOL AddFileHash(HANDLE hCat, LPCSTR szFileName, BYTE* pbFileHash)
 		_snwprintf((wchar_t*)(&wszHash[2 * i]), 3, L"%02X", pbFileHash[i]);
 	}
 
-	memset(FileNameW, 0, sizeof(FileNameW));
-	if (mbstowcs(FileNameW, szFileName, _countof(FileNameW) - 1) == (size_t) - 1)
-	{
-		USBWRNN("unable to convert '%s' to UTF16", szFileName);
-		return FALSE;
-	}
-	_wcslwr(FileNameW);	// All cat filenames seem to be lowercases
 
 	// Set the PE or CAB/INF type according to the extension
-	if (PathMatchSpecA(szFileName, "*.dll") ||
-	        PathMatchSpecA(szFileName, "*.sys") ||
-	        PathMatchSpecA(szFileName, "*.exe"))
+	if (PathMatchSpecW(szFileName, L"*.dll") ||
+	        PathMatchSpecW(szFileName, L"*.sys") ||
+	        PathMatchSpecW(szFileName, L"*.exe"))
 	{
-		USBDBGN("Using PE guid..");
+		USBDBGN(L"Using PE guid..");
 	}
-	else if (PathMatchSpecA(szFileName, "*.inf"))
+	else if (PathMatchSpecW(szFileName, L"*.inf"))
 	{
-		USBDBGN("Using INF guid..");
+		USBDBGN(L"Using INF guid..");
 		bPEType = FALSE;
 	}
 	else
 	{
-		USBWRNN("unhandled file type: '%s' - ignoring", szFileName);
+		USBWRNN(L"unhandled file type: '%s' - ignoring", szFileName);
 		goto out;
 	}
 
@@ -1104,7 +1088,7 @@ static BOOL AddFileHash(HANDLE hCat, LPCSTR szFileName, BYTE* pbFileHash)
 		sSPCImageData.pFile = &sSPCLink;
 		if (!pfCryptEncodeObject(X509_ASN_ENCODING, SPC_PE_IMAGE_DATA_OBJID, &sSPCImageData, pbEncoded, &cbEncoded))
 		{
-			USBWRNN("unable to encode SPC Image Data: %s", windows_error_str(0));
+			USBWRNN(L"unable to encode SPC Image Data: %s", windows_error_str(0));
 			goto out;
 		}
 	}
@@ -1112,7 +1096,7 @@ static BOOL AddFileHash(HANDLE hCat, LPCSTR szFileName, BYTE* pbFileHash)
 	{
 		if (!pfCryptEncodeObject(X509_ASN_ENCODING, SPC_CAB_DATA_OBJID, &sSPCLink, pbEncoded, &cbEncoded))
 		{
-			USBWRNN("unable to encode SPC Image Data: %s", windows_error_str(0));
+			USBWRNN(L"unable to encode SPC Image Data: %s", windows_error_str(0));
 			goto out;
 		}
 	}
@@ -1130,19 +1114,19 @@ static BOOL AddFileHash(HANDLE hCat, LPCSTR szFileName, BYTE* pbFileHash)
 	if ((pCatMember = pfCryptCATPutMemberInfo(hCat, NULL, wszHash, (GUID*)((bPEType) ? &pe_guid : &inf_guid),
 	                  0x200, sizeof(sSIPData), (BYTE*)&sSIPData)) == NULL)
 	{
-		USBWRNN("unable to create cat entry for file '%s': %s", szFileName, windows_error_str(0));
+		USBWRNN(L"unable to create cat entry for file '%s': %s", szFileName, windows_error_str(0));
 		goto out;
 	}
 
 	// Add the "File" and "OSAttr" attributes to the newly created member
 	if ( (pfCryptCATPutAttrInfo(hCat, pCatMember, L"File",
 	                            CRYPTCAT_ATTR_AUTHENTICATED | CRYPTCAT_ATTR_NAMEASCII | CRYPTCAT_ATTR_DATAASCII,
-	                            2 * ((DWORD)wcslen(FileNameW) + 1), (BYTE*)FileNameW) == NULL)
+	                            2 * ((DWORD)wcslen(szFileName) + 1), (BYTE*)szFileName) == NULL)
 	        || (pfCryptCATPutAttrInfo(hCat, pCatMember, L"OSAttr",
 	                                  CRYPTCAT_ATTR_AUTHENTICATED | CRYPTCAT_ATTR_NAMEASCII | CRYPTCAT_ATTR_DATAASCII,
 	                                  2 * ((DWORD)wcslen(wszOSAttr) + 1), (BYTE*)wszOSAttr) == NULL) )
 	{
-		USBWRNN("unable to create attributes for file '%s': %s", szFileName, windows_error_str(0));
+		USBWRNN(L"unable to create attributes for file '%s': %s", szFileName, windows_error_str(0));
 		goto out;
 	}
 	r = TRUE;
@@ -1176,14 +1160,14 @@ BOOL CreateCatEx(PKINF_EL infEL)
 
 	if (!CryptAcquireContextW(&hProv, NULL, NULL, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT))
 	{
-		USBWRNN("unable to acquire crypt context for cat creation");
+		USBWRNN(L"unable to acquire crypt context for cat creation");
 		goto out;
 	}
 
 	hCat = pfCryptCATOpen(infEL->CatFullPath, CRYPTCAT_OPEN_CREATENEW, hProv, 0, 0);
 	if (hCat == INVALID_HANDLE_VALUE)
 	{
-		USBWRNN("unable to create file '%s': %s", WcsToTempMbs(infEL->CatFullPath), windows_error_str(0));
+		USBWRNN(L"unable to create file '%s': %s", infEL->CatFullPath, windows_error_str(0));
 		goto out;
 	}
 
@@ -1197,7 +1181,7 @@ BOOL CreateCatEx(PKINF_EL infEL)
 		if (pfCryptCATPutCatAttrInfo(hCat, deviceEL->CatKey, CRYPTCAT_ATTR_AUTHENTICATED | CRYPTCAT_ATTR_NAMEASCII | CRYPTCAT_ATTR_DATAASCII,
 		                             2 * ((DWORD)wcslen(deviceEL->HardwareID) + 1), (BYTE*)deviceEL->HardwareID) ==  NULL)
 		{
-			USBWRNN("failed to set HWID%d cat attribute: %s", i, windows_error_str(0));
+			USBWRNN(L"failed to set HWID%d cat attribute: %s", i, windows_error_str(0));
 			goto out;
 		}
 	}
@@ -1205,47 +1189,47 @@ BOOL CreateCatEx(PKINF_EL infEL)
 	if (pfCryptCATPutCatAttrInfo(hCat, L"OS", CRYPTCAT_ATTR_AUTHENTICATED | CRYPTCAT_ATTR_NAMEASCII | CRYPTCAT_ATTR_DATAASCII,
 	                             2 * ((DWORD)wcslen(wszOS) + 1), (BYTE*)wszOS) == NULL)
 	{
-		USBWRNN("failed to set OS cat attribute: %s", windows_error_str(0));
+		USBWRNN(L"failed to set OS cat attribute: %s", windows_error_str(0));
 		goto out;
 	}
 
 	DL_FOREACH(infEL->Files, sourceFileEL)
 	{
-		static CHAR szFilePath[MAX_PATH];
-		static CHAR szEntry[MAX_PATH];
-		static CHAR szRelPath[MAX_PATH];
+		static WCHAR szFilePath[MAX_PATH];
+		static WCHAR szEntry[MAX_PATH];
+		static WCHAR szRelPath[MAX_PATH];
 
-		strcpy_s(szFilePath, MAX_PATH, WcsToTempMbs(infEL->BaseDir));
-		strcpy_s(szEntry, MAX_PATH, WcsToTempMbs(sourceFileEL->Filename));
-		PathAppendA(szFilePath, WcsToTempMbs(sourceFileEL->SubDir));
-		PathAppendA(szFilePath, szEntry);
+		wcscpy_s(szFilePath, _countof(szFilePath), infEL->BaseDir);
+		wcscpy_s(szEntry, _countof(szEntry), sourceFileEL->Filename);
+		PathAppendW(szFilePath, sourceFileEL->SubDir);
+		PathAppendW(szFilePath, szEntry);
 
-		_strlwr(szFilePath);
-		_strlwr(szEntry);
+		//_wcslwr(szFilePath);
+		//_wcslwr(szEntry);
 
-		if (GetFileAttributesA(szFilePath) == INVALID_FILE_ATTRIBUTES)
+		if (GetFileAttributesW(szFilePath) == INVALID_FILE_ATTRIBUTES)
 		{
-			USBWRNN("SourceDiskFile %s does not exists.", szFilePath);
+			USBWRNN(L"SourceDiskFile %s does not exists.", szFilePath);
 		}
 		else
 		{
 			if (CalcHash(pbHash, szFilePath))
 			{
 				szRelPath[0] = '\0';
-				PathRelativePathToA(szRelPath, WcsToTempMbs(infEL->BaseDir), FILE_ATTRIBUTE_DIRECTORY, szFilePath, FILE_ATTRIBUTE_NORMAL);
-				USBMSGN("Hash calculated for: %s",  szRelPath);
+				PathRelativePathToW(szRelPath, infEL->BaseDir, FILE_ATTRIBUTE_DIRECTORY, szFilePath, FILE_ATTRIBUTE_NORMAL);
+				USBMSGN(L"Hash calculated for: %s",  szRelPath);
 				if (AddFileHash(hCat, szEntry, pbHash))
 				{
-					USBMSGN("Hash added..");
+					USBMSGN(L"Hash added..");
 				}
 				else
 				{
-					USBWRNN("Failed adding hash for '%s' - ignored", szEntry);
+					USBWRNN(L"Failed adding hash for '%s' - ignored", szEntry);
 				}
 			}
 			else
 			{
-				USBWRNN("Failed calculating hash for '%s' - ignored", szFilePath);
+				USBWRNN(L"Failed calculating hash for '%s' - ignored", szFilePath);
 			}
 		}
 	}
@@ -1253,10 +1237,10 @@ BOOL CreateCatEx(PKINF_EL infEL)
 	// The cat needs to be sorted before being saved
 	if (!pfCryptCATPersistStore(hCat))
 	{
-		USBWRNN("unable to sort file: %s",  windows_error_str(0));
+		USBWRNN(L"unable to sort file: %s",  windows_error_str(0));
 		goto out;
 	}
-	USBMSGN("Catalog file '%s' created..", WcsToTempMbs(infEL->CatTitle));
+	USBMSGN(L"Catalog file '%s' created..", infEL->CatTitle);
 	r = TRUE;
 
 out:
