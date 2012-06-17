@@ -231,7 +231,7 @@ VOID XferCtrl (
 	}
 	else
 	{
-		USBE_OK("status=%Xh\n", status);
+		USBMSGN("[Ok] status=%Xh", status);
 		return;
 	}
 
@@ -259,7 +259,7 @@ VOID XferCtrlComplete(__in WDFREQUEST Request,
 
 	if (NT_SUCCESS(status))
 	{
-		USBE_OK("transferred=%u\n", length);
+		USBMSGN("[Ok] transferred=%u", length);
 		WdfRequestCompleteWithInformation(Request, status, length);
 
 	}
