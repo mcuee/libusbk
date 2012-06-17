@@ -294,7 +294,6 @@ VOID Queue_OnIsoStop(
 	if ((queueContext = GetQueueContext(Queue)) == NULL)
 	{
 		USBERRN("Invalid queue context.");
-		WdfRequestCancelSentRequest(Request);
 		return;
 	}
 
