@@ -180,7 +180,7 @@ LRESULT CPageInstall::OnWizardNext()
 	{
 		// Using a temp directory.
 		CString tempPath;
-		GetTempPath(256, tempPath.GetBufferSetLength(4096));
+		GetTempPath(512, tempPath.GetBufferSetLength(4096));
 		tempPath.ReleaseBuffer();
 
 		PathAppend(tempPath.GetBufferSetLength(4096), _T("InfWizard_Driver"));
@@ -221,8 +221,9 @@ LRESULT CPageInstall::OnWizardNext()
 	this->AppendStatus(fmtRtf);
 
 	infName += _T(".inf");
-	infPathA = infPath;
-	infNameA = infName;
+
+	WideCharToMultiByte(CP_UTF8, 0, infPath, -1, infPathA.GetBufferSetLength(512), 512, NULL, NULL);
+	WideCharToMultiByte(CP_UTF8, 0, infName, -1, infNameA.GetBufferSetLength(512), 512, NULL, NULL);
 
 	fmtRtf.Format(_T("%s..\n"), CInfWizardDisplay::GetTipString(IDS_STATUS_PREPARE_DRIVER)->GetBuffer(0));
 	this->AppendStatus(fmtRtf);
@@ -250,7 +251,7 @@ LRESULT CPageInstall::OnWizardNext()
 		goto Done;
 	}
 
-	if (!FinalizePrepareDriver(&deviceInfo, infPathA.GetBuffer(0), infNameA.GetBuffer(0), &prepareOptions))
+	if (!FinalizePrepareDriver(&deviceInfo, infPath.GetBuffer(0), infName.GetBuffer(0), &prepareOptions))
 	{
 		errorCode = GetLastError();
 		goto Done;
@@ -561,12 +562,12 @@ VOID CPageInstall::OnBnClickedBtnSaveBaseFolder()
 
 BOOL CPageInstall::FinalizePrepareDriver(
     PWDI_DEVICE_INFO DeviceInfo,
-    LPCSTR InfPathA,
-    LPCSTR InfNameA,
+	LPCWSTR InfPath,
+	LPCWSTR InfName,
     PWDI_OPTIONS_PREPARE_DRIVER Options)
 {
-	CString infPath(InfPathA);
-	CString infName(InfNameA);
+	CString infPath(InfPath);
+	CString infName(InfName);
 	CString fileName;
 	CFile extractFile;
 	CString errorMessage;

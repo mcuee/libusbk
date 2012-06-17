@@ -88,8 +88,8 @@ private:
 	void WriteStatusError(LPCTSTR szCaption, LPCTSTR szText);
 	BOOL FinalizePrepareDriver(
 	    PWDI_DEVICE_INFO DeviceInfo,
-	    LPCSTR InfPath,
-	    LPCSTR InfName,
+	    LPCWSTR InfPath,
+	    LPCWSTR InfName,
 	    PWDI_OPTIONS_PREPARE_DRIVER Options);
 
 

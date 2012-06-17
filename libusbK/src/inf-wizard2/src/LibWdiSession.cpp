@@ -11,13 +11,13 @@ static char THIS_FILE[] = __FILE__;
 #endif
 
 #define WDI_ALLOC_STRING(mDeviceInfo,mMember) do {		\
-		mDeviceInfo->mMember = NULL;						\
-		if (mMember.GetLength() > 0)						\
-		{													\
-			mDeviceInfo->mMember = (char*)malloc(256);		\
-			memset(mDeviceInfo->mMember,0, 256);			\
-			wcstombs(mDeviceInfo->mMember,mMember,255);		\
-		}													\
+		mDeviceInfo->mMember = NULL;											\
+		if (mMember.GetLength() > 0)											\
+		{																		\
+			mDeviceInfo->mMember = (char*)malloc(256);							\
+			memset(mDeviceInfo->mMember,0, 256);								\
+			WideCharToMultiByte(CP_UTF8, 0, mMember, -1, mDeviceInfo->mMember, 256, NULL, NULL);	\
+		}																		\
 	}while(0)
 
 #define WDI_FREE_STRING(mDeviceInfo,mMember) do {		\
@@ -116,12 +116,11 @@ void CLibWdiSession::CopyTo(PWDI_DEVICE_INFO deviceInfo)
 
 void CLibWdiSession::RefreshSession(void)
 {
-	wcstombs(chVendorName, m_VendorName, sizeof(chVendorName));
-	wcstombs(chDeviceGuid, m_InterfaceGuid, sizeof(chDeviceGuid));
-
-	wcstombs(chInfClassGuid, m_InfClassGuid, sizeof(chInfClassGuid));
-	wcstombs(chInfClassName, m_InfClassName, sizeof(chInfClassName));
-	wcstombs(chInfProvider, m_InfProvider, sizeof(chInfProvider));
+	WideCharToMultiByte(CP_UTF8, 0, m_VendorName, -1, chVendorName, _countof(chVendorName), NULL, NULL);
+	WideCharToMultiByte(CP_UTF8, 0, m_InfClassName, -1, chInfClassName, _countof(chInfClassName), NULL, NULL);
+	WideCharToMultiByte(CP_UTF8, 0, m_InfProvider, -1, chInfProvider, _countof(chInfProvider), NULL, NULL);
+	WideCharToMultiByte(CP_UTF8, 0, m_InterfaceGuid, -1, chDeviceGuid, _countof(chDeviceGuid), NULL, NULL);
+	WideCharToMultiByte(CP_UTF8, 0, m_InfClassGuid, -1, chInfClassGuid, _countof(chInfClassGuid), NULL, NULL);
 }
 
 void CLibWdiSession::Serialize(CArchive& archive)
