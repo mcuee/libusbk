@@ -74,7 +74,7 @@ UINT CGridColumnTraitEdit::GetLimitText() const
 //! @param rect The rectangle where the inplace cell value editor should be placed
 //! @return Pointer to the cell editor to use
 //------------------------------------------------------------------------
-CEdit* CGridColumnTraitEdit::CreateEdit(CGridListCtrlEx& owner, int nRow, int nCol, const CRect& rect)
+CEdit* CGridColumnTraitEdit::CreateEdit(CGridListCtrlEx& owner, int nRow, int nCol, const CRect& rect, CString* initialText)
 {
 	// Get the text-style of the cell to edit
 	DWORD dwStyle = m_EditStyle;
@@ -88,8 +88,9 @@ CEdit* CGridColumnTraitEdit::CreateEdit(CGridListCtrlEx& owner, int nRow, int nC
 	else
 		dwStyle |= ES_LEFT;
 
-	CEdit* pEdit = new CGridEditorText(nRow, nCol);
+	CEdit* pEdit = new CGridEditorText(nRow, nCol, initialText);
 	VERIFY( pEdit->Create( WS_CHILD | dwStyle, rect, &owner, 0) );
+
 
 	// Configure font
 	pEdit->SetFont(owner.GetCellFont());
@@ -118,12 +119,13 @@ CWnd* CGridColumnTraitEdit::OnEditBegin(CGridListCtrlEx& owner, int nRow, int nC
 {
 	// Get position of the cell to edit
 	CRect rectCell = GetCellEditRect(owner, nRow, nCol);
+	CString initialText = owner.GetItemText(nRow, nCol);
 
 	// Create edit control to edit the cell
-	CEdit* pEdit = CreateEdit(owner, nRow, nCol, rectCell);
+	CEdit* pEdit = CreateEdit(owner, nRow, nCol, rectCell, &initialText);
 	VERIFY(pEdit != NULL);
 
-	pEdit->SetWindowText(owner.GetItemText(nRow, nCol));
+	pEdit->SetWindowText(initialText);
 	pEdit->SetSel(0, -1, 0);
 
 	return pEdit;
@@ -144,12 +146,13 @@ END_MESSAGE_MAP()
 //------------------------------------------------------------------------
 //! CGridEditorText - Constructor
 //------------------------------------------------------------------------
-CGridEditorText::CGridEditorText(int nRow, int nCol)
+CGridEditorText::CGridEditorText(int nRow, int nCol, CString* initialText)
 	: m_Row(nRow)
 	, m_Col(nCol)
 	, m_Completed(false)
-	, m_Modified(false)
-{}
+{
+	m_InitialText = *initialText;
+}
 
 //------------------------------------------------------------------------
 //! The cell value editor was closed and the entered should be saved.
@@ -175,7 +178,7 @@ void CGridEditorText::EndEdit(BOOL bSuccess)
 
 	dispinfo.item.iItem = m_Row;
 	dispinfo.item.iSubItem = m_Col;
-	if (bSuccess && m_Modified)
+	if (bSuccess && m_InitialText != str)
 	{
 		dispinfo.item.mask = LVIF_TEXT;
 		dispinfo.item.pszText = str.GetBuffer(0);
@@ -236,7 +239,6 @@ void CGridEditorText::OnNcCalcSize(BOOL bCalcValidRects, NCCALCSIZE_PARAMS* lpnc
 //------------------------------------------------------------------------
 void CGridEditorText::OnChar(UINT nChar, UINT nRepCnt, UINT nFlags)
 {
-	m_Modified = true;
 	CEdit::OnChar(nChar, nRepCnt, nFlags);
 }
 
