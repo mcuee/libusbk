@@ -1,7 +1,11 @@
 LIBUSBK RELEASE NOTES
 
-V3.0.5.14 RC14 (06/12/2012)
+V3.0.5.14 RC14 (06/17/2012)
 ==============================================
+- Removed 'WdfRequestCancelSentRequest' from 'Queue_OnIsoStop'.
+
+- Fixed InfWizard wide char/muti-byte conversions.
+
 - Fixed 'WdfDeviceInitFree' not being called when 'WdfDeviceCreate'
   succeeds and 'Device_OnAdd' ultimately fails.
 
