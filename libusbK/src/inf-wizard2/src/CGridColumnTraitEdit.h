@@ -26,7 +26,7 @@ public:
 
 protected:
 	virtual void Accept(CGridColumnTraitVisitor& visitor);
-	virtual CEdit* CreateEdit(CGridListCtrlEx& owner, int nRow, int nCol, const CRect& rect);
+	virtual CEdit* CreateEdit(CGridListCtrlEx& owner, int nRow, int nCol, const CRect& rect, CString* initalText);
 
 	DWORD m_EditStyle;				//!< Style to use when creating CEdit
 	UINT m_EditLimitText;			//!< Max number of characters the CEdit will accept
@@ -38,7 +38,7 @@ protected:
 class CGridEditorText : public CEdit
 {
 public:
-	CGridEditorText(int nRow, int nCol);
+	CGridEditorText(int nRow, int nCol, CString* initalText);
 	virtual void EndEdit(BOOL bSuccess);
 
 protected:
@@ -51,7 +51,7 @@ protected:
 	int		m_Row;					//!< The index of the row being edited
 	int		m_Col;					//!< The index of the column being edited
 	BOOL	m_Completed;			//!< Ensure the editor only reacts to a single close event
-	BOOL	m_Modified;				//!< Register if text was modified while the editor was open
+	CString	m_InitialText;			//!< Register if text was modified while the editor was open
 
 	DECLARE_MESSAGE_MAP();
 };
