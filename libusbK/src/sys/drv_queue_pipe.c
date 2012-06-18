@@ -291,13 +291,19 @@ VOID Queue_OnIsoStop(
 {
 	PQUEUE_CONTEXT queueContext;
 
+	if (Request == NULL || Queue == NULL)
+	{
+		USBERRN("Invalid wdf object.");
+		return;
+	}
+
 	if ((queueContext = GetQueueContext(Queue)) == NULL)
 	{
 		USBERRN("Invalid queue context.");
 		return;
 	}
 
-	if (ActionFlags & WdfRequestStopActionSuspend )
+	if (ActionFlags & WdfRequestStopActionSuspend)
 	{
 		USBDBGN("pipeID=%02Xh StopAcknowledge request for suspend. Requeue=FALSE", queueContext->Info.EndpointAddress);
 		queueContext->ResetPipeForResume = TRUE;
@@ -306,12 +312,14 @@ VOID Queue_OnIsoStop(
 		return;
 	}
 
+	/*
 	if(ActionFlags & WdfRequestStopActionPurge)
 	{
 		USBDBGN("pipeID=%02Xh CancelSentRequest for purge.", queueContext->Info.EndpointAddress);
 		WdfRequestCancelSentRequest(Request);
 		return;
 	}
+	*/
 }
 
 VOID Queue_OnReadBulkRawStop(
