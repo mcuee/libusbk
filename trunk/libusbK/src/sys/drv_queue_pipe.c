@@ -370,7 +370,7 @@ VOID Queue_OnReadBulkStop(
 	{
 		USBDBGN("pipeID=%02Xh StopAcknowledge request for suspend. Requeue=TRUE", queueContext->Info.EndpointAddress);
 		queueContext->ResetPipeForResume = TRUE;
-		WdfRequestStopAcknowledge(Request, TRUE);
+		WdfRequestStopAcknowledge(Request, FALSE);
 		return;
 	}
 
