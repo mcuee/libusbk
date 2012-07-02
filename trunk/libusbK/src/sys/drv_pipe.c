@@ -231,19 +231,71 @@ VOID Pipe_StopAll(__in PDEVICE_CONTEXT deviceContext)
 	}
 }
 
+VOID Pipe_InitQueueConfig(
+    __in PPIPE_CONTEXT pipeContext,
+    __out WDF_IO_QUEUE_CONFIG* queueConfig)
+{
+	if (!pipeContext->Pipe)
+	{
+		// Default (Control) pipe
+		WDF_IO_QUEUE_CONFIG_INIT(queueConfig,	WdfIoQueueDispatchSequential);
+		queueConfig->EvtIoDeviceControl = PipeQueue_OnIoControl;
+		return;
+	}
+
+	if (pipeContext->PipeInformation.PipeType == WdfUsbPipeTypeIsochronous || pipeContext->Policies.RawIO)
+	{
+		USBDBGN("Configuring parallel queue..");
+		WDF_IO_QUEUE_CONFIG_INIT(queueConfig,	WdfIoQueueDispatchParallel);
+
+		/*
+		NOTE: WinUSB does not support RawIO OUT transfers; libusbK does.
+		http://msdn.microsoft.com/en-us/library/windows/hardware/ff728833%28v=vs.85%29.aspx
+
+		In libusbK, RawIO means we use a parallel queue.  Any pipe policies or functionality
+		that could cause multiple IO transactions per request are no longer supported. IE:
+		Transfer splitting, ALLOW_ARTIAL_READS, AUTO_FLUSH, IGNORE_SHORT_PACKETS, SHORT_PACKET_TERMINATE.
+		*/
+
+#		if ((KMDF_MAJOR_VERSION==1 && KMDF_MINOR_VERSION >= 9) || (KMDF_MAJOR_VERSION > 1))
+		if (pipeContext->SimulParallelRequests)
+		{
+			queueConfig->Settings.Parallel.NumberOfPresentedRequests = pipeContext->SimulParallelRequests;
+		}
+#		endif
+	}
+	else
+	{
+		USBDBGN("Configuring sequential queue..");
+		WDF_IO_QUEUE_CONFIG_INIT(queueConfig, WdfIoQueueDispatchSequential);
+
+		queueConfig->EvtIoStop = Queue_OnStop;
+		queueConfig->EvtIoResume = Queue_OnResume;
+	}
+
+	queueConfig->EvtIoDeviceControl = PipeQueue_OnIoControl;
+	if (USB_ENDPOINT_DIRECTION_IN(pipeContext->PipeInformation.EndpointAddress))
+	{
+		queueConfig->EvtIoRead = PipeQueue_OnRead;
+	}
+	else
+	{
+		queueConfig->EvtIoWrite = PipeQueue_OnWrite;
+		queueConfig->AllowZeroLengthRequests = TRUE;
+	}
+}
+
 NTSTATUS Pipe_InitQueue(
     __in PDEVICE_CONTEXT deviceContext,
     __in PPIPE_CONTEXT pipeContext,
     __out WDFQUEUE* queueRef)
 {
-	WDF_IO_QUEUE_DISPATCH_TYPE queueDispatchType = WdfIoQueueDispatchInvalid;
 	WDF_IO_QUEUE_CONFIG queueConfig;
 	WDF_OBJECT_ATTRIBUTES objectAttributes;
 	NTSTATUS status = STATUS_INVALID_HANDLE;
 	WDFQUEUE queue = NULL;
 	PQUEUE_CONTEXT queueContext;
 	WDF_OBJECT_ATTRIBUTES memAttributes;
-	PFN_WDF_IO_QUEUE_IO_STOP evtStop = NULL;
 
 	WDF_OBJECT_ATTRIBUTES_INIT(&objectAttributes);
 	objectAttributes.SynchronizationScope = WdfSynchronizationScopeQueue;
@@ -253,108 +305,10 @@ NTSTATUS Pipe_InitQueue(
 	// All queues get a context. At the very least, they will use a local copy of policy and pipe information
 	WDF_OBJECT_ATTRIBUTES_SET_CONTEXT_TYPE(&objectAttributes, QUEUE_CONTEXT);
 
-	if (pipeContext->Pipe)
-	{
-		if (pipeContext->PipeInformation.PipeType == WdfUsbPipeTypeIsochronous)
-		{
-			// Isochronous read or write pipe.
-			USBDBGN("Configuring parallel queue..");
-			queueDispatchType = WdfIoQueueDispatchParallel;
-			WDF_IO_QUEUE_CONFIG_INIT(&queueConfig,	queueDispatchType);
+	queueConfig.DispatchType = WdfIoQueueDispatchInvalid;
+	Pipe_InitQueueConfig(pipeContext, &queueConfig);
 
-			queueConfig.EvtIoDeviceControl = PipeQueue_OnIoControl;
-
-#if ((KMDF_MAJOR_VERSION==1 && KMDF_MINOR_VERSION >= 9) || (KMDF_MAJOR_VERSION > 1))
-			if (pipeContext->SimulParallelRequests)
-			{
-				queueConfig.Settings.Parallel.NumberOfPresentedRequests = pipeContext->SimulParallelRequests;
-			}
-#endif
-			if (USB_ENDPOINT_DIRECTION_IN(pipeContext->PipeInformation.EndpointAddress))
-			{
-				// Isochronous Read Pipe
-				queueConfig.EvtIoRead = PipeQueue_OnRead;
-			}
-			else
-			{
-				// Isochronous Write Pipe
-				queueConfig.EvtIoWrite = PipeQueue_OnWrite;
-				queueConfig.AllowZeroLengthRequests = TRUE;
-
-			}
-			queueConfig.EvtIoStop = Queue_OnIsoStop;
-		}
-		else if (USB_ENDPOINT_DIRECTION_IN(pipeContext->PipeInformation.EndpointAddress))
-		{
-			// Bulk/Int Read Pipe
-			if (pipeContext->Policies.RawIO)
-			{
-				// Configure for BulkReadRaw
-				USBDBGN("Configuring parallel queue..");
-				queueDispatchType = WdfIoQueueDispatchParallel;
-				evtStop = Queue_OnReadBulkRawStop;
-#if ((KMDF_MAJOR_VERSION==1 && KMDF_MINOR_VERSION >= 9) || (KMDF_MAJOR_VERSION > 1))
-				if (pipeContext->SimulParallelRequests)
-				{
-					queueConfig.Settings.Parallel.NumberOfPresentedRequests = pipeContext->SimulParallelRequests;
-				}
-#endif
-			}
-			else
-			{
-				// Configure for BulkRead
-				USBDBGN("Configuring sequential queue..");
-				queueDispatchType = WdfIoQueueDispatchSequential;
-				evtStop = Queue_OnReadBulkStop;
-
-			}
-			WDF_IO_QUEUE_CONFIG_INIT(&queueConfig,	queueDispatchType);
-
-			queueConfig.EvtIoDeviceControl = PipeQueue_OnIoControl;
-			queueConfig.EvtIoRead = PipeQueue_OnRead;
-			queueConfig.EvtIoStop = evtStop;
-		}
-		else
-		{
-			// Bulk/Int Write Pipe
-			if (pipeContext->Policies.RawIO)
-			{
-				// Configure for BulkWriteRaw
-				USBDBGN("Configuring parallel queue..");
-				queueDispatchType = WdfIoQueueDispatchParallel;
-				evtStop = Queue_OnReadBulkRawStop;
-#if ((KMDF_MAJOR_VERSION==1 && KMDF_MINOR_VERSION >= 9) || (KMDF_MAJOR_VERSION > 1))
-				if (pipeContext->SimulParallelRequests)
-				{
-					queueConfig.Settings.Parallel.NumberOfPresentedRequests = pipeContext->SimulParallelRequests;
-				}
-#endif
-			}
-			else
-			{
-				// Configure for BulkWrite
-				USBDBGN("Configuring sequential queue..");
-				queueDispatchType = WdfIoQueueDispatchSequential;
-			}
-			WDF_IO_QUEUE_CONFIG_INIT(&queueConfig,	queueDispatchType);
-
-			queueConfig.EvtIoDeviceControl = PipeQueue_OnIoControl;
-			queueConfig.EvtIoWrite = PipeQueue_OnWrite;
-			queueConfig.AllowZeroLengthRequests = TRUE;
-			queueConfig.EvtIoStop = evtStop;
-		}
-	}
-	else
-	{
-		// Default (Control) pipe
-		queueDispatchType = WdfIoQueueDispatchSequential;
-		WDF_IO_QUEUE_CONFIG_INIT(&queueConfig,	queueDispatchType);
-
-		queueConfig.EvtIoDeviceControl = PipeQueue_OnIoControl;
-
-	}
-
-	if (queueDispatchType != WdfIoQueueDispatchInvalid)
+	if (queueConfig.DispatchType != WdfIoQueueDispatchInvalid)
 	{
 		status = WdfIoQueueCreate(deviceContext->WdfDevice,
 		                          &queueConfig,
@@ -394,6 +348,7 @@ NTSTATUS Pipe_InitQueue(
 			if (!NT_SUCCESS(status))
 			{
 				USBERRN("WdfMemoryCreate failed. status=%08Xh", status);
+				WdfObjectDelete(queue);
 				goto Exit;
 			}
 		}

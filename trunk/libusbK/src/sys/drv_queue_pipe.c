@@ -16,6 +16,9 @@ License files are located in a license folder at the root of source and
 binary distributions.
 ********************************************************************!*/
 
+// warning C4127: conditional expression is constant.
+#pragma warning(disable: 4127)
+
 #include "drv_common.h"
 
 #if (defined(ALLOC_PRAGMA) && defined(PAGING_ENABLED))
@@ -266,118 +269,86 @@ Done:
 
 }
 
-/*++
-
-Routine Description:
-
-    This callback is invoked on every inflight request when the device
-    is suspended or removed. Since our inflight read and write requests
-    are actually pending in the target device, we will just acknowledge
-    its presence. Until we acknowledge, complete, or requeue the requests
-    framework will wait before allowing the device suspend or remove to
-    proceeed. When the underlying USB stack gets the request to suspend or
-    remove, it will fail all the pending requests.
-
-Arguments:
-
-Return Value:
-    None
-
---*/
-VOID Queue_OnIsoStop(
+/* EvtIoStop
+Invoked for every inflight pipe write request.  The callback executes when:
+1) libusbK will stop the queue because of queue policy changes.
+2) The system requests stand-by
+3) The device is removed
+*/
+VOID Queue_OnStop(
     __in WDFQUEUE Queue,
     __in WDFREQUEST Request,
     __in ULONG ActionFlags)
 {
 	PQUEUE_CONTEXT queueContext;
+	PREQUEST_CONTEXT requestContext;
 
 	if (Request == NULL || Queue == NULL)
 	{
 		USBERRN("Invalid wdf object.");
 		return;
 	}
-
 	if ((queueContext = GetQueueContext(Queue)) == NULL)
 	{
 		USBERRN("Invalid queue context.");
+		return;
+	}
+	if ((requestContext = GetRequestContext(Request)) == NULL)
+	{
+		USBERRN("Invalid request context.");
+		return;
+	}
+
+	// None of the libusbK transfer functions set EvtRequestCancel, hence this should never happen.
+	if (ActionFlags & WdfRequestStopRequestCancelable)
+	{
+		USBERRN("WdfRequestStopRequestCancelable! pipeID=%02Xh", queueContext->Info.EndpointAddress);
+		WdfVerifierDbgBreakPoint();
 		return;
 	}
 
 	if (ActionFlags & WdfRequestStopActionSuspend)
 	{
-		USBDBGN("pipeID=%02Xh StopAcknowledge request for suspend. Requeue=FALSE", queueContext->Info.EndpointAddress);
-		queueContext->ResetPipeForResume = TRUE;
+
+		USBDBGN("StopAcknowledge for ActionSuspend. pipeID=%02Xh request=%p timeout=%d", 
+			queueContext->Info.EndpointAddress, Request, requestContext->Timeout);
+
 		WdfRequestStopAcknowledge(Request, FALSE);
-
-		return;
 	}
-
-	/*
-	if(ActionFlags & WdfRequestStopActionPurge)
+	else if(ActionFlags & WdfRequestStopActionPurge)
 	{
-		USBDBGN("pipeID=%02Xh CancelSentRequest for purge.", queueContext->Info.EndpointAddress);
+		USBDBGN("CancelSentRequest for ActionPurge. pipeID=%02Xh request=%p timeout=%d", 
+				queueContext->Info.EndpointAddress, Request, requestContext->Timeout);
+
 		WdfRequestCancelSentRequest(Request);
-		return;
 	}
-	*/
 }
 
-VOID Queue_OnReadBulkRawStop(
-    __in WDFQUEUE Queue,
-    __in WDFREQUEST Request,
-    __in ULONG ActionFlags)
+/* EvtIoResume
+Invoked for pipe write requests which were "StopAcknowledge" in EvtIoStop.
+This callback exucutes after the device has re-entered D0(working).
+*/
+VOID Queue_OnResume(WDFQUEUE Queue, WDFREQUEST Request)
 {
 	PQUEUE_CONTEXT queueContext;
+	PREQUEST_CONTEXT requestContext;
+	NTSTATUS status = STATUS_SUCCESS;
 
+	if (Request == NULL || Queue == NULL)
+	{
+		USBERRN("Invalid wdf object.");
+		return;
+	}
 	if ((queueContext = GetQueueContext(Queue)) == NULL)
 	{
 		USBERRN("Invalid queue context.");
-		WdfRequestCancelSentRequest(Request);
 		return;
 	}
-
-	if (ActionFlags & WdfRequestStopActionSuspend )
+	if ((requestContext = GetRequestContext(Request)) == NULL)
 	{
-		USBDBGN("pipeID=%02Xh StopAcknowledge request for suspend. Requeue=FALSE", queueContext->Info.EndpointAddress);
-		queueContext->ResetPipeForResume = TRUE;
-		WdfRequestStopAcknowledge(Request, FALSE);
-
+		USBERRN("Invalid request context.");
 		return;
 	}
 
-	if(ActionFlags & WdfRequestStopActionPurge)
-	{
-		USBDBGN("pipeID=%02Xh CancelSentRequest for purge.", queueContext->Info.EndpointAddress);
-		WdfRequestCancelSentRequest(Request);
-		return;
-	}
-}
-VOID Queue_OnReadBulkStop(
-    __in WDFQUEUE Queue,
-    __in WDFREQUEST Request,
-    __in ULONG ActionFlags)
-{
-	PQUEUE_CONTEXT queueContext;
-
-	if ((queueContext = GetQueueContext(Queue)) == NULL)
-	{
-		USBERRN("Invalid queue context.");
-		WdfRequestCancelSentRequest(Request);
-		return;
-	}
-
-	if (ActionFlags & WdfRequestStopActionSuspend )
-	{
-		USBDBGN("pipeID=%02Xh StopAcknowledge request for suspend. Requeue=TRUE", queueContext->Info.EndpointAddress);
-		queueContext->ResetPipeForResume = TRUE;
-		WdfRequestStopAcknowledge(Request, FALSE);
-		return;
-	}
-
-	if(ActionFlags & WdfRequestStopActionPurge)
-	{
-		USBDBGN("pipeID=%02Xh CancelSentRequest for purge.", queueContext->Info.EndpointAddress);
-		WdfRequestCancelSentRequest(Request);
-		return;
-	}
+	mXfer_HandlePipeResetScenarios(status, queueContext, requestContext);
 }

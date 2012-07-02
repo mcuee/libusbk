@@ -364,18 +364,52 @@ NTSTATUS Device_OnD0Entry(WDFDEVICE Device, WDF_POWER_DEVICE_STATE WdfPowerDevic
 	UNREFERENCED_PARAMETER(Device);
 	UNREFERENCED_PARAMETER(WdfPowerDeviceState);
 
-	USBMSGN("Entering D0. Leaving D%u.", WdfPowerDeviceState - 1);
+	USBMSGN("Active. D%u -> D0", WdfPowerDeviceState - 1);
 
 	return STATUS_SUCCESS;
 }
 
 NTSTATUS Device_OnD0Exit(WDFDEVICE Device, WDF_POWER_DEVICE_STATE WdfPowerDeviceState)
 {
-	UNREFERENCED_PARAMETER(Device);
+	PDEVICE_CONTEXT             deviceContext;
+	PQUEUE_CONTEXT              queueContext;
+	PPIPE_CONTEXT               pipeContext;
+	int i;
+
 	UNREFERENCED_PARAMETER(WdfPowerDeviceState);
 
-	USBMSGN("Leaving D0. Entering D%u.", WdfPowerDeviceState - 1);
+	USBMSGN("Idle.   D0 -> D%u", WdfPowerDeviceState - 1);
 
+	deviceContext = GetDeviceContext(Device);
+
+	/*
+	Mark all Bulk/Int/Iso IN/OUT endpoints which have the Policies.ResetPipeOnResume set.
+	These pipes are reset in the xfer routines before the next subsequent transfer. (not in D0 entry)
+	*/
+	for (i = 1; i < LIBUSB_MAX_ENDPOINT_COUNT; i++)
+	{
+		pipeContext = &deviceContext->PipeContextByID[i];
+		if (pipeContext->IsValid && pipeContext->Pipe && pipeContext->Queue && pipeContext->Policies.ResetPipeOnResume && (pipeContext->PipeInformation.EndpointAddress & 0xF))
+		{
+			queueContext = GetQueueContext(pipeContext->Queue);
+			if (!queueContext)
+			{
+				USBERRN("Invalid queue context. pipeID=%02Xh queue=%p",
+					pipeContext->PipeInformation.EndpointAddress, pipeContext->Queue);
+
+				continue;
+			}
+
+			if (!queueContext->ResetPipeForResume)
+			{
+				USBMSGN("Marking pipe for reset on next request. pipeID=%02Xh queue=%p",
+					pipeContext->PipeInformation.EndpointAddress, pipeContext->Queue);
+				
+				queueContext->ResetPipeForResume = TRUE;
+			}
+		}
+	}
+	
 	return STATUS_SUCCESS;
 }
 
