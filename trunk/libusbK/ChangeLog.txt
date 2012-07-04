@@ -1,9 +1,26 @@
 LIBUSBK RELEASE NOTES
 
-V3.0.5.14 RC14 (06/17/2012)
+V3.0.5.16 RC16 (07/03/2012)
 ==============================================
-- Removed 'WdfRequestCancelSentRequest' from 'Queue_OnIsoStop'.
+- Fixed BSOD! IRQL_NOT_LESS_OR_EQUAL in wdf01000.sys.
+  - This occurs when bulk/interrupt pipe transfers with RAW_IO
+    disabled(default) are pending and the system attempts to enter
+	stand-by. Reported by Ekkehard Domning, Peter Wang, JamesO.
 
+- Fixed Potential BSOD! IRQL_NOT_LESS_OR_EQUAL in wdf01000.sys.
+  - This may sparatically occur with ISO transfers.
+
+- Added power broadcast functionality to HotK.  This allows applications
+  to receive system suspend/resume notifications.
+
+- Updated queue suspend/resume routines to be more compatible with WinUSB.
+- Updated behavior of RAW_IO pipe policy in regards to suspend/resume.
+  Updated behavior of ISO transfers in regards to suspend/resume.
+  - ISO/RAW_IO transfers no longer implement queue stop/resume
+    functionality. This means flying transfers will prevent the system
+	from entering standby until they complete, timeout, or the
+	*application* cancels them. 
+  
 - Fixed InfWizard wide char/muti-byte conversions.
 
 - Fixed 'WdfDeviceInitFree' not being called when 'WdfDeviceCreate'
