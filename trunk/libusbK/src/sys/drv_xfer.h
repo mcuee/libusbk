@@ -122,9 +122,6 @@ FORCEINLINE NTSTATUS SubmitAsyncQueueRequest(
 	{
 		status = WdfRequestGetStatus(wdfRequest);
 		USBERR("WdfRequestSend failed. pipeID=%02Xh status=%Xh\n", queueContext->Info.EndpointAddress, status);
-
-		// [tr] I suspect this could only happen if a lower driver was buggy.
-		ASSERT(!NT_SUCCESS(status));
 	}
 	return status;
 }
