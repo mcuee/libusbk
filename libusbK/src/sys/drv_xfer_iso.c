@@ -136,11 +136,23 @@ typedef struct _ISO_URB_PACKET_CALC
 	INT		minBytesPerPacket;
 } ISO_URB_PACKET_CALC;
 
+/*
+* ISO completion callbacks for "basic" ISO transfers.
+* IE: Transfers completed from "UsbK_ReadPipe" or UsbK_WritePipe"
+*/
 EVT_WDF_REQUEST_COMPLETION_ROUTINE XferIsoWrComplete;
 EVT_WDF_REQUEST_COMPLETION_ROUTINE XferIsoRdComplete;
-EVT_WDF_REQUEST_COMPLETION_ROUTINE XferAutoIsoExComplete;
+
+/*
+* ISO completion callback for "advanced" ISO transfers.
+* IE: Transfers completed from "UsbK_IsoReadPipe" or UsbK_IsoWritePipe"
+*/
 EVT_WDF_REQUEST_COMPLETION_ROUTINE XferIsoExComplete;
 
+/*
+* ISO submit transfer function for "advanced" ISO transfers.
+* IE: Transfers submitted with "UsbK_IsoReadPipe" or UsbK_IsoWritePipe"
+*/
 VOID XferIsoEx(__in WDFQUEUE Queue,
                __in WDFREQUEST Request)
 {
@@ -314,10 +326,33 @@ VOID XferIsoExComplete(
 	Xfer_CheckPipeStatus(status, requestContext->QueueContext->Info.EndpointAddress);
 
 	urb = WdfMemoryGetBuffer(requestContext->IsoEx.UrbMemory, NULL);
+
+	if (!urb || !requestContext || !IsoContext)
+	{
+		USBERRN("Critical Error! urb=%p requestContext=%p IsoContext=%p",urb, requestContext, IsoContext);
+		if (NT_SUCCESS(status)) status = STATUS_INVALID_ADDRESS;
+		WdfRequestComplete(Request,status);
+		return;
+	}
+
+	if (status == STATUS_CANCELLED || status == STATUS_DEVICE_NOT_CONNECTED)
+	{
+		USBWRNN("[Cancelled] PipeID=%02Xh Status=%08Xh USBD-Status=%08Xh ErrorCount=%u",
+		        requestContext->QueueContext->Info.EndpointAddress, status, urb->UrbHeader.Status, urb->UrbIsochronousTransfer.ErrorCount);
+		WdfRequestComplete(Request,status);
+		return;
+
+	}
 	if (!NT_SUCCESS(status))
 	{
 		USBERRN("[Failure] PipeID=%02Xh Status=%08Xh USBD-Status=%08Xh ErrorCount=%u",
 		        requestContext->QueueContext->Info.EndpointAddress, status, urb->UrbHeader.Status, urb->UrbIsochronousTransfer.ErrorCount);
+
+		if (urb->UrbHeader.Status != USBD_STATUS_SUCCESS)
+		{
+			WdfRequestComplete(Request,status);
+			return;
+		}
 	}
 
 	mXfer_HandlePipeResetScenariosForComplete(status, requestContext->QueueContext, requestContext);

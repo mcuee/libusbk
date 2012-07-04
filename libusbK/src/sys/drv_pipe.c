@@ -17,6 +17,7 @@ binary distributions.
 ********************************************************************!*/
 
 #include "drv_common.h"
+extern WDFDRIVER gWdfDriver;
 
 // warning C4127: conditional expression is constant.
 #pragma warning(disable: 4127)
@@ -235,6 +236,8 @@ VOID Pipe_InitQueueConfig(
     __in PPIPE_CONTEXT pipeContext,
     __out WDF_IO_QUEUE_CONFIG* queueConfig)
 {
+	WDF_DRIVER_VERSION_AVAILABLE_PARAMS verParams;
+
 	if (!pipeContext->Pipe)
 	{
 		// Default (Control) pipe
@@ -257,12 +260,18 @@ VOID Pipe_InitQueueConfig(
 		Transfer splitting, ALLOW_ARTIAL_READS, AUTO_FLUSH, IGNORE_SHORT_PACKETS, SHORT_PACKET_TERMINATE.
 		*/
 
-#		if ((KMDF_MAJOR_VERSION==1 && KMDF_MINOR_VERSION >= 9) || (KMDF_MAJOR_VERSION > 1))
-		if (pipeContext->SimulParallelRequests)
+		WDF_DRIVER_VERSION_AVAILABLE_PARAMS_INIT(&verParams, KMDF_MAJOR_VERSION, KMDF_MINOR_VERSION);
+		if (WdfDriverIsVersionAvailable(gWdfDriver, &verParams))
 		{
-			queueConfig->Settings.Parallel.NumberOfPresentedRequests = pipeContext->SimulParallelRequests;
-		}
+#		if ((KMDF_MAJOR_VERSION==1 && KMDF_MINOR_VERSION >= 9) || (KMDF_MAJOR_VERSION > 1))
+			if (pipeContext->SimulParallelRequests)
+				queueConfig->Settings.Parallel.NumberOfPresentedRequests = pipeContext->SimulParallelRequests;
 #		endif
+		}
+		else
+		{
+			DbgPrint("Expected library version %u.%u!\n",KMDF_MAJOR_VERSION, KMDF_MINOR_VERSION);
+		}
 	}
 	else
 	{

@@ -23,6 +23,7 @@ binary distributions.
 //
 ULONG DebugLevel = 4;
 volatile LONG DeviceInstanceNumber = 0;
+WDFDRIVER gWdfDriver = NULL;
 
 #ifdef ALLOC_PRAGMA
 #pragma alloc_text(INIT, DriverEntry)
@@ -87,7 +88,7 @@ Return Value:
 	             RegistryPath,
 	             WDF_NO_OBJECT_ATTRIBUTES, // Driver Attributes
 	             &config,          // Driver Config Info
-	             WDF_NO_HANDLE // hDriver
+	             &gWdfDriver);	// hDriver
 	         );
 
 	if (!NT_SUCCESS(status))
