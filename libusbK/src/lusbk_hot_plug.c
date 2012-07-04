@@ -108,6 +108,7 @@ static BOOL KUSB_API h_DevEnum_PlugWaiters(KLST_HANDLE DeviceList, KLST_DEVINFO_
 static BOOL KUSB_API h_DevEnum_ClearSyncResults(KLST_HANDLE DeviceList, KLST_DEVINFO_HANDLE DeviceInfo, PKLST_NOTIFY_CONTEXT Context);
 static BOOL KUSB_API h_DevEnum_RegisterForBroadcast(KLST_HANDLE DeviceList, KLST_DEVINFO_HANDLE DeviceInfo, PKHOT_HANDLE_INTERNAL Context);
 static BOOL KUSB_API h_DevEnum_UpdateForRemoval(KLST_HANDLE DeviceList, KLST_DEVINFO_HANDLE DeviceInfo, PDEV_BROADCAST_DEVICEINTERFACE_A Context);
+static BOOL KUSB_API h_DevEnum_PowerBroadcast(KLST_HANDLE DeviceList, KLST_DEVINFO_HANDLE DeviceInfo, VOID* PbtEvent);
 
 static BOOL h_NotifyWaiters(__in_opt PKHOT_HANDLE_INTERNAL HotHandle, BOOL ClearSyncResultsWhenComplete);
 static BOOL h_RegisterForBroadcast(PKHOT_HANDLE_INTERNAL HotHandle);
@@ -159,6 +160,35 @@ static BOOL KUSB_API h_DevEnum_UpdateForRemoval(KLST_HANDLE DeviceList, KLST_DEV
 		return FALSE;
 	}
 
+	return TRUE;
+}
+
+static BOOL KUSB_API h_DevEnum_PowerBroadcast(KLST_HANDLE DeviceList, KLST_DEVINFO_HANDLE DeviceInfo, VOID* PbtEvent)
+{
+	PKHOT_HANDLE_INTERNAL handle;
+
+	UNREFERENCED_PARAMETER(DeviceList);
+
+	/*
+	Broadcast the power message to all connected devices registered for hot-plug detection.
+	Different registrations that match the same device(s) are allowed; all will be notified.
+	*/
+	if (!DeviceInfo->Connected) return TRUE;
+
+	DL_FOREACH(g_HotNotifierList.Items, handle)
+	{
+		if (h_IsHotMatch(handle, DeviceInfo))
+		{
+			// If the handle was not registered with an OnPowerBroadcast callback; skip it.
+			if (!handle->Public.OnPowerBroadcast) continue;
+
+			/* Broadcast the PBT_xx event:
+			http://msdn.microsoft.com/en-us/library/windows/desktop/aa373247%28v=vs.85%29.aspx
+			Applications will generally be interested in only PBT_APMRESUMEAUTOMATIC and PBT_APMSUSPEND
+			*/
+			handle->Public.OnPowerBroadcast((KHOT_HANDLE)handle, DeviceInfo, (UINT)(UINT_PTR)PbtEvent);
+		}
+	}
 	return TRUE;
 }
 
@@ -534,6 +564,15 @@ static LRESULT CALLBACK h_WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
 		InterlockedExchangePointer(&g_HotNotifierList.Hwnd, NULL);
 		PostQuitMessage(0);
 		break;
+	case WM_POWERBROADCAST:
+
+		if (wParam == PBT_APMRESUMEAUTOMATIC || wParam == PBT_APMSUSPEND)
+		{
+			LstK_Enumerate(g_HotNotifierList.DeviceList, h_DevEnum_PowerBroadcast, (PVOID)wParam);
+		}
+
+		break;
+
 	default:
 		return DefWindowProc(hwnd, msg, wParam, lParam);
 	}

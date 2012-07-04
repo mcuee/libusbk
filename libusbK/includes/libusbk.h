@@ -1495,10 +1495,17 @@ typedef enum _KHOT_FLAG
     KHOT_FLAG_POST_USER_MESSAGE				= 0x0004,
 } KHOT_FLAG;
 
+//! Hot plug event function definition.
 typedef VOID KUSB_API KHOT_PLUG_CB(
     _in KHOT_HANDLE HotHandle,
     _in KLST_DEVINFO_HANDLE DeviceInfo,
     _in KLST_SYNC_FLAG PlugType);
+
+//! Power broadcast event function definition.
+typedef VOID KUSB_API KHOT_POWER_BROADCAST_CB(
+    _in KHOT_HANDLE HotHandle,
+    _in KLST_DEVINFO_HANDLE DeviceInfo,
+    _in UINT PbtEvent);
 
 //! Hot plug parameter structure.
 /*!
@@ -1533,8 +1540,14 @@ typedef struct _KHOT_PARAMS
 	*/
 	KHOT_PLUG_CB* OnHotPlug;
 
+	//! \b WM_POWERBROADCAST event callback function invoked when a power-management event has occurred.
+	/*! \fn VOID KUSB_API OnPowerBroadcast (_in KHOT_HANDLE HotHandle, _in KLST_DEVINFO_HANDLE DeviceInfo, _in UINT PbtEvent)
+	* \memberof KHOT_PARAMS
+	*/
+	KHOT_POWER_BROADCAST_CB* OnPowerBroadcast;
+
 	//! fixed structure padding.
-	UCHAR z_F_i_x_e_d[2048 - sizeof(KLST_PATTERN_MATCH) - sizeof(UINT_PTR) * 2 - sizeof(UINT) * 2];
+	UCHAR z_F_i_x_e_d[2048 - sizeof(KLST_PATTERN_MATCH) - sizeof(UINT_PTR) * 3 - sizeof(UINT) * 2];
 
 } KHOT_PARAMS;
 C_ASSERT(sizeof(KHOT_PARAMS) == 2048);
