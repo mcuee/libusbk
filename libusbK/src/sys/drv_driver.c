@@ -86,10 +86,9 @@ Return Value:
 	status = WdfDriverCreate(
 	             DriverObject,
 	             RegistryPath,
-	             WDF_NO_OBJECT_ATTRIBUTES, // Driver Attributes
-	             &config,          // Driver Config Info
-	             &gWdfDriver);	// hDriver
-	         );
+	             WDF_NO_OBJECT_ATTRIBUTES,	// Driver Attributes
+	             &config,					// Driver Config Info
+	             &gWdfDriver);				// hDriver
 
 	if (!NT_SUCCESS(status))
 	{
