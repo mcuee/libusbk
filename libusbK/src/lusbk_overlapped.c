@@ -151,7 +151,7 @@ KUSB_EXP BOOL KUSB_API OvlK_Init(
 	*PoolHandle = NULL;
 
 	ErrorParamAction(!IsHandleValid(PoolHandle), "PoolHandle", return FALSE);
-	ErrorParamAction(MaxOverlappedCount > 64, "MaxOverlappedCount cannot be greater than 64", return FALSE);
+	ErrorParamAction(MaxOverlappedCount > 256, "MaxOverlappedCount cannot be greater than 256", return FALSE);
 
 	Pub_To_Priv_UsbK(UsbHandle, usbHandle, return FALSE);
 
