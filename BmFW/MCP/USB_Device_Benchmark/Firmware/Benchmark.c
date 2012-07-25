@@ -368,7 +368,6 @@ void Benchmark_ProcessIO(void)
 	//Don't attempt to read/write over the USB until after the device has been fully enumerated.
 	if((USBDeviceState < CONFIGURED_STATE)||(USBSuspendControl==1))
 	{
-		Benchmark_Init();
 		return;
 	}
 
