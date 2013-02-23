@@ -421,9 +421,13 @@ static LRESULT CALLBACK h_WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
 		PoolHandle_Live_HotK(handle);
 
 		if (handle->Public.Flags & KHOT_FLAG_PLUG_ALL_ON_INIT)
-			h_NotifyWaiters(handle, TRUE);
+			PostMessageA(hwnd, WM_USER_NOTIFY_HOT_HANDLE, (WPARAM)handle, 0);
 
 		return (LRESULT)ERROR_SUCCESS;
+
+	case WM_USER_NOTIFY_HOT_HANDLE:
+		h_NotifyWaiters((PKHOT_HANDLE_INTERNAL)wParam, TRUE);
+		return (LRESULT)TRUE;
 
 	case WM_USER_FREE_HOT_HANDLE:
 		Handle = (KHOT_HANDLE)wParam;
@@ -660,7 +664,6 @@ static unsigned _stdcall h_ThreadProc(PKHOT_NOTIFIER_LIST NotifierList)
 	HWND hwnd;
 	MSG msg;
 	DWORD exitCode = 0;
-
 	g_HotNotifierList.ActiveHeap = g_HotNotifierList.Heap;
 
 	if (!h_Register_Atom(NotifierList))
