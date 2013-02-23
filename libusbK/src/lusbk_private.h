@@ -24,6 +24,7 @@
 
 #define WM_USER_INIT_HOT_HANDLE			(WM_USER+1)
 #define WM_USER_FREE_HOT_HANDLE			(WM_USER+2)
+#define WM_USER_NOTIFY_HOT_HANDLE		(WM_USER+3)
 
 #define GetSetPipePolicy(BackendContextPtr,pipeID)	\
 	(BackendContextPtr->PipePolicies[((((pipeID) & 0xF)|(((pipeID)>>3) & 0x10)) & 0x1F)])
