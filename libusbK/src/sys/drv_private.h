@@ -201,14 +201,6 @@ typedef struct _PIPE_CONTEXT
 
 	PIPE_POLICIES Policies;
 
-	/*! IMPORTANT:
-	* When in-use, the iso packet memory must be referenced with WdfObjectReference. It
-	* could be deleted/updated while iso transfers using it are pending. ALL iso transfers
-	* forwarded to a pipe queue MUST call WdfObjectDereference() before completing the main
-	* request.
-	*/
-	WDFMEMORY SharedAutoIsoExPacketMemory;
-
 	// Set when policies have changes that require queue settings to change.
 	BOOLEAN IsQueueDirty;
 
