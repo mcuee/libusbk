@@ -122,14 +122,21 @@ VOID WUsb_Init_Library()
 static void KUSB_API w_Cleanup_DevK(__in PKDEV_HANDLE_INTERNAL SharedDevice)
 {
 	int pos = 0;
-	for (pos = 0; pos < KDEV_SHARED_INTERFACE_COUNT; pos++)
-	{
-		if (!SharedDevice->SharedInterfaces[pos].InterfaceHandle)
-			break;
-		WinUsb.Free(SharedDevice->SharedInterfaces[pos].InterfaceHandle);
-		SharedDevice->SharedInterfaces[pos].InterfaceHandle = NULL;
-	}
 
+	if (SharedDevice->SharedInterfaces)
+	{
+		for (pos = 0; pos < KDEV_SHARED_INTERFACE_COUNT; pos++)
+		{
+			if (!SharedDevice->SharedInterfaces[pos].InterfaceHandle)
+				break;
+			WinUsb.Free(SharedDevice->SharedInterfaces[pos].InterfaceHandle);
+			SharedDevice->SharedInterfaces[pos].InterfaceHandle = NULL;
+		}
+	}
+	else
+	{
+		USBWRNN("SharedDevice->SharedInterfaces is NULL");
+	}
 	if (!Str_IsNullOrEmpty(SharedDevice->DevicePath))
 	{
 		Mem_Free(&SharedDevice->DevicePath);
