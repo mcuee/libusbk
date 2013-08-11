@@ -40,6 +40,12 @@ typedef struct _KINF_EL
 
 	WCHAR Provider[MAX_PATH_LENGTH];
 
+	WCHAR DriverVerDate[20];
+	WCHAR DriverVerVersion[20];
+
+	DWORD DriverVerVersionBinaryH;
+	DWORD DriverVerVersionBinaryL;
+
 	PKINF_DEVICE_EL Devices;
 
 	PKINF_FILE_EL	Files;
