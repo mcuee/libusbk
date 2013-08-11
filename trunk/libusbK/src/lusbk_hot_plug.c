@@ -73,7 +73,7 @@ typedef struct _KHOT_NOTIFIER_LIST
 	volatile long HotLockCount;
 	volatile long HotInitCount;
 
-	ATOM WindowAtom;
+	BOOL IsClassRegistered;
 
 	KLST_HANDLE DeviceList;
 	ULONG MaxRefreshMS;
@@ -95,7 +95,7 @@ typedef struct _KHOT_NOTIFIER_LIST
 typedef KHOT_NOTIFIER_LIST* PKHOT_NOTIFIER_LIST;
 
 static LPCSTR g_WindowClassHotK = "HotK_NotificationWindowClass";
-static KHOT_NOTIFIER_LIST g_HotNotifierList = {NULL, 0, 0, 0, NULL, 1000, NULL, {0}, NULL, NULL, 0, NULL, NULL, NULL};
+static KHOT_NOTIFIER_LIST g_HotNotifierList = {NULL, 0, 0, FALSE, NULL, 1000, NULL, {0}, NULL, NULL, 0, NULL, NULL, NULL};
 
 static LRESULT CALLBACK h_WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 static unsigned _stdcall h_ThreadProc(PKHOT_NOTIFIER_LIST NotifierList);
@@ -587,7 +587,7 @@ static BOOL h_Register_Atom(PKHOT_NOTIFIER_LIST NotifierList)
 {
 	WNDCLASSEXA wc;
 
-	if (NotifierList->WindowAtom) return TRUE;
+	if (NotifierList->IsClassRegistered) return TRUE;
 
 	memset(&wc, 0, sizeof(wc));
 
@@ -607,12 +607,14 @@ static BOOL h_Register_Atom(PKHOT_NOTIFIER_LIST NotifierList)
 	wc.lpszClassName = g_WindowClassHotK;
 	wc.hIconSm       = NULL;
 
-	NotifierList->WindowAtom = RegisterClassExA(&wc);
-	ErrorNoSet(!NotifierList->WindowAtom, Error, "RegisterClassEx failed.");
+	// We don't care if this call fails.  This is a possibility if the DLL is dynamically freed and re-loaded.
+	if (RegisterClassExA(&wc) == 0)
+	{
+		USBWRNN("HotK window class could not be registered. ErrorCode=%08Xh",GetLastError());
+	}
 
+	NotifierList->IsClassRegistered = TRUE;
 	return TRUE;
-Error:
-	return FALSE;
 }
 
 static BOOL h_Create_Hwnd(PKHOT_NOTIFIER_LIST NotifierList, HWND* hwnd)
