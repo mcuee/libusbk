@@ -178,6 +178,9 @@ int RunProgram(int argc, LPWSTR* argv)
 	DWORD returnCode = ERROR_SUCCESS;
 	WIN32_FIND_DATAW findFileData;
 	HANDLE hFind;
+	int iArg;
+	BOOL bGetVerInfo = FALSE;
+	WCHAR* pSearchPath = NULL;
 
 	// startup initialization
 	memset(searchPath, 0, sizeof(searchPath));
@@ -190,39 +193,63 @@ int RunProgram(int argc, LPWSTR* argv)
 #endif
 
 	// arg parsing
-	if (argc == 3)
+
+	for (iArg = 1; iArg < argc; iArg++)
 	{
-		USBMSGN(L"");
-		if (_wcsicmp(argv[1], L"/path") != 0)
+		if (_wcsicmp(argv[iArg], L"/path") == 0)
 		{
-			returnCode = ERROR_INVALID_PARAMETER;
-			SetLastError(returnCode);
-			USBERRN(L"Invalid parameter: %s",argv[1]);
+			if (iArg+1 < argc)
+			{
+				iArg++;
+				wcscpy_s(searchPath, _countof(searchPath), argv[iArg]);
+				pSearchPath = searchPath;
+
+				while(pSearchPath[0]==(WCHAR)'\"') pSearchPath++;
+				while(pSearchPath[wcslen(pSearchPath)-1]==(WCHAR)'\"') pSearchPath[wcslen(pSearchPath)-1]=0;
+
+				if (PathFileExistsW(pSearchPath))
+				{
+					PathAppendW(pSearchPath, L"*.inf");
+				}
+				else
+				{
+					returnCode = ERROR_PATH_NOT_FOUND;
+					SetLastError(returnCode);
+					USBERRN(L"searchPath does not exists.");
+					goto Error;
+				}
+			}
+			else
+			{
+				returnCode = ERROR_INVALID_PARAMETER;
+				SetLastError(returnCode);
+				USBERRN(L"Invalid parameter: %s",argv[iArg]);
+				goto Error;
+			}
+		}
+		else if (_wcsicmp(argv[iArg], L"/?") == 0)
+		{
+			ShowHelp();
+			returnCode = 0;
 			goto Error;
 		}
-		if (PathFileExistsW(argv[2]))
+		else if (_wcsicmp(argv[iArg], L"/getverinfo") == 0)
 		{
-			wcscpy_s(searchPath, _countof(searchPath), argv[2]);
-			PathAppendW(searchPath, L"*.inf");
-
+			bGetVerInfo = TRUE;
 		}
 		else
 		{
-			returnCode = ERROR_PATH_NOT_FOUND;
+			returnCode = ERROR_INVALID_PARAMETER;
 			SetLastError(returnCode);
-			USBERRN(L"searchPath does not exists.");
+			USBERRN(L"Invalid parameter: %s",argv[iArg]);
+			ShowHelp();
 			goto Error;
 		}
 	}
-	else if (argc == 2)
+
+	USBMSGN(L"");
+	if (pSearchPath == NULL)
 	{
-		ShowHelp();
-		returnCode = 0;
-		goto Error;
-	}
-	else
-	{
-		USBMSGN(L"");
 		// Set the .inf search path to the current directory.
 		length = GetCurrentDirectoryW(_countof(searchPath), searchPath);
 		if (!length)
@@ -233,16 +260,15 @@ int RunProgram(int argc, LPWSTR* argv)
 		}
 
 		PathAppendW(searchPath, L"*.inf");
-
+		pSearchPath = searchPath;
 	}
 
-
-	hFind = FindFirstFileW(searchPath, &findFileData);
+	hFind = FindFirstFileW(pSearchPath, &findFileData);
 	if (!hFind || hFind == INVALID_HANDLE_VALUE)
 	{
 		returnCode = ERROR_FILE_NOT_FOUND;
 		SetLastError(returnCode);
-		USBERRN(L"%s does not exist.", searchPath);
+		USBERRN(L"%s does not exist.", pSearchPath);
 		goto Error;
 	}
 
@@ -253,7 +279,7 @@ int RunProgram(int argc, LPWSTR* argv)
 		if (!(findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
 		{
 			memset(infPathName, 0, sizeof(infPathName));
-			wcscpy_s(infPathName, _countof(infPathName), searchPath);
+			wcscpy_s(infPathName, _countof(infPathName), pSearchPath);
 			PathRemoveFileSpecW(infPathName);
 			PathAppendW(infPathName, findFileData.cFileName);
 
@@ -262,15 +288,39 @@ int RunProgram(int argc, LPWSTR* argv)
 	}
 	while(FindNextFileW(hFind, &findFileData));
 
-
-	DL_FOREACH(infList->Files, infEL)
+	if (bGetVerInfo)
 	{
-		int lenSubject = _snwprintf(certSubject, _countof(certSubject), L"CN=%s (%s) [Self]", infEL->Provider, infEL->InfTitle);
-		if (lenSubject < 0 || lenSubject >= _countof(certSubject)) lenSubject = _countof(certSubject) - 1;
-		certSubject[lenSubject] = '\0';
+		FILE* pFileVerInfo = _wfopen(L"infinfo.txt",L"ab+");
+		if (!pFileVerInfo)
+		{
+			returnCode = ERROR_ACCESS_DENIED;
+			SetLastError(returnCode);
+			USBERRN(L"%s could not be opened.", L"infinfo.txt");
+			goto Error;
+		}
 
-		if (CreateCatEx(infEL))
-			SelfSignFile(infEL->CatFullPath, certSubject);
+		DL_FOREACH(infList->Files, infEL)
+		{
+			length = _snwprintf(certSubject, _countof(certSubject), L"%u,%u,", infEL->DriverVerVersionBinaryH, infEL->DriverVerVersionBinaryL);
+			fwrite(WcsToTempMbs(certSubject), 1, length, pFileVerInfo);
+			fwrite(WcsToTempMbs(infEL->InfFullPath), 1, wcslen(infEL->InfFullPath), pFileVerInfo);
+			fwrite("\n",1,1,pFileVerInfo);
+		}
+
+		fflush(pFileVerInfo);
+		fclose(pFileVerInfo);
+	}
+	else
+	{
+		DL_FOREACH(infList->Files, infEL)
+		{
+			int lenSubject = _snwprintf(certSubject, _countof(certSubject), L"CN=%s (%s) [Self]", infEL->Provider, infEL->InfTitle);
+			if (lenSubject < 0 || lenSubject >= _countof(certSubject)) lenSubject = _countof(certSubject) - 1;
+			certSubject[lenSubject] = '\0';
+
+			if (CreateCatEx(infEL))
+				SelfSignFile(infEL->CatFullPath, certSubject);
+		}
 	}
 
 Error:

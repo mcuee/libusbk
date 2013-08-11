@@ -135,6 +135,35 @@ static BOOL KINF_API inf_AddSourceFiles(PKINF_LIST List, PKINF_EL infFileEL, HIN
 	return TRUE;
 }
 
+VOID InfK_SetDriverVersionBinary(PKINF_EL infFileEL)
+{
+	WCHAR* pVerStr;
+	DWORD uVerBinary = 0;
+	DWORD dwTemp;
+	WCHAR driverVerVersion[20];
+	INT i;
+
+	memcpy(driverVerVersion, infFileEL->DriverVerVersion, sizeof(driverVerVersion));
+	pVerStr = driverVerVersion;
+
+	i=0;
+	while(pVerStr[i]!=0)
+	{
+		if (pVerStr[i]==(WCHAR)'.') pVerStr[i] = 0;
+		i++;
+	}
+
+	pVerStr = driverVerVersion;
+	for (i=0; i < 4; i++)
+	{
+		uVerBinary <<= 8;
+		dwTemp = wcstoul(pVerStr, NULL, 10);
+		pVerStr = &pVerStr[wcslen(pVerStr)+1];
+		uVerBinary|=dwTemp;
+	}
+	infFileEL->DriverVerVersionBinaryH = ((uVerBinary >> 16) & 0xFFFF);
+	infFileEL->DriverVerVersionBinaryL = ((uVerBinary >> 0) & 0xFFFF);
+}
 
 BOOL KINF_API InfK_AddInfFile(PKINF_LIST List, LPCWSTR InfFilename)
 {
@@ -194,6 +223,22 @@ BOOL KINF_API InfK_AddInfFile(PKINF_LIST List, LPCWSTR InfFilename)
 		goto Error;
 	}
 
+	// Move to Version.Provider
+	success = SetupFindNextMatchLineW(&infContext, L"Provider", &infContextProperty);
+	if (!success)
+	{
+		USBERRN(L"SetupFindNextMatchLineW Failed. ErrorCode=%08Xh", GetLastError());
+		goto Error;
+	}
+
+	// Get Provider
+	success = SetupGetStringFieldW(&infContextProperty, 1, infFileEL->Provider, _countof(infFileEL->Provider), &sectionSize);
+	if (!success)
+	{
+		USBERRN(L"SetupGetStringFieldW Failed. ErrorCode=%08Xh", GetLastError());
+		goto Error;
+	}
+
 	// Move to Version.CatalogFile
 	success = SetupFindNextMatchLineW(&infContext, L"CatalogFile", &infContextProperty);
 	if (!success)
@@ -210,21 +255,31 @@ BOOL KINF_API InfK_AddInfFile(PKINF_LIST List, LPCWSTR InfFilename)
 		goto Error;
 	}
 
-	// Move to Version.Provider
-	success = SetupFindNextMatchLineW(&infContext, L"Provider", &infContextProperty);
+	// Move to Version.DriverVer
+	success = SetupFindNextMatchLineW(&infContext, L"DriverVer", &infContextProperty);
 	if (!success)
 	{
 		USBERRN(L"SetupFindNextMatchLineW Failed. ErrorCode=%08Xh", GetLastError());
 		goto Error;
 	}
 
-	// Get Provider
-	success = SetupGetStringFieldW(&infContextProperty, 1, infFileEL->Provider, _countof(infFileEL->Provider), &sectionSize);
+	// Get DriverVerDate
+	success = SetupGetStringFieldW(&infContextProperty, 1, infFileEL->DriverVerDate, _countof(infFileEL->DriverVerDate), &sectionSize);
 	if (!success)
 	{
 		USBERRN(L"SetupGetStringFieldW Failed. ErrorCode=%08Xh", GetLastError());
 		goto Error;
 	}
+
+	// Get DriverVerVersion
+	success = SetupGetStringFieldW(&infContextProperty, 2, infFileEL->DriverVerVersion, _countof(infFileEL->DriverVerVersion), &sectionSize);
+	if (!success)
+	{
+		USBERRN(L"SetupGetStringFieldW Failed. ErrorCode=%08Xh", GetLastError());
+		goto Error;
+	}
+
+	InfK_SetDriverVersionBinary(infFileEL);
 
 	// Get CatFullPath
 	wcscpy_s(infFileEL->CatFullPath, _countof(infFileEL->CatFullPath), infFileEL->BaseDir);
