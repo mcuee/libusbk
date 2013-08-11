@@ -11,7 +11,7 @@ DIRS= \
      xfer-async \
      xfer-async-loop \
      xfer-control \
-     xfer-control-stream \
+     xfer-control-loop \
      xfer-iso \
      xfer-iso-read \
      xfer-stream \
