@@ -73,7 +73,7 @@ typedef struct _KHOT_NOTIFIER_LIST
 	volatile long HotLockCount;
 	volatile long HotInitCount;
 
-	BOOL IsClassRegistered;
+	ATOM WindowAtom;
 
 	KLST_HANDLE DeviceList;
 	ULONG MaxRefreshMS;
@@ -587,7 +587,7 @@ static BOOL h_Register_Atom(PKHOT_NOTIFIER_LIST NotifierList)
 {
 	WNDCLASSEXA wc;
 
-	if (NotifierList->IsClassRegistered) return TRUE;
+	if (NotifierList->WindowAtom) return TRUE;
 
 	memset(&wc, 0, sizeof(wc));
 
@@ -607,13 +607,13 @@ static BOOL h_Register_Atom(PKHOT_NOTIFIER_LIST NotifierList)
 	wc.lpszClassName = g_WindowClassHotK;
 	wc.hIconSm       = NULL;
 
+	NotifierList->WindowAtom = RegisterClassExA(&wc);
 	// We don't care if this call fails.  This is a possibility if the DLL is dynamically freed and re-loaded.
-	if (RegisterClassExA(&wc) == 0)
+	if (NotifierList->WindowAtom  == 0)
 	{
-		USBWRNN("HotK window class could not be registered. ErrorCode=%08Xh",GetLastError());
+		USBERRN("HotK window class could not be registered. ErrorCode=%08Xh",GetLastError());
+		return FALSE;
 	}
-
-	NotifierList->IsClassRegistered = TRUE;
 	return TRUE;
 }
 
@@ -623,11 +623,12 @@ static BOOL h_Create_Hwnd(PKHOT_NOTIFIER_LIST NotifierList, HWND* hwnd)
 	UNREFERENCED_PARAMETER(NotifierList);
 
 	*hwnd = NULL;
-
 	do
 	{
 		memset(g_HotNotifierList.WindowName, 0, sizeof(g_HotNotifierList.WindowName));
 		sprintf_s(g_HotNotifierList.WindowName, sizeof(g_HotNotifierList.WindowName), "HotK_NotificationWindow_%u", count);
+
+		USBMSGN("Checking for existing HotK monitor window '%s'",g_HotNotifierList.WindowName);
 
 		if (!IsHandleValid(FindWindowA(g_WindowClassHotK, g_HotNotifierList.WindowName)))
 			break;
@@ -641,6 +642,8 @@ static BOOL h_Create_Hwnd(PKHOT_NOTIFIER_LIST NotifierList, HWND* hwnd)
 		return LusbwError(ERROR_TOO_MANY_MODULES);
 	}
 
+	USBMSGN("Creating HotK monitor window '%s'",g_HotNotifierList.WindowName);
+
 	*hwnd = g_HotNotifierList.Hwnd = CreateWindowExA(
 	                                     WS_EX_CLIENTEDGE,
 	                                     g_WindowClassHotK,
@@ -651,7 +654,7 @@ static BOOL h_Create_Hwnd(PKHOT_NOTIFIER_LIST NotifierList, HWND* hwnd)
 
 	if(!IsHandleValid(g_HotNotifierList.Hwnd))
 	{
-		USBERRN("RegisterClassEx failed. ErrorCode=%08Xh", GetLastError());
+		USBERRN("CreateWindowExA failed. ErrorCode=%08Xh", GetLastError());
 		return FALSE;
 	}
 
@@ -782,6 +785,11 @@ KUSB_EXP BOOL KUSB_API HotK_Free(
 
 		// wait for the window to exit
 		h_Wait_Hwnd(TRUE);
+
+		while(!UnregisterClassA(g_WindowClassHotK, g_HotNotifierList.hAppInstance) && lockCnt++ < 1000)
+		{
+			Sleep(1);
+		}
 	}
 	return TRUE;
 }
