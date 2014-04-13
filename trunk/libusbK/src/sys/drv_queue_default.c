@@ -574,7 +574,7 @@ VOID DefaultQueue_OnIoControl(__in WDFQUEUE Queue,
 			break;
 		}
 
-		status = Pipe_Stop(pipeContext, WdfIoTargetCancelSentIo, TRUE);
+		status = Pipe_Stop(pipeContext, WdfIoTargetCancelSentIo, TRUE, TRUE);
 		if (!NT_SUCCESS(status))
 		{
 			USBERRN("Pipe_Stop failed. PipeID=%02Xh Status=%08Xh", libusbRequest->endpoint.endpoint, status);
@@ -598,7 +598,7 @@ VOID DefaultQueue_OnIoControl(__in WDFQUEUE Queue,
 			WdfObjectReleaseLock(pipeContext->Queue);
 		}
 
-		status = Pipe_Start(deviceContext, pipeContext);
+		status = Pipe_Start(deviceContext, pipeContext, TRUE);
 		if (!NT_SUCCESS(status))
 		{
 			USBERRN("Pipe_Start failed. PipeID=%02Xh Status=%08Xh", libusbRequest->endpoint.endpoint, status);

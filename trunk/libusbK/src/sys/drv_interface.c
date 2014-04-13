@@ -58,17 +58,7 @@ NTSTATUS Interface_Stop(__in PDEVICE_CONTEXT deviceContext, __in PINTERFACE_CONT
 		pipeContext = interfaceContext->PipeContextByIndex[pipeIndex];
 		if (pipeContext)
 		{
-			pipeContext->IsValid = FALSE;
-			if (pipeContext->Queue)
-			{
-				// stop queue, cancel any outstanding requests
-				WdfIoQueuePurgeSynchronously(pipeContext->Queue);
-			}
-
-			if (pipeContext->Pipe)
-			{
-				WdfIoTargetStop(WdfUsbTargetPipeGetIoTarget(pipeContext->Pipe), WdfIoTargetCancelSentIo);
-			}
+			Pipe_Stop(pipeContext, WdfIoTargetCancelSentIo, TRUE, FALSE);
 		}
 	}
 
@@ -80,12 +70,18 @@ NTSTATUS Interface_Start(__in PDEVICE_CONTEXT deviceContext,
 {
 	NTSTATUS					status = STATUS_SUCCESS;
 	UCHAR						pipeIndex;
+	PPIPE_CONTEXT pipeContext;
 
 	// start all the pipes on interfaceContext.
 	for (pipeIndex = 0; pipeIndex < interfaceContext->PipeCount; pipeIndex++)
-		status = Pipe_Start(deviceContext, interfaceContext->PipeContextByIndex[pipeIndex]);
-
-	return STATUS_SUCCESS;
+	{
+		pipeContext = interfaceContext->PipeContextByIndex[pipeIndex];
+		if (pipeContext)
+		{
+			Pipe_Start(deviceContext, pipeContext, FALSE);
+		}
+	}
+	return status;
 }
 
 NTSTATUS Interface_DeletePipeQueues(__in PINTERFACE_CONTEXT interfaceContext)
@@ -224,7 +220,7 @@ NTSTATUS Interface_SetAltSetting(__in  PDEVICE_CONTEXT deviceContext,
 		USBERR("unable to set alt setting index %u on interface number %u\n", altsetting_index,
 		       (*interfaceContext)->InterfaceDescriptor.bInterfaceNumber);
 
-		if (!NT_SUCCESS(Interface_Start(deviceContext, (*interfaceContext))), FALSE)
+		if (!NT_SUCCESS(Interface_Start(deviceContext, (*interfaceContext))))
 		{
 			USBERR("Interface_Start failed. status=%Xh", status);
 		}

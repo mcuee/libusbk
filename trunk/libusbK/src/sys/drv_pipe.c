@@ -134,14 +134,14 @@ NTSTATUS Pipe_RefreshQueue(__in PDEVICE_CONTEXT deviceContext, __in PPIPE_CONTEX
 {
 	NTSTATUS status;
 
-	status = Pipe_Stop(pipeContext, WdfIoTargetCancelSentIo, TRUE);
+	status = Pipe_Stop(pipeContext, WdfIoTargetCancelSentIo, TRUE, FALSE);
 	if (!NT_SUCCESS(status))
 	{
 		USBERRN("Pipe_Stop failed. PipeID=%02Xh Status=%08Xh", pipeContext->PipeInformation.EndpointAddress, status);
 		goto Done;
 	}
 
-	status = Pipe_Start(deviceContext, pipeContext);
+	status = Pipe_Start(deviceContext, pipeContext, FALSE);
 	if (!NT_SUCCESS(status))
 	{
 		USBERRN("Pipe_Start failed. PipeID=%02Xh Status=%08Xh", pipeContext->PipeInformation.EndpointAddress, status);
@@ -154,7 +154,8 @@ Done:
 
 NTSTATUS Pipe_Stop(__in PPIPE_CONTEXT pipeContext,
                    __in WDF_IO_TARGET_SENT_IO_ACTION WdfIoTargetSentIoAction,
-                   __in BOOLEAN purgeQueue)
+                   __in BOOLEAN purgeQueue,
+				   __in BOOLEAN stopIoTarget)
 {
 	NTSTATUS status = STATUS_SUCCESS;
 	PAGED_CODE();
@@ -166,7 +167,7 @@ NTSTATUS Pipe_Stop(__in PPIPE_CONTEXT pipeContext,
 		if (pipeContext->Queue && purgeQueue)	// stop queue, cancel any outstanding requests
 			WdfIoQueuePurgeSynchronously(pipeContext->Queue);
 
-		if (pipeContext->Pipe)
+		if (pipeContext->Pipe && stopIoTarget)
 			PipeStop(pipeContext, WdfIoTargetSentIoAction); // stop pipe, cancel any outstanding requests
 	}
 	else
@@ -212,7 +213,7 @@ NTSTATUS Pipe_AbortAll(__in PDEVICE_CONTEXT deviceContext)
 	return STATUS_SUCCESS;
 }
 
-VOID Pipe_StopAll(__in PDEVICE_CONTEXT deviceContext)
+VOID Pipe_StopAll(__in PDEVICE_CONTEXT deviceContext, __in BOOLEAN stopIoTarget)
 {
 	PPIPE_CONTEXT pipeContext = NULL;
 	UCHAR interfaceIndex, pipeIndex;
@@ -227,7 +228,7 @@ VOID Pipe_StopAll(__in PDEVICE_CONTEXT deviceContext)
 		for (pipeIndex = 0; pipeIndex < pipeCount; pipeIndex++)
 		{
 			pipeContext = deviceContext->InterfaceContext[interfaceIndex].PipeContextByIndex[pipeIndex];
-			Pipe_Stop(pipeContext, WdfIoTargetCancelSentIo, TRUE);
+			Pipe_Stop(pipeContext, WdfIoTargetCancelSentIo, TRUE, stopIoTarget);
 		}
 	}
 }
@@ -379,7 +380,8 @@ Exit:
 // On return the pipe and queue are started and the context is marked valid again.
 //
 NTSTATUS Pipe_InitContext(__in PDEVICE_CONTEXT deviceContext,
-                          __in PPIPE_CONTEXT pipeContext)
+                          __in PPIPE_CONTEXT pipeContext,
+						  __in BOOLEAN startIoTarget)
 {
 	NTSTATUS status = STATUS_INVALID_HANDLE;
 	WDFQUEUE queueOld	= pipeContext->Queue;
@@ -427,14 +429,18 @@ NTSTATUS Pipe_InitContext(__in PDEVICE_CONTEXT deviceContext,
 	{
 		if (pipeContext->PipeInformation.PipeType != WdfUsbPipeTypeControl)
 		{
-			// start pipe
-			USBDBG("pipeID=%02Xh starting..\n", pipeContext->PipeInformation.EndpointAddress);
-			status = PipeStart(pipeContext);
-			if (!NT_SUCCESS(status))
+			if (startIoTarget)
 			{
-				pipeContext->IsValid = FALSE;
-				USBERR("WdfIoTargetStart failed. status=%Xh\n", status);
-				goto Done;
+				// start pipe
+				USBDBG("pipeID=%02Xh starting..\n", pipeContext->PipeInformation.EndpointAddress);
+				
+				status = PipeStart(pipeContext);
+				if (!NT_SUCCESS(status))
+				{
+					pipeContext->IsValid = FALSE;
+					USBERR("WdfIoTargetStart failed. status=%Xh\n", status);
+					goto Done;
+				}
 			}
 		}
 
@@ -456,7 +462,8 @@ Done:
 }
 
 NTSTATUS Pipe_Start(__in PDEVICE_CONTEXT deviceContext,
-                    __in PPIPE_CONTEXT pipeContext)
+                    __in PPIPE_CONTEXT pipeContext,
+					__in BOOLEAN startIoTarget)
 {
 	NTSTATUS status = STATUS_INVALID_PIPE_STATE;
 
@@ -467,7 +474,7 @@ NTSTATUS Pipe_Start(__in PDEVICE_CONTEXT deviceContext,
 
 	if (pipeContext->IsValid == FALSE)
 	{
-		status = Pipe_InitContext(deviceContext, pipeContext);
+		status = Pipe_InitContext(deviceContext, pipeContext, startIoTarget);
 		if (!NT_SUCCESS(status))
 		{
 			USBERR("pipeID=%02Xh failed initializing pipe\n",
@@ -481,7 +488,7 @@ NTSTATUS Pipe_Start(__in PDEVICE_CONTEXT deviceContext,
 	return status;
 }
 
-VOID Pipe_StartAll(__in PDEVICE_CONTEXT deviceContext)
+VOID Pipe_StartAll(__in PDEVICE_CONTEXT deviceContext, __in BOOLEAN startIoTarget)
 {
 	PPIPE_CONTEXT pipeContext = NULL;
 	UCHAR interfaceIndex, pipeIndex;
@@ -497,7 +504,7 @@ VOID Pipe_StartAll(__in PDEVICE_CONTEXT deviceContext)
 		for (pipeIndex = 0; pipeIndex < pipeCount; pipeIndex++)
 		{
 			pipeContext = deviceContext->InterfaceContext[interfaceIndex].PipeContextByIndex[pipeIndex];
-			status = Pipe_Start(deviceContext, pipeContext);
+			status = Pipe_Start(deviceContext, pipeContext, startIoTarget);
 		}
 	}
 }
@@ -552,7 +559,7 @@ NTSTATUS Pipe_InitDefaultContext(__in PDEVICE_CONTEXT deviceContext)
 
 	pipeContext->TimeoutPolicy							= 5000;
 
-	return Pipe_InitContext(deviceContext, pipeContext);
+	return Pipe_InitContext(deviceContext, pipeContext, FALSE);
 }
 
 ULONG Pipe_CalcMaxTransferSize(
