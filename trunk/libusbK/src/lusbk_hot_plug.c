@@ -589,6 +589,9 @@ static BOOL h_Register_Atom(PKHOT_NOTIFIER_LIST NotifierList)
 
 	if (NotifierList->WindowAtom) return TRUE;
 
+	// This call will fail unless libusbK.dll is being loaded dynamically after it was previously freed.
+	UnregisterClassA(g_WindowClassHotK, g_HotNotifierList.hAppInstance);
+
 	memset(&wc, 0, sizeof(wc));
 
 	// Registering the Window Class
@@ -608,10 +611,9 @@ static BOOL h_Register_Atom(PKHOT_NOTIFIER_LIST NotifierList)
 	wc.hIconSm       = NULL;
 
 	NotifierList->WindowAtom = RegisterClassExA(&wc);
-	// We don't care if this call fails.  This is a possibility if the DLL is dynamically freed and re-loaded.
 	if (NotifierList->WindowAtom  == 0)
 	{
-		USBERRN("HotK window class could not be registered. ErrorCode=%08Xh",GetLastError());
+		USBERRN("HotK window class '%s' could not be registered. ErrorCode=%08Xh", g_WindowClassHotK, GetLastError());
 		return FALSE;
 	}
 	return TRUE;
@@ -627,8 +629,6 @@ static BOOL h_Create_Hwnd(PKHOT_NOTIFIER_LIST NotifierList, HWND* hwnd)
 	{
 		memset(g_HotNotifierList.WindowName, 0, sizeof(g_HotNotifierList.WindowName));
 		sprintf_s(g_HotNotifierList.WindowName, sizeof(g_HotNotifierList.WindowName), "HotK_NotificationWindow_%u", count);
-
-		USBMSGN("Checking for existing HotK monitor window '%s'",g_HotNotifierList.WindowName);
 
 		if (!IsHandleValid(FindWindowA(g_WindowClassHotK, g_HotNotifierList.WindowName)))
 			break;
@@ -785,11 +785,6 @@ KUSB_EXP BOOL KUSB_API HotK_Free(
 
 		// wait for the window to exit
 		h_Wait_Hwnd(TRUE);
-
-		while(!UnregisterClassA(g_WindowClassHotK, g_HotNotifierList.hAppInstance) && lockCnt++ < 1000)
-		{
-			Sleep(1);
-		}
 	}
 	return TRUE;
 }
