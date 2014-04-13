@@ -20,9 +20,11 @@ NTSTATUS Pipe_Abort(__in PDEVICE_CONTEXT deviceContext,
 NTSTATUS Pipe_Reset(__in PDEVICE_CONTEXT deviceContext,
                     __in UCHAR pipeID);
 
-VOID Pipe_StopAll(__in PDEVICE_CONTEXT deviceContext);
+VOID Pipe_StopAll(__in PDEVICE_CONTEXT deviceContext,
+				  __in BOOLEAN stopIoTarget);
 
-VOID Pipe_StartAll(__in PDEVICE_CONTEXT deviceContext);
+VOID Pipe_StartAll(__in PDEVICE_CONTEXT deviceContext,
+				   __in BOOLEAN startIoTarget);
 
 PPIPE_CONTEXT Pipe_GetContextFromName(__in PDEVICE_CONTEXT DeviceContext,
                                       IN PUNICODE_STRING FileName);
@@ -30,14 +32,17 @@ PPIPE_CONTEXT Pipe_GetContextFromName(__in PDEVICE_CONTEXT DeviceContext,
 NTSTATUS Pipe_InitDefaultContext(__in PDEVICE_CONTEXT deviceContext);
 
 NTSTATUS Pipe_InitContext(__in PDEVICE_CONTEXT deviceContext,
-                          __in PPIPE_CONTEXT pipeContext);
+                          __in PPIPE_CONTEXT pipeContext,
+						  __in BOOLEAN startIoTarget);
 
 NTSTATUS Pipe_Start(__in PDEVICE_CONTEXT deviceContext,
-                    __in PPIPE_CONTEXT pipeContext);
+                    __in PPIPE_CONTEXT pipeContext,
+					__in BOOLEAN startIoTarget);
 
 NTSTATUS Pipe_Stop(__in PPIPE_CONTEXT pipeContext,
                    __in WDF_IO_TARGET_SENT_IO_ACTION WdfIoTargetSentIoAction,
-                   __in BOOLEAN purgeQueue);
+                   __in BOOLEAN purgeQueue,
+				   __in BOOLEAN stopIoTarget);
 
 NTSTATUS Pipe_RefreshQueue(
     __in PDEVICE_CONTEXT deviceContext,

@@ -444,7 +444,7 @@ Return Value:
 	PFILE_CONTEXT               pFileContext;
 	PDEVICE_CONTEXT             deviceContext;
 	PPIPE_CONTEXT               pipeContext;
-
+	PEPROCESS					pProcess;
 	PAGED_CODE();
 
 	USBMSG("begins\n");
@@ -457,6 +457,12 @@ Return Value:
 	pFileContext->DeviceContext = deviceContext;
 
 	fileName = WdfFileObjectGetFileName(FileObject);
+
+	pProcess = PsGetCurrentProcess();
+	if (pProcess != NULL)
+	{
+		USBMSG("Process ID=%u\n", PsGetProcessId(pProcess));
+	}
 
 	if (0 == fileName->Length)
 	{
@@ -824,7 +830,7 @@ NTSTATUS Device_Reset(__in WDFDEVICE Device)
 	// (by calling WdfIoTargetStop) before resetting the device, and restart the
 	// continuous reader (by calling WdfIoTargetStart) after the request completes.
 	//
-	Pipe_StopAll(deviceContext);
+	Pipe_StopAll(deviceContext, TRUE);
 
 	//
 	// It may not be necessary to check whether device is connected before
@@ -842,7 +848,7 @@ NTSTATUS Device_Reset(__in WDFDEVICE Device)
 		USBMSG("WdfUsbTargetDeviceIsConnectedSynchronous status=%Xh\n", status);
 	}
 
-	Pipe_StartAll(deviceContext);
+	Pipe_StartAll(deviceContext, TRUE);
 
 
 	return status;
