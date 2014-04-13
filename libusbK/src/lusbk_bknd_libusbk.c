@@ -416,6 +416,7 @@ KUSB_EXP BOOL KUSB_API UsbK_GetCurrentAlternateSetting(
 
 	ErrorParamAction(!AltSettingNumber, "AltSettingNumber", return FALSE);
 	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
 
 	Get_CurSharedInterface(handle, sharedInterface);
 	Mem_Zero(&request, sizeof(request));
