@@ -1,5 +1,16 @@
 LIBUSBK RELEASE NOTES
 
+V3.0.6.15 RC15 (04/13/2014)
+==============================================
+- Fixed hot-plug init issue which caused a failure after re-loading
+  libusbK.dll dynamically. (Reported By Stefan Battmer) 
+
+- Fixed BSOD if a device is removed while changing an interfaces alternate
+  Setting. (Reported By Matt Liberty)
+  
+- Fixed GetCurrentAlternateSetting issues which caused the device to close
+  upon return.
+
 V3.0.6.0 (08/11/2013)
 ==============================================
 - Fixed hot-plug deadlock issue
