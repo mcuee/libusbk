@@ -94,14 +94,17 @@ VOID Policy_InitPipe(
     __in PDEVICE_CONTEXT deviceContext,
     __inout PPIPE_CONTEXT pipeContext)
 {
-	PIPE_POLICIES defaultPolicies;
-	defaultPolicies.values = 0;
-	defaultPolicies.AllowPartialReads = TRUE;
-	defaultPolicies.IsoStartLatency = IsHighSpeedDevice(deviceContext) ? 32 : 8;
-	if (pipeContext)
+	if (pipeContext && pipeContext->PipePoliciesInitialized == FALSE)
 	{
+		PIPE_POLICIES defaultPolicies;
+
+		defaultPolicies.values = 0;
+		defaultPolicies.AllowPartialReads = TRUE;
+		defaultPolicies.IsoStartLatency = IsHighSpeedDevice(deviceContext) ? 32 : 8;
+
 		defaultPolicies.IsoAlwaysStartAsap = USB_ENDPOINT_DIRECTION_IN(pipeContext->PipeInformation.EndpointAddress) ? FALSE : TRUE;
 		pipeContext->Policies.values = defaultPolicies.values;
+		pipeContext->PipePoliciesInitialized = TRUE;
 	}
 }
 

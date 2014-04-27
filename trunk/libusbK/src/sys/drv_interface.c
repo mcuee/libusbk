@@ -84,24 +84,42 @@ NTSTATUS Interface_Start(__in PDEVICE_CONTEXT deviceContext,
 	return status;
 }
 
-NTSTATUS Interface_DeletePipeQueues(__in PINTERFACE_CONTEXT interfaceContext)
+VOID Interface_DeletePipesAndQueues(__in PINTERFACE_CONTEXT interfaceContext)
 {
-	UCHAR						pipeIndex;
+	UCHAR pipeIndex;
 
-	// start all the pipes on interfaceContext.
 	for (pipeIndex = 0; pipeIndex < interfaceContext->PipeCount; pipeIndex++)
 	{
 		PPIPE_CONTEXT pipeContext = interfaceContext->PipeContextByIndex[pipeIndex];
-		WDFQUEUE queue = pipeContext->Queue;
+		
+		// this needs to be re-initialized in subsequent code but we null it here
+		// because nothing else should be using it at this point.
+		interfaceContext->PipeContextByIndex[pipeIndex] = NULL;
 
-		if (pipeContext->IsValid == FALSE &&  queue && (pipeContext->PipeInformation.EndpointAddress & 0xF))
+		if (!pipeContext)
+		{
+			// should certainly never happen; indicates corrupted memory
+			USBERRN("NULL pipeContext at index %u. Memory may be corrupt!", pipeIndex);
+			continue;
+		}
+
+		// the context should always be marked invalid at this point
+		// delete the queues for all pipes associated with this interface
+		if (pipeContext->IsValid == FALSE && 
+			pipeContext->Queue != WDF_NO_HANDLE && 
+			(pipeContext->PipeInformation.EndpointAddress & 0xF))
 		{
 			USBDBGN("pipeID=%02Xh Destroying pipe queue.", pipeContext->PipeInformation.EndpointAddress);
-			WdfObjectDelete(queue);
-			InterlockedExchangePointer(&pipeContext->Queue, (PVOID)NULL);
+			WdfObjectDelete(pipeContext->Queue);
+			pipeContext->Queue = WDF_NO_HANDLE;
 		}
+
+		// mark the pipe handle as null.  The framework destroys these for us.
+		pipeContext->Pipe = WDF_NO_HANDLE;
 	}
-	return STATUS_SUCCESS;
+
+	// set the pipe count to zero
+	interfaceContext->PipeCount = 0;
 }
 
 NTSTATUS Interface_InitContext(__in PDEVICE_CONTEXT deviceContext,
@@ -110,8 +128,15 @@ NTSTATUS Interface_InitContext(__in PDEVICE_CONTEXT deviceContext,
 	NTSTATUS status = STATUS_SUCCESS;
 	UCHAR pipeIndex;
 
-	// get the interface handle
-	interfaceContext->Interface = WdfUsbTargetDeviceGetInterface(deviceContext->WdfUsbTargetDevice, interfaceContext->InterfaceIndex);
+	if (interfaceContext->Interface == WDF_NO_HANDLE)
+	{
+		// interface indexes are assigned only once during configuration.
+		// memory may be corrupt
+		// invalid config descriptor?
+		// WDF decided not to give us an interface handle for some unknown reason
+		USBERR("WdfUsbTargetDeviceGetInterface returned a null interface handle at index %u\n", interfaceContext->InterfaceIndex);
+		return STATUS_FILE_CORRUPT_ERROR;
+	}
 
 	// get the configured alt setting index for this inteface
 	interfaceContext->SettingIndex = WdfUsbInterfaceGetConfiguredSettingIndex(interfaceContext->Interface);
@@ -145,24 +170,25 @@ NTSTATUS Interface_InitContext(__in PDEVICE_CONTEXT deviceContext,
 		}
 
 		// get the pipe context by endpoint id from the master pipe list
+		// this is never null
 		pipeContext = GetPipeContextByID(deviceContext, pipeInfo.EndpointAddress);
-
-		// set the default pipe polices
-		if (!pipeContext->Pipe)
-		{
-			Policy_InitPipe(deviceContext, pipeContext);
-		}
 
 		// set the pipe context by index in the interface context
 		interfaceContext->PipeContextByIndex[pipeIndex] = pipeContext;
+
+		// update the pipe information
+		// this needs to be done BEFORE calling Policy_InitPipe
+		RtlCopyMemory(&pipeContext->PipeInformation, &pipeInfo, sizeof(WDF_USB_PIPE_INFORMATION));
+
+		// set the default pipe polices
+		// NOTE: This is done only once for any given endpoint ID
+		Policy_InitPipe(deviceContext, pipeContext);
 
 		// always update the pipe handle
 		pipeContext->Pipe = pipe;
 
 		pipeInfo.MaximumTransferSize = Pipe_CalcMaxTransferSize(IsHighSpeedDevice(deviceContext), pipeInfo.PipeType, pipeInfo.MaximumPacketSize, pipeInfo.MaximumTransferSize);
-
-		// update the pipe information
-		RtlCopyMemory(&pipeContext->PipeInformation, &pipeInfo, sizeof(WDF_USB_PIPE_INFORMATION));
+		pipeContext->PipeInformation.MaximumTransferSize = pipeInfo.MaximumTransferSize;
 
 		USBDBG("configured %s pipe: PipeID=%02Xh MaximumPacketSize=%u MaximumTransferSize=%u PipeType=%s\n",
 		       GetEndpointDirString(pipeInfo.EndpointAddress), pipeInfo.EndpointAddress, pipeInfo.MaximumPacketSize, pipeInfo.MaximumTransferSize, GetPipeTypeString(pipeInfo.PipeType));
@@ -186,6 +212,13 @@ NTSTATUS Interface_SetAltSetting(__in  PDEVICE_CONTEXT deviceContext,
 	if (!NT_SUCCESS(status))
 	{
 		USBERR("GetInterfaceContextFromRequest failed. status=%Xh\n", status);
+		goto Done;
+	}
+
+	if ((*interfaceContext)->Interface == WDF_NO_HANDLE)
+	{
+		status = STATUS_NO_MORE_ENTRIES;
+		USBERR("Interface handle is NULL. status=%Xh\n", status);
 		goto Done;
 	}
 
@@ -230,15 +263,13 @@ NTSTATUS Interface_SetAltSetting(__in  PDEVICE_CONTEXT deviceContext,
 		USBMSG("selected alt setting index %u on interface number %u\n", altsetting_index,
 		       (*interfaceContext)->InterfaceDescriptor.bInterfaceNumber);
 
+		// fetch the setting back from WDF
 		(*interfaceContext)->SettingIndex = WdfUsbInterfaceGetConfiguredSettingIndex((*interfaceContext)->Interface);
 
-		status = Interface_DeletePipeQueues((*interfaceContext));
-		if (!NT_SUCCESS(status))
-		{
-			USBERR("Interface_DeletePipeQueues failed. status=%Xh", status);
-			goto Done;
-		}
+		// delete the old queues and pipes
+		Interface_DeletePipesAndQueues((*interfaceContext));
 
+		// initialize the new queues and pipes
 		status = Interface_InitContext(deviceContext, (*interfaceContext));
 		if (!NT_SUCCESS(status))
 		{

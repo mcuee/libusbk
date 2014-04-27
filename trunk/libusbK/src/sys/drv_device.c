@@ -782,7 +782,10 @@ NTSTATUS Device_Configure(WDFDEVICE Device)
 		{
 			interfaceContext = &deviceContext->InterfaceContext[interfaceIndex];
 			interfaceContext->InterfaceIndex = interfaceIndex;
-
+			
+			// get the interface handle
+			interfaceContext->Interface = WdfUsbTargetDeviceGetInterface(deviceContext->WdfUsbTargetDevice, interfaceContext->InterfaceIndex);
+			
 			status = Interface_InitContext(deviceContext, interfaceContext);
 			if (!NT_SUCCESS(status))
 			{
