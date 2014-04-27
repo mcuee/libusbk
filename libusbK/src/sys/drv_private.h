@@ -196,6 +196,7 @@ typedef struct _PIPE_CONTEXT
 	volatile ULONG TimeoutPolicy;
 
 	BOOLEAN IsValid;							// True only when the pipe exists and is ready.
+	BOOLEAN PipePoliciesInitialized;			// True only the first time a PipeID is initialized.
 	WDF_USB_PIPE_INFORMATION PipeInformation;	// WDF pipe info.
 	WDFUSBPIPE Pipe;							// Pipe handle.
 
