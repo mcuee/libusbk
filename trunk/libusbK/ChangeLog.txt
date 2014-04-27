@@ -1,5 +1,9 @@
 LIBUSBK RELEASE NOTES
 
+V3.0.7.0 (04/27/2014)
+==============================================
+- Improved driver error handling.
+
 V3.0.6.15 RC15 (04/13/2014)
 ==============================================
 - Fixed hot-plug init issue which caused a failure after re-loading
