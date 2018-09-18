@@ -3991,6 +3991,55 @@ extern "C" {
 
 	/*! @} */
 
+//! Transmits control data over a default control endpoint.
+	/*!
+	*
+	* \param[in] InterfaceHandle
+	* A valid libusbK interface handle returned by:
+	* - \ref UsbK_Init
+	* - \ref UsbK_Initialize
+	* - \ref UsbK_GetAssociatedInterface
+	* - \ref UsbK_Clone
+	*
+	* \param[in] SetupPacket
+	*  The 8-byte setup packet of type WINUSB_SETUP_PACKET.
+	*
+	* \param[in,out] Buffer
+	* A caller-allocated buffer that contains the data to transfer.
+	*
+	* \param[in] BufferLength
+	* The number of bytes to transfer, not including the setup packet. This number must be less than or equal to
+	* the size, in bytes, of Buffer.
+	*
+	* \param[out] LengthTransferred
+	* A pointer to a UINT variable that receives the actual number of transferred bytes. If the application
+	* does not expect any data to be transferred during the data phase (BufferLength is zero), LengthTransferred
+	* can be NULL.
+	*
+	* \param[in] Overlapped
+	* An optional pointer to an OVERLAPPED structure, which is used for asynchronous operations. If this
+	* parameter is specified, \ref UsbK_ControlTransfer immediately returns, and the event is signaled when the
+	* operation is complete. If Overlapped is not supplied, the \ref UsbK_ControlTransfer function transfers
+	* data synchronously.
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information. If an
+	* \c Overlapped member is supplied and the operation succeeds this function returns FALSE and sets last
+	* error to ERROR_IO_PENDING.
+	*
+	* A \ref UsbK_ControlTransfer is never cached. These requests always go directly to the usb device.
+	*
+	* \attention
+	* This function should not be used for operations supported by the library.\n e.g.
+	* \ref UsbK_SetConfiguration, \ref UsbK_SetAltInterface, etc..
+	*
+	*/
+	KUSB_EXP BOOL KUSB_API LUsb0_ControlTransfer(
+		_in KUSB_HANDLE InterfaceHandle,
+		_in WINUSB_SETUP_PACKET SetupPacket,
+		_refopt PUCHAR Buffer,
+		_in UINT BufferLength,
+		_outopt PUINT LengthTransferred,
+		_inopt LPOVERLAPPED Overlapped);
 #endif
 
 #ifdef __cplusplus
