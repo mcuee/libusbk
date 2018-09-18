@@ -20,6 +20,8 @@ binary distributions.
 #include "lusbk_handles.h"
 #include "lusbk_stack_collection.h"
 
+static int _usb_io_sync(HANDLE dev, unsigned int code, void *out, int out_size,
+	void *in, int in_size, int *ret);
 
 /*
  * Standard requests
@@ -36,6 +38,8 @@ binary distributions.
 #define USB_ENDPOINT_IN			0x80
 #define USB_ENDPOINT_OUT		0x00
 
+#define LIBUSB_DEFAULT_TIMEOUT	1000
+
 KUSB_EXP BOOL KUSB_API LUsb0_ControlTransfer(
 	_in KUSB_HANDLE InterfaceHandle,
 	_in WINUSB_SETUP_PACKET SetupPacket,
@@ -51,7 +55,7 @@ KUSB_EXP BOOL KUSB_API LUsb0_ControlTransfer(
 	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
 	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
 
-	ret = usb_control_msg(Dev_Handle(), SetupPacket.RequestType, SetupPacket.Request, SetupPacket.Value, SetupPacket.Index, Buffer, BufferLength, /* timeout */ 1000);
+	ret = usb_control_msg(Dev_Handle(), SetupPacket.RequestType, SetupPacket.Request, SetupPacket.Value, SetupPacket.Index, Buffer, BufferLength, LIBUSB_DEFAULT_TIMEOUT);
 
 	if (ret >= 0)
 	{
@@ -66,6 +70,60 @@ KUSB_EXP BOOL KUSB_API LUsb0_ControlTransfer(
 	PoolHandle_Dec_UsbK(handle);
 
 	return success;
+}
+
+KUSB_EXP BOOL KUSB_API LUsb0_SetConfiguration(
+	_in KUSB_HANDLE InterfaceHandle,
+	_in UCHAR ConfigurationNumber)
+{
+	libusb_request request;
+	PKUSB_HANDLE_INTERNAL handle;
+	BOOL success;
+
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
+
+	if (!usb_set_configuration(handle, ConfigurationNumber))
+	{
+		USBERRN("failed setting configuration #%d", ConfigurationNumber);
+		goto Error;
+	}
+
+	// rebuild the interface list.
+	success = UsbStack_Rebuild(handle, k_Init_Config);
+	ErrorNoSet(!success, Error, "->UsbStack_Rebuild");
+
+Done:
+	PoolHandle_Dec_UsbK(handle);
+	return TRUE;
+
+Error:
+	PoolHandle_Dec_UsbK(handle);
+	return FALSE;
+}
+
+// See libusb-win32 windows.c:217-254
+int usb_set_configuration(HANDLE *dev, int configuration)
+{
+	libusb_request req;
+
+	if (!dev)
+	{
+		USBERR("device not open\n");
+		return FALSE;
+	}
+
+	req.configuration.configuration = configuration;
+	req.timeout = LIBUSB_DEFAULT_TIMEOUT;
+
+	if (!_usb_io_sync(dev, LIBUSB_IOCTL_SET_CONFIGURATION,
+		&req, sizeof(libusb_request), NULL, 0, NULL))
+	{
+		USBERR("could not set config %d: ", configuration);
+		return FALSE;
+	}
+
+	return TRUE;
 }
 
 // See libusb-win32 windows.c:671-815

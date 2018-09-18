@@ -4030,9 +4030,10 @@ extern "C" {
 	*
 	* \attention
 	* This function should not be used for operations supported by the library.\n e.g.
-	* \ref UsbK_SetConfiguration, \ref UsbK_SetAltInterface, etc..
+	* \ref LUsb0_SetConfiguration, \ref UsbK_SetAltInterface, etc..
 	*
 	*/
+
 	KUSB_EXP BOOL KUSB_API LUsb0_ControlTransfer(
 		_in KUSB_HANDLE InterfaceHandle,
 		_in WINUSB_SETUP_PACKET SetupPacket,
@@ -4040,6 +4041,30 @@ extern "C" {
 		_in UINT BufferLength,
 		_outopt PUINT LengthTransferred,
 		_inopt LPOVERLAPPED Overlapped);
+	//! Sets the device configuration number.
+		/*!
+		*
+		* \param[in] InterfaceHandle
+		* An initialized usb handle, see \ref UsbK_Init.
+		*
+		* \param[in] ConfigurationNumber
+		* The configuration number to activate.
+		*
+		* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+		*
+		* \ref LUsb0_SetConfiguration is only supported with libusb0.sys. If the driver in not libusb0.sys, this
+		* function performs the following emulation actions:
+		* - If the requested configuration number is the current configuration number, returns TRUE.
+		* - If the requested configuration number is one other than the current configuration number, returns FALSE
+		*   and set last error to \c ERROR_NO_MORE_ITEMS.
+		*
+		* This function will fail if there are pending I/O operations or there are other libusbK interface handles
+		* referencing the device. \sa UsbK_Free
+		*
+		*/
+	KUSB_EXP BOOL KUSB_API LUsb0_SetConfiguration(
+		_in KUSB_HANDLE InterfaceHandle,
+		_in UCHAR ConfigurationNumber);
 #endif
 
 #ifdef __cplusplus

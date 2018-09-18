@@ -180,6 +180,9 @@ BOOL GetProcAddress_LUsb0(__out KPROC* ProcAddress, __in LONG FunctionID)
 	case KUSB_FNID_IsoWritePipe:
 		GetProcAddress_Unsupported(ProcAddress, FunctionID);
 		return LusbwError(ERROR_NOT_SUPPORTED);
+	case KUSB_FNID_SetConfiguration:
+		*ProcAddress = (KPROC)LUsb0_SetConfiguration;
+		break;
 	case KUSB_FNID_ControlTransfer:
 		*ProcAddress = (KPROC)LUsb0_ControlTransfer;
 		break;

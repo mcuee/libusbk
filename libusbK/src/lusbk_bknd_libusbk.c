@@ -111,7 +111,7 @@ static BOOL k_Init_Backend(PKUSB_HANDLE_INTERNAL handle)
 	return IsHandleValid(handle->Device->Backend.CtxK);
 }
 
-static BOOL k_Init_Config(PKUSB_HANDLE_INTERNAL handle)
+BOOL k_Init_Config(PKUSB_HANDLE_INTERNAL handle)
 {
 	libusb_request request;
 	UINT transferred = 0;
