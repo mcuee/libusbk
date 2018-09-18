@@ -103,9 +103,9 @@
       <Command />
     </PreLinkEvent>
     <Link>
-      <AdditionalDependencies>msvcrt.lib;kernel32.lib;user32.lib;advapi32.lib;setupapi.lib;newdev.lib;ole32.lib;shlwapi.lib;shell32.lib</AdditionalDependencies>
+      <AdditionalDependencies>kernel32.lib;user32.lib;advapi32.lib;setupapi.lib;newdev.lib;ole32.lib;shlwapi.lib;shell32.lib</AdditionalDependencies>
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
-      <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
+      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <TargetMachine>MachineX86</TargetMachine>
@@ -162,7 +162,7 @@
     <Link>
       <AdditionalDependencies>msvcrt.lib;kernel32.lib;user32.lib;advapi32.lib;setupapi.lib;newdev.lib;ole32.lib;shlwapi.lib;shell32.lib</AdditionalDependencies>
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
-      <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
+      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <SubSystem>Windows</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
