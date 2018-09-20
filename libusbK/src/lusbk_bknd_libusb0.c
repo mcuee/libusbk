@@ -19,9 +19,7 @@ binary distributions.
 #include "lusbk_private.h"
 #include "lusbk_handles.h"
 #include "lusbk_stack_collection.h"
-
-static int _usb_io_sync(HANDLE dev, unsigned int code, void *out, int out_size,
-	void *in, int in_size, int *ret);
+#include "lusbk_bknd_libusb0.h"
 
 /*
  * Standard requests
@@ -52,6 +50,8 @@ KUSB_EXP BOOL KUSB_API LUsb0_ControlTransfer(
 	int ret;
 	PKUSB_HANDLE_INTERNAL handle;
 
+	UNUSED(Overlapped);
+
 	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
 	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
 
@@ -59,7 +59,7 @@ KUSB_EXP BOOL KUSB_API LUsb0_ControlTransfer(
 
 	if (ret >= 0)
 	{
-		LengthTransferred = ret;
+		*LengthTransferred = ret;
 		success = TRUE;
 	}
 	else
@@ -76,14 +76,13 @@ KUSB_EXP BOOL KUSB_API LUsb0_SetConfiguration(
 	_in KUSB_HANDLE InterfaceHandle,
 	_in UCHAR ConfigurationNumber)
 {
-	libusb_request request;
 	PKUSB_HANDLE_INTERNAL handle;
 	BOOL success;
 
 	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
 	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
 
-	if (!usb_set_configuration(handle, ConfigurationNumber))
+	if (!usb_set_configuration((HANDLE*)handle, ConfigurationNumber))
 	{
 		USBERRN("failed setting configuration #%d", ConfigurationNumber);
 		goto Error;
@@ -93,7 +92,6 @@ KUSB_EXP BOOL KUSB_API LUsb0_SetConfiguration(
 	success = UsbStack_Rebuild(handle, k_Init_Config);
 	ErrorNoSet(!success, Error, "->UsbStack_Rebuild");
 
-Done:
 	PoolHandle_Dec_UsbK(handle);
 	return TRUE;
 
@@ -128,7 +126,7 @@ int usb_set_configuration(HANDLE *dev, int configuration)
 
 // See libusb-win32 windows.c:671-815
 int usb_control_msg(HANDLE *dev, int requesttype, int request,
-	int value, int index, char *bytes, int size, int timeout)
+	int value, int index, PUCHAR bytes, int size, int timeout)
 {
 	int read = 0;
 	libusb_request req;
@@ -239,7 +237,8 @@ int usb_control_msg(HANDLE *dev, int requesttype, int request,
 	/* out request? */
 	if (!(requesttype & USB_ENDPOINT_IN))
 	{
-		if (!(out = malloc(sizeof(libusb_request) + size)))
+		out = malloc(sizeof(libusb_request) + size);
+		if (!out)
 		{
 			USBERR("memory allocation failed\n");
 			return -ENOMEM;
@@ -272,7 +271,7 @@ int usb_control_msg(HANDLE *dev, int requesttype, int request,
 		return read;
 }
 
-static int _usb_io_sync(HANDLE dev, unsigned int code, void *out, int out_size,
+int _usb_io_sync(HANDLE dev, unsigned int code, void *out, int out_size,
 	void *in, int in_size, int *ret)
 {
 	OVERLAPPED ol;

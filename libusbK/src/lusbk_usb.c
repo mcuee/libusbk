@@ -189,6 +189,7 @@ BOOL GetProcAddress_LUsb0(__out KPROC* ProcAddress, __in LONG FunctionID)
 	default:
 		return GetProcAddress_UsbK(ProcAddress, FunctionID);
 	}
+	return TRUE;
 }
 
 KUSB_EXP BOOL KUSB_API LibK_GetProcAddress(
