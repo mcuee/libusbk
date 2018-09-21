@@ -59,7 +59,11 @@ KUSB_EXP BOOL KUSB_API LUsb0_ControlTransfer(
 
 	if (ret >= 0)
 	{
-		*LengthTransferred = ret;
+		if (LengthTransferred != NULL)
+		{
+			*LengthTransferred = ret;
+		}
+
 		success = TRUE;
 	}
 	else
