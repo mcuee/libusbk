@@ -882,3 +882,5 @@ FORCEINLINE BOOL Guid_To_String(__in GUID* Guid, __inout LPSTR GuidString)
 	return (guidLen == GUID_STRING_LENGTH);
 }
 #endif
+
+BOOL k_Init_Config(PKUSB_HANDLE_INTERNAL handle);
