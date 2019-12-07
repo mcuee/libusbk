@@ -1,2 +1,6 @@
 .vs/
+*.user
 *.filters
+bin/
+Debug/
+Backup/
