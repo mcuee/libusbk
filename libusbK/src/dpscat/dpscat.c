@@ -88,8 +88,20 @@ VOID WriteInfStatus(CONST WCHAR* fmt, ...)
 		if (WriteConW(buf, len, (LPDWORD)&len))
 			return;
 
+	} 
+	else 
+	{
+		HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+		if (hStdOut != INVALID_HANDLE_VALUE) {
+			DWORD transferred = 0;
+			if (WriteFile(hStdOut, buf, len, &transferred, NULL)) {
+				return;
+			}
+		}
 	}
+#ifdef _DEBUG
 	OutputDebugStringW(buf);
+#endif
 }
 
 int APIENTRY _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdLine, int nCmdShow)
@@ -165,6 +177,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
 
 		FreeConsole();
 	}
+	return ret;
 }
 
 int RunProgram(int argc, LPWSTR* argv)

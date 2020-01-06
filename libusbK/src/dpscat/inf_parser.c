@@ -2,8 +2,9 @@
 #include "inf_parser.h"
 #include <Shlwapi.h>
 
-// warning C4127: conditional expression is constant
-#pragma warning(disable: 4127)
+
+#pragma warning(disable: 4127) // warning C4127: conditional expression is constant
+#pragma warning(disable: 4996) // warning C4996: 'GetVersionExW': was declared deprecated
 
 BOOL KINF_API InfK_Init(PKINF_LIST* List)
 {
