@@ -48,6 +48,9 @@ EXPORTS
     UsbK_GetOverlappedResult
     UsbK_GetProperty
     
+    LUsb0_SetConfiguration
+    LUsb0_ControlTransfer
+
     LstK_Init
     LstK_InitEx
     LstK_Free
