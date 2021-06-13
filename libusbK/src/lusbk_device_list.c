@@ -807,10 +807,21 @@ static BOOL l_EnumKey_Guids(KUSB_ENUM_REGKEY_PARAMS* RegEnumParams)
 			status = RegQueryValueExA(hkeyDevInfo, "DeviceInterfaceGUIDs", NULL, NULL, (LPBYTE)devInterfaceGuidArray, &length);
 			if (status != ERROR_SUCCESS)
 			{
-				USBERRN("RegQueryValueExA Failed. ErrorCode:%08Xh", GetLastError());
-				RegCloseKey(hkeyDevInfo);
-				goto NextInstance;
+				status = RegQueryValueExA(hkeyDevInfo, "DeviceInterfaceGUID", NULL, NULL, (LPBYTE)devInterfaceGuidArray, &length);
+				if (status != ERROR_SUCCESS)
+				{
+					USBERRN("RegQueryValueExA Failed. ErrorCode:%08Xh", GetLastError());
+					RegCloseKey(hkeyDevInfo);
+					goto NextInstance;
+				}
+				else
+				{
+					devInterfaceGuidArray[length]=0;
+					devInterfaceGuidArray[length+1]=0;
+					devInterfaceGuidArray[length+2]=0;
+				}
 			}
+
 			RegCloseKey(hkeyDevInfo);
 
 			devInterfaceGuidArrayPos = 0;
