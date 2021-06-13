@@ -36,6 +36,27 @@
 
 #define CATSIGN_STANDALONE
 
+static BOOL ShouldUseSHA256()
+{
+	const WORD wMajorVersion = HIBYTE(_WIN32_WINNT_WIN7);
+	const WORD wMinorVersion = LOBYTE(_WIN32_WINNT_WIN7);
+	const WORD wServicePackMajor = 0;
+
+	OSVERSIONINFOEXW osvi = { sizeof(osvi), 0, 0, 0, 0, {0}, 0, 0 };
+	DWORDLONG        const dwlConditionMask = VerSetConditionMask(
+		VerSetConditionMask(
+			VerSetConditionMask(
+				0, VER_MAJORVERSION, VER_GREATER_EQUAL),
+			VER_MINORVERSION, VER_GREATER_EQUAL),
+		VER_SERVICEPACKMAJOR, VER_GREATER_EQUAL);
+
+	osvi.dwMajorVersion = wMajorVersion;
+	osvi.dwMinorVersion = wMinorVersion;
+	osvi.wServicePackMajor = wServicePackMajor;
+
+	return VerifyVersionInfoW(&osvi, VER_MAJORVERSION | VER_MINORVERSION | VER_SERVICEPACKMAJOR, dwlConditionMask) != FALSE;
+}
+
 static WCHAR* windows_error_str(unsigned int retval)
 {
 	static WCHAR err_string[1024];
@@ -763,7 +784,10 @@ PCCERT_CONTEXT CreateSelfSignedCert(LPCWSTR szCertSubject)
 
 	// Prepare algorithm structure for self-signed certificate
 	memset(&SignatureAlgorithm, 0, sizeof(SignatureAlgorithm));
-	SignatureAlgorithm.pszObjId = szOID_RSA_SHA1RSA;
+	if (ShouldUseSHA256())
+		SignatureAlgorithm.pszObjId = szOID_RSA_SHA256RSA;
+	else
+		SignatureAlgorithm.pszObjId = szOID_RSA_SHA1RSA;
 
 	// Create self-signed certificate
 	pCertContext = pfCertCreateSelfSignCertificate((ULONG_PTR)NULL,
