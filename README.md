@@ -1,8 +1,3 @@
-# usb-travis
-Automatically exported from code.google.com/p/usb-travis
-
-# Status: unmaintained and with limited support as lack of developers to take over
-
 # libusbK Overview #
 libusbK is a complete driver/library solution for vendor class usb
 device interfaces. If you are a usb developers or usb device
