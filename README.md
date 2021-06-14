@@ -4,8 +4,8 @@ device interfaces. If you are a usb developers or usb device
 manufacturer seeking a driver solution for a new USB widget then
 libusbK could be for you.
 
-libusbK will now move to Sourceforge and this site will serve
-mainly for testing purpose.
+## Main development site in github ##
+https://github.com/mcuee/libusbk/
 
 ## Main website in Sourceforge and main download location ##
 http://sourceforge.net/projects/libusbk/
@@ -24,19 +24,5 @@ to the WLK license.
 ### Code Examples ###
 Many examples are provided for the library users to develop
 their own applications.
-http://libusbk.sourceforge.net/UsbK3/examples.html
+https://github.com/mcuee/libusbk/tree/master/libusbK/examples
 
-### libusbK Issues & missing features ###
-  * Untested functionality:
-    * Direct pipe file handles
-  * Unsupported pipe policies: NONE
-
-### To-do list ###
-  * Licensing change to use dual GPL/New BSD (Done)
-  * More examples, especially simple examples (Done)
-  * Draft of API documents (Doxygen) (Done)
-  * Driver improvement (isochronous transfer) (Done:Preliminary)
-  * Streaming API(Done)
-  * libusbx support for K, working version first, improvement later (Done)
-  * MinGW-w64 compatible examples (Done)
-  * MinGW compatible examples (Done)
