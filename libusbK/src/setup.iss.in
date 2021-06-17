@@ -149,7 +149,7 @@ Name: "{group}\Uninstall @K_USBK_NAME@ Development Kit"; Filename: "{uninstallex
 ; ============================================================================
 ; ** @K_LIBUSBK_NAME@ x86 (Windows 2000/XP and greater)
 Source: "@K_PKG_BIN@\sys\x86\@K_LIBUSBK_NAME@.sys"; DestDir: {sys}\drivers; Flags: uninsneveruninstall replacesameversion restartreplace promptifolder; Check: IsX86; Tasks: upgrader\sys;
-Source: "@K_LIBUSB0_DEP_DIR@\bin\x86\@K_LIBUSB0_NAME@.sys"; DestDir: {sys}\drivers; Flags: uninsneveruninstall replacesameversion restartreplace promptifolder; Check: IsX86; Tasks: upgrader\libusb0sys;
+Source: "@K_LIBUSB0_REDIST_DIR@\bin\x86\@K_LIBUSB0_NAME@.sys"; DestDir: {sys}\drivers; Flags: uninsneveruninstall replacesameversion restartreplace promptifolder; Check: IsX86; Tasks: upgrader\libusb0sys;
 
 ; 32 bit program support
 Source: "@K_PKG_BIN@\dll\x86\@K_LIBUSBK_NAME@.dll"; DestDir: {sys}; Flags: replacesameversion restartreplace promptifolder; Check: IsX86; Tasks: upgrader\dll;
@@ -159,7 +159,7 @@ Source: "@K_PKG_BIN@\dll\x86\@K_LIBUSB0_NAME@.dll"; DestDir: {sys}; Flags: repla
 ; ============================================================================
 ; ** @K_LIBUSBK_NAME@ AMD 64bit
 Source: "@K_PKG_BIN@\sys\amd64\@K_LIBUSBK_NAME@.sys"; DestDir: {sys}\drivers; Flags: uninsneveruninstall replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\sys;
-Source: "@K_LIBUSB0_DEP_DIR@\bin\amd64\@K_LIBUSB0_NAME@.sys"; DestDir: {sys}\drivers; Flags: uninsneveruninstall replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\libusb0sys;
+Source: "@K_LIBUSB0_REDIST_DIR@\bin\amd64\@K_LIBUSB0_NAME@.sys"; DestDir: {sys}\drivers; Flags: uninsneveruninstall replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\libusb0sys;
 
 ; 32 bit program support
 Source: "@K_PKG_BIN@\dll\x86\@K_LIBUSBK_NAME@.dll"; DestDir: {syswow64}; Flags: replacesameversion restartreplace promptifolder; Check: IsX64; Tasks: upgrader\dll;
@@ -177,8 +177,8 @@ Source: "@K_PKG@\@K_LIBUSBK_NAME@-inf-wizard.exe"; DestDir: {app}; Components: d
 
 ; ============================================================================
 ; ** @K_LIBUSB0_NAME@ filter installer
-Source: "@K_LIBUSB0_DEP_DIR@\bin\x86\install-filter-win.exe"; DestDir: {app}; Check: IsX86; Components: devpackage;
-Source: "@K_LIBUSB0_DEP_DIR@\bin\amd64\install-filter-win.exe"; DestDir: {app}; Check: IsX64; Components: devpackage;
+Source: "@K_LIBUSB0_REDIST_DIR@\bin\x86\install-filter-win.exe"; DestDir: {app}; Check: IsX86; Components: devpackage;
+Source: "@K_LIBUSB0_REDIST_DIR@\bin\amd64\install-filter-win.exe"; DestDir: {app}; Check: IsX64; Components: devpackage;
 
 ; ============================================================================
 ; ** documentation and examples
