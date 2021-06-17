@@ -56,6 +56,10 @@ GOTO :EOF
 		SET 7Z_RUN="%~1"
 		GOTO :EOF
 	)
+	IF EXIST "%CD%\%~1" (
+		SET 7Z_RUN="%CD%\%~1"
+		GOTO :EOF
+	)
 	SHIFT /1
 	IF "%~1" EQU "" GOTO :EOF
 	GOTO Find7Zip

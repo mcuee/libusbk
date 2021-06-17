@@ -640,6 +640,37 @@ BOOL CPageInstall::FinalizePrepareDriver(
 				fileName.ReleaseBuffer();
 			}
 
+			if (idPacked == ID_7ZA_EXE)
+			{
+				// export 7za.exe as well
+				CString s = infPath;
+				if (!PathAppend(s.GetBufferSetLength(MAX_PATH), _T("7za.exe")))
+				{
+					errorCode = GetLastError();
+					errorMessage.Format(IDSF_PATH_TO_LONG, MAX_PATH, s, errorCode);
+					MessageBox(errorMessage, _T("Path is to long"), MB_OK | MB_ICONEXCLAMATION);
+
+					SetLastError(errorCode);
+					return FALSE;
+				}
+				s.ReleaseBuffer();
+				success = extractFile.Open(s, CFile::modeCreate | CFile::shareDenyNone | CFile::modeWrite);
+
+				if (!success)
+				{
+					errorCode = GetLastError();
+					errorMessage.Format(IDSF_CREATE_FILE_FAILED, s, errorCode);
+					MessageBox(errorMessage, _T("Create file failed"), MB_OK | MB_ICONEXCLAMATION);
+
+					SetLastError(errorCode);
+					return FALSE;
+				}
+				extractFile.Write(resourceData, resourceSize);
+				extractFile.Flush();
+				extractFile.Close();
+			}
+ 
+
 			if (!bOverwrite && PathFileExists(fileName))
 				continue;
 

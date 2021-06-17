@@ -187,8 +187,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2,0,0,1
- PRODUCTVERSION 2,0,0,1
+ FILEVERSION 2,1,0,0
+ PRODUCTVERSION 2,1,0,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -205,12 +205,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "http://libusb-win32.sourceforge.net"
             VALUE "FileDescription", "libusbK(lusbk) USB Library"
-            VALUE "FileVersion", "2.0.0.1"
+            VALUE "FileVersion", "2.1.0.0"
             VALUE "InternalName", "InfWizard.exe"
-            VALUE "LegalCopyright", "© T. Robinson 2010-2011"
+            VALUE "LegalCopyright", "© T. Robinson 2010-2021"
             VALUE "OriginalFilename", "InfWizard.exe"
             VALUE "ProductName", "InfWizard.exe"
-            VALUE "ProductVersion", "2.0.0.1"
+            VALUE "ProductVersion", "2.1.0.0"
         END
     END
     BLOCK "VarFileInfo"
@@ -330,12 +330,12 @@ END
 
 STRINGTABLE 
 BEGIN
-    IDS_PAGE_INTRO_TITLE    "Welcome to InfWizard v2.0"
+    IDS_PAGE_INTRO_TITLE    "Welcome to InfWizard v2.1"
 END
 
 STRINGTABLE 
 BEGIN
-    IDS_INFWIZARD           "InfWizard v2.0"
+    IDS_INFWIZARD           "InfWizard v2.1"
     IDS_HEADERTITLE         "Header Title"
     IDS_HEADERSUBTITLE      "Header Sub Title"
     IDS_PAGE_SELECT_DEVICE_TITLE "Device Selection"
