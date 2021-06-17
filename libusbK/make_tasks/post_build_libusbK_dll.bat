@@ -15,7 +15,13 @@ IF /I "!G_DIST!" NEQ "finalize" (
 
 REM - Debug or Release depending on build mode
 SET K_DBGorREL=Release
-IF DEFINED G_CHK SET K_DBGorREL=Debug
+SET K_LIBUSBK_SYS_REDIST_DIR=!K_LIBUSBK_SYS_REDIST_DIR_RELEASE!
+
+IF DEFINED G_CHK (
+	SET K_DBGorREL=Debug
+	SET K_LIBUSBK_SYS_REDIST_DIR=!K_LIBUSBK_SYS_REDIST_DIR_DEBUG!
+)
+
 ECHO !K_DBGorREL! Build
 
 IF EXIST "!K_LIBUSB10_DEP_DIR!" (
@@ -39,16 +45,16 @@ IF EXIST "!K_LIBUSB10_DEP_DIR!" (
 	COPY /Y "!K_LIBUSB10_OUTPUT_DIR!\!K_LIBUSB10_NAME!.lib" "!G_TARGET_OUTPUT_ABS_DIR!\!G_TARGET_OUTPUT_ARCH!\"
 )
 
-IF EXIST "!K_LIBUSB0_DEP_DIR!" (
+IF EXIST "!K_LIBUSB0_REDIST_DIR!" (
 	IF /I "!_BUILDARCH!" EQU "x86" (
-		COPY /Y "!K_LIBUSB0_DEP_DIR!\bin\!_BUILDARCH!\libusb0_x86.dll" "!G_TARGET_OUTPUT_ABS_DIR!\!G_TARGET_OUTPUT_ARCH!\libusb0.dll"
-		COPY /Y "!K_LIBUSB0_DEP_DIR!\lib\msvc\libusb.lib" "!G_TARGET_OUTPUT_ABS_DIR!\!G_TARGET_OUTPUT_ARCH!\libusb0.lib"
+		COPY /Y "!K_LIBUSB0_REDIST_DIR!\bin\!_BUILDARCH!\libusb0_x86.dll" "!G_TARGET_OUTPUT_ABS_DIR!\!G_TARGET_OUTPUT_ARCH!\libusb0.dll"
+		COPY /Y "!K_LIBUSB0_REDIST_DIR!\lib\msvc\libusb.lib" "!G_TARGET_OUTPUT_ABS_DIR!\!G_TARGET_OUTPUT_ARCH!\libusb0.lib"
 	) ELSE (
-		COPY /Y "!K_LIBUSB0_DEP_DIR!\bin\!_BUILDARCH!\libusb0.dll" "!G_TARGET_OUTPUT_ABS_DIR!\!G_TARGET_OUTPUT_ARCH!\"
+		COPY /Y "!K_LIBUSB0_REDIST_DIR!\bin\!_BUILDARCH!\libusb0.dll" "!G_TARGET_OUTPUT_ABS_DIR!\!G_TARGET_OUTPUT_ARCH!\"
 		IF /I "!_BUILDARCH!" EQU "ia64" (
-			COPY /Y "!K_LIBUSB0_DEP_DIR!\lib\msvc_i64\libusb.lib" "!G_TARGET_OUTPUT_ABS_DIR!\!G_TARGET_OUTPUT_ARCH!\libusb0.lib"
+			COPY /Y "!K_LIBUSB0_REDIST_DIR!\lib\msvc_i64\libusb.lib" "!G_TARGET_OUTPUT_ABS_DIR!\!G_TARGET_OUTPUT_ARCH!\libusb0.lib"
 		) ELSE (
-			COPY /Y "!K_LIBUSB0_DEP_DIR!\lib\msvc_x64\libusb.lib" "!G_TARGET_OUTPUT_ABS_DIR!\!G_TARGET_OUTPUT_ARCH!\libusb0.lib"
+			COPY /Y "!K_LIBUSB0_REDIST_DIR!\lib\msvc_x64\libusb.lib" "!G_TARGET_OUTPUT_ABS_DIR!\!G_TARGET_OUTPUT_ARCH!\libusb0.lib"
 		)
 	)
 )
@@ -78,6 +84,12 @@ GOTO :EOF
 	
 	REM - Move the dynamic .lib files to the lib dir.
 	CALL :MoveOutputFiles "\dll\x86\*.lib" "\lib\x86" "\dll\amd64\*.lib" "\lib\amd64" "\dll\ia64\*.lib" "\lib\ia64"
+	
+	REM - always include the 3.0.7 signed drivers
+	ECHO Packaging libusbK 3.0.7 driver from %CD%\..\redist\libusbK-3.0.7.0-bin\bin\sys
+	XCOPY "!K_LIBUSBK_SYS_REDIST_DIR!\bin\sys\x86\libusbk*.*" "!G_BUILD_OUTPUT_BASE_ABS_DIR!\sys\x86" /I /Y
+	XCOPY "!K_LIBUSBK_SYS_REDIST_DIR!\bin\sys\amd64\libusbk*.*" "!G_BUILD_OUTPUT_BASE_ABS_DIR!\sys\amd64" /I /Y
+	XCOPY "!K_LIBUSBK_SYS_REDIST_DIR!\bin\sys\ia64\libusbk*.*" "!G_BUILD_OUTPUT_BASE_ABS_DIR!\sys\ia64" /I /Y
 GOTO :EOF
 
 :FinalizeDistribution
@@ -90,14 +102,14 @@ GOTO :EOF
 	REM - Remove pdb and exp files; leave the driver pdb.
 	DEL /S /Q !G_BUILD_OUTPUT_BASE_ABS_DIR!\dll\*.pdb
 	DEL /S /Q !G_BUILD_OUTPUT_BASE_ABS_DIR!\*.exp
-
+	
 	CALL :DistFixup
 	
 	REM - Copy the entire binary tree to K_PKG_BIN
 	XCOPY "!G_BUILD_OUTPUT_BASE_ABS_DIR!\*" "!K_PKG_BIN!" /S /I /Y
 	
 	REM - Copy in the libusb-win32 includes
-	IF EXIST "!K_LIBUSB0_DEP_DIR!" CALL .\make_tasks\deploy_dep.cmd "!K_LIBUSB0_DEP_DIR!" "!K_PKG!" "!K_LIBUSB0_NAME!" ".\make_tasks\!K_LIBUSB0_NAME!.dep.lst"
+	IF EXIST "!K_LIBUSB0_REDIST_DIR!" CALL .\make_tasks\deploy_dep.cmd "!K_LIBUSB0_REDIST_DIR!" "!K_PKG!" "!K_LIBUSB0_NAME!" ".\make_tasks\!K_LIBUSB0_NAME!.dep.lst"
 
 	REM - Copy in the libusb-1.x includes
 	IF EXIST "!K_LIBUSB10_DEP_DIR!" CALL .\make_tasks\deploy_dep.cmd "!K_LIBUSB10_DEP_DIR!" "!K_PKG!" "!K_LIBUSB10_NAME!" ".\make_tasks\!K_LIBUSB10_NAME!.dep.lst"
@@ -124,13 +136,13 @@ GOTO :EOF
 	)
 	
 	IF EXIST ".\src\inf-wizard2\lib\libwdi.lib" DEL /Q ".\src\inf-wizard2\lib\libwdi.lib"
-	SET CL=/DLIBUSBK_DIR=\"!K_PKG_BIN:\=/!\" /DLIBUSB0_DIR=\"!K_LIBUSB0_DEP_DIR:\=/!\" /DDDK_DIR=\"!G_WDK_DIR:\=/!\"
+	SET CL=/DLIBUSBK_DIR=\"!K_PKG_BIN:\=/!\" /DLIBUSB0_DIR=\"!K_LIBUSB0_REDIST_DIR:\=/!\" /DDDK_DIR=\"!G_WDK_DIR:\=/!\"
 	!G_DEVENV_EXE! "!K_LIBWDI_DIR!\libwdi_2008.sln" /build "!K_DBGorREL!|Win32" /project "libwdi (static)"
 	IF "!ERRORLEVEL!" NEQ "0" (
 		ECHO [BUILD ERROR] - libwdi_2008
 		goto SetError
 	)
-	
+
 	SET CL=
 	COPY /Y "!K_LIBWDI_DIR!\Win32\!K_DBGorREL!\lib\libwdi.lib" ".\src\inf-wizard2\lib\libwdi.lib"
 
@@ -148,7 +160,7 @@ GOTO :EOF
 
 	REM PUSHD !CD!
 	REM CD /D "!K_LIBWDI_DIR!"
-	REM SET C_DEFINES=/DLIBUSBK_DIR=\"!K_PKG_BIN:\=/!\" /DLIBUSB0_DIR=\"!K_LIBUSB0_DEP_DIR:\=/!\" /DINFWIZARD_LIBUSBK=1
+	REM SET C_DEFINES=/DLIBUSBK_DIR=\"!K_PKG_BIN:\=/!\" /DLIBUSB0_DIR=\"!K_LIBUSB0_REDIST_DIR:\=/!\" /DINFWIZARD_LIBUSBK=1
 	REM SET RC_DEFINES=!C_DEFINES!
 	REM CALL ddk_build inf_wizard_only
 	REM SET C_DEFINES=
@@ -253,6 +265,10 @@ REM :: Signs a binary using the cert options defined in make.cfg or passed as ar
 REM - %1 = Full path of file to sign.
 REM [USES] G_WDK_DIR, G_SIGN_CERT_FILE, G_SIGN_CERT_NAME, G_SIGN_CERT_OPTIONS
 :SignFile
+	IF NOT EXIST "!G_SIGN_CERT_FILE!" (
+		GOTO :EOF
+	)
+
 	CALL :FindFileInPath SIGN_EXE SignTool.exe
 	IF NOT EXIST "!SIGN_EXE!" SET SIGN_EXE=!G_WDK_DIR!\bin\x86\SignTool.exe
 	IF NOT EXIST "!SIGN_EXE!" FOR /F "usebackq eol=; tokens=* delims=" %%A IN (`dir /S /A-D /B "!G_WDK_DIR!\SignTool.exe"`) DO IF NOT EXIST "!SIGN_EXE!" SET SIGN_EXE=%%~A

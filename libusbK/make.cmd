@@ -982,6 +982,11 @@ REM :: Signs a binary using the cert options defined in make.cfg or passed as ar
 REM - %1 = Full path of file to sign.
 REM [USES] G_WDK_DIR, G_SIGN_CERT_FILE, G_SIGN_CERT_NAME, G_SIGN_CERT_OPTIONS
 :SignFile
+	IF NOT EXIST "!G_SIGN_CERT_FILE!" (
+	
+		CALL :Print D "SIGN" "Skipping sign. No cert file."
+		GOTO :EOF
+	)
 	CALL :FindFileInPath SIGN_EXE SignTool.exe
 	IF NOT EXIST "!SIGN_EXE!" SET SIGN_EXE=!G_WDK_DIR!\bin\x86\SignTool.exe
 	IF NOT EXIST "!SIGN_EXE!" FOR /F "usebackq eol=; tokens=* delims=" %%A IN (`dir /S /A-D /B "!G_WDK_DIR!\SignTool.exe"`) DO IF NOT EXIST "!SIGN_EXE!" SET SIGN_EXE=%%~A
