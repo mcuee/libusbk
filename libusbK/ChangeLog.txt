@@ -1,5 +1,15 @@
 LIBUSBK RELEASE NOTES
 
+V3.0.8.0 (06/17/2021)
+==============================================
+- Add SHA256 self-sign support for dpscat and inf-wizard2
+
+- Update kBench usb ids
+
+- Fix inf-wizard2 re-pack (Now includes 7za.exe)
+
+- Add support for "DeviceInterfaceGUID" (singular)
+
 V3.0.7.0 (04/27/2014)
 ==============================================
 - Improved driver error handling.
