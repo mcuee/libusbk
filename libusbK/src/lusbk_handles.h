@@ -851,20 +851,26 @@ FORCEINLINE BOOL String_To_Guid(__inout GUID* GuidVal, __in LPCSTR GuidString)
 	int scanCount;
 	UCHAR guidChars[11 * sizeof(int)];
 	GUID* Guid = (GUID*)&guidChars;
-
+	unsigned int d1, d2, d3, d40, d41, d42, d43, d44, d45, d46, d47;
 
 	if (GuidString[0] == '{') GuidString++;
 
 	scanCount = sscanf_s(GuidString, GUID_FORMAT_STRING,
-	                     &Guid->Data1,
-	                     &Guid->Data2,
-	                     &Guid->Data3,
-	                     &Guid->Data4[0], &Guid->Data4[1], &Guid->Data4[2], &Guid->Data4[3],
-	                     &Guid->Data4[4], &Guid->Data4[5], &Guid->Data4[6], &Guid->Data4[7]);
+	                     &d1,
+	                     &d2,
+	                     &d3,
+	                     &d40, &d41, &d42, &d43,
+	                     &d44, &d45, &d46, &d47);
 
 	if (scanCount == 11)
+	{
+		Guid->Data1 = d1;
+		Guid->Data2 = (UINT16)d2;
+		Guid->Data3 = (UINT16)d3;
+		Guid->Data4[0] = (BYTE)d40; Guid->Data4[1] = (BYTE)d41; Guid->Data4[2] = (BYTE)d42; Guid->Data4[3] = (BYTE)d43;
+		Guid->Data4[4] = (BYTE)d44; Guid->Data4[5] = (BYTE)d45; Guid->Data4[6] = (BYTE)d46; Guid->Data4[7] = (BYTE)d47;
 		memcpy(GuidVal, &guidChars, sizeof(GUID));
-
+	}
 	return (scanCount == 11);
 }
 
