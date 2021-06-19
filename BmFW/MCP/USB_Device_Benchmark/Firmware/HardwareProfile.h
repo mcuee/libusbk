@@ -62,7 +62,11 @@
             #elif defined(PIC32_USB_STARTER_KIT)
                 #include "HardwareProfile - PIC32 USB Starter Kit.h"
             #endif
-        #endif
+        #elif defined(__32MX695F512L__)
+            #if defined(PIC32MX695F512L_WF32)
+                #include "HardwareProfile - PIC32MX695F512L WF32.h"
+			#endif
+		#endif
     #endif
 
     #if defined(__C30__)
