@@ -86,10 +86,11 @@ GOTO :EOF
 	CALL :MoveOutputFiles "\dll\x86\*.lib" "\lib\x86" "\dll\amd64\*.lib" "\lib\amd64" "\dll\ia64\*.lib" "\lib\ia64"
 	
 	REM - always include the 3.0.7 signed drivers
-	ECHO Packaging libusbK 3.0.7 driver from %CD%\..\redist\libusbK-3.0.7.0-bin\bin\sys
+	ECHO Packaging libusbK 3.0.7 driver from !K_LIBUSBK_SYS_REDIST_DIR!\bin\sys
 	XCOPY "!K_LIBUSBK_SYS_REDIST_DIR!\bin\sys\x86\libusbk*.*" "!G_BUILD_OUTPUT_BASE_ABS_DIR!\sys\x86" /I /Y
 	XCOPY "!K_LIBUSBK_SYS_REDIST_DIR!\bin\sys\amd64\libusbk*.*" "!G_BUILD_OUTPUT_BASE_ABS_DIR!\sys\amd64" /I /Y
 	XCOPY "!K_LIBUSBK_SYS_REDIST_DIR!\bin\sys\ia64\libusbk*.*" "!G_BUILD_OUTPUT_BASE_ABS_DIR!\sys\ia64" /I /Y
+	pause
 GOTO :EOF
 
 :FinalizeDistribution
