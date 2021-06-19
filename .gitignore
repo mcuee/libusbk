@@ -4,3 +4,5 @@
 Debug/
 Backup/
 libusbK/package/
+*.AssemblyReference.cache
+*.vcxprojAssemblyReference.cache
