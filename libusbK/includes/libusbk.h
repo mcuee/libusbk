@@ -120,7 +120,7 @@ typedef union _KUSB_SETUP_PACKET
 	};
 } KUSB_SETUP_PACKET;
 // setup packet is eight bytes -- defined by spec
-C_ASSERT(sizeof(KUSB_SETUP_PACKET) == 8);
+USBK_C_ASSERT(KUSB_SETUP_PACKET,sizeof(KUSB_SETUP_PACKET) == 8);
 
 #if _MSC_VER >= 1200
 #pragma warning(pop)
@@ -380,7 +380,7 @@ typedef struct _KLST_PATTERN_MATCH
 	UCHAR z_F_i_x_e_d[1024 - KLST_STRING_MAX_LEN * 3];
 
 } KLST_PATTERN_MATCH;
-C_ASSERT(sizeof(KLST_PATTERN_MATCH) == 1024);
+USBK_C_ASSERT(KLST_PATTERN_MATCH,sizeof(KLST_PATTERN_MATCH) == 1024);
 
 //! Pointer to a \ref KLST_PATTERN_MATCH structure.
 typedef KLST_PATTERN_MATCH* PKLST_PATTERN_MATCH;
@@ -1469,7 +1469,7 @@ typedef struct _KUSB_DRIVER_API
 
 } KUSB_DRIVER_API;
 typedef KUSB_DRIVER_API* PKUSB_DRIVER_API;
-C_ASSERT(sizeof(KUSB_DRIVER_API) == 512);
+USBK_C_ASSERT(KUSB_DRIVER_API,sizeof(KUSB_DRIVER_API) == 512);
 /**@}*/
 #endif
 
@@ -1550,7 +1550,7 @@ typedef struct _KHOT_PARAMS
 	UCHAR z_F_i_x_e_d[2048 - sizeof(KLST_PATTERN_MATCH) - sizeof(UINT_PTR) * 3 - sizeof(UINT) * 2];
 
 } KHOT_PARAMS;
-C_ASSERT(sizeof(KHOT_PARAMS) == 2048);
+USBK_C_ASSERT(KHOT_PARAMS,sizeof(KHOT_PARAMS) == 2048);
 
 //! Pointer to a \ref KHOT_PARAMS structure.
 typedef KHOT_PARAMS* PKHOT_PARAMS;
@@ -1791,7 +1791,7 @@ typedef struct _KSTM_CALLBACK
 } KSTM_CALLBACK;
 //! Pointer to a \ref KSTM_CALLBACK structure.
 typedef KSTM_CALLBACK* PKSTM_CALLBACK;
-C_ASSERT(sizeof(KSTM_CALLBACK) == 64);
+USBK_C_ASSERT(KSTM_CALLBACK,sizeof(KSTM_CALLBACK) == 64);
 
 /**@}*/
 

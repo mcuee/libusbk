@@ -5,6 +5,13 @@
 #ifndef __LUSBK_SHARED_H_
 #define __LUSBK_SHARED_H_
 
+// fix C_ASSERT macro error notifications in VS2010+ code browser
+#if defined(_MSC_VER) && _MSC_VER >= 1600
+#define USBK_C_ASSERT(name,x) typedef char C_ASSERT_ ## name ## _COUNTER_ [(x) ? 1 : -1];
+#else
+#define USBK_C_ASSERT(name,x) C_ASSERT(x)
+#endif
+
 #ifndef __USB_H__
 
 //! Values used in the \c bmAttributes field of a \ref USB_ENDPOINT_DESCRIPTOR
@@ -79,7 +86,7 @@ typedef struct _WINUSB_PIPE_INFORMATION
 } WINUSB_PIPE_INFORMATION;
 //! Pointer to a \ref WINUSB_PIPE_INFORMATION structure
 typedef WINUSB_PIPE_INFORMATION* PWINUSB_PIPE_INFORMATION;
-C_ASSERT(sizeof(WINUSB_PIPE_INFORMATION) == 12);
+USBK_C_ASSERT(WINUSB_PIPE_INFORMATION,sizeof(WINUSB_PIPE_INFORMATION) == 12);
 
 #include <pshpack1.h>
 
@@ -111,7 +118,7 @@ typedef struct _WINUSB_SETUP_PACKET
 } WINUSB_SETUP_PACKET;
 //! pointer to a \c WINUSB_SETUP_PACKET structure
 typedef WINUSB_SETUP_PACKET* PWINUSB_SETUP_PACKET;
-C_ASSERT(sizeof(WINUSB_SETUP_PACKET) == 8);
+USBK_C_ASSERT(WINUSB_SETUP_PACKET,sizeof(WINUSB_SETUP_PACKET) == 8);
 
 #include <poppack.h>
 
@@ -294,7 +301,7 @@ typedef struct _KISO_CONTEXT
 	KISO_PACKET IsoPackets[0];
 
 } KISO_CONTEXT;
-C_ASSERT(sizeof(KISO_CONTEXT) == 16);
+USBK_C_ASSERT(KISO_CONTEXT,sizeof(KISO_CONTEXT) == 16);
 
 //! pointer to a \c KISO_CONTEXT structure
 typedef KISO_CONTEXT* PKISO_CONTEXT;
