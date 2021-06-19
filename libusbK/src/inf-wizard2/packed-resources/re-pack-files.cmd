@@ -10,7 +10,7 @@ SET 7Z_SWITCHES=-air0 -mx
 
 SET CMD_EXIT_CODE=0
 
-IF EXIST "!7ZA_EXE!" (SET 7Z_RUN="!7ZA_EXE!") ELSE CALL :Find7Zip 7z.exe 7za.exe 7zan.exe
+IF EXIST "!7ZA_EXE!" (SET 7Z_RUN="!7ZA_EXE!") ELSE CALL :Find7Zip 7za.exe 7z.exe 7zan.exe
 IF !7Z_RUN! EQU "" (
 	ECHO 7Zip is required to re-pack this installer.
 	ECHO 1] Download and install 7Zip. http://www.7-zip.org/
@@ -50,14 +50,16 @@ ECHO "!INSTALL_DRIVER_EXE!" re-packed!
 GOTO :EOF
 
 :Find7Zip
+	IF EXIST "%~dp0\%~1" (
+		SET 7Z_RUN="%~dp0\%~1"
+		ECHO 7Zip found at: !7Z_RUN!
+		GOTO :EOF
+	)
+
 	SET 7Z_RUN="%~$PATH:1"
 	IF NOT !7Z_RUN! EQU "" (
 		ECHO 7Zip found at: !7Z_RUN!
 		SET 7Z_RUN="%~1"
-		GOTO :EOF
-	)
-	IF EXIST "%CD%\%~1" (
-		SET 7Z_RUN="%CD%\%~1"
 		GOTO :EOF
 	)
 	SHIFT /1
