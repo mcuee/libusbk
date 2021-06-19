@@ -90,7 +90,6 @@ GOTO :EOF
 	XCOPY "!K_LIBUSBK_SYS_REDIST_DIR!\bin\sys\x86\libusbk*.*" "!G_BUILD_OUTPUT_BASE_ABS_DIR!\sys\x86" /I /Y
 	XCOPY "!K_LIBUSBK_SYS_REDIST_DIR!\bin\sys\amd64\libusbk*.*" "!G_BUILD_OUTPUT_BASE_ABS_DIR!\sys\amd64" /I /Y
 	XCOPY "!K_LIBUSBK_SYS_REDIST_DIR!\bin\sys\ia64\libusbk*.*" "!G_BUILD_OUTPUT_BASE_ABS_DIR!\sys\ia64" /I /Y
-	pause
 GOTO :EOF
 
 :FinalizeDistribution
