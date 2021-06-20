@@ -149,6 +149,9 @@ typedef KLIB_HANDLE KOVL_POOL_HANDLE;
 //! Opaque StmK handle, see \ref StmK_Init.
 typedef KLIB_HANDLE KSTM_HANDLE;
 
+//! Opaque IsochK handle, see \ref IsochK_Init.
+typedef KLIB_HANDLE KUSB_ISOCH_HANDLE;
+
 //! Handle type enumeration.
 typedef enum _KLIB_HANDLE_TYPE
 {
@@ -176,7 +179,10 @@ typedef enum _KLIB_HANDLE_TYPE
     //! Pipe stream handle. \ref KSTM_HANDLE
     KLIB_HANDLE_TYPE_STMK,
 
-    //! Max handle type count.
+	//! Pipe stream handle. \ref KSTM_HANDLE
+	KLIB_HANDLE_TYPE_ISOCHK,
+	
+	//! Max handle type count.
     KLIB_HANDLE_TYPE_COUNT
 } KLIB_HANDLE_TYPE;
 
@@ -888,6 +894,51 @@ typedef struct _USB_INTERFACE_ASSOCIATION_DESCRIPTOR
 //! pointer to a \c USB_INTERFACE_ASSOCIATION_DESCRIPTOR
 typedef USB_INTERFACE_ASSOCIATION_DESCRIPTOR* PUSB_INTERFACE_ASSOCIATION_DESCRIPTOR;
 
+
+#ifndef __USB_TIME_SYNC_DEFINED
+#define __USB_TIME_SYNC_DEFINED
+
+typedef struct _USB_START_TRACKING_FOR_TIME_SYNC_INFORMATION {
+
+	HANDLE          TimeTrackingHandle;
+	BOOLEAN         IsStartupDelayTolerable;
+
+} USB_START_TRACKING_FOR_TIME_SYNC_INFORMATION, * PUSB_START_TRACKING_FOR_TIME_SYNC_INFORMATION;
+
+typedef struct _USB_STOP_TRACKING_FOR_TIME_SYNC_INFORMATION {
+
+	HANDLE          TimeTrackingHandle;
+
+} USB_STOP_TRACKING_FOR_TIME_SYNC_INFORMATION, * PUSB_STOP_TRACKING_FOR_TIME_SYNC_INFORMATION;
+
+typedef struct _USB_FRAME_NUMBER_AND_QPC_FOR_TIME_SYNC_INFORMATION {
+
+	//
+	// Input
+	//
+
+	HANDLE          TimeTrackingHandle;
+	ULONG           InputFrameNumber;
+	ULONG           InputMicroFrameNumber;
+
+	//
+	// Output
+	//
+
+	LARGE_INTEGER   QueryPerformanceCounterAtInputFrameOrMicroFrame;
+	LARGE_INTEGER   QueryPerformanceCounterFrequency;
+	ULONG           PredictedAccuracyInMicroSeconds;
+
+	ULONG           CurrentGenerationID;
+	LARGE_INTEGER   CurrentQueryPerformanceCounter;
+	ULONG           CurrentHardwareFrameNumber;         // 11 bits from hardware/MFINDEX
+	ULONG           CurrentHardwareMicroFrameNumber;    //  3 bits from hardware/MFINDEX
+	ULONG           CurrentUSBFrameNumber;              // 32 bit USB Frame Number
+
+} USB_FRAME_NUMBER_AND_QPC_FOR_TIME_SYNC_INFORMATION, * PUSB_FRAME_NUMBER_AND_QPC_FOR_TIME_SYNC_INFORMATION;
+
+#endif
+
 #if _MSC_VER >= 1200
 #pragma warning(pop)
 #endif
@@ -1229,8 +1280,6 @@ typedef BOOL KUSB_API KUSB_GetProperty (
     _in KUSB_PROPERTY PropertyType,
     _ref PUINT PropertySize,
     _out PVOID Value);
-
-
 
 //! USB core driver API information structure.
 /*!
@@ -3847,9 +3896,9 @@ extern "C" {
 	*  @{
 	*/
 
-//! Creates a new isochronous transfer context.
+//! Creates a new isochronous transfer context for libusbK only.
 	/*!
-	*
+	* 
 	* \param[out] IsoContext
 	* Receives a new isochronous transfer context.
 	*
@@ -3875,6 +3924,7 @@ extern "C" {
 	    _out PKISO_CONTEXT* IsoContext,
 	    _in INT NumberOfPackets,
 	    _inopt INT StartFrame);
+
 
 //! Destroys an isochronous transfer context.
 	/*!
@@ -3990,6 +4040,162 @@ extern "C" {
 	    _ref PKISO_CONTEXT IsoContext);
 
 	/*! @} */
+#endif
+
+#ifndef _LIBUSBK_ISOCHK_FUNCTIONS
+	/*! \addtogroup isok
+	*  @{
+	*/
+
+	//! Creates a new isochronous transfer context for libusbK or WinUSB.
+		/*!
+		*
+		* \param[in] InterfaceHandle
+		* An initialized usb handle, see \ref UsbK_Init.
+		*
+		* \param[out] IsoContext
+		* Receives a new isochronous transfer context for use with device using the libusbK or WinUSB driver.
+		*
+		* \param[in] NumberOfPackets
+		* The number of \ref KISO_PACKET structures allocated to \c IsoContext. Assigned to
+		* \ref KISO_CONTEXT::NumberOfPackets. The \ref KISO_CONTEXT::NumberOfPackets field is assignable by
+		* \c IsoK_Init only and must not be changed by the user.
+		*
+		* \param[in] StartFrame
+		* The USB frame number this request must start on (or \b 0 for ASAP) and assigned to
+		* \ref KISO_CONTEXT::StartFrame. The \ref KISO_CONTEXT::StartFrame may be chamged by the user in subsequent
+		* request. For more information, see \ref KISO_CONTEXT::StartFrame.
+		*
+		* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+		*
+		* \c IsoK_Init is performs the following tasks in order:
+		* -# Allocates the \c IsoContext and the required \ref KISO_PACKET structures.
+		* -# Zero-initializes all ISO context memory.
+		* -# Assigns \b NumberOfPackets, \b PipeID, and \b StartFrame to \c IsoContext.
+		*
+		*/
+	KUSB_EXP BOOL KUSB_API IsochK_Init(
+		_in KUSB_HANDLE IntefaceHandle,
+		_out PKISO_CONTEXT* IsoContext,
+		_in INT NumberOfPackets,
+		_inopt INT StartFrame);
+
+
+	//! Destroys an isochronous transfer context.
+		/*!
+		* \param[in] IsoContext
+		* A pointer to an isochronous transfer context created with \ref IsoK_Init.
+		*
+		* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+		*/
+	KUSB_EXP BOOL KUSB_API IsoK_Free(
+		_in PKISO_CONTEXT IsoContext);
+
+	//! Convenience function for setting the offset of all ISO packets of an isochronous transfer context.
+		/*!
+		* \param[in] IsoContext
+		* A pointer to an isochronous transfer context.
+		*
+		* \param[in] PacketSize
+		* The packet size used to calculate and assign the absolute data offset for each \ref KISO_PACKET in
+		* \c IsoContext.
+		*
+		* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+		*
+		* \c IsoK_SetPackets updates all \ref KISO_PACKET::Offset fields in a \ref KISO_CONTEXT so all offset are
+		* \c PacketSize apart. For example:
+		* - The offset of the first (0-index) packet is 0.
+		* - The offset of the second (1-index) packet is PacketSize.
+		* - The offset of the third (2-index) packet is PacketSize*2.
+		*
+		* \code
+		* for (packetIndex = 0; packetIndex < IsoContext->NumberOfPackets; packetIndex++)
+		* 	IsoContext->IsoPackets[packetIndex].Offset = packetIndex * PacketSize;
+		* \endcode
+		*
+		*/
+	KUSB_EXP BOOL KUSB_API IsoK_SetPackets(
+		_in PKISO_CONTEXT IsoContext,
+		_in INT PacketSize);
+
+	//! Convenience function for setting all fields of a \ref KISO_PACKET.
+		/*!
+		* \param[in] IsoContext
+		* A pointer to an isochronous transfer context.
+		*
+		* \param[in] PacketIndex
+		* The packet index to set.
+		*
+		* \param[in] IsoPacket
+		* Pointer to a user allocated \c KISO_PACKET which is copied into the PKISO_CONTEXT::IsoPackets array at the
+		* specified index.
+		*
+		* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+		*/
+	KUSB_EXP BOOL KUSB_API IsoK_SetPacket(
+		_in PKISO_CONTEXT IsoContext,
+		_in INT PacketIndex,
+		_in PKISO_PACKET IsoPacket);
+
+	//! Convenience function for getting all fields of a \ref KISO_PACKET.
+		/*!
+		* \param[in] IsoContext
+		* A pointer to an isochronous transfer context.
+		*
+		* \param[in] PacketIndex
+		* The packet index to get.
+		*
+		* \param[out] IsoPacket
+		* Pointer to a user allocated \c KISO_PACKET which receives a copy of the ISO packet in the
+		* PKISO_CONTEXT::IsoPackets array at the specified index.
+		*
+		* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+		*/
+	KUSB_EXP BOOL KUSB_API IsoK_GetPacket(
+		_in PKISO_CONTEXT IsoContext,
+		_in INT PacketIndex,
+		_out PKISO_PACKET IsoPacket);
+
+	//! Convenience function for enumerating ISO packets of an isochronous transfer context.
+		/*!
+		* \param[in] IsoContext
+		* A pointer to an isochronous transfer context.
+		*
+		* \param[in] EnumPackets
+		* Pointer to a user supplied callback function which is executed for all ISO packets in \c IsoContext or
+		* until the user supplied callback function returns \c FALSE.
+		*
+		* \param[in] StartPacketIndex
+		* The zero-based ISO packet index to begin enumeration at.
+		*
+		* \param[in] UserState
+		* A user defined value which is passed as a parameter to the user supplied callback function.
+		*
+		* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+		*/
+	KUSB_EXP BOOL KUSB_API IsoK_EnumPackets(
+		_in PKISO_CONTEXT IsoContext,
+		_in KISO_ENUM_PACKETS_CB* EnumPackets,
+		_inopt INT StartPacketIndex,
+		_inopt PVOID UserState);
+
+	//! Convenience function for re-using an isochronous transfer context in a subsequent request.
+		/*!
+		* \param[in,out] IsoContext
+		* A pointer to an isochronous transfer context.
+		*
+		* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+		*
+		* \c IsoK_ReUse does the following:
+		* -# Zero-initializes the \b Length and \b Status fields of all \ref KISO_PACKET structures.
+		* -# Zero-initializes the \b StartFrame and \b ErrorCount of the \ref KISO_CONTEXT.
+		*
+		*/
+	KUSB_EXP BOOL KUSB_API IsoK_ReUse(
+		_ref PKISO_CONTEXT IsoContext);
+
+	/*! @} */
+#endif
 
 //! Transmits control data over a default control endpoint.
 	/*!
@@ -4065,7 +4271,6 @@ extern "C" {
 	KUSB_EXP BOOL KUSB_API LUsb0_SetConfiguration(
 		_in KUSB_HANDLE InterfaceHandle,
 		_in UCHAR ConfigurationNumber);
-#endif
 
 #ifdef __cplusplus
 }

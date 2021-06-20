@@ -342,6 +342,10 @@ static PKOBJ_BASE Lib_GetBase(KLIB_HANDLE Handle, KLIB_HANDLE_TYPE HandleType)
 	case KLIB_HANDLE_TYPE_STMK:
 		base = (PKOBJ_BASE)Handle;
 		break;
+		
+	case KLIB_HANDLE_TYPE_ISOCHK:
+		base = (PKOBJ_BASE)Handle;
+		break;
 	}
 	return base;
 }
@@ -429,6 +433,9 @@ KUSB_EXP KLIB_USER_CONTEXT KUSB_API LibK_GetDefaultContext(
 
 	case KLIB_HANDLE_TYPE_STMK:
 		return AllK->StmK.DefaultUserContext;
+
+		case KLIB_HANDLE_TYPE_ISOCHK:
+		return AllK->IsochK.DefaultUserContext;
 	}
 
 	LusbwError(ERROR_INVALID_HANDLE);
@@ -473,6 +480,9 @@ KUSB_EXP BOOL KUSB_API LibK_SetDefaultContext(
 
 	case KLIB_HANDLE_TYPE_STMK:
 		InterlockedExchangePointer(&((PVOID)AllK->StmK.DefaultUserContext), (PVOID)ContextValue);
+		return TRUE;
+	case KLIB_HANDLE_TYPE_ISOCHK:
+		InterlockedExchangePointer(&((PVOID)AllK->IsochK.DefaultUserContext), (PVOID)ContextValue);
 		return TRUE;
 	}
 
@@ -524,6 +534,7 @@ KUSB_EXP BOOL KUSB_API LibK_Context_Init(
 	ALLK_DBG_PRINT_SECTION(OvlK);
 	ALLK_DBG_PRINT_SECTION(OvlPoolK);
 	ALLK_DBG_PRINT_SECTION(StmK);
+	ALLK_DBG_PRINT_SECTION(IsochK);
 	USBLOG_PRINTLN("");
 
 	// AllK->PathMatchSpec = (KDYN_PathMatchSpec*)GetProcAddress(AllK->Dlls.hShlwapi, "PathMatchSpecA");
@@ -540,6 +551,7 @@ KUSB_EXP BOOL KUSB_API LibK_Context_Init(
 	AllK->OvlPoolK.Index = -1;
 	AllK->StmK.Index = -1;
 	AllK->UsbK.Index = -1;
+	AllK->IsochK.Index = -1;
 
 	USBLOG_PRINTLN("Dynamically allocated as needed:");
 	USBLOG_PRINTLN("\tKLST_DEVINFO = %u bytes each", sizeof(KLST_DEVINFO));
@@ -573,6 +585,7 @@ KUSB_EXP VOID KUSB_API LibK_Context_Free(VOID)
 	POOLHANDLE_LIB_EXIT_CHECK(OvlK);
 	POOLHANDLE_LIB_EXIT_CHECK(OvlPoolK);
 	POOLHANDLE_LIB_EXIT_CHECK(StmK);
+	POOLHANDLE_LIB_EXIT_CHECK(IsochK);
 #endif
 
 	//if (AllK->Dlls.hShlwapi)

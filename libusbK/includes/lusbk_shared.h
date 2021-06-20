@@ -130,7 +130,7 @@ USBK_C_ASSERT(WINUSB_SETUP_PACKET,sizeof(WINUSB_SETUP_PACKET) == 8);
 *  @{
 */
 
-//! Structure describing an isochronous transfer packet.
+//! Structure describing an isochronous transfer packet for libusbK.
 typedef struct _KISO_PACKET
 {
 	//! Specifies the offset, in bytes, of the buffer for this packet from the beginning of the entire isochronous transfer data buffer.
@@ -156,8 +156,38 @@ typedef struct _KISO_PACKET
 	USHORT Status;
 
 } KISO_PACKET;
+
 //! pointer to a \c KISO_PACKET structure
 typedef KISO_PACKET* PKISO_PACKET;
+
+//! Structure describing an isochronous transfer packet for winusb.
+typedef struct _KISO_WUSB_PACKET
+{
+	//! Specifies the offset, in bytes, of the buffer for this packet from the beginning of the entire isochronous transfer data buffer.
+	/*!
+	* \c Offset represents an absolute data offset from the start of the \c Buffer parameter \ref UsbK_IsoReadPipe or \ref UsbK_IsoWritePipe.
+	*
+	* \note This field is assigned by the user application only and used by the driver upon transfer submission and completion.
+	*/
+	UINT Offset;
+
+	//! Set by the host controller to indicate the actual number of bytes received by the device for isochronous IN transfers. Length not used for isochronous OUT transfers.
+	/*!
+	* \note This field is is not user assignable and is updated by the driver upon transfer completion.
+	*/
+	UINT Length;
+
+	//! Contains the 16 least significant USBD status bits, on return from the host controller driver, of this transfer packet.
+	/*!
+	* See MSDN for USBD status codes: <A href="http://msdn.microsoft.com/en-us/library/ff539136%28VS.85%29.aspx">USBD status code reference</A>
+	*
+	* \note This field is is not user assignable and is updated by the driver upon transfer completion.
+	*/
+	UINT Status;
+
+} KISO_WUSB_PACKET;
+//! pointer to a \c KISO_PACKET structure
+typedef KISO_WUSB_PACKET* PKISO_WUSB_PACKET;
 
 #pragma warning(disable:4200)
 
@@ -299,7 +329,6 @@ typedef struct _KISO_CONTEXT
 	* updated by the driver upon transfer completion.
 	*/
 	KISO_PACKET IsoPackets[0];
-
 } KISO_CONTEXT;
 USBK_C_ASSERT(KISO_CONTEXT,sizeof(KISO_CONTEXT) == 16);
 

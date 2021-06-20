@@ -131,6 +131,16 @@ typedef struct _USER_PIPE_POLICY
 
 }* PUSER_PIPE_POLICY, USER_PIPE_POLICY;
 
+//! Opaque UsbK handle, see \ref UsbK_Init.
+typedef KLIB_HANDLE WINUSB_ISOCH_BUFFER_HANDLE;
+typedef KLIB_HANDLE* PWINUSB_ISOCH_BUFFER_HANDLE;
+
+typedef struct _USBD_ISO_PACKET_DESCRIPTOR {
+	ULONG       Offset;
+	ULONG       Length;
+	ULONG		Status;
+} USBD_ISO_PACKET_DESCRIPTOR, *PUSBD_ISO_PACKET_DESCRIPTOR;
+
 typedef BOOL WINAPI KDYN_CancelIoEx(HANDLE, KOVL_HANDLE);
 typedef BOOL WINAPI KDYN_PathMatchSpec(__in LPCSTR pszFile, __in LPCSTR pszSpec);
 

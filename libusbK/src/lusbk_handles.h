@@ -30,6 +30,7 @@ binary distributions.
 #define KOVL_HANDLE_COUNT				4096
 #define KOVL_POOL_HANDLE_COUNT			64
 #define KSTM_HANDLE_COUNT				32
+#define KISOCH_HANDLE_COUNT				32
 
 #define ALLK_HANDLE_COUNT(AllKSection) (sizeof(AllK->AllKSection.Handles)/sizeof(AllK->AllKSection.Handles[0]))
 
@@ -98,6 +99,9 @@ binary distributions.
 
 #define Pub_To_Priv_StmK(KStm_Pool_Handle,KStm_Pool_Handle_Internal,ErrorAction)						\
 	PUB_TO_PRIV(StmK,KSTM_HANDLE_INTERNAL,KStm_Pool_Handle,KStm_Pool_Handle_Internal,ErrorAction)
+
+#define Pub_To_Priv_IsochK(KIsoch_Pool_Handle,KIsoch_Pool_Handle_Internal,ErrorAction)						\
+	PUB_TO_PRIV(IsochK,KISOCH_HANDLE_INTERNAL,KIsoch_Pool_Handle,KIsoch_Pool_Handle_Internal,ErrorAction)
 
 #define PROTO_POOLHANDLE(AllKSection,HandleType)											\
 	KLIB_USER_CONTEXT PoolHandle_GetContext_##AllKSection(P##HandleType PoolHandle);		\
@@ -644,6 +648,36 @@ typedef struct _KSTM_HANDLE_INTERNAL
 } KSTM_HANDLE_INTERNAL;
 typedef KSTM_HANDLE_INTERNAL* PKSTM_HANDLE_INTERNAL;
 
+typedef struct _WINUSB_ISO_CONTEXT
+{
+	PWINUSB_ISOCH_BUFFER_HANDLE BufferHandle;
+	UINT MaxNumberOfPackets;
+	PUSBD_ISO_PACKET_DESCRIPTOR Packets;
+
+}WINUSB_ISO_CONTEXT;
+
+typedef struct _KISOCH_HANDLE_INTERNAL
+{
+	KOBJ_BASE Base;
+	PKUSB_HANDLE_INTERNAL UsbHandle;
+	PVOID Buffer;
+	UINT BufferSize;
+	UINT NumberOfPackets;
+	union
+	{
+		KISO_CONTEXT UsbK;
+		WINUSB_ISO_CONTEXT UsbW;
+	}Context;
+}KISOCH_HANDLE_INTERNAL;
+typedef KISOCH_HANDLE_INTERNAL* PKISOCH_HANDLE_INTERNAL;
+#define Init_Handle_IsochK(HandlePtr) do {									\
+		(HandlePtr)->UsbHandle = NULL;										\
+		(HandlePtr)->Buffer = NULL;											\
+		(HandlePtr)->BufferSize = 0;										\
+		(HandlePtr)->NumberOfPackets = 0;									\
+		memset(&((HandlePtr)->Context), 0, sizeof((HandlePtr)->Context));	\
+	}while(0)
+
 #endif
 
 #define DEF_POOLED_HANDLE_STRUCT(AllKSection,HandleType,HandlePoolCount)	\
@@ -683,6 +717,7 @@ typedef struct
 	DEF_POOLED_HANDLE_STRUCT(OvlK,		KOVL_HANDLE_INTERNAL,			KOVL_HANDLE_COUNT);
 	DEF_POOLED_HANDLE_STRUCT(OvlPoolK,	KOVL_POOL_HANDLE_INTERNAL,		KOVL_POOL_HANDLE_COUNT);
 	DEF_POOLED_HANDLE_STRUCT(StmK,		KSTM_HANDLE_INTERNAL,			KSTM_HANDLE_COUNT);
+	DEF_POOLED_HANDLE_STRUCT(IsochK,	KISOCH_HANDLE_INTERNAL,			KISOCH_HANDLE_COUNT);
 } ALLK_CONTEXT, *PALLK_CONTEXT;
 
 // extern ALLK_CONTEXT AllK;
@@ -789,6 +824,7 @@ PROTO_POOLHANDLE(DevK, KDEV_HANDLE_INTERNAL);
 PROTO_POOLHANDLE(OvlK, KOVL_HANDLE_INTERNAL);
 PROTO_POOLHANDLE(OvlPoolK, KOVL_POOL_HANDLE_INTERNAL);
 PROTO_POOLHANDLE(StmK, KSTM_HANDLE_INTERNAL);
+PROTO_POOLHANDLE(IsochK, KISOCH_HANDLE_INTERNAL);
 
 #define PoolHandle_Live(KLib_Handle_Internal,AllKSection,KLib_Handle_Type) do {	\
 		if (!(KLib_Handle_Internal)->Base.User.Valid)  								\
@@ -822,6 +858,7 @@ PROTO_POOLHANDLE(StmK, KSTM_HANDLE_INTERNAL);
 #define PoolHandle_Dead_OvlK(KLib_Handle_Internal) PoolHandle_Dead(KLib_Handle_Internal,OvlK,KLIB_HANDLE_TYPE_OVLK)
 #define PoolHandle_Dead_OvlPoolK(KLib_Handle_Internal) PoolHandle_Dead(KLib_Handle_Internal,OvlPoolK,KLIB_HANDLE_TYPE_OVLPOOLK)
 #define PoolHandle_Dead_StmK(KLib_Handle_Internal) PoolHandle_Dead(KLib_Handle_Internal,StmK,KLIB_HANDLE_TYPE_STMK)
+#define PoolHandle_Dead_IsochK(KLib_Handle_Internal) PoolHandle_Dead(KLib_Handle_Internal,IsochK,KLIB_HANDLE_TYPE_ISOCHK)
 
 #define PoolHandle_Live_HotK(KLib_Handle_Internal) PoolHandle_Live(KLib_Handle_Internal,HotK,KLIB_HANDLE_TYPE_HOTK)
 #define PoolHandle_Live_LstK(KLib_Handle_Internal) PoolHandle_Live(KLib_Handle_Internal,LstK,KLIB_HANDLE_TYPE_LSTK)
@@ -831,6 +868,7 @@ PROTO_POOLHANDLE(StmK, KSTM_HANDLE_INTERNAL);
 #define PoolHandle_Live_OvlK(KLib_Handle_Internal) PoolHandle_Live(KLib_Handle_Internal,OvlK,KLIB_HANDLE_TYPE_OVLK)
 #define PoolHandle_Live_OvlPoolK(KLib_Handle_Internal) PoolHandle_Live(KLib_Handle_Internal,OvlPoolK,KLIB_HANDLE_TYPE_OVLPOOLK)
 #define PoolHandle_Live_StmK(KLib_Handle_Internal) PoolHandle_Live(KLib_Handle_Internal,StmK,KLIB_HANDLE_TYPE_STMK)
+#define PoolHandle_Live_IsochK(KLib_Handle_Internal) PoolHandle_Live(KLib_Handle_Internal,IsochK,KLIB_HANDLE_TYPE_ISOCHK)
 
 
 // Shared device list & hot-plug macros and functions:

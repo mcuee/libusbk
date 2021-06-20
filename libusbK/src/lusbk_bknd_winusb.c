@@ -32,6 +32,16 @@ extern ULONG DebugLevel;
 
 #ifndef WINUSB_DLL_DYNAMIC_____________________________________________
 
+// winusb specific ISO functions that we cannot directly support in the public API because of multi-driver compatibility issues 
+typedef BOOL KUSB_API WUSB_GetAdjustedFrameNumber(PULONG CurrentFrameNumber, LARGE_INTEGER TimeStamp);
+typedef BOOL KUSB_API WUSB_GetCurrentFrameNumber(KUSB_HANDLE InterfaceHandle, PULONG CurrentFrameNumber, LARGE_INTEGER* TimeStamp);
+typedef BOOL KUSB_API WUSB_ReadIsochPipe(WINUSB_ISOCH_BUFFER_HANDLE BufferHandle, ULONG Offset, ULONG Length, PULONG FrameNumber, ULONG NumberOfPackets, PUSBD_ISO_PACKET_DESCRIPTOR IsoPacketDescriptors, LPOVERLAPPED Overlapped);
+typedef BOOL KUSB_API WUSB_ReadIsochPipeAsap(WINUSB_ISOCH_BUFFER_HANDLE BufferHandle, ULONG Offset, ULONG Length, BOOL ContinueStream, ULONG NumberOfPackets, PUSBD_ISO_PACKET_DESCRIPTOR IsoPacketDescriptors, LPOVERLAPPED Overlapped);
+typedef BOOL KUSB_API WUSB_RegisterIsochBuffer(KUSB_HANDLE InterfaceHandle, UCHAR PipeID, PUCHAR Buffer, ULONG BufferLength, PWINUSB_ISOCH_BUFFER_HANDLE IsochBufferHandle);
+typedef BOOL KUSB_API WUSB_UnregisterIsochBuffer(WINUSB_ISOCH_BUFFER_HANDLE BufferHandle);
+typedef BOOL KUSB_API WUSB_WriteIsochPipe (WINUSB_ISOCH_BUFFER_HANDLE BufferHandle, ULONG Offset, ULONG Length, PULONG FrameNumber, LPOVERLAPPED Overlapped);
+typedef BOOL KUSB_API WUSB_WriteIsochPipeAsap(WINUSB_ISOCH_BUFFER_HANDLE BufferHandle, ULONG Offset, ULONG Length, BOOL ContinueStream, LPOVERLAPPED Overlapped);
+
 typedef struct _WINUSB_API
 {
 	struct
@@ -39,6 +49,7 @@ typedef struct _WINUSB_API
 		volatile long Lock;
 		BOOL IsInitialized;
 		volatile HMODULE DLL;
+		BOOL IsIsoSupported;
 	} Init;
 
 	BOOL (KUSB_API* Initialize) ( HANDLE DeviceHandle, KUSB_HANDLE* InterfaceHandle);
@@ -58,9 +69,17 @@ typedef struct _WINUSB_API
 	BOOL (KUSB_API* FlushPipe) ( KUSB_HANDLE InterfaceHandle, UCHAR PipeID);
 	BOOL (KUSB_API* SetPowerPolicy) ( KUSB_HANDLE InterfaceHandle, UINT PolicyType, UINT ValueLength, PVOID Value);
 	BOOL (KUSB_API* GetPowerPolicy) ( KUSB_HANDLE InterfaceHandle, UINT PolicyType, PUINT ValueLength, PVOID Value);
+	WUSB_GetAdjustedFrameNumber* GetAdjustedFrameNumber;
+	WUSB_GetCurrentFrameNumber* GetCurrentFrameNumber;
+	WUSB_ReadIsochPipe* ReadIsochPipe;
+	WUSB_ReadIsochPipeAsap* ReadIsochPipeAsap;
+	WUSB_RegisterIsochBuffer* RegisterIsochBuffer;
+	WUSB_UnregisterIsochBuffer* UnregisterIsochBuffer;
+	WUSB_WriteIsochPipe* WriteIsochPipe;
+	WUSB_WriteIsochPipeAsap* WriteIsochPipeAsap;
 }* PWINUSB_API, WINUSB_API;
 
-WINUSB_API WinUsb = {{0, FALSE, NULL}};
+WINUSB_API WinUsb = {{0, FALSE, NULL, FALSE}};
 
 VOID WUsb_Init_Library()
 {
@@ -88,6 +107,16 @@ VOID WUsb_Init_Library()
 			WinUsb.FlushPipe = (KUSB_FlushPipe*)GetProcAddress(WinUsb.Init.DLL, "WinUsb_FlushPipe");
 			WinUsb.SetPowerPolicy = (KUSB_SetPowerPolicy*)GetProcAddress(WinUsb.Init.DLL, "WinUsb_SetPowerPolicy");
 			WinUsb.GetPowerPolicy = (KUSB_GetPowerPolicy*)GetProcAddress(WinUsb.Init.DLL, "WinUsb_GetPowerPolicy");
+			WinUsb.GetAdjustedFrameNumber = (WUSB_GetAdjustedFrameNumber*)GetProcAddress(WinUsb.Init.DLL, "WinUsb_GetAdjustedFrameNumber");
+			WinUsb.GetCurrentFrameNumber = (WUSB_GetCurrentFrameNumber*)GetProcAddress(WinUsb.Init.DLL, "WinUsb_GetCurrentFrameNumber");
+			WinUsb.ReadIsochPipe = (WUSB_ReadIsochPipe*)GetProcAddress(WinUsb.Init.DLL, "WinUsb_ReadIsochPipe");
+			WinUsb.ReadIsochPipeAsap = (WUSB_ReadIsochPipeAsap*)GetProcAddress(WinUsb.Init.DLL, "WinUsb_ReadIsochPipeAsap");
+			WinUsb.RegisterIsochBuffer = (WUSB_RegisterIsochBuffer*)GetProcAddress(WinUsb.Init.DLL, "WinUsb_RegisterIsochBuffer");
+			WinUsb.UnregisterIsochBuffer = (WUSB_UnregisterIsochBuffer*)GetProcAddress(WinUsb.Init.DLL, "WinUsb_UnregisterIsochBuffer");
+			WinUsb.WriteIsochPipe = (WUSB_WriteIsochPipe*)GetProcAddress(WinUsb.Init.DLL, "WinUsb_WriteIsochPipe");
+			WinUsb.WriteIsochPipeAsap = (WUSB_WriteIsochPipeAsap*)GetProcAddress(WinUsb.Init.DLL, "WinUsb_WriteIsochPipeAsap");
+			WinUsb.Init.IsIsoSupported = (WinUsb.ReadIsochPipe != NULL);
+
 		}
 		else
 		{

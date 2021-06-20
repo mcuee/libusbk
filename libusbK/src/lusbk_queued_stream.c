@@ -654,7 +654,7 @@ KUSB_EXP BOOL KUSB_API StmK_Init(
 	ErrorParamAction(epDescriptor.wMaxPacketSize == 0, "endpoint wMaxPacketSize = 0", return FALSE);
 	ErrorParamAction((MaxTransferSize % epDescriptor.wMaxPacketSize) > 0, "MaxTransferSize not an interval of wMaxPacketSize", return FALSE);
 
-	handle = PoolHandle_Acquire_StmK(Stm_Cleanup);
+	handle = PoolHandle_Acquire_StmK((PKOBJ_CB)Stm_Cleanup);
 	ErrorNoSetAction(!IsHandleValid(handle), return FALSE, "->PoolHandle_Acquire_StmK");
 
 	minHeapSize = 0;
