@@ -163,6 +163,12 @@ BOOL GetProcAddress_UsbK(__out KPROC* ProcAddress, __in LONG FunctionID)
 	case KUSB_FNID_GetCurrentFrameNumber:
 		*ProcAddress = (KPROC)UsbK_GetCurrentFrameNumber;
 		break;
+	case KUSB_FNID_IsochReadPipe:
+		*ProcAddress = (KPROC)UsbK_IsochReadPipe;
+		break;
+	case KUSB_FNID_IsochWritePipe:
+		*ProcAddress = (KPROC)UsbK_IsochWritePipe;
+		break;
 	default:
 		return FALSE;
 
@@ -175,9 +181,9 @@ BOOL GetProcAddress_LUsb0(__out KPROC* ProcAddress, __in LONG FunctionID)
 	switch(FunctionID)
 	{
 	case KUSB_FNID_IsoReadPipe:
-		GetProcAddress_Unsupported(ProcAddress, FunctionID);
-		return LusbwError(ERROR_NOT_SUPPORTED);
 	case KUSB_FNID_IsoWritePipe:
+	case KUSB_FNID_IsochWritePipe:
+	case KUSB_FNID_IsochReadPipe:
 		GetProcAddress_Unsupported(ProcAddress, FunctionID);
 		return LusbwError(ERROR_NOT_SUPPORTED);
 	case KUSB_FNID_SetConfiguration:
@@ -451,38 +457,38 @@ KUSB_EXP BOOL KUSB_API LibK_SetDefaultContext(
 	switch (HandleType)
 	{
 	case KLIB_HANDLE_TYPE_HOTK:
-		InterlockedExchangePointer(&((PVOID)AllK->HotK.DefaultUserContext), (PVOID)ContextValue);
+		InterlockedExchangePointer((PVOID volatile*)&(AllK->HotK.DefaultUserContext), (PVOID)ContextValue);
 		return TRUE;
 
 	case KLIB_HANDLE_TYPE_USBK:
-		InterlockedExchangePointer(&((PVOID)AllK->UsbK.DefaultUserContext), (PVOID)ContextValue);
+		InterlockedExchangePointer((PVOID volatile*)&(AllK->UsbK.DefaultUserContext), (PVOID)ContextValue);
 		return TRUE;
 
 	case KLIB_HANDLE_TYPE_USBSHAREDK:
-		InterlockedExchangePointer(&((PVOID)AllK->DevK.DefaultUserContext), (PVOID)ContextValue);
+		InterlockedExchangePointer((PVOID volatile*)&(AllK->DevK.DefaultUserContext), (PVOID)ContextValue);
 		return TRUE;
 
 	case KLIB_HANDLE_TYPE_LSTK:
-		InterlockedExchangePointer(&((PVOID)AllK->LstK.DefaultUserContext), (PVOID)ContextValue);
+		InterlockedExchangePointer((PVOID volatile*)&(AllK->LstK.DefaultUserContext), (PVOID)ContextValue);
 		return TRUE;
 
 	case KLIB_HANDLE_TYPE_LSTINFOK:
-		InterlockedExchangePointer(&((PVOID)AllK->LstInfoK.DefaultUserContext), (PVOID)ContextValue);
+		InterlockedExchangePointer((PVOID volatile*)&(AllK->LstInfoK.DefaultUserContext), (PVOID)ContextValue);
 		return TRUE;
 
 	case KLIB_HANDLE_TYPE_OVLK:
-		InterlockedExchangePointer(&((PVOID)AllK->OvlK.DefaultUserContext), (PVOID)ContextValue);
+		InterlockedExchangePointer((PVOID volatile*)&(AllK->OvlK.DefaultUserContext), (PVOID)ContextValue);
 		return TRUE;
 
 	case KLIB_HANDLE_TYPE_OVLPOOLK:
-		InterlockedExchangePointer(&((PVOID)AllK->OvlPoolK.DefaultUserContext), (PVOID)ContextValue);
+		InterlockedExchangePointer((PVOID volatile*)&(AllK->OvlPoolK.DefaultUserContext), (PVOID)ContextValue);
 		return TRUE;
 
 	case KLIB_HANDLE_TYPE_STMK:
-		InterlockedExchangePointer(&((PVOID)AllK->StmK.DefaultUserContext), (PVOID)ContextValue);
+		InterlockedExchangePointer((PVOID volatile*)&(AllK->StmK.DefaultUserContext), (PVOID)ContextValue);
 		return TRUE;
 	case KLIB_HANDLE_TYPE_ISOCHK:
-		InterlockedExchangePointer(&((PVOID)AllK->IsochK.DefaultUserContext), (PVOID)ContextValue);
+		InterlockedExchangePointer((PVOID volatile*)&(AllK->IsochK.DefaultUserContext), (PVOID)ContextValue);
 		return TRUE;
 	}
 

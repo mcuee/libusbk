@@ -1082,6 +1082,7 @@ Error:
 	return FALSE;
 }
 
+
 KUSB_EXP BOOL KUSB_API UsbK_IsoWritePipe(
     _in KUSB_HANDLE InterfaceHandle,
     _in UCHAR PipeID,
@@ -1128,6 +1129,78 @@ KUSB_EXP BOOL KUSB_API UsbK_IsoWritePipe(
 	return success;
 Error:
 	PoolHandle_Dec_UsbK(handle);
+	return FALSE;
+}
+
+KUSB_EXP BOOL KUSB_API UsbK_IsochReadPipe(
+	_in KUSB_ISOCH_HANDLE IsochHandle,
+	_in UINT FrameNumber,
+	_in LPOVERLAPPED Overlapped)
+{
+	libusb_request request;
+	ULONG IsoContextSize;
+	PKISOCH_HANDLE_INTERNAL handle;
+	BOOL success;
+
+	Pub_To_Priv_IsochK(IsochHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_IsochK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_IsochK");
+
+	ErrorParam(!IsHandleValid(Overlapped), Error, "Overlapped");
+	IsoContextSize = sizeof(KISO_CONTEXT) + (handle->Context.UsbK->NumberOfPackets * sizeof(KISO_PACKET));
+
+	handle->Context.UsbK->StartFrame = FrameNumber;
+	
+	Mem_Zero(&request, sizeof(request));
+	request.IsoEx.IsoContext = handle->Context.UsbK;
+	request.IsoEx.IsoContextSize = IsoContextSize;
+	request.IsoEx.PipeID = (UCHAR)handle->PipeID;
+
+	success = Ioctl_Async(handle->UsbHandle->Device->MasterDeviceHandle, LIBUSBK_IOCTL_ISOEX_READ,
+		&request, sizeof(request),
+		handle->TransferBuffer, handle->TransferBufferSize,
+		Overlapped);
+
+
+	PoolHandle_Dec_IsochK(handle);
+	return success;
+Error:
+	PoolHandle_Dec_IsochK(handle);
+	return FALSE;
+}
+
+
+KUSB_EXP BOOL KUSB_API UsbK_IsochWritePipe(
+	_in KUSB_ISOCH_HANDLE IsochHandle,
+	_in UINT FrameNumber,
+	_in LPOVERLAPPED Overlapped)
+{
+	libusb_request request;
+	ULONG IsoContextSize;
+	PKISOCH_HANDLE_INTERNAL handle;
+	BOOL success;
+
+	Pub_To_Priv_IsochK(IsochHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_IsochK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_IsochK");
+
+	ErrorParam(!IsHandleValid(Overlapped), Error, "Overlapped");
+	IsoContextSize = sizeof(KISO_CONTEXT) + (handle->Context.UsbK->NumberOfPackets * sizeof(KISO_PACKET));
+
+	handle->Context.UsbK->StartFrame = FrameNumber;
+
+	Mem_Zero(&request, sizeof(request));
+	request.IsoEx.IsoContext = handle->Context.UsbK;
+	request.IsoEx.IsoContextSize = IsoContextSize;
+	request.IsoEx.PipeID = (UCHAR)handle->PipeID;
+
+	success = Ioctl_Async(handle->UsbHandle->Device->MasterDeviceHandle, LIBUSBK_IOCTL_ISOEX_WRITE,
+		&request, sizeof(request),
+		handle->TransferBuffer, handle->TransferBufferSize,
+		Overlapped);
+
+	PoolHandle_Dec_IsochK(handle);
+	return success;
+Error:
+	PoolHandle_Dec_IsochK(handle);
 	return FALSE;
 }
 

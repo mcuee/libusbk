@@ -233,4 +233,54 @@ BOOL GetProcAddress_LUsb0(__out KPROC* ProcAddress, __in LONG FunctionID);
 BOOL GetProcAddress_WUsb(__out KPROC* ProcAddress, __in LONG FunctionID);
 BOOL GetProcAddress_Unsupported(__out KPROC* ProcAddress, __in LONG FunctionID);
 
+
+// winusb specific ISO functions that we cannot directly support in the public API because of multi-driver compatibility issues 
+typedef BOOL KUSB_API WUSB_GetAdjustedFrameNumber(PULONG CurrentFrameNumber, LARGE_INTEGER TimeStamp);
+typedef BOOL KUSB_API WUSB_GetCurrentFrameNumber(KUSB_HANDLE InterfaceHandle, PULONG CurrentFrameNumber, LARGE_INTEGER* TimeStamp);
+typedef BOOL KUSB_API WUSB_ReadIsochPipe(WINUSB_ISOCH_BUFFER_HANDLE BufferHandle, ULONG Offset, ULONG Length, PULONG FrameNumber, ULONG NumberOfPackets, PUSBD_ISO_PACKET_DESCRIPTOR IsoPacketDescriptors, LPOVERLAPPED Overlapped);
+typedef BOOL KUSB_API WUSB_ReadIsochPipeAsap(WINUSB_ISOCH_BUFFER_HANDLE BufferHandle, ULONG Offset, ULONG Length, BOOL ContinueStream, ULONG NumberOfPackets, PUSBD_ISO_PACKET_DESCRIPTOR IsoPacketDescriptors, LPOVERLAPPED Overlapped);
+typedef BOOL KUSB_API WUSB_RegisterIsochBuffer(KUSB_HANDLE InterfaceHandle, UCHAR PipeID, PUCHAR Buffer, ULONG BufferLength, PWINUSB_ISOCH_BUFFER_HANDLE IsochBufferHandle);
+typedef BOOL KUSB_API WUSB_UnregisterIsochBuffer(WINUSB_ISOCH_BUFFER_HANDLE BufferHandle);
+typedef BOOL KUSB_API WUSB_WriteIsochPipe(WINUSB_ISOCH_BUFFER_HANDLE BufferHandle, ULONG Offset, ULONG Length, PULONG FrameNumber, LPOVERLAPPED Overlapped);
+typedef BOOL KUSB_API WUSB_WriteIsochPipeAsap(WINUSB_ISOCH_BUFFER_HANDLE BufferHandle, ULONG Offset, ULONG Length, BOOL ContinueStream, LPOVERLAPPED Overlapped);
+
+typedef struct _WINUSB_API
+{
+	struct
+	{
+		volatile long Lock;
+		BOOL IsInitialized;
+		volatile HMODULE DLL;
+		BOOL IsIsoSupported;
+	} Init;
+
+	BOOL(KUSB_API* Initialize) (HANDLE DeviceHandle, KUSB_HANDLE* InterfaceHandle);
+	BOOL(KUSB_API* Free) (KUSB_HANDLE InterfaceHandle);
+	BOOL(KUSB_API* GetAssociatedInterface) (KUSB_HANDLE InterfaceHandle, UCHAR AssociatedInterfaceIndex, KUSB_HANDLE* AssociatedInterfaceHandle);
+	BOOL(KUSB_API* GetDescriptor) (KUSB_HANDLE InterfaceHandle, UCHAR DescriptorType, UCHAR Index, USHORT LanguageID, PUCHAR Buffer, UINT BufferLength, PUINT LengthTransferred);
+	BOOL(KUSB_API* QueryDeviceInformation) (KUSB_HANDLE InterfaceHandle, UINT InformationType, PUINT BufferLength, PVOID Buffer);
+	BOOL(KUSB_API* SetCurrentAlternateSetting) (KUSB_HANDLE InterfaceHandle, UCHAR AltSettingNumber);
+	BOOL(KUSB_API* GetCurrentAlternateSetting) (KUSB_HANDLE InterfaceHandle, PUCHAR AltSettingNumber);
+	BOOL(KUSB_API* SetPipePolicy) (KUSB_HANDLE InterfaceHandle, UCHAR PipeID, UINT PolicyType, UINT ValueLength, PVOID Value);
+	BOOL(KUSB_API* GetPipePolicy) (KUSB_HANDLE InterfaceHandle, UCHAR PipeID, UINT PolicyType, PUINT ValueLength, PVOID Value);
+	BOOL(KUSB_API* ReadPipe) (KUSB_HANDLE InterfaceHandle, UCHAR PipeID, PUCHAR Buffer, UINT BufferLength, PUINT LengthTransferred, LPOVERLAPPED Overlapped);
+	BOOL(KUSB_API* WritePipe) (KUSB_HANDLE InterfaceHandle, UCHAR PipeID, PUCHAR Buffer, UINT BufferLength, PUINT LengthTransferred, LPOVERLAPPED Overlapped);
+	BOOL(KUSB_API* ControlTransfer) (KUSB_HANDLE InterfaceHandle, WINUSB_SETUP_PACKET SetupPacket, PUCHAR Buffer, UINT BufferLength, PUINT LengthTransferred, LPOVERLAPPED Overlapped);
+	BOOL(KUSB_API* ResetPipe) (KUSB_HANDLE InterfaceHandle, UCHAR PipeID);
+	BOOL(KUSB_API* AbortPipe) (KUSB_HANDLE InterfaceHandle, UCHAR PipeID);
+	BOOL(KUSB_API* FlushPipe) (KUSB_HANDLE InterfaceHandle, UCHAR PipeID);
+	BOOL(KUSB_API* SetPowerPolicy) (KUSB_HANDLE InterfaceHandle, UINT PolicyType, UINT ValueLength, PVOID Value);
+	BOOL(KUSB_API* GetPowerPolicy) (KUSB_HANDLE InterfaceHandle, UINT PolicyType, PUINT ValueLength, PVOID Value);
+	WUSB_GetAdjustedFrameNumber* GetAdjustedFrameNumber;
+	WUSB_GetCurrentFrameNumber* GetCurrentFrameNumber;
+	WUSB_ReadIsochPipe* ReadIsochPipe;
+	WUSB_ReadIsochPipeAsap* ReadIsochPipeAsap;
+	WUSB_RegisterIsochBuffer* RegisterIsochBuffer;
+	WUSB_UnregisterIsochBuffer* UnregisterIsochBuffer;
+	WUSB_WriteIsochPipe* WriteIsochPipe;
+	WUSB_WriteIsochPipeAsap* WriteIsochPipeAsap;
+}*PWINUSB_API, WINUSB_API;
+
+extern WINUSB_API WinUsb;
+
 #endif

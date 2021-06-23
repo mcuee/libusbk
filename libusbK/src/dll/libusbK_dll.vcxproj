@@ -181,6 +181,7 @@
     <ClCompile Include="..\lusbk_usb_iso.c" />
     <ClCompile Include="..\lusbk_wrapper_winusb.c" />
     <ClCompile Include="lusbk_dllmain.c" />
+    <ClCompile Include="lusbk_usb_isoch.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\includes\libusbk.h" />

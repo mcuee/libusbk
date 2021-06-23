@@ -44,6 +44,9 @@ EXPORTS
     UsbK_FlushPipe
     UsbK_IsoReadPipe
     UsbK_IsoWritePipe
+    UsbK_IsochReadPipe
+    UsbK_IsochWritePipe
+
     UsbK_GetCurrentFrameNumber
     UsbK_GetOverlappedResult
     UsbK_GetProperty
@@ -98,6 +101,13 @@ EXPORTS
     IsoK_EnumPackets
     IsoK_ReUse
 
+    IsochK_Init
+    IsochK_Free
+    IsochK_SetPacketOffsets
+    IsochK_SetPacket
+    IsochK_GetPacket
+    IsochK_EnumPackets
+
 	WinUsb_Initialize
 	WinUsb_Free
 	WinUsb_GetAssociatedInterface
@@ -118,4 +128,3 @@ EXPORTS
 	WinUsb_SetPowerPolicy
 	WinUsb_GetPowerPolicy
 	WinUsb_GetOverlappedResult
-

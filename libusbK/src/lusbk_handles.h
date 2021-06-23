@@ -30,7 +30,7 @@ binary distributions.
 #define KOVL_HANDLE_COUNT				4096
 #define KOVL_POOL_HANDLE_COUNT			64
 #define KSTM_HANDLE_COUNT				32
-#define KISOCH_HANDLE_COUNT				32
+#define KISOCH_HANDLE_COUNT				64
 
 #define ALLK_HANDLE_COUNT(AllKSection) (sizeof(AllK->AllKSection.Handles)/sizeof(AllK->AllKSection.Handles[0]))
 
@@ -650,9 +650,9 @@ typedef KSTM_HANDLE_INTERNAL* PKSTM_HANDLE_INTERNAL;
 
 typedef struct _WINUSB_ISO_CONTEXT
 {
-	PWINUSB_ISOCH_BUFFER_HANDLE BufferHandle;
-	UINT MaxNumberOfPackets;
+	WINUSB_ISOCH_BUFFER_HANDLE BufferHandle;
 	PUSBD_ISO_PACKET_DESCRIPTOR Packets;
+	UINT NumberOfPackets;
 
 }WINUSB_ISO_CONTEXT;
 
@@ -660,21 +660,22 @@ typedef struct _KISOCH_HANDLE_INTERNAL
 {
 	KOBJ_BASE Base;
 	PKUSB_HANDLE_INTERNAL UsbHandle;
-	PVOID Buffer;
-	UINT BufferSize;
-	UINT NumberOfPackets;
+	UCHAR PipeID;
+	PUCHAR TransferBuffer;
+	UINT TransferBufferSize;
+	UINT PacketCount;
 	union
 	{
-		KISO_CONTEXT UsbK;
+		PKISO_CONTEXT UsbK;
 		WINUSB_ISO_CONTEXT UsbW;
 	}Context;
 }KISOCH_HANDLE_INTERNAL;
 typedef KISOCH_HANDLE_INTERNAL* PKISOCH_HANDLE_INTERNAL;
 #define Init_Handle_IsochK(HandlePtr) do {									\
 		(HandlePtr)->UsbHandle = NULL;										\
-		(HandlePtr)->Buffer = NULL;											\
-		(HandlePtr)->BufferSize = 0;										\
-		(HandlePtr)->NumberOfPackets = 0;									\
+		(HandlePtr)->TransferBuffer = NULL;									\
+		(HandlePtr)->TransferBufferSize = 0;								\
+		(HandlePtr)->PacketCount = 0;										\
 		memset(&((HandlePtr)->Context), 0, sizeof((HandlePtr)->Context));	\
 	}while(0)
 

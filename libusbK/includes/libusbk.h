@@ -219,6 +219,9 @@ typedef KLIB_VERSION* PKLIB_VERSION;
 //! Callback function typedef for \ref IsoK_EnumPackets
 typedef BOOL KUSB_API KISO_ENUM_PACKETS_CB (_in UINT PacketIndex, _in PKISO_PACKET IsoPacket, _in PVOID UserState);
 
+//! Callback function typedef for \ref IsochK_EnumPackets
+typedef BOOL KUSB_API KISOCH_ENUM_PACKETS_CB(_in UINT PacketIndex, _ref PUINT Offset, _ref PUINT Length, _ref PUINT Status, _in PVOID UserState);
+
 /*! @} */
 #endif
 
@@ -1089,6 +1092,11 @@ typedef enum _KUSB_FNID
     //! \ref UsbK_GetProperty dynamic driver function id.
     KUSB_FNID_GetProperty,
 
+    //! \ref UsbK_IsochReadPipe dynamic driver function id.
+	KUSB_FNID_IsochReadPipe,
+	
+    //! \ref UsbK_IsochWritePipe dynamic driver function id.
+	KUSB_FNID_IsochWritePipe,
 
     //! Supported function count
     KUSB_FNID_COUNT,
@@ -1280,6 +1288,16 @@ typedef BOOL KUSB_API KUSB_GetProperty (
     _in KUSB_PROPERTY PropertyType,
     _ref PUINT PropertySize,
     _out PVOID Value);
+
+typedef BOOL KUSB_API KUSB_IsochReadPipe(
+	_in KUSB_ISOCH_HANDLE IsochHandle,
+	_in UINT FrameNumber,
+	_in LPOVERLAPPED Overlapped);
+
+typedef BOOL KUSB_API KUSB_IsochWritePipe(
+	_in KUSB_ISOCH_HANDLE IsochHandle,
+	_in UINT FrameNumber,
+	_in LPOVERLAPPED Overlapped);
 
 //! USB core driver API information structure.
 /*!
@@ -1513,6 +1531,9 @@ typedef struct _KUSB_DRIVER_API
 	*/
 	KUSB_GetProperty* GetProperty;
 
+	KUSB_IsochReadPipe* IsochReadPipe;
+	
+	KUSB_IsochWritePipe* IsochWritePipe;
 	//! fixed structure padding.
 	UCHAR z_F_i_x_e_d[512 - sizeof(KUSB_DRIVER_API_INFO) -  sizeof(UINT_PTR) * KUSB_FNID_COUNT];
 
@@ -3089,7 +3110,18 @@ extern "C" {
 	    _in KUSB_HANDLE InterfaceHandle,
 	    _out PUINT FrameNumber);
 
-//! Retrieves the results of an overlapped operation on the specified libusbK handle.
+
+	KUSB_EXP BOOL KUSB_API UsbK_IsochReadPipe(
+		_in KUSB_ISOCH_HANDLE IsochHandle,
+		_in UINT FrameNumber,
+		_in LPOVERLAPPED Overlapped);
+	
+	KUSB_EXP BOOL KUSB_API UsbK_IsochWritePipe(
+		_in KUSB_ISOCH_HANDLE IsochHandle,
+		_in UINT FrameNumber,
+		_in LPOVERLAPPED Overlapped);
+	
+	//! Retrieves the results of an overlapped operation on the specified libusbK handle.
 	/*!
 	*
 	* \param[in] InterfaceHandle
@@ -4074,12 +4106,13 @@ extern "C" {
 		* -# Assigns \b NumberOfPackets, \b PipeID, and \b StartFrame to \c IsoContext.
 		*
 		*/
-	KUSB_EXP BOOL KUSB_API IsochK_Init(
-		_in KUSB_HANDLE IntefaceHandle,
-		_out PKISO_CONTEXT* IsoContext,
-		_in INT NumberOfPackets,
-		_inopt INT StartFrame);
-
+		KUSB_EXP BOOL KUSB_API IsochK_Init(
+			_out KUSB_ISOCH_HANDLE* IsochHandle,
+			_in KUSB_HANDLE InterfaceHandle,
+			_in UCHAR PipeId,
+			_in UINT MaxNumberOfPackets,
+			_in PUCHAR TransferBuffer,
+			_in UINT TransferBufferSize);
 
 	//! Destroys an isochronous transfer context.
 		/*!
@@ -4088,9 +4121,9 @@ extern "C" {
 		*
 		* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 		*/
-	KUSB_EXP BOOL KUSB_API IsoK_Free(
-		_in PKISO_CONTEXT IsoContext);
-
+		KUSB_EXP BOOL KUSB_API IsochK_Free(
+			_in KUSB_ISOCH_HANDLE IsochHandle);
+	
 	//! Convenience function for setting the offset of all ISO packets of an isochronous transfer context.
 		/*!
 		* \param[in] IsoContext
@@ -4114,10 +4147,11 @@ extern "C" {
 		* \endcode
 		*
 		*/
-	KUSB_EXP BOOL KUSB_API IsoK_SetPackets(
-		_in PKISO_CONTEXT IsoContext,
-		_in INT PacketSize);
-
+		KUSB_EXP BOOL KUSB_API IsochK_SetPacketOffsets(
+			_in KUSB_ISOCH_HANDLE IsochHandle,
+			_in UINT NumberOfPackets,
+			_in UINT PacketSize);
+	
 	//! Convenience function for setting all fields of a \ref KISO_PACKET.
 		/*!
 		* \param[in] IsoContext
@@ -4132,11 +4166,13 @@ extern "C" {
 		*
 		* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 		*/
-	KUSB_EXP BOOL KUSB_API IsoK_SetPacket(
-		_in PKISO_CONTEXT IsoContext,
-		_in INT PacketIndex,
-		_in PKISO_PACKET IsoPacket);
-
+		KUSB_EXP BOOL KUSB_API IsochK_SetPacket(
+			_in KUSB_ISOCH_HANDLE IsochHandle,
+			_in UINT PacketIndex,
+			_in UINT Offset,
+			_in UINT Length,
+			_in UINT Status);
+	
 	//! Convenience function for getting all fields of a \ref KISO_PACKET.
 		/*!
 		* \param[in] IsoContext
@@ -4151,11 +4187,13 @@ extern "C" {
 		*
 		* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 		*/
-	KUSB_EXP BOOL KUSB_API IsoK_GetPacket(
-		_in PKISO_CONTEXT IsoContext,
-		_in INT PacketIndex,
-		_out PKISO_PACKET IsoPacket);
-
+		KUSB_EXP BOOL KUSB_API IsochK_GetPacket(
+			_in KUSB_ISOCH_HANDLE IsochHandle,
+			_in UINT PacketIndex,
+			_outopt PUINT Offset,
+			_outopt PUINT Length,
+			_outopt PUINT Status);
+	
 	//! Convenience function for enumerating ISO packets of an isochronous transfer context.
 		/*!
 		* \param[in] IsoContext
@@ -4173,26 +4211,11 @@ extern "C" {
 		*
 		* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 		*/
-	KUSB_EXP BOOL KUSB_API IsoK_EnumPackets(
-		_in PKISO_CONTEXT IsoContext,
-		_in KISO_ENUM_PACKETS_CB* EnumPackets,
-		_inopt INT StartPacketIndex,
-		_inopt PVOID UserState);
-
-	//! Convenience function for re-using an isochronous transfer context in a subsequent request.
-		/*!
-		* \param[in,out] IsoContext
-		* A pointer to an isochronous transfer context.
-		*
-		* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
-		*
-		* \c IsoK_ReUse does the following:
-		* -# Zero-initializes the \b Length and \b Status fields of all \ref KISO_PACKET structures.
-		* -# Zero-initializes the \b StartFrame and \b ErrorCount of the \ref KISO_CONTEXT.
-		*
-		*/
-	KUSB_EXP BOOL KUSB_API IsoK_ReUse(
-		_ref PKISO_CONTEXT IsoContext);
+		KUSB_EXP BOOL KUSB_API IsochK_EnumPackets(
+			_in KUSB_ISOCH_HANDLE IsochHandle,
+			_in KISOCH_ENUM_PACKETS_CB* EnumPackets,
+			_inopt UINT StartPacketIndex,
+			_inopt PVOID UserState);
 
 	/*! @} */
 #endif

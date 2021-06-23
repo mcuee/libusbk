@@ -403,6 +403,34 @@ KUSB_EXP BOOL KUSB_API Unsupported_GetCurrentFrameNumber(
 	return FALSE;
 }
 
+KUSB_EXP BOOL KUSB_API Unsupported_IsochReadPipe(
+	_in KUSB_ISOCH_HANDLE IsochHandle,
+	_in UINT FrameNumber,
+	_in LPOVERLAPPED Overlapped)
+{
+	UNREFERENCED_PARAMETER(IsochHandle);
+	UNREFERENCED_PARAMETER(FrameNumber);
+	UNREFERENCED_PARAMETER(Overlapped);
+
+	SetLastError(ERROR_NOT_SUPPORTED);
+	return FALSE;
+
+}
+
+KUSB_EXP BOOL KUSB_API Unsupported_IsochWritePipe(
+	_in KUSB_ISOCH_HANDLE IsochHandle,
+	_in UINT FrameNumber,
+	_in LPOVERLAPPED Overlapped)
+{
+	UNREFERENCED_PARAMETER(IsochHandle);
+	UNREFERENCED_PARAMETER(FrameNumber);
+	UNREFERENCED_PARAMETER(Overlapped);
+	
+	SetLastError(ERROR_NOT_SUPPORTED);
+	return FALSE;
+}
+
+
 KUSB_EXP BOOL KUSB_API Unsupported_Free(
     _in KUSB_HANDLE InterfaceHandle)
 {
@@ -549,6 +577,12 @@ BOOL GetProcAddress_Unsupported(__out KPROC* ProcAddress, __in LONG FunctionID)
 		break;
 	case KUSB_FNID_GetCurrentFrameNumber:
 		*ProcAddress = (KPROC)Unsupported_GetCurrentFrameNumber;
+		break;
+	case KUSB_FNID_IsochReadPipe:
+		*ProcAddress = (KPROC)Unsupported_IsochReadPipe;
+		break;
+	case KUSB_FNID_IsochWritePipe:
+		*ProcAddress = (KPROC)Unsupported_IsochWritePipe;
 		break;
 
 	default:

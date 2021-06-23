@@ -32,54 +32,7 @@ extern ULONG DebugLevel;
 
 #ifndef WINUSB_DLL_DYNAMIC_____________________________________________
 
-// winusb specific ISO functions that we cannot directly support in the public API because of multi-driver compatibility issues 
-typedef BOOL KUSB_API WUSB_GetAdjustedFrameNumber(PULONG CurrentFrameNumber, LARGE_INTEGER TimeStamp);
-typedef BOOL KUSB_API WUSB_GetCurrentFrameNumber(KUSB_HANDLE InterfaceHandle, PULONG CurrentFrameNumber, LARGE_INTEGER* TimeStamp);
-typedef BOOL KUSB_API WUSB_ReadIsochPipe(WINUSB_ISOCH_BUFFER_HANDLE BufferHandle, ULONG Offset, ULONG Length, PULONG FrameNumber, ULONG NumberOfPackets, PUSBD_ISO_PACKET_DESCRIPTOR IsoPacketDescriptors, LPOVERLAPPED Overlapped);
-typedef BOOL KUSB_API WUSB_ReadIsochPipeAsap(WINUSB_ISOCH_BUFFER_HANDLE BufferHandle, ULONG Offset, ULONG Length, BOOL ContinueStream, ULONG NumberOfPackets, PUSBD_ISO_PACKET_DESCRIPTOR IsoPacketDescriptors, LPOVERLAPPED Overlapped);
-typedef BOOL KUSB_API WUSB_RegisterIsochBuffer(KUSB_HANDLE InterfaceHandle, UCHAR PipeID, PUCHAR Buffer, ULONG BufferLength, PWINUSB_ISOCH_BUFFER_HANDLE IsochBufferHandle);
-typedef BOOL KUSB_API WUSB_UnregisterIsochBuffer(WINUSB_ISOCH_BUFFER_HANDLE BufferHandle);
-typedef BOOL KUSB_API WUSB_WriteIsochPipe (WINUSB_ISOCH_BUFFER_HANDLE BufferHandle, ULONG Offset, ULONG Length, PULONG FrameNumber, LPOVERLAPPED Overlapped);
-typedef BOOL KUSB_API WUSB_WriteIsochPipeAsap(WINUSB_ISOCH_BUFFER_HANDLE BufferHandle, ULONG Offset, ULONG Length, BOOL ContinueStream, LPOVERLAPPED Overlapped);
-
-typedef struct _WINUSB_API
-{
-	struct
-	{
-		volatile long Lock;
-		BOOL IsInitialized;
-		volatile HMODULE DLL;
-		BOOL IsIsoSupported;
-	} Init;
-
-	BOOL (KUSB_API* Initialize) ( HANDLE DeviceHandle, KUSB_HANDLE* InterfaceHandle);
-	BOOL (KUSB_API* Free) ( KUSB_HANDLE InterfaceHandle);
-	BOOL (KUSB_API* GetAssociatedInterface) ( KUSB_HANDLE InterfaceHandle, UCHAR AssociatedInterfaceIndex, KUSB_HANDLE* AssociatedInterfaceHandle);
-	BOOL (KUSB_API* GetDescriptor) ( KUSB_HANDLE InterfaceHandle, UCHAR DescriptorType, UCHAR Index, USHORT LanguageID, PUCHAR Buffer, UINT BufferLength, PUINT LengthTransferred);
-	BOOL (KUSB_API* QueryDeviceInformation) ( KUSB_HANDLE InterfaceHandle, UINT InformationType, PUINT BufferLength, PVOID Buffer);
-	BOOL (KUSB_API* SetCurrentAlternateSetting) ( KUSB_HANDLE InterfaceHandle, UCHAR AltSettingNumber);
-	BOOL (KUSB_API* GetCurrentAlternateSetting) ( KUSB_HANDLE InterfaceHandle, PUCHAR AltSettingNumber);
-	BOOL (KUSB_API* SetPipePolicy) ( KUSB_HANDLE InterfaceHandle, UCHAR PipeID, UINT PolicyType, UINT ValueLength, PVOID Value);
-	BOOL (KUSB_API* GetPipePolicy) ( KUSB_HANDLE InterfaceHandle, UCHAR PipeID, UINT PolicyType, PUINT ValueLength, PVOID Value);
-	BOOL (KUSB_API* ReadPipe) ( KUSB_HANDLE InterfaceHandle, UCHAR PipeID, PUCHAR Buffer, UINT BufferLength, PUINT LengthTransferred, LPOVERLAPPED Overlapped);
-	BOOL (KUSB_API* WritePipe) ( KUSB_HANDLE InterfaceHandle, UCHAR PipeID, PUCHAR Buffer, UINT BufferLength, PUINT LengthTransferred, LPOVERLAPPED Overlapped);
-	BOOL (KUSB_API* ControlTransfer) ( KUSB_HANDLE InterfaceHandle, WINUSB_SETUP_PACKET SetupPacket, PUCHAR Buffer, UINT BufferLength, PUINT LengthTransferred, LPOVERLAPPED Overlapped);
-	BOOL (KUSB_API* ResetPipe) ( KUSB_HANDLE InterfaceHandle, UCHAR PipeID);
-	BOOL (KUSB_API* AbortPipe) ( KUSB_HANDLE InterfaceHandle, UCHAR PipeID);
-	BOOL (KUSB_API* FlushPipe) ( KUSB_HANDLE InterfaceHandle, UCHAR PipeID);
-	BOOL (KUSB_API* SetPowerPolicy) ( KUSB_HANDLE InterfaceHandle, UINT PolicyType, UINT ValueLength, PVOID Value);
-	BOOL (KUSB_API* GetPowerPolicy) ( KUSB_HANDLE InterfaceHandle, UINT PolicyType, PUINT ValueLength, PVOID Value);
-	WUSB_GetAdjustedFrameNumber* GetAdjustedFrameNumber;
-	WUSB_GetCurrentFrameNumber* GetCurrentFrameNumber;
-	WUSB_ReadIsochPipe* ReadIsochPipe;
-	WUSB_ReadIsochPipeAsap* ReadIsochPipeAsap;
-	WUSB_RegisterIsochBuffer* RegisterIsochBuffer;
-	WUSB_UnregisterIsochBuffer* UnregisterIsochBuffer;
-	WUSB_WriteIsochPipe* WriteIsochPipe;
-	WUSB_WriteIsochPipeAsap* WriteIsochPipeAsap;
-}* PWINUSB_API, WINUSB_API;
-
-WINUSB_API WinUsb = {{0, FALSE, NULL, FALSE}};
+WINUSB_API WinUsb = { {0, FALSE, NULL, FALSE} };
 
 VOID WUsb_Init_Library()
 {
@@ -790,6 +743,76 @@ KUSB_EXP BOOL KUSB_API WUsb_WritePipe(
 	return success;
 }
 
+KUSB_EXP BOOL KUSB_API WUsb_IsochReadPipe(
+	_in KUSB_ISOCH_HANDLE IsochHandle,
+	_in UINT FrameNumber,
+	_in LPOVERLAPPED Overlapped)
+{
+	PKISOCH_HANDLE_INTERNAL handle;
+	BOOL success;
+
+	if (!WinUsb.ReadIsochPipe) { SetLastError(ERROR_NOT_SUPPORTED); return FALSE; }
+
+	Pub_To_Priv_IsochK(IsochHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_IsochK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_IsochK");
+
+	ErrorParam(!IsHandleValid(Overlapped), Error, "Overlapped");
+
+	success = WinUsb.ReadIsochPipe(handle->Context.UsbW.BufferHandle, 0, handle->TransferBufferSize, (PULONG)&FrameNumber, handle->Context.UsbW.NumberOfPackets, handle->Context.UsbW.Packets, Overlapped);
+
+
+	PoolHandle_Dec_IsochK(handle);
+	return success;
+Error:
+	PoolHandle_Dec_IsochK(handle);
+	return FALSE;
+}
+
+KUSB_EXP BOOL KUSB_API WUsb_IsochWritePipe(
+	_in KUSB_ISOCH_HANDLE IsochHandle,
+	_in UINT FrameNumber,
+	_in LPOVERLAPPED Overlapped)
+{
+	PKISOCH_HANDLE_INTERNAL handle;
+	BOOL success;
+
+	if (!WinUsb.WriteIsochPipe) { SetLastError(ERROR_NOT_SUPPORTED); return FALSE; }
+
+	Pub_To_Priv_IsochK(IsochHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_IsochK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_IsochK");
+
+	ErrorParam(!IsHandleValid(Overlapped), Error, "Overlapped");
+
+	success = WinUsb.WriteIsochPipe(handle->Context.UsbW.BufferHandle, 0, handle->TransferBufferSize, (PULONG)&FrameNumber, Overlapped);
+
+
+	PoolHandle_Dec_IsochK(handle);
+	return success;
+Error:
+	PoolHandle_Dec_IsochK(handle);
+	return FALSE;
+}
+
+KUSB_EXP BOOL KUSB_API WUsb_GetCurrentFrameNumber(
+	_in KUSB_HANDLE InterfaceHandle,
+	_out PUINT FrameNumber)
+{
+	PKUSB_HANDLE_INTERNAL handle;
+	BOOL success;
+	LARGE_INTEGER timeStamp;
+	timeStamp.QuadPart = 0;
+	
+	if (!WinUsb.GetCurrentFrameNumber) { SetLastError(ERROR_NOT_SUPPORTED); return FALSE; }
+	
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
+
+	success = WinUsb.GetCurrentFrameNumber(Intf_Handle(),(PULONG)FrameNumber, &timeStamp);
+
+	PoolHandle_Dec_UsbK(handle);
+	return success;
+}
+
 #endif
 
 BOOL GetProcAddress_WUsb(__out KPROC* ProcAddress, __in LONG FunctionID)
@@ -869,6 +892,15 @@ BOOL GetProcAddress_WUsb(__out KPROC* ProcAddress, __in LONG FunctionID)
 		break;
 	case KUSB_FNID_GetAltInterface:
 		*ProcAddress = (KPROC)WUsb_GetAltInterface;
+		break;
+	case KUSB_FNID_GetCurrentFrameNumber:
+		*ProcAddress = (KPROC)WUsb_GetCurrentFrameNumber;
+		break;
+	case KUSB_FNID_IsochReadPipe:
+		*ProcAddress = (KPROC)WUsb_IsochReadPipe;
+		break;
+	case KUSB_FNID_IsochWritePipe:
+		*ProcAddress = (KPROC)WUsb_IsochWritePipe;
 		break;
 	default:
 		return FALSE;
