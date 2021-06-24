@@ -157,6 +157,7 @@
     <ClCompile Include="..\lusbk_stack_collection.c" />
     <ClCompile Include="..\lusbk_usb.c" />
     <ClCompile Include="..\lusbk_usb_iso.c" />
+    <ClCompile Include="..\lusbk_usb_isoch.c" />
     <ClCompile Include="..\lusbk_wrapper_winusb.c" />
   </ItemGroup>
   <ItemGroup>

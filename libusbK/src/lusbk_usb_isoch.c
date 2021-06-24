@@ -19,6 +19,9 @@ binary distributions.
 #include "lusbk_private.h"
 #include "lusbk_handles.h"
 
+// warning C4127: conditional expression is constant.
+#pragma warning(disable: 4127)
+
 static void KUSB_API Isoch_Cleanup(PKISOCH_HANDLE_INTERNAL handle)
 {
 	PoolHandle_Dead_IsochK(handle);
