@@ -35,16 +35,45 @@ BOOL Examples_GetTestDevice(KLST_HANDLE* DeviceList,
 	                                0);
 
 }
+
+BOOL Examples_GetArgVal(int argc, char* argv[], LPCSTR argName, PUINT argValue, BOOL isHex)
+{
+	int argPos;
+	for (argPos = 1; argPos < argc; argPos++)
+	{
+		CHAR buf[128];
+		UINT i;
+
+		const UINT len = strlen(argv[argPos]);
+		for (i = 0; i < len && i < _countof(buf) - 1; i++)
+			buf[i] = (char) tolower(argv[argPos][i]);
+		buf[i] = 0;
+		
+		char* pFound = strstr(buf, argName);
+		if (pFound)
+		{
+			pFound += strlen(argName);
+			if (pFound[0] == '0' && (pFound[1] == 'x'))
+			{
+				pFound += 2;
+				isHex = TRUE;
+			}
+			*argValue = strtoul(pFound, NULL, (isHex?16:10));
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
 BOOL Examples_GetTestDeviceEx(KLST_HANDLE* DeviceList,
                               KLST_DEVINFO_HANDLE* DeviceInfo,
                               int argc,
                               char* argv[],
                               KLST_FLAG Flags)
 {
-	ULONG vidArg = EXAMPLE_VID;
-	ULONG pidArg = EXAMPLE_PID;
+	UINT vidArg = EXAMPLE_VID;
+	UINT pidArg = EXAMPLE_PID;
 	ULONG deviceCount = 0;
-	int argPos;
 	KLST_HANDLE deviceList = NULL;
 	KLST_DEVINFO_HANDLE deviceInfo = NULL;
 
@@ -53,11 +82,8 @@ BOOL Examples_GetTestDeviceEx(KLST_HANDLE* DeviceList,
 	*DeviceInfo = NULL;
 
 	// Get the test device vid/pid from the command line (if specified)
-	for (argPos = 1; argPos < argc; argPos++)
-	{
-		sscanf(argv[argPos], "vid=%04x", &vidArg);
-		sscanf(argv[argPos], "pid=%04x", &pidArg);
-	}
+	Examples_GetArgVal(argc, argv, "vid=", &vidArg, TRUE);
+	Examples_GetArgVal(argc, argv, "pid=", &pidArg, TRUE);
 
 	// Get the device list
 	if (!LstK_Init(&deviceList, Flags))

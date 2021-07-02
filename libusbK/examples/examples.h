@@ -85,6 +85,7 @@ BOOL Bench_Configure(KUSB_HANDLE UsbHandle,
                      PKUSB_DRIVER_API DriverAPI,
                      PBM_TEST_TYPE TestType);
 
+BOOL Examples_GetArgVal(int argc, char* argv[], LPCSTR argName, PUINT argValue, BOOL isHex);
 
 typedef struct _DATA_COUNTER_STATS
 {
