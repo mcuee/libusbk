@@ -288,6 +288,7 @@ typedef struct _KUSB_PIPE_EL
 	UCHAR Index;
 
 	PUSB_ENDPOINT_DESCRIPTOR Descriptor;
+	PUSB_SUPERSPEED_ENDPOINT_COMPANION_DESCRIPTOR SuperSpeedCompanionDescriptor;
 
 	struct _KUSB_PIPE_EL* next;
 	struct _KUSB_PIPE_EL* prev;
@@ -664,13 +665,17 @@ typedef struct _KISOCH_HANDLE_INTERNAL
 	PUCHAR TransferBuffer;
 	UINT TransferBufferSize;
 	UINT PacketCount;
+	BOOL IsHighSpeed;
+	KISOCH_PACKET_INFORMATION PacketInformation;
+	WINUSB_PIPE_INFORMATION_EX PipeInformation;
+	
 	union
 	{
 		PKISO_CONTEXT UsbK;
 		WINUSB_ISO_CONTEXT UsbW;
 	}Context;
-}KISOCH_HANDLE_INTERNAL;
-typedef KISOCH_HANDLE_INTERNAL* PKISOCH_HANDLE_INTERNAL;
+}KISOCH_HANDLE_INTERNAL, *PKISOCH_HANDLE_INTERNAL;
+
 #define Init_Handle_IsochK(HandlePtr) do {									\
 		(HandlePtr)->UsbHandle = NULL;										\
 		(HandlePtr)->TransferBuffer = NULL;									\

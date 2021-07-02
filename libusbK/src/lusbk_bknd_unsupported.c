@@ -405,11 +405,15 @@ KUSB_EXP BOOL KUSB_API Unsupported_GetCurrentFrameNumber(
 
 KUSB_EXP BOOL KUSB_API Unsupported_IsochReadPipe(
 	_in KUSB_ISOCH_HANDLE IsochHandle,
-	_in UINT FrameNumber,
+	_inopt UINT DataLength,
+	_ref PUINT FrameNumber,
+	_inopt UINT NumberOfPackets,
 	_in LPOVERLAPPED Overlapped)
 {
 	UNREFERENCED_PARAMETER(IsochHandle);
+	UNREFERENCED_PARAMETER(DataLength);
 	UNREFERENCED_PARAMETER(FrameNumber);
+	UNREFERENCED_PARAMETER(NumberOfPackets);
 	UNREFERENCED_PARAMETER(Overlapped);
 
 	SetLastError(ERROR_NOT_SUPPORTED);
@@ -419,13 +423,17 @@ KUSB_EXP BOOL KUSB_API Unsupported_IsochReadPipe(
 
 KUSB_EXP BOOL KUSB_API Unsupported_IsochWritePipe(
 	_in KUSB_ISOCH_HANDLE IsochHandle,
-	_in UINT FrameNumber,
+	_inopt UINT DataLength,
+	_ref PUINT FrameNumber,
+	_inopt UINT NumberOfPackets,
 	_in LPOVERLAPPED Overlapped)
 {
 	UNREFERENCED_PARAMETER(IsochHandle);
+	UNREFERENCED_PARAMETER(DataLength);
 	UNREFERENCED_PARAMETER(FrameNumber);
+	UNREFERENCED_PARAMETER(NumberOfPackets);
 	UNREFERENCED_PARAMETER(Overlapped);
-	
+
 	SetLastError(ERROR_NOT_SUPPORTED);
 	return FALSE;
 }

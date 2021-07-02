@@ -6,6 +6,7 @@ EXPORTS
     LibK_SetContext
     LibK_SetCleanupCallback
     LibK_LoadDriverAPI
+    LibK_IsFunctionSupported
     LibK_CopyDriverAPI
     LibK_GetProcAddress
     LibK_SetDefaultContext
@@ -46,6 +47,7 @@ EXPORTS
     UsbK_IsoWritePipe
     UsbK_IsochReadPipe
     UsbK_IsochWritePipe
+    UsbK_QueryPipeEx
 
     UsbK_GetCurrentFrameNumber
     UsbK_GetOverlappedResult
@@ -107,6 +109,7 @@ EXPORTS
     IsochK_SetPacket
     IsochK_GetPacket
     IsochK_EnumPackets
+    IsochK_CalcPacketInformation
 
 	WinUsb_Initialize
 	WinUsb_Free
@@ -128,3 +131,4 @@ EXPORTS
 	WinUsb_SetPowerPolicy
 	WinUsb_GetPowerPolicy
 	WinUsb_GetOverlappedResult
+	WinUsb_QueryPipeEx

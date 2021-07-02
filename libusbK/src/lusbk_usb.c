@@ -30,9 +30,11 @@ volatile long AllKInitLock = 0;
 
 #define CASE_FNID_LOAD(FunctionName)															\
 	case KUSB_FNID_##FunctionName:  															\
+	DriverAPI->FuncSupported[fnIdIndex]=TRUE;													\
 	if (LibK_GetProcAddress((KPROC*)&DriverAPI->FunctionName, DriverID, fnIdIndex) == FALSE)	\
 	{   																						\
 		USBWRNN("function id %u for driver id %u does not exist.",fnIdIndex,DriverID);  		\
+		DriverAPI->FuncSupported[fnIdIndex]=FALSE;												\
 	}   																						\
 	else																						\
 		fnIdCount++;																			\
@@ -169,6 +171,9 @@ BOOL GetProcAddress_UsbK(__out KPROC* ProcAddress, __in LONG FunctionID)
 	case KUSB_FNID_IsochWritePipe:
 		*ProcAddress = (KPROC)UsbK_IsochWritePipe;
 		break;
+	case KUSB_FNID_QueryPipeEx:
+		*ProcAddress = (KPROC)UsbK_QueryPipeEx;
+		break;
 	default:
 		return FALSE;
 
@@ -296,9 +301,12 @@ KUSB_EXP BOOL KUSB_API LibK_LoadDriverAPI(
 			CASE_FNID_LOAD(FlushPipe);
 			CASE_FNID_LOAD(IsoReadPipe);
 			CASE_FNID_LOAD(IsoWritePipe);
+			CASE_FNID_LOAD(IsochReadPipe);
+			CASE_FNID_LOAD(IsochWritePipe);
 			CASE_FNID_LOAD(GetCurrentFrameNumber);
 			CASE_FNID_LOAD(GetOverlappedResult);
 			CASE_FNID_LOAD(GetProperty);
+			CASE_FNID_LOAD(QueryPipeEx);
 
 		default:
 			USBERRN("undeclared api function %u!", fnIdIndex);
@@ -632,4 +640,17 @@ KUSB_EXP VOID KUSB_API LibK_Context_Free(VOID)
 
 	mSpin_Release(&AllKInitLock);
 
+}
+
+KUSB_EXP BOOL KUSB_API LibK_IsFunctionSupported(
+	PKUSB_DRIVER_API DriverAPI, 
+	UINT FunctionID)
+{
+	if (!IsHandleValid(DriverAPI))
+	{
+		SetLastError(ERROR_INVALID_HANDLE);
+		return FALSE;
+	}
+
+	return DriverAPI->FuncSupported[FunctionID];
 }

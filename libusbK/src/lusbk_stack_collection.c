@@ -36,6 +36,7 @@ typedef struct _DESCRIPTOR_ITERATOR
 		PUSB_COMMON_DESCRIPTOR		Comn;
 		PUSB_INTERFACE_DESCRIPTOR	Intf;
 		PUSB_ENDPOINT_DESCRIPTOR	Pipe;
+		PUSB_SUPERSPEED_ENDPOINT_COMPANION_DESCRIPTOR	SuperSpeedEndpointCompanion;
 	} Ptr;
 } DESCRIPTOR_ITERATOR, *PDESCRIPTOR_ITERATOR;
 
@@ -57,6 +58,7 @@ static void u_Add_Pipe(PKUSB_ALT_INTERFACE_EL altInterfaceEL, PDESCRIPTOR_ITERAT
 {
 	PKUSB_PIPE_EL pipeEL;
 	DESCRIPTOR_ITERATOR descPrev;
+	PKUSB_PIPE_EL prevPipeELForCompanionAttach = NULL;
 
 	memcpy(&descPrev, desc, sizeof(descPrev));
 
@@ -81,7 +83,17 @@ static void u_Add_Pipe(PKUSB_ALT_INTERFACE_EL altInterfaceEL, PDESCRIPTOR_ITERAT
 
 				DL_APPEND(altInterfaceEL->PipeList, pipeEL);
 			}
+			prevPipeELForCompanionAttach = pipeEL;
 		}
+		else if (desc->Ptr.Comn->bDescriptorType == USB_SUPERSPEED_ENDPOINT_COMPANION)
+		{
+			if (prevPipeELForCompanionAttach)
+			{
+				prevPipeELForCompanionAttach->SuperSpeedCompanionDescriptor = desc->Ptr.SuperSpeedEndpointCompanion;
+				prevPipeELForCompanionAttach = NULL;
+			}
+		}
+
 		memcpy(&descPrev, desc, sizeof(descPrev));
 	}
 }
@@ -501,6 +513,47 @@ Error:
 	return FALSE;
 }
 
+BOOL UsbStack_QuerySelectedPipe(
+	__in KUSB_HANDLE Handle,
+	__in UCHAR EndpointAddressOrIndex,
+	__in BOOL IsIndex,
+	__out PWINUSB_PIPE_INFORMATION_EX PipeInformationEx)
+{
+	PKUSB_HANDLE_INTERNAL handle;
+	PKUSB_INTERFACE_EL intfEL;
+	PKUSB_ALT_INTERFACE_EL altfEL;
+	PKUSB_PIPE_EL pipeEL;
+	UCHAR altSetting;
+
+	ErrorParamAction(!IsHandleValid(PipeInformationEx), "PipeInformationEx", return FALSE);
+
+	Pub_To_Priv_UsbK(Handle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
+
+	FindInterfaceEL(handle->Device->UsbStack, intfEL, TRUE, handle->Selected_SharedInterface_Index);
+	ErrorSet(!intfEL, Error, ERROR_NO_MORE_ITEMS, "Failed locating interface number %u.", handle->Selected_SharedInterface_Index);
+
+	altSetting = (UCHAR)handle->Device->SharedInterfaces[handle->Selected_SharedInterface_Index].CurrentAltSetting;
+
+	FindAltInterfaceEL(intfEL, altfEL, FALSE, altSetting);
+	ErrorSet(!altfEL, Error, ERROR_NO_MORE_ITEMS, "AltSettingNumber %u does not exists.", altSetting);
+
+	FindPipeEL(altfEL, pipeEL, IsIndex, EndpointAddressOrIndex);
+	ErrorSet(!pipeEL, Error, ERROR_NO_MORE_ITEMS, "Endpoint %s %u does not exists.", IsIndex ? "index" : "address", EndpointAddressOrIndex);
+
+	if (!UsbStack_QueryPipeEx(Handle, altSetting, pipeEL->Index, PipeInformationEx))
+	{
+		ErrorNoSetAction(TRUE,goto Error, "Endpoint %s %u does not exists.", IsIndex ? "index" : "address", EndpointAddressOrIndex);
+	}
+	
+	PoolHandle_Dec_UsbK(handle);
+	return TRUE;
+
+Error:
+	PoolHandle_Dec_UsbK(handle);
+	return FALSE;
+}
+
 BOOL UsbStack_QueryPipe(
     __in KUSB_HANDLE Handle,
     __in UCHAR AltSettingNumber,
@@ -533,6 +586,53 @@ BOOL UsbStack_QueryPipe(
 	PipeInformation->PipeId				= pipeEL->Descriptor->bEndpointAddress;
 	PipeInformation->Interval			= pipeEL->Descriptor->bInterval;
 
+	PoolHandle_Dec_UsbK(handle);
+	return TRUE;
+
+Error:
+	PoolHandle_Dec_UsbK(handle);
+	return FALSE;
+}
+
+BOOL UsbStack_QueryPipeEx(
+	__in KUSB_HANDLE Handle,
+	__in UCHAR AltSettingNumber,
+	__in UCHAR PipeIndex,
+	__out PWINUSB_PIPE_INFORMATION_EX PipeInformation)
+{
+	PKUSB_HANDLE_INTERNAL handle;
+	PKUSB_INTERFACE_EL intfEL;
+	PKUSB_ALT_INTERFACE_EL altfEL;
+	PKUSB_PIPE_EL pipeEL;
+	
+	ErrorParamAction(AltSettingNumber > 0x7F, "AltSettingNumber", return FALSE);
+	ErrorParamAction(PipeIndex > 0x1F, "PipeIndex", return FALSE);
+	ErrorParamAction(!IsHandleValid(PipeInformation), "PipeInformation", return FALSE);
+
+	Pub_To_Priv_UsbK(Handle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
+
+	FindInterfaceEL(handle->Device->UsbStack, intfEL, TRUE, handle->Selected_SharedInterface_Index);
+	ErrorSet(!intfEL, Error, ERROR_NO_MORE_ITEMS, "Failed locating interface number %u.", handle->Selected_SharedInterface_Index);
+
+	FindAltInterfaceEL(intfEL, altfEL, FALSE, AltSettingNumber);
+	ErrorSet(!altfEL, Error, ERROR_NO_MORE_ITEMS, "AltSettingNumber %u does not exists.", AltSettingNumber);
+
+	FindPipeEL(altfEL, pipeEL, TRUE, PipeIndex);
+	ErrorSet(!pipeEL, Error, ERROR_NO_MORE_ITEMS, "PipeIndex %u does not exists.", PipeIndex);
+	
+	PipeInformation->PipeType = pipeEL->Descriptor->bmAttributes & 0x03;
+	PipeInformation->MaximumPacketSize = (pipeEL->Descriptor->wMaxPacketSize & 0x7FF) * (((pipeEL->Descriptor->wMaxPacketSize >> 11) & 0x3) + 1);
+	PipeInformation->PipeId = pipeEL->Descriptor->bEndpointAddress;
+	PipeInformation->Interval = pipeEL->Descriptor->bInterval;
+	if (pipeEL->SuperSpeedCompanionDescriptor)
+	{
+		PipeInformation->MaximumBytesPerInterval = pipeEL->SuperSpeedCompanionDescriptor->wBytesPerInterval;
+	}
+	else
+	{
+		PipeInformation->MaximumBytesPerInterval = PipeInformation->MaximumPacketSize;
+	}
 	PoolHandle_Dec_UsbK(handle);
 	return TRUE;
 

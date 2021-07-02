@@ -18,9 +18,30 @@ binary distributions.
 
 #include "lusbk_private.h"
 #include "lusbk_handles.h"
+#include "lusbk_stack_collection.h"
 
 // warning C4127: conditional expression is constant.
 #pragma warning(disable: 4127)
+
+const USHORT PollingPeriod_Per_bInterval_HighSpeed[32] =
+{
+	1, 2, 4, 8, 16, 32, 32,
+	32, 32, 32, 32, 32, 32,
+	32, 32, 32, 32, 32, 32,
+	32, 32, 32, 32, 32, 32,
+	32, 32, 32, 32, 32, 32,
+	32,
+};
+
+const USHORT PollingPeriod_Per_bInterval_FullSpeed[32] =
+{
+	1, 2, 2, 4, 4, 4,
+	4, 8, 8, 8, 8, 8,
+	8, 8, 8, 16, 16, 16,
+	16, 16, 16, 16, 16,
+	16, 16, 16, 16, 16,
+	16, 16, 16, 32,
+};
 
 static void KUSB_API Isoch_Cleanup(PKISOCH_HANDLE_INTERNAL handle)
 {
@@ -58,7 +79,8 @@ KUSB_EXP BOOL KUSB_API IsochK_Init(
 {
 	PKISOCH_HANDLE_INTERNAL handle = NULL;
 	PKUSB_HANDLE_INTERNAL usbHandle = NULL;
-	
+	UCHAR devSpeed = 1;
+	UINT devSpeedLen = 1;
 	ErrorParamAction(IsochHandle==NULL, "IsochHandle", goto Error);
 	ErrorParamAction(!IsHandleValid(InterfaceHandle), "UsbHandle", goto Error);
 	ErrorParamAction(MaxNumberOfPackets <= 0, "MaxNumberOfPackets", goto Error);
@@ -68,14 +90,25 @@ KUSB_EXP BOOL KUSB_API IsochK_Init(
 	
 	handle = PoolHandle_Acquire_IsochK((PKOBJ_CB)Isoch_Cleanup);
 	ErrorNoSetAction(!IsHandleValid(handle), goto Error, "->PoolHandle_Acquire_IsochK");
-	
+
+	if (!usbHandle->Device->DriverAPI->QueryDeviceInformation(usbHandle, DEVICE_SPEED, &devSpeedLen, &devSpeed))
+	{
+		ErrorNoSetAction(TRUE, goto Error, "QueryDeviceInformation:DEVICE_SPEED failed.");
+	}
+	if (!UsbStack_QuerySelectedPipe(usbHandle, PipeId, FALSE,&handle->PipeInformation))
+	{
+		ErrorNoSetAction(TRUE, goto Error, "UsbStack_QuerySelectedPipe failed.");
+	}
 
 	handle->UsbHandle = usbHandle;
 	handle->PipeID = PipeId;
 	handle->PacketCount = MaxNumberOfPackets;
 	handle->TransferBuffer = TransferBuffer;
 	handle->TransferBufferSize = TransferBufferSize;
+	handle->IsHighSpeed = (devSpeed >= 3);
 
+	IsochK_CalcPacketInformation(handle->IsHighSpeed, &handle->PipeInformation, &handle->PacketInformation);
+	
 	switch(usbHandle->Device->DriverAPI->Info.DriverID)
 	{
 	case KUSB_DRVID_LIBUSBK:
@@ -88,13 +121,13 @@ KUSB_EXP BOOL KUSB_API IsochK_Init(
 			ErrorNoSet(TRUE, Error, "WinUsb.RegisterIsochBuffer Failed.");
 		}
 		handle->Context.UsbW.Packets = Mem_Alloc(MaxNumberOfPackets * sizeof(USBD_ISO_PACKET_DESCRIPTOR));
-		handle->Context.UsbK->NumberOfPackets = (SHORT) MaxNumberOfPackets;
+		handle->Context.UsbW.NumberOfPackets = (SHORT) MaxNumberOfPackets;
 		break;
 		default:
 			ErrorSetAction(TRUE, ERROR_NOT_SUPPORTED, goto Error, "This driver does not support ISO");
 
 	}
-	
+	*IsochHandle = handle;
 	PoolHandle_Live_IsochK(handle);
 	return TRUE;
 Error:
@@ -142,7 +175,10 @@ KUSB_EXP BOOL KUSB_API IsochK_SetPacketOffsets(
 		handle->Context.UsbK->NumberOfPackets = (SHORT)NumberOfPackets;
 		for (packetIndex = 0; packetIndex < NumberOfPackets; packetIndex++)
 		{
+			// length and status are set by the driver on transfer completion
 			handle->Context.UsbK->IsoPackets[packetIndex].Offset = nextOffSet;
+			handle->Context.UsbK->IsoPackets[packetIndex].Length = (USHORT)PacketSize;
+			handle->Context.UsbK->IsoPackets[packetIndex].Status = 0;
 			nextOffSet += PacketSize;
 		}
 		break;
@@ -150,7 +186,11 @@ KUSB_EXP BOOL KUSB_API IsochK_SetPacketOffsets(
 		handle->Context.UsbW.NumberOfPackets = (UINT)NumberOfPackets;
 		for (packetIndex = 0; packetIndex < NumberOfPackets; packetIndex++)
 		{
+			// length and status are set by the driver on transfer completion for read endpoints (0x8?)
+			// WinUsb does not use packets at all for write endpoints. (0x0?)
 			handle->Context.UsbW.Packets[packetIndex].Offset = nextOffSet;
+			handle->Context.UsbW.Packets[packetIndex].Length = PacketSize;
+			handle->Context.UsbW.Packets[packetIndex].Status = 0;
 			nextOffSet += PacketSize;
 		}
 		break;
@@ -210,6 +250,73 @@ KUSB_EXP BOOL KUSB_API IsochK_GetPacket(
 Error:
 	PoolHandle_Dec_IsochK(IsochHandle);
 	return FALSE;
+}
+
+KUSB_EXP BOOL KUSB_API IsochK_SetNumberOfPackets(
+	_in KUSB_ISOCH_HANDLE IsochHandle,
+	_in UINT NumberOfPackets)
+{
+	PKISOCH_HANDLE_INTERNAL handle;
+	INT drvId;
+
+	Pub_To_Priv_IsochK(IsochHandle, handle, return FALSE);
+	ErrorNoSetAction(!PoolHandle_Inc_IsochK(IsochHandle), return FALSE, "IsochHandle is invalid");
+
+	ErrorSetAction(NumberOfPackets > handle->PacketCount, ERROR_TOO_MANY_DESCRIPTORS, goto Error, "NumberOfPackets must be less than or equal to MaxNumberOfPackets");
+	drvId = handle->UsbHandle->Device->DriverAPI->Info.DriverID;
+	switch (drvId)
+	{
+	case KUSB_DRVID_LIBUSBK:
+		handle->Context.UsbK->NumberOfPackets =(SHORT)NumberOfPackets;
+		break;
+	case KUSB_DRVID_WINUSB:
+		handle->Context.UsbW.NumberOfPackets = NumberOfPackets;
+		break;
+	default:
+		ErrorSetAction(TRUE, ERROR_NOT_SUPPORTED, goto Error, "This driver does not support ISO");
+
+	}
+
+	return PoolHandle_Dec_IsochK(IsochHandle);
+
+Error:
+	PoolHandle_Dec_IsochK(IsochHandle);
+	return FALSE;
+
+}
+
+KUSB_EXP BOOL KUSB_API IsochK_GetNumberOfPackets(
+	_in KUSB_ISOCH_HANDLE IsochHandle,
+	_out PUINT NumberOfPackets)
+{
+	PKISOCH_HANDLE_INTERNAL handle;
+	INT drvId;
+
+	Pub_To_Priv_IsochK(IsochHandle, handle, return FALSE);
+	ErrorNoSetAction(!PoolHandle_Inc_IsochK(IsochHandle), return FALSE, "IsochHandle is invalid");
+	
+	ErrorParam(!IsHandleValid(NumberOfPackets), Error, NumberOfPackets);
+
+	drvId = handle->UsbHandle->Device->DriverAPI->Info.DriverID;
+	switch (drvId)
+	{
+	case KUSB_DRVID_LIBUSBK:
+		*NumberOfPackets = handle->Context.UsbK->NumberOfPackets;
+		break;
+	case KUSB_DRVID_WINUSB:
+		*NumberOfPackets = handle->Context.UsbW.NumberOfPackets;
+		break;
+	default:
+		ErrorSetAction(TRUE, ERROR_NOT_SUPPORTED, goto Error, "This driver does not support ISO");
+
+	}
+
+	return PoolHandle_Dec_IsochK(IsochHandle);
+
+Error:
+	PoolHandle_Dec_IsochK(IsochHandle);
+	return FALSE;
+
 }
 
 KUSB_EXP BOOL KUSB_API IsochK_SetPacket(
@@ -310,4 +417,30 @@ Error:
 	return FALSE;
 }
 
+KUSB_EXP BOOL KUSB_API IsochK_CalcPacketInformation(
+	_in BOOL IsHighSpeed,
+	_in PWINUSB_PIPE_INFORMATION_EX pipeInformationEx,
+	_out PKISOCH_PACKET_INFORMATION PacketInformation)
+{
+	UINT pollingPeriod;
 
+	ErrorParamAction(PacketInformation == NULL, "PacketInformation", return FALSE);
+	
+	if (IsHighSpeed)
+	{
+		pollingPeriod = PollingPeriod_Per_bInterval_HighSpeed[(pipeInformationEx->Interval - 1) % _countof(PollingPeriod_Per_bInterval_HighSpeed)];
+		PacketInformation->PacketsPerFrame = 8 / pollingPeriod;
+		
+		PacketInformation->PollingPeriodMicroseconds = pollingPeriod * 125;
+		PacketInformation->BytesPerMillisecond = (pipeInformationEx->MaximumBytesPerInterval * PacketInformation->PacketsPerFrame);
+	}
+	else
+	{
+		pollingPeriod = PollingPeriod_Per_bInterval_FullSpeed[(pipeInformationEx->Interval - 1) % _countof(PollingPeriod_Per_bInterval_HighSpeed)];
+		PacketInformation->PacketsPerFrame = 1;
+		PacketInformation->PollingPeriodMicroseconds = pollingPeriod * 1000;
+		PacketInformation->BytesPerMillisecond = pipeInformationEx->MaximumPacketSize / pollingPeriod;
+	}
+
+	return TRUE;
+}

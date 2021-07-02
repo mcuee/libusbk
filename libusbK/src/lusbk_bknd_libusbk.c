@@ -50,6 +50,9 @@ extern ULONG DebugLevel;
 	Ioctl_Sync(DeviceHandle, IoControlCode, &request, sizeof(request), &request, sizeof(request), NULL)
 #define SubmitSimpleSyncRequest(IoControlCode)					\
 	SubmitSimpleSyncRequestEx(Dev_Handle(),IoControlCode)
+
+#define CalclNextIsoFrameNumber(mFrameNumber, mIsochHandle) ((mFrameNumber) + ((mIsochHandle)->TransferBufferSize / (mIsochHandle)->PacketInformation.BytesPerMillisecond))
+
 #endif
 
 #ifndef HANDLE_CLEANUP_________________________________________________
@@ -449,6 +452,19 @@ KUSB_EXP BOOL KUSB_API UsbK_QueryPipe(
 	           PipeInformation);
 }
 
+KUSB_EXP BOOL KUSB_API UsbK_QueryPipeEx(
+	_in KUSB_HANDLE InterfaceHandle,
+	_in UCHAR AltSettingNumber,
+	_in UCHAR PipeIndex,
+	_out PWINUSB_PIPE_INFORMATION_EX PipeInformationEx)
+{
+	return UsbStack_QueryPipeEx(
+		InterfaceHandle,
+		AltSettingNumber,
+		PipeIndex,
+		PipeInformationEx);
+
+}
 KUSB_EXP BOOL KUSB_API UsbK_SetPipePolicy(
     _in KUSB_HANDLE InterfaceHandle,
     _in UCHAR PipeID,
@@ -1134,7 +1150,9 @@ Error:
 
 KUSB_EXP BOOL KUSB_API UsbK_IsochReadPipe(
 	_in KUSB_ISOCH_HANDLE IsochHandle,
-	_in UINT FrameNumber,
+	_inopt UINT DataLength,
+	_ref PUINT FrameNumber,
+	_inopt UINT NumberOfPackets,
 	_in LPOVERLAPPED Overlapped)
 {
 	libusb_request request;
@@ -1146,9 +1164,18 @@ KUSB_EXP BOOL KUSB_API UsbK_IsochReadPipe(
 	ErrorSetAction(!PoolHandle_Inc_IsochK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_IsochK");
 
 	ErrorParam(!IsHandleValid(Overlapped), Error, "Overlapped");
+	ErrorParam(!FrameNumber, Error, "FrameNumber");
+
+	if (NumberOfPackets)
+		handle->Context.UsbK->NumberOfPackets = (SHORT) NumberOfPackets;
+
+	if (!DataLength)
+		DataLength = handle->TransferBufferSize;
+	
 	IsoContextSize = sizeof(KISO_CONTEXT) + (handle->Context.UsbK->NumberOfPackets * sizeof(KISO_PACKET));
 
-	handle->Context.UsbK->StartFrame = FrameNumber;
+	handle->Context.UsbK->StartFrame = *FrameNumber;
+	*FrameNumber = CalclNextIsoFrameNumber(*FrameNumber, handle);
 	
 	Mem_Zero(&request, sizeof(request));
 	request.IsoEx.IsoContext = handle->Context.UsbK;
@@ -1157,7 +1184,7 @@ KUSB_EXP BOOL KUSB_API UsbK_IsochReadPipe(
 
 	success = Ioctl_Async(handle->UsbHandle->Device->MasterDeviceHandle, LIBUSBK_IOCTL_ISOEX_READ,
 		&request, sizeof(request),
-		handle->TransferBuffer, handle->TransferBufferSize,
+		handle->TransferBuffer, DataLength,
 		Overlapped);
 
 
@@ -1171,7 +1198,9 @@ Error:
 
 KUSB_EXP BOOL KUSB_API UsbK_IsochWritePipe(
 	_in KUSB_ISOCH_HANDLE IsochHandle,
-	_in UINT FrameNumber,
+	_inopt UINT DataLength,
+	_ref PUINT FrameNumber,
+	_inopt UINT NumberOfPackets,
 	_in LPOVERLAPPED Overlapped)
 {
 	libusb_request request;
@@ -1183,9 +1212,18 @@ KUSB_EXP BOOL KUSB_API UsbK_IsochWritePipe(
 	ErrorSetAction(!PoolHandle_Inc_IsochK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_IsochK");
 
 	ErrorParam(!IsHandleValid(Overlapped), Error, "Overlapped");
+	ErrorParam(!FrameNumber, Error, "FrameNumber");
+
+	if (NumberOfPackets)
+		handle->Context.UsbK->NumberOfPackets = (SHORT)NumberOfPackets;
+
+	if (!DataLength)
+		DataLength = handle->TransferBufferSize;
+
 	IsoContextSize = sizeof(KISO_CONTEXT) + (handle->Context.UsbK->NumberOfPackets * sizeof(KISO_PACKET));
 
-	handle->Context.UsbK->StartFrame = FrameNumber;
+	handle->Context.UsbK->StartFrame = *FrameNumber;
+	*FrameNumber = CalclNextIsoFrameNumber(*FrameNumber, handle);
 
 	Mem_Zero(&request, sizeof(request));
 	request.IsoEx.IsoContext = handle->Context.UsbK;
@@ -1194,7 +1232,7 @@ KUSB_EXP BOOL KUSB_API UsbK_IsochWritePipe(
 
 	success = Ioctl_Async(handle->UsbHandle->Device->MasterDeviceHandle, LIBUSBK_IOCTL_ISOEX_WRITE,
 		&request, sizeof(request),
-		handle->TransferBuffer, handle->TransferBufferSize,
+		handle->TransferBuffer, DataLength,
 		Overlapped);
 
 	PoolHandle_Dec_IsochK(handle);

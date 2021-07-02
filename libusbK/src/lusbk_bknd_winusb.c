@@ -68,8 +68,9 @@ VOID WUsb_Init_Library()
 			WinUsb.UnregisterIsochBuffer = (WUSB_UnregisterIsochBuffer*)GetProcAddress(WinUsb.Init.DLL, "WinUsb_UnregisterIsochBuffer");
 			WinUsb.WriteIsochPipe = (WUSB_WriteIsochPipe*)GetProcAddress(WinUsb.Init.DLL, "WinUsb_WriteIsochPipe");
 			WinUsb.WriteIsochPipeAsap = (WUSB_WriteIsochPipeAsap*)GetProcAddress(WinUsb.Init.DLL, "WinUsb_WriteIsochPipeAsap");
+			WinUsb.GetOverlappedResult = (KUSB_GetOverlappedResult*)GetProcAddress(WinUsb.Init.DLL, "WinUsb_GetOverlappedResult");
+			WinUsb.QueryPipeEx = (KUSB_QueryPipeEx*)GetProcAddress(WinUsb.Init.DLL, "WinUsb_QueryPipeEx");
 			WinUsb.Init.IsIsoSupported = (WinUsb.ReadIsochPipe != NULL);
-
 		}
 		else
 		{
@@ -329,6 +330,35 @@ KUSB_EXP BOOL KUSB_API WUsb_QueryPipe(
 	           AltSettingNumber,
 	           PipeIndex,
 	           PipeInformation);
+}
+KUSB_EXP BOOL KUSB_API WUsb_QueryPipeEx(
+	_in KUSB_HANDLE InterfaceHandle,
+	_in UCHAR AltSettingNumber,
+	_in UCHAR PipeIndex,
+	_out PWINUSB_PIPE_INFORMATION_EX PipeInformationEx)
+{
+
+	return UsbStack_QueryPipeEx(
+		InterfaceHandle,
+		AltSettingNumber,
+		PipeIndex,
+		PipeInformationEx);
+	
+	/*
+	PKUSB_HANDLE_INTERNAL handle;
+	BOOL success;
+
+	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
+
+	success = WinUsb.QueryPipeEx(Intf_Handle(), AltSettingNumber, PipeIndex, PipeInformationEx);
+	ErrorNoSetAction(!success, USB_LOG_NOP(), "QueryPipeEx Failed. PipeIndex=%u", PipeIndex);
+
+	PoolHandle_Dec_UsbK(handle);
+	return success;
+	*/
+	
+
 }
 
 KUSB_EXP BOOL KUSB_API WUsb_SetPipePolicy(
@@ -638,7 +668,8 @@ KUSB_EXP BOOL KUSB_API WUsb_GetOverlappedResult(
 	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
 	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
 
-	success = GetOverlappedResult(Dev_Handle(), Overlapped, (LPDWORD)lpNumberOfBytesTransferred, bWait);
+	//success = GetOverlappedResult(handle->Device->MasterDeviceHandle, Overlapped, lpNumberOfBytesTransferred, bWait);
+	success = WinUsb.GetOverlappedResult(Intf_Handle(), Overlapped, lpNumberOfBytesTransferred, bWait);
 
 	PoolHandle_Dec_UsbK(handle);
 	return success;
@@ -745,7 +776,9 @@ KUSB_EXP BOOL KUSB_API WUsb_WritePipe(
 
 KUSB_EXP BOOL KUSB_API WUsb_IsochReadPipe(
 	_in KUSB_ISOCH_HANDLE IsochHandle,
-	_in UINT FrameNumber,
+	_inopt UINT DataLength,
+	_ref PUINT FrameNumber,
+	_inopt UINT NumberOfPackets,
 	_in LPOVERLAPPED Overlapped)
 {
 	PKISOCH_HANDLE_INTERNAL handle;
@@ -756,21 +789,23 @@ KUSB_EXP BOOL KUSB_API WUsb_IsochReadPipe(
 	Pub_To_Priv_IsochK(IsochHandle, handle, return FALSE);
 	ErrorSetAction(!PoolHandle_Inc_IsochK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_IsochK");
 
-	ErrorParam(!IsHandleValid(Overlapped), Error, "Overlapped");
-
-	success = WinUsb.ReadIsochPipe(handle->Context.UsbW.BufferHandle, 0, handle->TransferBufferSize, (PULONG)&FrameNumber, handle->Context.UsbW.NumberOfPackets, handle->Context.UsbW.Packets, Overlapped);
+	if (NumberOfPackets)
+		handle->Context.UsbW.NumberOfPackets = NumberOfPackets;
+	if (!DataLength)
+		DataLength = handle->TransferBufferSize;
+	
+	success = WinUsb.ReadIsochPipe(handle->Context.UsbW.BufferHandle, 0, DataLength, (PULONG)FrameNumber, handle->Context.UsbW.NumberOfPackets, handle->Context.UsbW.Packets, Overlapped);
 
 
 	PoolHandle_Dec_IsochK(handle);
 	return success;
-Error:
-	PoolHandle_Dec_IsochK(handle);
-	return FALSE;
 }
 
 KUSB_EXP BOOL KUSB_API WUsb_IsochWritePipe(
 	_in KUSB_ISOCH_HANDLE IsochHandle,
-	_in UINT FrameNumber,
+	_inopt UINT DataLength,
+	_ref PUINT FrameNumber,
+	_inopt UINT NumberOfPackets,
 	_in LPOVERLAPPED Overlapped)
 {
 	PKISOCH_HANDLE_INTERNAL handle;
@@ -780,17 +815,16 @@ KUSB_EXP BOOL KUSB_API WUsb_IsochWritePipe(
 
 	Pub_To_Priv_IsochK(IsochHandle, handle, return FALSE);
 	ErrorSetAction(!PoolHandle_Inc_IsochK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_IsochK");
+	
+	if (NumberOfPackets)
+		handle->Context.UsbW.NumberOfPackets = NumberOfPackets;
+	if (!DataLength)
+		DataLength = handle->TransferBufferSize;
 
-	ErrorParam(!IsHandleValid(Overlapped), Error, "Overlapped");
-
-	success = WinUsb.WriteIsochPipe(handle->Context.UsbW.BufferHandle, 0, handle->TransferBufferSize, (PULONG)&FrameNumber, Overlapped);
-
+	success = WinUsb.WriteIsochPipe(handle->Context.UsbW.BufferHandle, 0, DataLength, (PULONG)FrameNumber, Overlapped);
 
 	PoolHandle_Dec_IsochK(handle);
 	return success;
-Error:
-	PoolHandle_Dec_IsochK(handle);
-	return FALSE;
 }
 
 KUSB_EXP BOOL KUSB_API WUsb_GetCurrentFrameNumber(
@@ -894,13 +928,20 @@ BOOL GetProcAddress_WUsb(__out KPROC* ProcAddress, __in LONG FunctionID)
 		*ProcAddress = (KPROC)WUsb_GetAltInterface;
 		break;
 	case KUSB_FNID_GetCurrentFrameNumber:
+		if (!WinUsb.GetCurrentFrameNumber) return FALSE;
 		*ProcAddress = (KPROC)WUsb_GetCurrentFrameNumber;
 		break;
 	case KUSB_FNID_IsochReadPipe:
+		if (!WinUsb.ReadIsochPipe) return FALSE;
 		*ProcAddress = (KPROC)WUsb_IsochReadPipe;
 		break;
 	case KUSB_FNID_IsochWritePipe:
+		if (!WinUsb.WriteIsochPipe) return FALSE;
 		*ProcAddress = (KPROC)WUsb_IsochWritePipe;
+		break;
+	case KUSB_FNID_QueryPipeEx:
+		// UsbStack handles this function
+		*ProcAddress = (KPROC)WUsb_QueryPipeEx;
 		break;
 	default:
 		return FALSE;

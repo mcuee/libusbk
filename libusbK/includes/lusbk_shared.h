@@ -88,6 +88,34 @@ typedef struct _WINUSB_PIPE_INFORMATION
 typedef WINUSB_PIPE_INFORMATION* PWINUSB_PIPE_INFORMATION;
 USBK_C_ASSERT(WINUSB_PIPE_INFORMATION,sizeof(WINUSB_PIPE_INFORMATION) == 12);
 
+//! The \c WINUSB_PIPE_INFORMATION structure contains pipe information that the \ref UsbK_QueryPipe routine retrieves.
+typedef struct _WINUSB_PIPE_INFORMATION_EX
+{
+	//! A \c USBD_PIPE_TYPE enumeration value that specifies the pipe type
+	USBD_PIPE_TYPE	PipeType;
+
+	//! The pipe identifier (ID)
+	UCHAR PipeId;
+
+	//! The maximum size, in bytes, of the packets that are transmitted on the pipe
+	USHORT MaximumPacketSize;
+
+	//! The pipe interval
+	UCHAR Interval;
+
+	//! The maximum number of bytes that can be transmitted in single interval.
+	/*!
+	 * This value may be a larger than the MaximumPacketSize value on high-bandwidth,
+	 * high-speed periodic endpoints and SuperSpeed periodic endpoints, such as
+	 * isochronous endpoints.
+	 */
+	ULONG MaximumBytesPerInterval;
+
+} WINUSB_PIPE_INFORMATION_EX;
+//! Pointer to a \ref WINUSB_PIPE_INFORMATION structure
+typedef WINUSB_PIPE_INFORMATION_EX* PWINUSB_PIPE_INFORMATION_EX;
+USBK_C_ASSERT(WINUSB_PIPE_INFORMATION_EX, sizeof(WINUSB_PIPE_INFORMATION_EX) == 16);
+
 #include <pshpack1.h>
 
 //! The \c WINUSB_SETUP_PACKET structure describes a USB setup packet.
@@ -334,6 +362,42 @@ USBK_C_ASSERT(KISO_CONTEXT,sizeof(KISO_CONTEXT) == 16);
 
 //! pointer to a \c KISO_CONTEXT structure
 typedef KISO_CONTEXT* PKISO_CONTEXT;
+
+//! Structure describing additional information about how an isochronous pipe transfers data.
+/*!
+*/
+typedef struct _KISOCH_PACKET_INFORMATION
+{
+	//! Number of ISO packets transferred per whole USB frame (1 millisecond).
+	/*!
+	 * Example:
+	 * - For a full speed device this value will always be 1.  On Windows, 1 is the only supported pipe interval for Full speed isochronous endpoints
+	 * - For a high speed or super speed device with an interval of 1, this value will be 8
+	 * - For a high speed or super speed device with an interval of 2, this value will be 4
+	*/
+	UINT PacketsPerFrame;
+	
+	//! How often a pipe transfers data.
+	/*!
+	 * Example:
+	 * - For a full speed device with an interval value of 1, this value will be 1000
+	 * - For a high speed or super speed device with an interval of 1, this value will be 125
+	*/
+	UINT PollingPeriodMicroseconds;
+
+
+	//! Number of bytes transferred per millisecond (or whole frame).
+	/*!
+	 * Example:
+	 * - For a full speed device with an interval value of 1 and a maximum packet size of 64, this value will be 64
+	 * - For a high speed or super speed device with an interval of 1 and a maximum packet size of 64, this value will be 512
+	*/
+	UINT BytesPerMillisecond;
+
+}KISOCH_PACKET_INFORMATION;
+
+//! pointer to a \c KISOCH_PACKET_INFORMATION structure
+typedef KISOCH_PACKET_INFORMATION* PKISOCH_PACKET_INFORMATION;
 
 /*! @} */
 

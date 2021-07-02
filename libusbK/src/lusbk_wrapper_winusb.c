@@ -92,6 +92,14 @@ KUSB_EXP BOOL KUSB_API WinUsb_QueryPipe(
 {
 	return UsbK_QueryPipe (InterfaceHandle, AltSettingNumber, PipeIndex, PipeInformation);
 }
+KUSB_EXP BOOL KUSB_API WinUsb_QueryPipeEx(
+    _in KUSB_HANDLE InterfaceHandle,
+    _in UCHAR AltSettingNumber,
+    _in UCHAR PipeIndex,
+    _out PWINUSB_PIPE_INFORMATION_EX PipeInformationEx)
+{
+    return UsbK_QueryPipeEx(InterfaceHandle, AltSettingNumber, PipeIndex, PipeInformationEx);
+}
 
 KUSB_EXP BOOL KUSB_API WinUsb_SetPipePolicy(
     _in KUSB_HANDLE InterfaceHandle,

@@ -64,6 +64,12 @@ BOOL UsbStack_QueryPipe(
     __in UCHAR PipeIndex,
     __out PWINUSB_PIPE_INFORMATION PipeInformation);
 
+BOOL UsbStack_QueryPipeEx(
+    __in KUSB_HANDLE Handle,
+    __in UCHAR AltSettingNumber,
+    __in UCHAR PipeIndex,
+    __out PWINUSB_PIPE_INFORMATION_EX PipeInformationEx);
+
 BOOL UsbStack_SelectInterface (
     __in KUSB_HANDLE Handle,
     __in UCHAR IndexOrNumber,
@@ -76,5 +82,11 @@ BOOL UsbStack_QuerySelectedEndpoint(
     __in UCHAR EndpointAddressOrIndex,
     __in BOOL IsIndex,
     __out PUSB_ENDPOINT_DESCRIPTOR EndpointDescriptor);
+
+BOOL UsbStack_QuerySelectedPipe(
+    __in KUSB_HANDLE Handle,
+    __in UCHAR EndpointAddressOrIndex,
+    __in BOOL IsIndex,
+    __out PWINUSB_PIPE_INFORMATION_EX PipeInformationEx);
 
 #endif

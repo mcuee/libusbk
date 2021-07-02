@@ -262,8 +262,9 @@ CancelIoRetry:
 
 	if (errorCode == WAIT_OBJECT_0)
 	{
+		success = overlapped->Pool->UsbHandle->Device->DriverAPI->GetOverlappedResult(overlapped->Pool->UsbHandle, &overlapped->Overlapped, TransferredLength, FALSE);
 		// check for an overlapped result regardless of the WaitForSingleObject return value
-		success = GetOverlappedResult(overlapped->Pool->UsbHandle->Device->MasterDeviceHandle, &overlapped->Overlapped, (LPDWORD)TransferredLength, FALSE);
+		//success = GetOverlappedResult(overlapped->Pool->UsbHandle->Device->MasterDeviceHandle, &overlapped->Overlapped, (LPDWORD)TransferredLength, FALSE);
 		if (!success) errorCode = GetLastError();
 	}
 	else if (errorCode == WAIT_TIMEOUT)

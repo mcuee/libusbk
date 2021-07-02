@@ -508,6 +508,8 @@ typedef enum _USB_DESCRIPTOR_TYPE
 
     //! Interface association descriptor type.
     USB_DESCRIPTOR_TYPE_INTERFACE_ASSOCIATION = 0x0B,
+
+	USB_SUPERSPEED_ENDPOINT_COMPANION = 0x30,
 } USB_DESCRIPTOR_TYPE;
 
 //! Makes \c wValue for a \ref USB_REQUEST_GET_DESCRIPTOR or \ref USB_REQUEST_SET_DESCRIPTOR request.
@@ -737,6 +739,25 @@ typedef struct _USB_ENDPOINT_DESCRIPTOR
 //! pointer to a \c USB_ENDPOINT_DESCRIPTOR
 typedef USB_ENDPOINT_DESCRIPTOR* PUSB_ENDPOINT_DESCRIPTOR;
 
+typedef struct _USB_SUPERSPEED_ENDPOINT_COMPANION_DESCRIPTOR {
+	UCHAR  bLength;
+	UCHAR  bDescriptorType;
+	UCHAR  bMaxBurst;
+	union {
+		UCHAR AsUchar;
+		struct {
+			UCHAR MaxStreams : 5;
+			UCHAR Reserved1 : 3;
+		} Bulk;
+		struct {
+			UCHAR Mult : 2;
+			UCHAR Reserved2 : 5;
+			UCHAR SspCompanion : 1;
+		} Isochronous;
+	} bmAttributes;
+	USHORT wBytesPerInterval;
+} USB_SUPERSPEED_ENDPOINT_COMPANION_DESCRIPTOR, * PUSB_SUPERSPEED_ENDPOINT_COMPANION_DESCRIPTOR;
+
 //! A structure representing the standard USB configuration descriptor.
 /*
 *
@@ -897,51 +918,6 @@ typedef struct _USB_INTERFACE_ASSOCIATION_DESCRIPTOR
 //! pointer to a \c USB_INTERFACE_ASSOCIATION_DESCRIPTOR
 typedef USB_INTERFACE_ASSOCIATION_DESCRIPTOR* PUSB_INTERFACE_ASSOCIATION_DESCRIPTOR;
 
-
-#ifndef __USB_TIME_SYNC_DEFINED
-#define __USB_TIME_SYNC_DEFINED
-
-typedef struct _USB_START_TRACKING_FOR_TIME_SYNC_INFORMATION {
-
-	HANDLE          TimeTrackingHandle;
-	BOOLEAN         IsStartupDelayTolerable;
-
-} USB_START_TRACKING_FOR_TIME_SYNC_INFORMATION, * PUSB_START_TRACKING_FOR_TIME_SYNC_INFORMATION;
-
-typedef struct _USB_STOP_TRACKING_FOR_TIME_SYNC_INFORMATION {
-
-	HANDLE          TimeTrackingHandle;
-
-} USB_STOP_TRACKING_FOR_TIME_SYNC_INFORMATION, * PUSB_STOP_TRACKING_FOR_TIME_SYNC_INFORMATION;
-
-typedef struct _USB_FRAME_NUMBER_AND_QPC_FOR_TIME_SYNC_INFORMATION {
-
-	//
-	// Input
-	//
-
-	HANDLE          TimeTrackingHandle;
-	ULONG           InputFrameNumber;
-	ULONG           InputMicroFrameNumber;
-
-	//
-	// Output
-	//
-
-	LARGE_INTEGER   QueryPerformanceCounterAtInputFrameOrMicroFrame;
-	LARGE_INTEGER   QueryPerformanceCounterFrequency;
-	ULONG           PredictedAccuracyInMicroSeconds;
-
-	ULONG           CurrentGenerationID;
-	LARGE_INTEGER   CurrentQueryPerformanceCounter;
-	ULONG           CurrentHardwareFrameNumber;         // 11 bits from hardware/MFINDEX
-	ULONG           CurrentHardwareMicroFrameNumber;    //  3 bits from hardware/MFINDEX
-	ULONG           CurrentUSBFrameNumber;              // 32 bit USB Frame Number
-
-} USB_FRAME_NUMBER_AND_QPC_FOR_TIME_SYNC_INFORMATION, * PUSB_FRAME_NUMBER_AND_QPC_FOR_TIME_SYNC_INFORMATION;
-
-#endif
-
 #if _MSC_VER >= 1200
 #pragma warning(pop)
 #endif
@@ -1098,7 +1074,10 @@ typedef enum _KUSB_FNID
     //! \ref UsbK_IsochWritePipe dynamic driver function id.
 	KUSB_FNID_IsochWritePipe,
 
-    //! Supported function count
+	//! \ref UsbK_QueryPipeEx dynamic driver function id.
+	KUSB_FNID_QueryPipeEx,
+	
+	//! Supported function count
     KUSB_FNID_COUNT,
 
 } KUSB_FNID;
@@ -1215,6 +1194,12 @@ typedef BOOL KUSB_API KUSB_QueryPipe (
     _in UCHAR PipeIndex,
     _out PWINUSB_PIPE_INFORMATION PipeInformation);
 
+typedef BOOL KUSB_API KUSB_QueryPipeEx(
+	_in KUSB_HANDLE InterfaceHandle,
+	_in UCHAR AlternateSettingNumber,
+	_in UCHAR PipeIndex,
+	_out PWINUSB_PIPE_INFORMATION_EX PipeInformationEx);
+
 typedef BOOL KUSB_API KUSB_SetPipePolicy (
     _in KUSB_HANDLE InterfaceHandle,
     _in UCHAR PipeID,
@@ -1291,13 +1276,18 @@ typedef BOOL KUSB_API KUSB_GetProperty (
 
 typedef BOOL KUSB_API KUSB_IsochReadPipe(
 	_in KUSB_ISOCH_HANDLE IsochHandle,
-	_in UINT FrameNumber,
+	_inopt UINT DataLength,
+	_ref PUINT FrameNumber,
+	_inopt UINT NumberOfPackets,
 	_in LPOVERLAPPED Overlapped);
 
 typedef BOOL KUSB_API KUSB_IsochWritePipe(
 	_in KUSB_ISOCH_HANDLE IsochHandle,
-	_in UINT FrameNumber,
+	_inopt UINT DataLength,
+	_ref PUINT FrameNumber,
+	_inopt UINT NumberOfPackets,
 	_in LPOVERLAPPED Overlapped);
+
 
 //! USB core driver API information structure.
 /*!
@@ -1534,8 +1524,13 @@ typedef struct _KUSB_DRIVER_API
 	KUSB_IsochReadPipe* IsochReadPipe;
 	
 	KUSB_IsochWritePipe* IsochWritePipe;
+	
+	KUSB_QueryPipeEx* QueryPipeEx;
+	
 	//! fixed structure padding.
-	UCHAR z_F_i_x_e_d[512 - sizeof(KUSB_DRIVER_API_INFO) -  sizeof(UINT_PTR) * KUSB_FNID_COUNT];
+	UCHAR z_F_i_x_e_d[512 - sizeof(KUSB_DRIVER_API_INFO) -  sizeof(UINT_PTR) * KUSB_FNID_COUNT - (KUSB_FNID_COUNT & (sizeof(UINT_PTR) - 1) ? (KUSB_FNID_COUNT & (~(sizeof(UINT_PTR) - 1))) + sizeof(UINT_PTR) : KUSB_FNID_COUNT)];
+
+	UCHAR FuncSupported[(KUSB_FNID_COUNT & (sizeof(UINT_PTR) - 1) ? (KUSB_FNID_COUNT & (~(sizeof(UINT_PTR) - 1))) + sizeof(UINT_PTR) : KUSB_FNID_COUNT)];
 
 } KUSB_DRIVER_API;
 typedef KUSB_DRIVER_API* PKUSB_DRIVER_API;
@@ -1963,6 +1958,22 @@ extern "C" {
 	    _out PKUSB_DRIVER_API DriverAPI,
 	    _in INT DriverID);
 
+//! Checks if the driver supports a function.
+	/*!
+	*
+	* \param[in] DriverAPI
+	* A driver API structure. See \ref LibK_LoadDriverAPI
+	*
+	* \param[in] FunctionID
+	* The function to check. See \ref KUSB_FNID
+	*
+	* \returns TRUE if the specified function is supported. Otherwise FALSE.
+	*
+	*/
+	KUSB_EXP BOOL KUSB_API LibK_IsFunctionSupported(
+		_in PKUSB_DRIVER_API DriverAPI,
+		_in UINT FunctionID);
+	
 //! Copies the driver API set out of a \ref KUSB_HANDLE
 	/*!
 	*
@@ -2746,6 +2757,12 @@ extern "C" {
 	    _in UCHAR AltSettingNumber,
 	    _in UCHAR PipeIndex,
 	    _out PWINUSB_PIPE_INFORMATION PipeInformation);
+	
+	KUSB_EXP BOOL KUSB_API UsbK_QueryPipeEx(
+		_in KUSB_HANDLE InterfaceHandle,
+		_in UCHAR AltSettingNumber,
+		_in UCHAR PipeIndex,
+		_out PWINUSB_PIPE_INFORMATION_EX PipeInformationEx);
 
 //! Sets the policy for a specific pipe associated with an endpoint on the device. This is a synchronous operation.
 	/*!
@@ -3110,15 +3127,97 @@ extern "C" {
 	    _in KUSB_HANDLE InterfaceHandle,
 	    _out PUINT FrameNumber);
 
-
+//! Reads from an isochronous pipe. Supports LibusbK or WinUsb
+	/*!
+	*
+	* \param[in] IsochHandle
+	* An initialized isochronous transfer handle, see \ref IsochK_Init.
+	*
+	* \param[in] DataLength
+	* The number of bytes to read. This number must be less than or equal to the size in bytes, of
+	* the transfer buffer the \b IsochHandle was initialized with. You may pass \b 0 for this parameter
+	* to use the entire transfer buffer.
+	*
+	* \param[in,out] FrameNumber
+	* The frame number this transfer should start on. Use \ref UsbK_GetCurrentFrameNumber when this is unknown.
+	* \code
+	* // Get the current frame number
+	* UINT StartFrameNumber;
+	* Usb.GetCurrentFrameNumber(usbHandle, &StartFrameNumber);
+	*
+	* // Give plenty of time to queue up all of our transfers BEFORE the bus starts consuming them
+	* // Note that this is also the startup delay in milliseconds.
+	* StartFrameNumber += 12
+	* \endcode
+	* 
+	* \param[in] NumberOfPackets
+	* The number of packets to read. This number must be less than or equal to the \b MaxNumberOfPackets value
+	* that the /b IsochHandle was initialized with. You may pass \b 0 for this parameter
+	* to use \b MaxNumberOfPackets.
+	*
+	* \param[in] Overlapped
+	* A \b required pointer to an overlapped structure for asynchronous operations. This can be a
+	* \ref KOVL_HANDLE or a pointer to a standard windows OVERLAPPED structure.
+	*
+	* \returns
+	* This function always returns \b FALSE.  You must use \c GetLastError() after calling this function.
+	* If \c GetLastError() returns \c ERROR_IO_PENDING, then the transfer was started successfully and is in progress.
+	* Any other error code indicates a failure.
+	* See /ref OvlK_wait or \ref UsbK_GetOverlappedResult
+	*
+	*/
 	KUSB_EXP BOOL KUSB_API UsbK_IsochReadPipe(
 		_in KUSB_ISOCH_HANDLE IsochHandle,
-		_in UINT FrameNumber,
+		_inopt UINT DataLength,
+		_ref PUINT FrameNumber,
+		_inopt UINT NumberOfPackets,
 		_in LPOVERLAPPED Overlapped);
-	
+
+//! Writes to an isochronous pipe. Supports LibusbK or WinUsb
+	/*!
+	*
+	* \param[in] IsochHandle
+	* An initialized isochronous transfer handle, see \ref IsochK_Init.
+	*
+	* \param[in] DataLength
+	* The number of bytes to write. This number must be less than or equal to the size in bytes, of
+	* the transfer buffer the \b IsochHandle was initialized with. You may pass \b 0 for this parameter
+	* to use the entire transfer buffer.
+	*
+	* \param[in,out] FrameNumber
+	* The frame number this transfer should start on. Use \ref UsbK_GetCurrentFrameNumber when this is unknown.
+	* \code
+	* // Get the current frame number
+	* UINT StartFrameNumber;
+	* Usb.GetCurrentFrameNumber(usbHandle, &StartFrameNumber);
+	*
+	* // Give plenty of time to queue up all of our transfers BEFORE the bus starts consuming them
+	* // Note that this is also the startup delay in milliseconds.
+	* StartFrameNumber += 12
+	* \endcode
+	* 
+	* \param[in] NumberOfPackets
+	* The number of packets to write. This number must be less than or equal to the \b MaxNumberOfPackets value
+	* that the /b IsochHandle was initialized with. You may pass \b 0 for this parameter
+	* to use \b MaxNumberOfPackets.
+	*
+	* \param[in] Overlapped
+	* A \b required pointer to an overlapped structure for asynchronous operations. This can be a
+	* \ref KOVL_HANDLE or a pointer to a standard windows OVERLAPPED structure.
+	*
+	*
+	* \returns
+	* This function always returns \b FALSE.  You must use \c GetLastError() after calling this function.
+	* If \c GetLastError() returns \c ERROR_IO_PENDING, then the transfer was started successfully and is in progress.
+	* Any other error code indicates a failure.
+	* See /ref OvlK_wait or \ref UsbK_GetOverlappedResult
+	*
+	*/
 	KUSB_EXP BOOL KUSB_API UsbK_IsochWritePipe(
 		_in KUSB_ISOCH_HANDLE IsochHandle,
-		_in UINT FrameNumber,
+		_inopt UINT DataLength,
+		_ref PUINT FrameNumber,
+		_inopt UINT NumberOfPackets,
 		_in LPOVERLAPPED Overlapped);
 	
 	//! Retrieves the results of an overlapped operation on the specified libusbK handle.
@@ -4075,148 +4174,189 @@ extern "C" {
 #endif
 
 #ifndef _LIBUSBK_ISOCHK_FUNCTIONS
-	/*! \addtogroup isok
+	/*! \addtogroup isochk
 	*  @{
 	*/
 
-	//! Creates a new isochronous transfer context for libusbK or WinUSB.
-		/*!
-		*
-		* \param[in] InterfaceHandle
-		* An initialized usb handle, see \ref UsbK_Init.
-		*
-		* \param[out] IsoContext
-		* Receives a new isochronous transfer context for use with device using the libusbK or WinUSB driver.
-		*
-		* \param[in] NumberOfPackets
-		* The number of \ref KISO_PACKET structures allocated to \c IsoContext. Assigned to
-		* \ref KISO_CONTEXT::NumberOfPackets. The \ref KISO_CONTEXT::NumberOfPackets field is assignable by
-		* \c IsoK_Init only and must not be changed by the user.
-		*
-		* \param[in] StartFrame
-		* The USB frame number this request must start on (or \b 0 for ASAP) and assigned to
-		* \ref KISO_CONTEXT::StartFrame. The \ref KISO_CONTEXT::StartFrame may be chamged by the user in subsequent
-		* request. For more information, see \ref KISO_CONTEXT::StartFrame.
-		*
-		* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
-		*
-		* \c IsoK_Init is performs the following tasks in order:
-		* -# Allocates the \c IsoContext and the required \ref KISO_PACKET structures.
-		* -# Zero-initializes all ISO context memory.
-		* -# Assigns \b NumberOfPackets, \b PipeID, and \b StartFrame to \c IsoContext.
-		*
-		*/
-		KUSB_EXP BOOL KUSB_API IsochK_Init(
-			_out KUSB_ISOCH_HANDLE* IsochHandle,
-			_in KUSB_HANDLE InterfaceHandle,
-			_in UCHAR PipeId,
-			_in UINT MaxNumberOfPackets,
-			_in PUCHAR TransferBuffer,
-			_in UINT TransferBufferSize);
+//! Creates a new isochronous transfer handle for libusbK or WinUSB.
+	/*!
+	*
+	* \param[in] InterfaceHandle
+	* An initialized usb handle, see \ref UsbK_Init.
+	*
+	* \param[out] IsochHandle
+	* Receives a new isochronous transfer handle.
+	*
+	* \param[in] PipeId
+	* The USB pipe ID that this transfer handle will be used with.
+	* \note The interface containing this pipe must be selected before calling this function.
+	* \note See /ref UsbK_SelectInterface and /ref UsbK_SetAltInterface.
+	*
+	* \param[in] MaxNumberOfPackets
+	* The number of ISO packet structures allocated to this \c IsochHandle.
+	*
+	* \param[in] TransferBuffer
+	* The buffer to use for reading/writing.
+	*
+	* \param[in] TransferBufferSize
+	* The size (in bytes) of /c TransferBuffer. This is also the number of bytes that will be
+	* written/read from the pipe on every call to /ref UsbK_IsochReadPipe and /ref UsbK_IsochWritePipe
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
+	* \c IsochK_Init is performs the following tasks in order:
+	* -# Allocates the \c IsochHandle and the required ISO packet structures.
+	* -# \sa IsochK_SetPacketOffsets
+	*
+	*/
+	KUSB_EXP BOOL KUSB_API IsochK_Init(
+		_out KUSB_ISOCH_HANDLE* IsochHandle,
+		_in KUSB_HANDLE InterfaceHandle,
+		_in UCHAR PipeId,
+		_in UINT MaxNumberOfPackets,
+		_in PUCHAR TransferBuffer,
+		_in UINT TransferBufferSize);
 
-	//! Destroys an isochronous transfer context.
-		/*!
-		* \param[in] IsoContext
-		* A pointer to an isochronous transfer context created with \ref IsoK_Init.
-		*
-		* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
-		*/
-		KUSB_EXP BOOL KUSB_API IsochK_Free(
-			_in KUSB_ISOCH_HANDLE IsochHandle);
+//! Destroys an isochronous transfer handle.
+	/*!
+	* \param[in] IsochHandle
+	* A pointer to an isochronous transfer handle created with \ref IsochK_Init.
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*/
+	KUSB_EXP BOOL KUSB_API IsochK_Free(
+		_in KUSB_ISOCH_HANDLE IsochHandle);
 	
-	//! Convenience function for setting the offset of all ISO packets of an isochronous transfer context.
-		/*!
-		* \param[in] IsoContext
-		* A pointer to an isochronous transfer context.
-		*
-		* \param[in] PacketSize
-		* The packet size used to calculate and assign the absolute data offset for each \ref KISO_PACKET in
-		* \c IsoContext.
-		*
-		* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
-		*
-		* \c IsoK_SetPackets updates all \ref KISO_PACKET::Offset fields in a \ref KISO_CONTEXT so all offset are
-		* \c PacketSize apart. For example:
-		* - The offset of the first (0-index) packet is 0.
-		* - The offset of the second (1-index) packet is PacketSize.
-		* - The offset of the third (2-index) packet is PacketSize*2.
-		*
-		* \code
-		* for (packetIndex = 0; packetIndex < IsoContext->NumberOfPackets; packetIndex++)
-		* 	IsoContext->IsoPackets[packetIndex].Offset = packetIndex * PacketSize;
-		* \endcode
-		*
-		*/
-		KUSB_EXP BOOL KUSB_API IsochK_SetPacketOffsets(
-			_in KUSB_ISOCH_HANDLE IsochHandle,
-			_in UINT NumberOfPackets,
-			_in UINT PacketSize);
+//! Convenience function for setting the offsets and lengths of all ISO packets of an isochronous transfer handle.
+	/*!
+	* \param[in] IsochHandle
+	* A pointer to an isochronous transfer handle.
+	*
+	* \param[in] PacketSize
+	* The packet size used to calculate and assign the absolute data offset for each ISO packet
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
+	* \c IsoK_SetPackets updates all \ref KISO_PACKET::Offset fields in a \ref KISO_CONTEXT so all offset are
+	* \c PacketSize apart. For example:
+	* - The offset of the first (0-index) packet is 0.
+	* - The offset of the second (1-index) packet is PacketSize.
+	* - The offset of the third (2-index) packet is PacketSize*2.
+	*
+	* \code
+	* for (packetIndex = 0; packetIndex < IsoContext->NumberOfPackets; packetIndex++)
+	* 	IsoContext->IsoPackets[packetIndex].Offset = packetIndex * PacketSize;
+	* \endcode
+	*
+	*/
+	KUSB_EXP BOOL KUSB_API IsochK_SetPacketOffsets(
+		_in KUSB_ISOCH_HANDLE IsochHandle,
+		_in UINT NumberOfPackets,
+		_in UINT PacketSize);
 	
-	//! Convenience function for setting all fields of a \ref KISO_PACKET.
-		/*!
-		* \param[in] IsoContext
-		* A pointer to an isochronous transfer context.
-		*
-		* \param[in] PacketIndex
-		* The packet index to set.
-		*
-		* \param[in] IsoPacket
-		* Pointer to a user allocated \c KISO_PACKET which is copied into the PKISO_CONTEXT::IsoPackets array at the
-		* specified index.
-		*
-		* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
-		*/
-		KUSB_EXP BOOL KUSB_API IsochK_SetPacket(
-			_in KUSB_ISOCH_HANDLE IsochHandle,
-			_in UINT PacketIndex,
-			_in UINT Offset,
-			_in UINT Length,
-			_in UINT Status);
-	
-	//! Convenience function for getting all fields of a \ref KISO_PACKET.
-		/*!
-		* \param[in] IsoContext
-		* A pointer to an isochronous transfer context.
-		*
-		* \param[in] PacketIndex
-		* The packet index to get.
-		*
-		* \param[out] IsoPacket
-		* Pointer to a user allocated \c KISO_PACKET which receives a copy of the ISO packet in the
-		* PKISO_CONTEXT::IsoPackets array at the specified index.
-		*
-		* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
-		*/
-		KUSB_EXP BOOL KUSB_API IsochK_GetPacket(
-			_in KUSB_ISOCH_HANDLE IsochHandle,
-			_in UINT PacketIndex,
-			_outopt PUINT Offset,
-			_outopt PUINT Length,
-			_outopt PUINT Status);
-	
-	//! Convenience function for enumerating ISO packets of an isochronous transfer context.
-		/*!
-		* \param[in] IsoContext
-		* A pointer to an isochronous transfer context.
-		*
-		* \param[in] EnumPackets
-		* Pointer to a user supplied callback function which is executed for all ISO packets in \c IsoContext or
-		* until the user supplied callback function returns \c FALSE.
-		*
-		* \param[in] StartPacketIndex
-		* The zero-based ISO packet index to begin enumeration at.
-		*
-		* \param[in] UserState
-		* A user defined value which is passed as a parameter to the user supplied callback function.
-		*
-		* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
-		*/
-		KUSB_EXP BOOL KUSB_API IsochK_EnumPackets(
-			_in KUSB_ISOCH_HANDLE IsochHandle,
-			_in KISOCH_ENUM_PACKETS_CB* EnumPackets,
-			_inopt UINT StartPacketIndex,
-			_inopt PVOID UserState);
 
+//! Convenience function for setting all fields in an isochronous transfer packet.
+	/*!
+	* \param[in] IsochHandle
+	* A pointer to an isochronous transfer handle.
+	*
+	* \param[in] PacketIndex
+	* The packet index to set.
+	*
+	* \param[out] Offset
+	* The offset in the transfer buffer that this packet starts at.
+	*
+	* \param[out] Length
+	* The Length in bytes of this packet.
+	*
+	* \param[out] Status
+	* The transfer status of this packet. This is set by the driver when the transfer completes.
+	*
+	* \remarks
+	* WinUsb only uses/sets these values for incomming (read) transfers.
+	* WinUsb ignores the ISO packets for outgoing (write) transfers.
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*/
+	KUSB_EXP BOOL KUSB_API IsochK_SetPacket(
+		_in KUSB_ISOCH_HANDLE IsochHandle,
+		_in UINT PacketIndex,
+		_in UINT Offset,
+		_in UINT Length,
+		_in UINT Status);
+	
+//! Convenience function for getting all fields in an isochronous transfer packet.
+	/*!
+	* \param[in] IsochHandle
+	* A pointer to an isochronous transfer handle.
+	*
+	* \param[in] PacketIndex
+	* The packet index to get.
+	*
+	* \param[out] Offset
+	* The offset in the transfer buffer that this packet starts at.
+	*
+	* \param[out] Length
+	* The Length in bytes of this packet.
+	*
+	* \param[out] Status
+	* The transfer status of this packet. This is set by the driver when the transfer completes. 
+	*
+	* \remarks
+	* WinUsb only uses/sets these values for incomming (read) transfers.
+	* WinUsb ignores the ISO packets for outgoing (write) transfers. 
+	* 
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*/
+	KUSB_EXP BOOL KUSB_API IsochK_GetPacket(
+		_in KUSB_ISOCH_HANDLE IsochHandle,
+		_in UINT PacketIndex,
+		_outopt PUINT Offset,
+		_outopt PUINT Length,
+		_outopt PUINT Status);
+	
+//! Convenience function for enumerating ISO packets of an isochronous transfer context.
+	/*!
+	* \param[in] IsochHandle
+	* A pointer to an isochronous transfer context.
+	*
+	* \param[in] EnumPackets
+	* Pointer to a user supplied callback function which is executed for all ISO packets allocated in the
+	* isochronous transfer handle or until the user supplied callback function returns \c FALSE.
+	*
+	* \param[in] StartPacketIndex
+	* The zero-based ISO packet index to begin enumeration at.
+	*
+	* \param[in] UserState
+	* A user defined value which is passed as a parameter to the user supplied callback function.
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*/
+	KUSB_EXP BOOL KUSB_API IsochK_EnumPackets(
+		_in KUSB_ISOCH_HANDLE IsochHandle,
+		_in KISOCH_ENUM_PACKETS_CB* EnumPackets,
+		_inopt UINT StartPacketIndex,
+		_inopt PVOID UserState);
+
+
+//! Helper function for isochronous packet/transfer calculations.
+	/*!
+	* \param[in] IsHighSpeed
+	* False if the calculations are for a FullSpeed device.  True for HighSpeed and SuperSpeed.
+	*
+	* \param[in] PipeInformationEx
+	* A pointer to a \ref WINUSB_PIPE_INFORMATION structure the was obtained from \ref UsbK_QueryPipEx. 
+	*
+	* \param[out] PacketInformation
+	* Pointer to a /ref KISOCH_PACKET_INFORMATION structure that receives the information
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*/
+	KUSB_EXP BOOL KUSB_API IsochK_CalcPacketInformation(
+		_in BOOL IsHighSpeed,
+		_in PWINUSB_PIPE_INFORMATION_EX PipeInformationEx,
+		_out PKISOCH_PACKET_INFORMATION PacketInformation);
+	
 	/*! @} */
 #endif
 

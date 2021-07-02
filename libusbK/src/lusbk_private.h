@@ -125,6 +125,7 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
+
 typedef struct _USER_PIPE_POLICY
 {
 	volatile ULONG timeout;
@@ -279,6 +280,8 @@ typedef struct _WINUSB_API
 	WUSB_UnregisterIsochBuffer* UnregisterIsochBuffer;
 	WUSB_WriteIsochPipe* WriteIsochPipe;
 	WUSB_WriteIsochPipeAsap* WriteIsochPipeAsap;
+	KUSB_GetOverlappedResult* GetOverlappedResult;
+	KUSB_QueryPipeEx* QueryPipeEx;
 }*PWINUSB_API, WINUSB_API;
 
 extern WINUSB_API WinUsb;
