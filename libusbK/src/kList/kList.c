@@ -63,6 +63,7 @@ typedef struct _UNI_DESCRIPTOR
 		USB_STRING_DESCRIPTOR String;
 		USB_INTERFACE_DESCRIPTOR Interface;
 		USB_ENDPOINT_DESCRIPTOR Endpoint;
+		USB_SUPERSPEED_ENDPOINT_COMPANION_DESCRIPTOR SSEndpointCompanion;
 		USB_INTERFACE_ASSOCIATION_DESCRIPTOR InterfaceAssociation;
 		HID_DESCRIPTOR Hid;
 	};
@@ -119,6 +120,11 @@ BOOL DumpDescriptorHidPhysical(__in PHID_DESCRIPTOR desc,
 BOOL DumpDescriptorHidReport(__in PHID_DESCRIPTOR desc,
                              __in PUSB_INTERFACE_DESCRIPTOR currentInterface,
                              __in UCHAR descriptorPos);
+BOOL DumpDescriptorSSEndpointCompanion(
+	__inout PPUNI_DESCRIPTOR uniRef,
+	__in PUSB_ENDPOINT_DESCRIPTOR endpoint,
+	__inout PLONG remainingLength);
+
 
 static LPCSTR DrvIdNames[8] = {"libusbK", "libusb0", "WinUSB", "libusb0 filter", "Unknown", "Unknown", "Unknown"};
 #define GetDrvIdString(DriverID)	(DrvIdNames[((((LONG)(DriverID))<0) || ((LONG)(DriverID)) >= KUSB_DRVID_COUNT)?KUSB_DRVID_COUNT:(DriverID)])
@@ -180,6 +186,20 @@ static LPCSTR DescriptorTypeString[] =
 	"Report",
 	"Physical",
 	UNUSED_DESCRIPTOR_STRING,
+	UNUSED_DESCRIPTOR_STRING,
+	UNUSED_DESCRIPTOR_STRING,
+	UNUSED_DESCRIPTOR_STRING,
+	UNUSED_DESCRIPTOR_STRING,
+	UNUSED_DESCRIPTOR_STRING,
+	UNUSED_DESCRIPTOR_STRING,
+	UNUSED_DESCRIPTOR_STRING,
+	UNUSED_DESCRIPTOR_STRING,
+	UNUSED_DESCRIPTOR_STRING,
+	UNUSED_DESCRIPTOR_STRING,
+	UNUSED_DESCRIPTOR_STRING,
+	"SS Companion",
+	UNUSED_DESCRIPTOR_STRING,
+	UNUSED_DESCRIPTOR_STRING,
 };
 #define GetDescriptorTypeString(DescriptorId)							\
 	(DescriptorTypeString[												\
@@ -217,6 +237,9 @@ static LPCSTR DescriptorTypeString[] =
 
 #define DESC_VALUE(Descriptor,FieldName,format,...) \
 	WRITE_LN(KLIST_CATEGORY_FORMAT_SEP format,DEFINE_TO_STR(FieldName), Descriptor->FieldName,__VA_ARGS__)
+
+#define DESC_VALUE_EX(DisplayName,FieldName,format,...) \
+	WRITE_LN(KLIST_CATEGORY_FORMAT_SEP format,DisplayName, FieldName,__VA_ARGS__)
 
 #define DESC_HID_VALUE(Descriptor,DescriptorIndex,FieldName,format,...)	\
 	WRITE_LN(KLIST_CATEGORY_FORMAT_SEP format,DEFINE_TO_STR(FieldName), (Descriptor)->DescriptorList[DescriptorIndex].FieldName,__VA_ARGS__)
@@ -746,7 +769,7 @@ BOOL DumpDescriptorInterface(PPUNI_DESCRIPTOR uniRef, PLONG remainingLength)
 
 	INT numEndpoints = (INT)(desc->bNumEndpoints);
 	USB_INTERFACE_DESCRIPTOR currentInterface;
-
+	
 	if (!IsUniDescriptorValid(*uniRef, *remainingLength))
 		return FALSE;
 
@@ -787,7 +810,7 @@ BOOL DumpDescriptorInterface(PPUNI_DESCRIPTOR uniRef, PLONG remainingLength)
 			}
 			success = DumpDescriptorEndpoint(uniRef, remainingLength);
 			break;
-
+			
 		case USB_HID_DESCRIPTOR_TYPE:
 			success = DumpDescriptorHid(uniRef, &currentInterface, remainingLength);
 			break;
@@ -1058,22 +1081,115 @@ BOOL DumpDescriptorEndpoint(PPUNI_DESCRIPTOR uniRef, PLONG remainingLength)
 {
 	BOOL success = TRUE;
 	PUSB_ENDPOINT_DESCRIPTOR desc = &((*uniRef)->Endpoint);
+	USB_ENDPOINT_DESCRIPTOR currentEndpoint;
+	UINT maxPacketSize, packetSizeMulti, totalMaxPacketSize;
 
 	if (!IsUniDescriptorValid(*uniRef, *remainingLength))
 		return FALSE;
 
+	memcpy(&currentEndpoint, desc, sizeof(currentEndpoint));
+	maxPacketSize = currentEndpoint.wMaxPacketSize & 0x7FF;
+	packetSizeMulti = ((currentEndpoint.wMaxPacketSize >> 11)) + 1;
+	totalMaxPacketSize = maxPacketSize * packetSizeMulti;
 	DESC_BEGIN_CFG(USB_DESCRIPTOR_TYPE_ENDPOINT);
 
 	DESC_VALUE(desc, bLength, KF_U);
 	DESC_VALUE(desc, bDescriptorType, KF_X2);
 	DESC_VALUE(desc, bEndpointAddress, KF_X2);
 	DESC_VALUE(desc, bmAttributes, KF_X2" (%s)", GetBmAttributes(desc->bmAttributes));
-	DESC_VALUE(desc, wMaxPacketSize, KF_U);
+	if (packetSizeMulti > 1)
+	{
+		DESC_VALUE_EX("wMaxPacketSize", maxPacketSize, "%u X %u (%u bytes)", packetSizeMulti, totalMaxPacketSize);
+	}
+	else
+	{
+		DESC_VALUE(desc, wMaxPacketSize, KF_U);
+	}
 	DESC_VALUE(desc, bInterval, KF_X2);
 
 	AdvanceUniDescriptor(*uniRef, *remainingLength);
 
-	DESC_SUB_END(USB_DESCRIPTOR_TYPE_ENDPOINT);
+	while ((success = IsUniDescriptorValid(*uniRef, *remainingLength)) == TRUE)
+	{
+		switch ((*uniRef)->Common.bDescriptorType)
+		{
+
+		case USB_SUPERSPEED_ENDPOINT_COMPANION:
+			success = DumpDescriptorSSEndpointCompanion(uniRef, &currentEndpoint, remainingLength);
+			DESC_SUB_END(USB_DESCRIPTOR_TYPE_ENDPOINT);
+			return success;
+		default:
+			DESC_SUB_END(USB_DESCRIPTOR_TYPE_ENDPOINT);
+			return TRUE;
+
+		}
+	}
+
+	return success;
+}
+
+BOOL DumpDescriptorSSEndpointCompanion(PPUNI_DESCRIPTOR uniRef, PUSB_ENDPOINT_DESCRIPTOR endpoint, PLONG remainingLength)
+{
+	BOOL success = TRUE;
+	PUSB_SUPERSPEED_ENDPOINT_COMPANION_DESCRIPTOR desc = &((*uniRef)->SSEndpointCompanion);
+	USBD_PIPE_TYPE pipeType = endpoint->bmAttributes & 0x3;
+	UINT bytesPerSecond = 0;
+	char bytesPerSecondSrc[64];
+	char bytesPerSecondDst[64];
+	NUMBERFMTA numberFmt;
+	
+	if (!IsUniDescriptorValid(*uniRef, *remainingLength))
+		return FALSE;
+
+	DESC_BEGIN_CFG(USB_SUPERSPEED_ENDPOINT_COMPANION);
+
+	
+	DESC_VALUE(desc, bLength, KF_U);
+	DESC_VALUE(desc, bDescriptorType, KF_X2);
+	DESC_VALUE(desc, bMaxBurst, KF_U " (%u Packets Per Burst)", desc->bMaxBurst+1);
+	if (pipeType == UsbdPipeTypeIsochronous)
+	{
+		DESC_VALUE_EX("Multi", ((UINT)desc->bmAttributes.Isochronous.Mult), KF_U" (%u Bursts Per Interval)", desc->bmAttributes.Isochronous.Mult+1);
+		if (endpoint->bInterval)
+		{
+
+			bytesPerSecond = desc->wBytesPerInterval * (8 / endpoint->bInterval) * 1000;
+			sprintf(bytesPerSecondSrc, "%u", bytesPerSecond);
+			numberFmt.Grouping = 3;
+			numberFmt.LeadingZero = 0;
+			numberFmt.NegativeOrder = 0;
+			numberFmt.NumDigits = 0;
+			numberFmt.lpDecimalSep = "";
+			numberFmt.lpThousandSep = ",";
+
+			GetNumberFormatA(LOCALE_USER_DEFAULT, 0, bytesPerSecondSrc, &numberFmt, bytesPerSecondDst, sizeof(bytesPerSecondDst)-1);
+
+		}
+
+	}
+	else if (pipeType == UsbdPipeTypeBulk)
+	{
+
+		DESC_VALUE_EX("MaxStreams", ((UINT)desc->bmAttributes.Bulk.MaxStreams), KF_U);
+
+	}
+	else
+	{
+		DESC_VALUE_EX("bmAttributes", desc->bmAttributes.AsUchar, KF_X2);
+	}
+
+	if (bytesPerSecond)
+	{
+		DESC_VALUE(desc, wBytesPerInterval, KF_U" (%s total bytes per second)", bytesPerSecondDst);
+	}
+	else
+	{
+		DESC_VALUE(desc, wBytesPerInterval, KF_U);
+	}
+
+	AdvanceUniDescriptor(*uniRef, *remainingLength);
+
+	DESC_SUB_END(USB_SUPERSPEED_ENDPOINT_COMPANION);
 
 	return success;
 }
