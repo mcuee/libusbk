@@ -872,7 +872,7 @@ DWORD TransferThreadProc(PBENCHMARK_TRANSFER_PARAM transferParam)
 
 	transferParam->IsRunning = TRUE;
 
-	K.ResetPipe(transferParam->Test->InterfaceHandle, transferParam->Ep.PipeId);
+	//K.ResetPipe(transferParam->Test->InterfaceHandle, transferParam->Ep.PipeId);
 
 	while (!transferParam->Test->IsCancelled)
 	{
