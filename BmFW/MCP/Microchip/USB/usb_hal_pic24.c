@@ -21,9 +21,6 @@ Description:
     Make sure to include the correct version of the usb_hal_picxx.h file for 
     the microcontroller family which will be used.
 
-    This file is located in the "\<Install Directory\>\\Microchip\\Include\\USB"
-    directory.
-    
     When including this file in a new project, this file can either be
     referenced from the directory in which it was installed or copied
     directly into the user application folder. If the first method is
@@ -36,7 +33,7 @@ Description:
     
     .
 
-    ..\\..\\MicrochipInclude
+    ..\\..\\Microchip\\Include
         
     If a different directory structure is used, modify the paths as
     required. An example using absolute paths instead of relative paths
@@ -65,8 +62,8 @@ Description:
  Software License Agreement:
 
  The software supplied herewith by Microchip Technology Incorporated
- (the “Company”) for its PICmicro® Microcontroller is intended and
- supplied to you, the Company’s customer, for use solely and
+ (the "Company") for its PICmicro(R) Microcontroller is intended and
+ supplied to you, the Company's customer, for use solely and
  exclusively on Microchip PICmicro Microcontroller products. The
  software is owned by the Company and/or its supplier, and is
  protected under applicable copyright laws. All rights are reserved.
@@ -75,7 +72,7 @@ Description:
  civil liability for the breach of the terms and conditions of this
  license.
 
- THIS SOFTWARE IS PROVIDED IN AN “AS IS” CONDITION. NO WARRANTIES,
+ THIS SOFTWARE IS PROVIDED IN AN "AS IS" CONDITION. NO WARRANTIES,
  WHETHER EXPRESS, IMPLIED OR STATUTORY, INCLUDING, BUT NOT LIMITED
  TO, IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
  PARTICULAR PURPOSE APPLY TO THIS SOFTWARE. THE COMPANY SHALL NOT,
@@ -101,23 +98,35 @@ Description:
 
 #include "USB/usb.h"
 
+//Only include the source for this file if you are using C30.  This code
+//  applies only to PIC24 parts.
+#if defined(__C30__) || defined __XC16__
 
-/*************************************************************************
-  Function:
+/********************************************************************
+Function:
     BOOL USBSleepOnSuspend(void)
-  Summary:
-    Places the PIC24F devices in sleep after enabling the USB activity flag to
-    wake it back up.
-  Conditions:
+    
+Summary:
+    Places the PIC24F core into sleep and sets up the USB module
+    to wake up the device on USB activity.
+    
+PreCondition:
     IPL (in the SR register) must be non-zero.
-  Input:
+    
+Parameters:
     None
-  Return:
+    
+Return Values:
     TRUE  - if entered sleep successfully
     FALSE - if there was an error entering sleep
-  Remarks:
-    None                                                                  
-  *************************************************************************/
+    
+Remarks:
+    Please note that before calling this function that it is the
+    responsibility of the application to place all of the other
+    peripherals or board features into a lower power state if
+    required.
+
+*******************************************************************/
 BOOL USBSleepOnSuspend(void)
 {
     unsigned int U1EIE_save, U1IE_save, U1OTGIE_save;
@@ -169,5 +178,6 @@ BOOL USBSleepOnSuspend(void)
     return TRUE;
 }
 
-#endif //USB_HAL_PIC24F_C
+#endif //__C30__
 
+#endif //USB_HAL_PIC24F_C

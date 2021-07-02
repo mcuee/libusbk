@@ -4,7 +4,7 @@
     Dependencies:	See INCLUDES section
     Processor:		PIC18,PIC24, PIC32 and dsPIC33E USB Microcontrollers
     Hardware:		The code is natively intended to be used on the following
-    				hardware platforms: PICDEM™ FS USB Demo Board, 
+    				hardware platforms: PICDEMï¿½ FS USB Demo Board, 
     				PIC18F87J50 FS USB Plug-In Module, or
     				Explorer 16 + compatible USB PIM.  The firmware may be
     				modified for use on other USB platforms by editing the
@@ -16,8 +16,8 @@
     Software License Agreement:
     
     The software supplied herewith by Microchip Technology Incorporated
-    (the “Company”) for its PIC® Microcontroller is intended and
-    supplied to you, the Company’s customer, for use solely and
+    (the ï¿½Companyï¿½) for its PICï¿½ Microcontroller is intended and
+    supplied to you, the Companyï¿½s customer, for use solely and
     exclusively on Microchip PIC Microcontroller products. The
     software is owned by the Company and/or its supplier, and is
     protected under applicable copyright laws. All rights are reserved.
@@ -26,7 +26,7 @@
     civil liability for the breach of the terms and conditions of this
     license.
     
-    THIS SOFTWARE IS PROVIDED IN AN “AS IS” CONDITION. NO WARRANTIES,
+    THIS SOFTWARE IS PROVIDED IN AN ï¿½AS ISï¿½ CONDITION. NO WARRANTIES,
     WHETHER EXPRESS, IMPLIED OR STATUTORY, INCLUDING, BUT NOT LIMITED
     TO, IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
     PARTICULAR PURPOSE APPLY TO THIS SOFTWARE. THE COMPANY SHALL NOT,
@@ -82,6 +82,8 @@
          file, so as to make the usb_device.c file less cluttered.
          Fixed BD() and EP() macro computation error, when running in
          USB_PING_PONG__EP0_OUT_ONLY mode.
+  2.9    No functional change.  Fixed spelling typo in the name of 
+         "USB_TRANSFER_COMPLETE_HANDLER()"
 ********************************************************************/
 #include "usb_config.h"
 
@@ -251,7 +253,7 @@ typedef union
     #define BD(ep,dir,pp) (4u*((2u*ep)+dir+(((ep==0)&&(dir==0))?pp:1)))
 
 #elif (USB_PING_PONG_MODE == USB_PING_PONG__FULL_PING_PONG)
-    #if defined (__18CXX) || defined(__C30__)
+#if defined (__18CXX) || defined(__C30__) || defined __XC16__ || defined(__XC8)
         #if (defined (__dsPIC33E__) || defined (__PIC24E__))
             #define USB_NEXT_EP0_OUT_PING_PONG 0x0008
             #define USB_NEXT_EP0_IN_PING_PONG 0x0008
@@ -335,7 +337,7 @@ typedef union
 
     #define EP(ep,dir,pp) (4*ep+2*dir+pp)
 
-    #if defined (__18CXX) || defined(__C30__)
+    #if defined (__18CXX) || defined(__C30__) || defined __XC16__ || (__XC8)
         #if (defined(__dsPIC33E__) || defined (__PIC24E__))
             #define BD(ep,dir,pp) (8*(4*ep+2*dir+pp))
         #else
@@ -463,9 +465,9 @@ typedef union
 #endif
 
 #if defined USB_DISABLE_NONSTANDARD_EP0_REQUEST_HANDLER 
-    #define USB_DISABLE_NONSTANDARD_EP0_REQUEST_HANDLER(event,pointer,size)                 
+    #define USB_NONSTANDARD_EP0_REQUEST_HANDLER(event,pointer,size)                 
 #else
-    #define USB_DISABLE_NONSTANDARD_EP0_REQUEST_HANDLER(event,pointer,size)       USER_USB_CALLBACK_EVENT_HANDLER(event,pointer,size)
+    #define USB_NONSTANDARD_EP0_REQUEST_HANDLER(event,pointer,size)       USER_USB_CALLBACK_EVENT_HANDLER(event,pointer,size)
 #endif
 
 #if defined USB_DISABLE_SET_DESCRIPTOR_HANDLER 
@@ -481,8 +483,8 @@ typedef union
 #endif
 
 #if defined USB_DISABLE_TRANSFER_COMPLETE_HANDLER 
-    #define USB_TRASFER_COMPLETE_HANDLER(event,pointer,size)               
+    #define USB_TRANSFER_COMPLETE_HANDLER(event,pointer,size)               
 #else
-    #define USB_TRASFER_COMPLETE_HANDLER(event,pointer,size)    USER_USB_CALLBACK_EVENT_HANDLER(event,pointer,size)
+    #define USB_TRANSFER_COMPLETE_HANDLER(event,pointer,size)    USER_USB_CALLBACK_EVENT_HANDLER(event,pointer,size)
 #endif
 

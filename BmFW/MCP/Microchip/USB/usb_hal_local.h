@@ -13,8 +13,8 @@ This file contains local definitions used by the HAL.
 Software License Agreement
 
 The software supplied herewith by Microchip Technology Incorporated
-(the “Company”) for its PICmicro® Microcontroller is intended and
-supplied to you, the Company’s customer, for use solely and
+(the "Company") for its PICmicro(R) Microcontroller is intended and
+supplied to you, the Company's customer, for use solely and
 exclusively on Microchip PICmicro Microcontroller products. The
 software is owned by the Company and/or its supplier, and is
 protected under applicable copyright laws. All rights are reserved.
@@ -23,7 +23,7 @@ user to criminal sanctions under applicable laws, as well as to
 civil liability for the breach of the terms and conditions of this
 license.
 
-THIS SOFTWARE IS PROVIDED IN AN “AS IS” CONDITION. NO WARRANTIES,
+THIS SOFTWARE IS PROVIDED IN AN "AS IS" CONDITION. NO WARRANTIES,
 WHETHER EXPRESS, IMPLIED OR STATUTORY, INCLUDING, BUT NOT LIMITED
 TO, IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
 PARTICULAR PURPOSE APPLY TO THIS SOFTWARE. THE COMPANY SHALL NOT,
@@ -40,12 +40,14 @@ Change History:
 #ifndef _USB_HAL_LOCAL_H_
 #define _USB_HAL_LOCAL_H_
 
-#include "usb/usb.h"
+#include "USB/usb.h"
 
 #if defined (__18CXX)
-    #include "USB PIC18.h"
-#elif defined (__C30__)
-    //#include "USB PIC24.h"
+    #include "usb_pic18_local.h"
+#elif defined (__C30__) || defined __XC16__
+    #if defined (__dsPIC33EP512MU810__)
+    #include <p33Exxxx.h>
+    #endif
 #elif defined (__PIC32MX__)
     #include "p32xxxx.h"
     #include "usb_pic32.h"
@@ -90,7 +92,7 @@ Change History:
     #define STATUS_MASK (UIR_USB_RST|UIR_UERR|UIR_SOF_TOK|UIR_TOK_DNE| \
                          UIR_UIDLE|UIR_STALL)
 
-#elif defined(__C30__)
+#elif defined(__C30__) || defined __XC16__
 
     // Status Bits
     #define UIR_USB_RST         0x0001
@@ -264,7 +266,7 @@ typedef union _BYTECOUNT
      };
 
     #if defined(__18CXX)
-        //TODO: (DF) - C18 does not allow bitfields of > 8 bits.  made this a word but that does not mask the upper 6 bits from getting set
+        //MCHP - here BC is only an unsigned char.  This is not large enough for larger transfers
         struct  // Byte-count field
         {
             unsigned char BC; // Number of bytes in data buffer (really only 10 bits)
@@ -424,14 +426,14 @@ typedef union
 
 #if defined(__18CXX)
     #if defined(__18F4550) || defined(__18F2455) || defined(__18F2550) || defined(__18F4455)
-        #error "Please define any necessary register translation macros.
+        #error "Please define any necessary register translation macros."
     #endif
 
     #define EnableUsbModule()
     #define SetPingPongMode(m)  U1CNFG1 |= (m)
 
-    #error "Please define any necessary register translation macros.
-#elif defined(__C30__)
+    #error "Please define any necessary register translation macros."
+#elif defined(__C30__) || defined __XC16__
 
     #define EnableUsbModule()   U1PWRCbits.USBPWR = 1
     #define SetPingPongMode(m)

@@ -217,6 +217,10 @@ Description:
 #define USTAT_EP0_IN_ODD    0x0C
 #define ENDPOINT_MASK       0xF0
 
+#define BDT_BASE_ADDR_TAG   __attribute__ ((aligned (512)))
+#define CTRL_TRF_SETUP_ADDR_TAG
+#define CTRL_TRF_DATA_ADDR_TAG
+
 typedef union
 {
     WORD UEP[16];
@@ -270,6 +274,11 @@ typedef union _POINTER
 #define ConvertToPhysicalAddress(a) ((DWORD)KVA_TO_PA(a))
 #define ConvertToVirtualAddress(a)  PA_TO_KVA1(a)
 
+#if ((__PIC32_FEATURE_SET__ >= 100) && (__PIC32_FEATURE_SET__ <= 299))
+#define USBIE 0x00000008
+#else
+#define USBIE 0x02000000
+#endif
 /****************************************************************
     Function:
         void USBModuleDisable(void)
@@ -348,7 +357,8 @@ typedef union _POINTER
             }\
         }
 
-#define USBClearUSBInterrupt() IFS1bits.USBIF = 0;
+#define USBClearUSBInterrupt() INTClearFlag(INT_USB);
+#define USBInterruptFlag  IFS1bits.USBIF
 #if defined(USB_DISABLE_SOF_HANDLER)
     #define USB_SOF_INTERRUPT 0x00
 #else
@@ -362,16 +372,32 @@ typedef union _POINTER
 
 //STALLIE, IDLEIE, TRNIE, and URSTIE are all enabled by default and are required
 #if defined(USB_INTERRUPT)
-    #define USBEnableInterrupts() {IEC1bits.USBIE = 1;IPC11CLR=0x0000FF00;IPC11SET=0x00001000; INTEnableSystemMultiVectoredInt(); INTEnableInterrupts();}
+    #if ((__PIC32_FEATURE_SET__ >= 100) && (__PIC32_FEATURE_SET__ <= 299))
+    	#define USBEnableInterrupts() {\
+            IEC1SET = USBIE;\
+            IPC7CLR=0x00FF0000;\
+            IPC7SET=0x00100000;\
+            INTEnableSystemMultiVectoredInt();\
+            INTEnableInterrupts();\
+        }
+    #else
+        #define USBEnableInterrupts() {\
+            IEC1SET = USBIE;\
+            IPC11CLR = 0x0000FF00;\
+            IPC11SET = 0x00001000;\
+            INTEnableSystemMultiVectoredInt();\
+            INTEnableInterrupts();\
+        }
+    #endif
 #else
     #define USBEnableInterrupts()
 #endif
 
-#define USBDisableInterrupts() {IEC1bits.USBIE = 0;}
+#define USBDisableInterrupts() {IEC1CLR = USBIE;}
 
 #if defined(USB_INTERRUPT)
-    #define USBMaskInterrupts() {IEC1bits.USBIE = 0;}
-    #define USBUnmaskInterrupts() {IEC1bits.USBIE = 1;}
+    #define USBMaskInterrupts() {IEC1CLR = USBIE;}
+    #define USBUnmaskInterrupts() {IEC1SET = USBIE;}
 #else
     #define USBMaskInterrupts() 
     #define USBUnmaskInterrupts() 
@@ -467,13 +493,14 @@ typedef union __USTAT
 
 
 #if defined(USB_SUPPORT_DEVICE) | defined(USB_SUPPORT_OTG)
-#if !defined(USBDEVICE_C)
-    //extern USB_VOLATILE USB_DEVICE_STATE USBDeviceState;
-    extern USB_VOLATILE BYTE USBActiveConfiguration;
-    extern USB_VOLATILE IN_PIPE inPipes[1];
-    extern USB_VOLATILE OUT_PIPE outPipes[1];
-    extern volatile BDT_ENTRY *pBDTEntryIn[USB_MAX_EP_NUMBER+1];
-#endif
+	#if !defined(USBDEVICE_C)
+	    //extern USB_VOLATILE USB_DEVICE_STATE USBDeviceState;
+	    extern USB_VOLATILE BYTE USBActiveConfiguration;
+	    extern USB_VOLATILE IN_PIPE inPipes[1];
+	    extern USB_VOLATILE OUT_PIPE outPipes[1];
+	#endif
+	extern volatile BDT_ENTRY* pBDTEntryOut[USB_MAX_EP_NUMBER+1];
+	extern volatile BDT_ENTRY* pBDTEntryIn[USB_MAX_EP_NUMBER+1];	
 #endif
 
 #endif  //USB_HAL_PIC32_H

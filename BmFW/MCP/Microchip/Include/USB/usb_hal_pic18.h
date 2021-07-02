@@ -250,7 +250,21 @@ Description:
 #define U1EP0bits UEP0bits
 
 //----- Defintions for BDT address --------------------------------------------
-#define USB_BDT_ADDRESS 0x400
+#if defined(__18CXX)
+    #if defined(__18F14K50) || defined(__18F13K50) || defined(__18LF14K50) || defined(__18LF13K50)
+        #define USB_BDT_ADDRESS 0x200     //See Linker Script, BDT in bank 2 on these devices - usb2:0x200-0x2FF(256-byte)
+    #elif defined(__18F47J53) || defined(__18F46J53) || defined(__18F27J53) || defined(__18F26J53) || defined(__18LF47J53) || defined(__18LF46J53) || defined(__18LF27J53) || defined(__18LF26J53)
+        #define USB_BDT_ADDRESS 0xD00		//BDT in Bank 13 on these devices
+    #elif defined(__18F97J94) || defined(__18F87J94) || defined(__18F67J94) || defined(__18F96J94) || defined(__18F86J94) || defined(__18F66J94) || defined(__18F96J99) || defined(__18F95J94) || defined(__18F86J99) || defined(__18F85J94) || defined(__18F66J99) || defined(__18F65J94)
+        #define USB_BDT_ADDRESS 0x100		//BDT in Bank 1 on these devices
+    #else
+        #define USB_BDT_ADDRESS 0x400     //All other PIC18 devices place the BDT in usb4:0x400-0x4FF(256-byte)
+    #endif
+#endif
+
+#define BDT_BASE_ADDR_TAG   __attribute__ ((aligned (512)))
+#define CTRL_TRF_SETUP_ADDR_TAG
+#define CTRL_TRF_DATA_ADDR_TAG
 
 //----- Depricated defintions - will be removed at some point of time----------
 //--------- Depricated in v2.2
@@ -283,14 +297,12 @@ typedef union _BD_STAT
     struct{
         //if the USB module owns the buffer then these are
         // the values
-        unsigned BC8:1;         //bit 8 of the byte count
-        unsigned BC9:1;         //bit 9 of the byte count
+        unsigned :2;
         unsigned PID0:1;        //Packet Identifier
         unsigned PID1:1;
         unsigned PID2:1;
         unsigned PID3:1;
         unsigned :1;
-        unsigned UOWN:1;        //USB Ownership
     };
     struct{
         unsigned :2;
@@ -369,29 +381,69 @@ typedef union _POINTER
 
 #define ConvertToPhysicalAddress(a) ((WORD)(a))
 #define ConvertToVirtualAddress(a)  ((void *)(a))
-#define USBClearUSBInterrupt() PIR2bits.USBIF = 0;
-#if defined(USB_INTERRUPT)
-    #define USBMaskInterrupts() {PIE2bits.USBIE = 0;}
-    #define USBUnmaskInterrupts() {PIE2bits.USBIE = 1;}
+
+
+//------------------------------------------------------------------------------
+//This section is for the PIC18F45K50 Family microcontrollers
+//------------------------------------------------------------------------------
+#if defined(__18F45K50) || defined(__18F25K50) || defined(__18F24K50) || defined(__18LF45K50) || defined(__18LF25K50) || defined(__18LF24K50)
+    #define USBClearUSBInterrupt() PIR3bits.USBIF = 0;
+    #if defined(USB_INTERRUPT)
+        #define USBMaskInterrupts() {PIE3bits.USBIE = 0;}
+        #define USBUnmaskInterrupts() {PIE3bits.USBIE = 1;}
+    #else
+        #define USBMaskInterrupts() 
+        #define USBUnmaskInterrupts() 
+    #endif
+    
+    #define USBInterruptFlag PIR3bits.USBIF
+    
+    //STALLIE, IDLEIE, TRNIE, and URSTIE are all enabled by default and are required
+    #if defined(USB_INTERRUPT)
+        #define USBEnableInterrupts() {RCONbits.IPEN = 1;IPR3bits.USBIP = 1;PIE3bits.USBIE = 1;INTCONbits.GIEH = 1;}
+    #else
+        #define USBEnableInterrupts()
+    #endif
+    
+    #define USBDisableInterrupts() {PIE3bits.USBIE = 0;}
+    
+    #define SetConfigurationOptions()   {\
+                                            U1CNFG1 = USB_PULLUP_OPTION | USB_TRANSCEIVER_OPTION | USB_SPEED_OPTION | USB_PING_PONG_MODE;\
+                                            U1EIE = 0x9F;\
+                                            UIE = 0x39 | USB_SOF_INTERRUPT | USB_ERROR_INTERRUPT;\
+                                        }  
 #else
-    #define USBMaskInterrupts() 
-    #define USBUnmaskInterrupts() 
-#endif
+//------------------------------------------------------------------------------
+//This section is for all other PIC18 USB microcontrollers
+//------------------------------------------------------------------------------
+    #define USBClearUSBInterrupt() PIR2bits.USBIF = 0;
+    #if defined(USB_INTERRUPT)
+        #define USBMaskInterrupts() {PIE2bits.USBIE = 0;}
+        #define USBUnmaskInterrupts() {PIE2bits.USBIE = 1;}
+    #else
+        #define USBMaskInterrupts() 
+        #define USBUnmaskInterrupts() 
+    #endif
+    
+    #define USBInterruptFlag PIR2bits.USBIF
+    
+    //STALLIE, IDLEIE, TRNIE, and URSTIE are all enabled by default and are required
+    #if defined(USB_INTERRUPT)
+        #define USBEnableInterrupts() {RCONbits.IPEN = 1;IPR2bits.USBIP = 1;PIE2bits.USBIE = 1;INTCONbits.GIEH = 1;}
+    #else
+        #define USBEnableInterrupts()
+    #endif
+    
+    #define USBDisableInterrupts() {PIE2bits.USBIE = 0;}
+    
+    #define SetConfigurationOptions()   {\
+                                            U1CNFG1 = USB_PULLUP_OPTION | USB_TRANSCEIVER_OPTION | USB_SPEED_OPTION | USB_PING_PONG_MODE;\
+                                            U1EIE = 0x9F;\
+                                            UIE = 0x39 | USB_SOF_INTERRUPT | USB_ERROR_INTERRUPT;\
+                                        }  
+#endif //end of #if defined(__18F45K50) || defined(__18F25K50)...
+//------------------------------------------------------------------------------
 
-//STALLIE, IDLEIE, TRNIE, and URSTIE are all enabled by default and are required
-#if defined(USB_INTERRUPT)
-    #define USBEnableInterrupts() {RCONbits.IPEN = 1;IPR2bits.USBIP = 1;PIE2bits.USBIE = 1;INTCONbits.GIEH = 1;}
-#else
-    #define USBEnableInterrupts()
-#endif
-
-#define USBDisableInterrupts() {PIE2bits.USBIE = 0;}
-
-#define SetConfigurationOptions()   {\
-                                        U1CNFG1 = USB_PULLUP_OPTION | USB_TRANSCEIVER_OPTION | USB_SPEED_OPTION | USB_PING_PONG_MODE;\
-                                        U1EIE = 0x9F;\
-                                        UIE = 0x39 | USB_SOF_INTERRUPT | USB_ERROR_INTERRUPT;\
-                                    }  
 
 /****************************************************************
     Function:
@@ -540,7 +592,9 @@ typedef union _POINTER
     extern USB_VOLATILE BYTE USBActiveConfiguration;
     extern USB_VOLATILE IN_PIPE inPipes[1];
     extern USB_VOLATILE OUT_PIPE outPipes[1];
-    extern volatile BDT_ENTRY *pBDTEntryIn[USB_MAX_EP_NUMBER+1];
 #endif
+
+extern volatile BDT_ENTRY* pBDTEntryOut[USB_MAX_EP_NUMBER+1];
+extern volatile BDT_ENTRY* pBDTEntryIn[USB_MAX_EP_NUMBER+1];
 
 #endif //#ifndef USB_HAL_PIC18_H

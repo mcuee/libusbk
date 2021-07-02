@@ -591,7 +591,7 @@ This is used in the descriptors.
 #define _BULK       0x02            //Bulk Transfer
 
 #define _INTERRUPT        0x03            //Interrupt Transfer
-#if defined(__18CXX) || defined(__C30__)
+#if defined(__18CXX) || defined(__C30__) || defined __XC16__
     #define _INT        0x03            //Interrupt Transfer
 #endif
 
@@ -606,8 +606,8 @@ This is used in the descriptors.
 #define _FE         (0x01<<4)       //Feedback endpoint
 #define _IE         (0x02<<4)       //Implicit feedback Data endpoint
 
-//These are the directional indicators used for USBTransferOnePacket()
-// and other functions that compute addresses of, and manipulate, BDT entries.
+//These are the directional indicators used for the USBTransferOnePacket()
+//  function.
 #define OUT_FROM_HOST 0
 #define IN_TO_HOST 1
 
