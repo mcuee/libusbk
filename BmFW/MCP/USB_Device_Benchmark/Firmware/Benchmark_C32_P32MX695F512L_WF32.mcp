@@ -44,6 +44,7 @@ file_016=Hardware Profile
 file_017=Hardware Profile
 file_018=.
 file_019=.
+file_020=.
 [GENERATED_FILES]
 file_000=no
 file_001=no
@@ -65,6 +66,7 @@ file_016=no
 file_017=no
 file_018=no
 file_019=no
+file_020=no
 [OTHER_FILES]
 file_000=no
 file_001=no
@@ -86,6 +88,7 @@ file_016=no
 file_017=no
 file_018=no
 file_019=no
+file_020=no
 [FILE_INFO]
 file_000=main.c
 file_001=usb_descriptors.c
@@ -107,12 +110,13 @@ file_016=HardwareProfile - PIC32MX695F512L WF32.h
 file_017=HardwareProfile - PIC32 USB Starter Kit.h
 file_018=Benchmark.h
 file_019=BDT_transfer.h
+file_020=usb_config_external.h
 [SUITE_INFO]
 suite_guid={14495C23-81F8-43F3-8A44-859C583D7760}
 suite_state=
 [TOOL_SETTINGS]
 TS{CB0AF4B8-4022-429D-8F99-8A56782B2C6D}=-gdwarf-2
-TS{9C698E0A-CBC9-4EFF-AE7D-B569F93E7322}=-g -DPIC32MX695F512L_WF32 -Os
+TS{9C698E0A-CBC9-4EFF-AE7D-B569F93E7322}=-g -DPIC32MX695F512L_WF32 -O1
 TS{77F59DA1-3C53-4677-AC5F-A03EB0125170}=-o"$(BINDIR_)$(TARGETBASE).$(TARGETSUFFIX)" -Map="$(BINDIR_)$(TARGETBASE).map"
 TS{0396C0A1-9052-4E4F-8B84-EF0162B1B4E9}=
 [INSTRUMENTED_TRACE]

@@ -81,12 +81,12 @@
     #define EXPLORER_16
 
     /** LED ************************************************************/
-    #define mInitAllLEDs()      mLED_1_Off()  mLED_2_Off()  mLED_3_Off()  mLED_4_Off()
+    #define mInitAllLEDs()      mLED_1_Off()  mLED_2_Off()  mLED_3_Off()  mLED_4_Off() TRISAbits.TRISA0=0; TRISAbits.TRISA1=0; TRISFbits.TRISF0=0; TRISGbits.TRISG6=0;
     
-    #define mLED_1              LATGbits.LATG6
-    #define mLED_2              LATFbits.LATF0
-    #define mLED_3              LATAbits.LATA0
-    #define mLED_4              LATAbits.LATA1
+    #define mLED_3              LATGbits.LATG6
+    #define mLED_4              LATFbits.LATF0
+    #define mLED_1              LATAbits.LATA0
+    #define mLED_2              LATAbits.LATA1
     
     #define mGetLED_1()         mLED_1
     #define mGetLED_2()         mLED_2

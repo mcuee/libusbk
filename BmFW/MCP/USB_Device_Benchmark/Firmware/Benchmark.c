@@ -85,14 +85,14 @@ BYTE VendorBuffer[8];
 WORD counter;
 
 // Internal test variables
-volatile BYTE TestType_INTF0;
+__attribute__ ((aligned (4))) volatile BYTE TestType_INTF0;
 volatile BYTE PrevTestType_INTF0;
 
 volatile BYTE FillCount_INTF0;
 volatile BYTE NextPacketKey_INTF0;
 
 #ifdef DUAL_INTERFACE
-	volatile BYTE TestType_INTF1;
+	__attribute__ ((aligned (4))) volatile BYTE TestType_INTF1;
 	volatile BYTE PrevTestType_INTF1;
 
 	volatile BYTE FillCount_INTF1;
@@ -254,37 +254,41 @@ void USBCBCheckOtherReq(void)
 		if ((SetupPkt.wIndex & 0xff) == INTF1_NUMBER)
 		{
 			TestType_INTF1=SetupPkt.wValue & 0xff;
-			inPipes[0].pSrc.bRam = (BYTE*)&TestType_INTF1;  // Set Source
-			inPipes[0].info.bits.ctrl_trf_mem = USB_EP0_RAM;		// Set memory type
-			inPipes[0].wCount.v[0] = 1;						// Set data count
-			inPipes[0].info.bits.busy = 1;
+			USBEP0SendRAMPtr((BYTE*)&TestType_INTF1, 1, USB_EP0_RAM | USB_EP0_INCLUDE_ZERO);
+//			inPipes[0].pSrc.bRam = (BYTE*)&TestType_INTF1;  // Set Source
+//			inPipes[0].info.bits.ctrl_trf_mem = USB_EP0_RAM;		// Set memory type
+//			inPipes[0].wCount.v[0] = 1;						// Set data count
+//			inPipes[0].info.bits.busy = 1;
 		}
 		else
 #endif
 		{
 			TestType_INTF0=SetupPkt.wValue & 0xff;
-			inPipes[0].pSrc.bRam = (BYTE*)&TestType_INTF0;  // Set Source
-			inPipes[0].info.bits.ctrl_trf_mem = USB_EP0_RAM;		// Set memory type
-			inPipes[0].wCount.v[0] = 1;						// Set data count
-			inPipes[0].info.bits.busy = 1;
+			USBEP0SendRAMPtr((BYTE*)&TestType_INTF0, 1, USB_EP0_RAM | USB_EP0_INCLUDE_ZERO);
+//			inPipes[0].pSrc.bRam = (BYTE*)&TestType_INTF0;  // Set Source
+//			inPipes[0].info.bits.ctrl_trf_mem = USB_EP0_RAM;		// Set memory type
+//			inPipes[0].wCount.v[0] = 1;						// Set data count
+//			inPipes[0].info.bits.busy = 1;
 		}
 		break;
 	case PICFW_GET_TEST:
 #ifdef DUAL_INTERFACE
 		if ((SetupPkt.wIndex & 0xff) == INTF1_NUMBER)
 		{
-			inPipes[0].pSrc.bRam = (BYTE*)&TestType_INTF1;		// Set Source
-			inPipes[0].info.bits.ctrl_trf_mem = USB_EP0_RAM;	// Set memory type
-			inPipes[0].wCount.v[0] = 1;							// Set data count
-			inPipes[0].info.bits.busy = 1;
+			USBEP0SendRAMPtr((BYTE*)&TestType_INTF1, 1, USB_EP0_RAM | USB_EP0_INCLUDE_ZERO);
+//			inPipes[0].pSrc.bRam = (BYTE*)&TestType_INTF1;		// Set Source
+//			inPipes[0].info.bits.ctrl_trf_mem = USB_EP0_RAM;	// Set memory type
+//			inPipes[0].wCount.v[0] = 1;							// Set data count
+//			inPipes[0].info.bits.busy = 1;
 		}
 		else
 #endif
 		{
-			inPipes[0].pSrc.bRam = (BYTE*)&TestType_INTF0;		// Set Source
-			inPipes[0].info.bits.ctrl_trf_mem = USB_EP0_RAM;	// Set memory type
-			inPipes[0].wCount.v[0] = 1;							// Set data count
-			inPipes[0].info.bits.busy = 1;
+			USBEP0SendRAMPtr((BYTE*)&TestType_INTF0, 1, USB_EP0_RAM | USB_EP0_INCLUDE_ZERO);
+//			inPipes[0].pSrc.bRam = (BYTE*)&TestType_INTF0;		// Set Source
+//			inPipes[0].info.bits.ctrl_trf_mem = USB_EP0_RAM;	// Set memory type
+//			inPipes[0].wCount.v[0] = 1;							// Set data count
+//			inPipes[0].info.bits.busy = 1;
 		}
 		break;
 #if defined(VENDOR_BUFFER_ENABLED)
