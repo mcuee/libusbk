@@ -24,33 +24,156 @@
 */
 #include "examples.h"
 
-// Example configuration:
-#define EP_TRANSFER				0x81
-#define EP_PACKET_SIZE			64
-#define ISO_PACKETS_PER_XFER	32
+#define MAX_OUTSTANDING_TRANSFERS	6
+#define MAX_TRANSFERS_TOTAL			64
+#define ISO_PACKETS_PER_TRANSFER	(16)
 
-#define ISO_CALC_CONTEXT_SIZE(mNumOfIsoPackets) (sizeof(KISO_CONTEXT)+(sizeof(KISO_PACKET)*(mNumOfIsoPackets)))
-#define ISO_CALC_DATABUFFER_SIZE(mNumOfIsoPackets, mIsoPacketSize) (mNumOfIsoPackets*mIsoPacketSize)
+// Remove this define to disable logging.
+#define ISO_LOG_FILENAME "xfer-iso-read.txt"
 
-DWORD __cdecl main(int argc, char* argv[])
+KUSB_DRIVER_API Usb;
+
+
+
+// UINT_MAX for first interface found.
+// NOTE: use "intf=" on the command line to specify a specific one. EG: intf=1
+UINT gIntfIndex = UINT_MAX;
+
+// UINT_MAX for first alt interface found.
+// NOTE: use "altf=" on the command line to specify a specific one. EG: altf=2
+UINT gAltfSetting = UINT_MAX;
+
+// UINT_MAX for first ep found. (read or write)
+// 0x80 for first IN (read)  endpoint found
+// 0x00 for first out (write) endpoint found
+// NOTE: use "ep=" on the command line to specify a specific one. EG: ep=81
+UINT gEpID = UINT_MAX;
+
+typedef struct _MY_ISO_BUFFER_EL
+{
+	PUCHAR			TransferBuffer;
+	KOVL_HANDLE		OvlHandle;
+
+	KUSB_ISOCH_HANDLE	IsoHandle;
+	UINT FrameNumber;
+
+	struct _MY_ISO_BUFFER_EL* prev;
+	struct _MY_ISO_BUFFER_EL* next;
+} MY_ISO_BUFFER_EL, *PMY_ISO_BUFFER_EL;
+
+typedef struct _MY_ISO_XFERS
+{
+	KOVL_POOL_HANDLE	OvlPool;
+
+	ULONG				TransferBufferSize;
+
+	PMY_ISO_BUFFER_EL	Outstanding;
+	PMY_ISO_BUFFER_EL	Completed;
+
+	ULONG				SubmittedCount;
+	ULONG				CompletedCount;
+
+	UINT				FrameNumber;
+
+	ULONG LastStartFrame;
+
+} MY_ISO_XFERS, * PMY_ISO_XFERS;
+
+// Globals:
+USB_INTERFACE_DESCRIPTOR	gInterfaceDescriptor;
+WINUSB_PIPE_INFORMATION_EX	gPipeInfo;
+MY_ISO_XFERS				gXfers;
+DATA_COUNTER_STATS	Dcs;
+FILE* gOutFile = NULL;
+
+int write_output(FILE* const stream, const char* fmt, ...)
+{
+	int len;
+	va_list args;
+	va_start(args, fmt);
+	if (stream)
+	{
+		len = vfprintf(stream, fmt, args);
+	}
+	else
+	{
+		len = vprintf(fmt, args);
+	}
+	va_end(args);
+	return len;
+}
+
+/*
+Reports isochronous packet information.
+*/
+VOID IsoXferComplete(PMY_ISO_XFERS myXfers, PMY_ISO_BUFFER_EL myBufferEL, ULONG transferLength)
+{
+	int packetPos;
+	UINT goodPackets, badPackets;
+	char packetCounters[ISO_PACKETS_PER_TRANSFER * 3 + 1];
+	Dcs.TotalBytes = 0;
+	transferLength = 0;
+
+	goodPackets = 0;
+	badPackets = 0;
+	for (packetPos = 0; packetPos < ISO_PACKETS_PER_TRANSFER; packetPos++)
+	{
+		UINT offset, length, status;
+		IsochK_GetPacket(myBufferEL->IsoHandle, packetPos, &offset, &length, &status);
+		sprintf(&packetCounters[packetPos * 3], "%02X ", myBufferEL->TransferBuffer[offset+1]);
+		if (status == 0 && length != 0)
+		{
+			goodPackets++;
+			transferLength += length;
+		}
+		else
+		{
+			badPackets++;
+		}
+	}
+	mDcs_MarkStop(&Dcs, transferLength);
+
+	if (myXfers->LastStartFrame != 0)
+	{
+		write_output(gOutFile,
+			"#%u: StartFrame=%08Xh TransferLength=%u GoodPackets=%u, BadPackets=%u, BPS-average:%.2f\n\t%s\n",
+			myXfers->CompletedCount, myBufferEL->FrameNumber, transferLength, goodPackets, badPackets, Dcs.Bps, packetCounters);
+	}
+	else
+	{
+		write_output(gOutFile,
+			"#%u: StartFrame=%08Xh TransferLength=%u GoodPackets=%u, BadPackets=%u, BPS-average:unknown\n\t%s\n",
+			myXfers->CompletedCount, myBufferEL->FrameNumber, transferLength, goodPackets, badPackets, packetCounters);
+	}
+	Dcs.Start = Dcs.Stop;
+	myXfers->CompletedCount++;
+	myXfers->LastStartFrame = myBufferEL->FrameNumber;
+}
+
+int __cdecl main(int argc, char* argv[])
 {
 	KLST_HANDLE deviceList = NULL;
 	KLST_DEVINFO_HANDLE deviceInfo = NULL;
-	KUSB_HANDLE handle = NULL;
+	KUSB_HANDLE usbHandle = NULL;
 	DWORD errorCode = ERROR_SUCCESS;
-	UCHAR pipeID = EP_TRANSFER;
-	BM_TEST_TYPE testType = USB_ENDPOINT_DIRECTION_IN(EP_TRANSFER) ? BM_TEST_TYPE_READ : BM_TEST_TYPE_WRITE;
-
+	BM_TEST_TYPE testType;
+	UCHAR interfaceIndex;
 	BOOL success;
-	UCHAR dataBuffer[ISO_CALC_DATABUFFER_SIZE(ISO_PACKETS_PER_XFER, EP_PACKET_SIZE)];
-	ULONG transferred = 0;
-	PKISO_CONTEXT isoCtx = NULL;
-	KOVL_HANDLE ovlkHandle = NULL;
-	LONG posPacket;
-	ULONG currentFrameNumber;
-	KOVL_POOL_HANDLE ovlPool = NULL;
+	UINT deviceSpeedLength;
+	BYTE deviceSpeed;
+	KISOCH_PACKET_INFORMATION isoPacketInformation;
+	PMY_ISO_BUFFER_EL nextBufferEL;
+	PMY_ISO_BUFFER_EL nextBufferELTemp;
+	ULONG transferred;
 
-	UNREFERENCED_PARAMETER(currentFrameNumber);
+	memset(&gXfers, 0, sizeof(gXfers));
+
+#ifdef ISO_LOG_FILENAME
+	// Create a new log file.
+	gOutFile = fopen("xfer-iso-read.txt", "w");
+#else
+	gOutFile = NULL;
+#endif
 
 	/*
 	Find the test device. Uses "vid=hhhh pid=hhhh" arguments supplied on the
@@ -59,319 +182,309 @@ DWORD __cdecl main(int argc, char* argv[])
 	if (!Examples_GetTestDevice(&deviceList, &deviceInfo, argc, argv))
 		return GetLastError();
 
+	// use settings from command line if specified
+	Examples_GetArgVal(argc, argv, "intf=", &gIntfIndex, FALSE);
+	Examples_GetArgVal(argc, argv, "altf=", &gAltfSetting, TRUE);
+	Examples_GetArgVal(argc, argv, "ep=", &gEpID, TRUE);
+
+	if (!LibK_LoadDriverAPI(&Usb, deviceInfo->DriverID))
+	{
+		errorCode = GetLastError();
+		printf("LibK_LoadDriverAPI failed. ErrorCode: %08lXh\n", errorCode);
+		goto Done;
+	}
+
+	if (!LibK_IsFunctionSupported(&Usb, KUSB_FNID_IsochReadPipe))
+	{
+		errorCode = ERROR_NOT_SUPPORTED;
+		printf("DriverID %i does not support isochronous transfers using 'Isoch' functions. ErrorCode: %08lXh\n" ,Usb.Info.DriverID, errorCode);
+		goto Done;
+	}
+	
 	/*
 	Initialize the device. This creates the physical usb handle.
 	*/
-	if (!UsbK_Init(&handle, deviceInfo))
+	if (!Usb.Init(&usbHandle, deviceInfo))
 	{
 		errorCode = GetLastError();
-		printf("UsbK_Init failed. ErrorCode: %08Xh\n",  errorCode);
+		printf("Usb.Init failed. ErrorCode: %08lXh\n", errorCode);
 		goto Done;
 	}
 	printf("Device opened successfully!\n");
 
 	/*
-	Configure the benchmark test device to accept/send data.
+	Select interface by pipe id and get descriptors.
 	*/
-	success = Bench_Configure(handle, BM_COMMAND_SET_TEST, 0, NULL, &testType);
-	if (!success)
+	interfaceIndex = (UCHAR)-1;
+	memset(&gInterfaceDescriptor, 0, sizeof(gInterfaceDescriptor));
+	memset(&gPipeInfo, 0, sizeof(gPipeInfo));
+	while (Usb.SelectInterface(usbHandle, ++interfaceIndex, TRUE))
 	{
-		errorCode = GetLastError();
-		printf("Bench_Configure failed. ErrorCode: %08Xh\n",  errorCode);
-		goto Done;
-	}
-
-	/*
-	Initialize a new iso context handle.
-	*/
-	IsoK_Init(&isoCtx, ISO_PACKETS_PER_XFER, 0);
-
-	/*
-	Set the iso packet offsets.
-	*/
-	IsoK_SetPackets(isoCtx, EP_PACKET_SIZE);
-
-	/*
-	Initialize a new OvlK pool handle.
-	*/
-	OvlK_Init(&ovlPool, handle, 4, 0);
-	OvlK_Acquire(&ovlkHandle, ovlPool);
-
-	UsbK_ResetPipe(handle, pipeID);
-
-	if (testType == BM_TEST_TYPE_READ)
-		UsbK_IsoReadPipe(handle, pipeID, dataBuffer, sizeof(dataBuffer), ovlkHandle, isoCtx);
-	else
-		UsbK_IsoWritePipe(handle, pipeID, dataBuffer, sizeof(dataBuffer), ovlkHandle, isoCtx);
-
-	success = OvlK_WaitAndRelease(ovlkHandle, 1000, &transferred);
-	if (!success)
-	{
-		errorCode = GetLastError();
-		printf("IsoReadPipe failed. ErrorCode: %08Xh\n",  errorCode);
-		goto Done;
-	}
-
-	printf("ISO StartFrame=%08Xh ErrorCount=%u Transferred=%u\n",
-	       isoCtx->StartFrame, isoCtx->ErrorCount, transferred);
-
-	for (posPacket = 0; posPacket < isoCtx->NumberOfPackets; posPacket++)
-	{
-		LONG posByte;
-		PKISO_PACKET isoPacket = &isoCtx->IsoPackets[posPacket];
-
-		printf("  IsoPacket[%d] Length=%u Status=%08Xh\n", posPacket, isoPacket->Length, isoPacket->Status);
-		printf("  Data:");
-
-		for (posByte = 0; posByte < isoPacket->Length; posByte++)
+		if (gIntfIndex != UINT_MAX && gIntfIndex != interfaceIndex) continue;
+		
+		memset(&gInterfaceDescriptor, 0, sizeof(gInterfaceDescriptor));
+		memset(&gPipeInfo, 0, sizeof(gPipeInfo));
+		UCHAR gAltsettingIndex = (UCHAR)-1;
+		while (Usb.QueryInterfaceSettings(usbHandle, ++gAltsettingIndex, &gInterfaceDescriptor))
 		{
-			printf("%02Xh ", dataBuffer[isoPacket->Offset + posByte]);
-			if ((posByte & 0xF) == 0xF) printf("\n       ");
+			if (gAltfSetting == UINT_MAX || gAltfSetting == gInterfaceDescriptor.bAlternateSetting)
+			{
+				UCHAR pipeIndex = (UCHAR)-1;
+				while (Usb.QueryPipeEx(usbHandle, gAltsettingIndex, ++pipeIndex, &gPipeInfo))
+				{
+					if (gEpID == UINT_MAX || gEpID == gPipeInfo.PipeId)
+					{
+						if (gPipeInfo.PipeType == UsbdPipeTypeIsochronous && gPipeInfo.MaximumPacketSize)
+						{
+							// use first endpoint
+							if (gEpID == UINT_MAX)
+								break;
+							
+							if ((gEpID & 0x0F) == 0 && (gEpID & 0x80) == (gPipeInfo.PipeId & 0x80))
+							{
+								// using first read or write endpoint
+								break;
+							}
+							if (gEpID == gPipeInfo.PipeId)
+							{
+								// using a user specified read or write endpoint
+								break;
+							}
+						}
+					}
+
+				}
+				if (gPipeInfo.PipeId) break;
+				memset(&gPipeInfo, 0, sizeof(gPipeInfo));
+			}
+			memset(&gInterfaceDescriptor, 0, sizeof(gInterfaceDescriptor));
 		}
-		printf("\n");
-		if ((posByte & 0xF) != 0xF) printf("\n");
 	}
+
+	if (!gPipeInfo.PipeId)
+	{
+		printf("Pipe not found.\n");
+		goto Done;
+	}
+
+	if (!gPipeInfo.MaximumBytesPerInterval)
+	{
+		printf("Pipe does not have MaximumBytesPerInterval.\n");
+		goto Done;
+
+	}
+	/*
+	Set the desired alternate setting.
+	*/
+	success = Usb.SetAltInterface(
+		usbHandle,
+		gInterfaceDescriptor.bInterfaceNumber,
+		FALSE,
+		gInterfaceDescriptor.bAlternateSetting);
+
+	if (!success)
+	{
+		printf("Usb.SetAltInterface failed.\n");
+		goto Done;
+	}
+
+	// get the device speed
+	deviceSpeedLength = 1;
+	success = Usb.QueryDeviceInformation(usbHandle, DEVICE_SPEED, &deviceSpeedLength, &deviceSpeed);
+	if (!success)
+	{
+		printf("Usb.QueryDeviceInformation failed.\n");
+		goto Done;
+	}
+
+	// get the iso packet information to help with frame calculations.
+	success = IsochK_CalcPacketInformation(deviceSpeed >= 3, &gPipeInfo, &isoPacketInformation);
+	if (!success)
+	{
+		printf("IsochK_CalcPacketInformation failed.\n");
+		goto Done;
+	}
+
+	// Configure the benchmark test device to send data.
+	testType = USB_ENDPOINT_DIRECTION_IN(gPipeInfo.PipeId) ? BM_TEST_TYPE_READ : BM_TEST_TYPE_WRITE;
+	success = Bench_Configure(usbHandle, BM_COMMAND_SET_TEST, 0, &Usb, &testType);
+	if (!success)
+	{
+		errorCode = GetLastError();
+		printf("Bench_Configure failed. ErrorCode: %08lXh\n", errorCode);
+		goto Done;
+	}
+
+	printf("Device hardware fully prepared..\n");
+
+	write_output(gOutFile, "XFER-ISO TEST\n", deviceInfo->DeviceID);
+	write_output(gOutFile, "----------------------------------------------------------\n");
+	write_output(gOutFile, "Device ID         : %s\n", deviceInfo->DeviceID);
+	write_output(gOutFile, "Device Name       : %s\n", deviceInfo->DeviceDesc);
+	write_output(gOutFile, "Interface         : %u\n", gInterfaceDescriptor.bInterfaceNumber);
+	write_output(gOutFile, "Alt Setting       : %u\n", gInterfaceDescriptor.bAlternateSetting);
+	write_output(gOutFile, "Pipe ID           : 0x%02X (%s)\n", gPipeInfo.PipeId, (gPipeInfo.PipeId & 0x80)?"Read":"Write");
+	write_output(gOutFile, "Bytes Per Interval: %u\n", gPipeInfo.MaximumBytesPerInterval);
+	write_output(gOutFile, "Interval Period   : %uus\n", isoPacketInformation.PollingPeriodMicroseconds);
+	write_output(gOutFile, "\n");
+	/*
+	Allocate the iso buffer resources.
+	*/
+	do
+	{
+		int pos;
+		gXfers.TransferBufferSize = ISO_PACKETS_PER_TRANSFER * gPipeInfo.MaximumBytesPerInterval;
+
+		success = OvlK_Init(&gXfers.OvlPool, usbHandle, MAX_OUTSTANDING_TRANSFERS, KOVL_POOL_FLAG_NONE);
+		if (!success)
+		{
+			errorCode = GetLastError();
+			printf("OvlK_Init Failed.\n");
+			goto Done;
+		}
+		
+		for (pos = 0; pos < MAX_OUTSTANDING_TRANSFERS; pos++)
+		{
+			nextBufferEL = malloc(sizeof(MY_ISO_BUFFER_EL));
+			if (nextBufferEL != NULL)
+			{
+				memset(nextBufferEL, 0, sizeof(nextBufferEL[0]));
+
+				nextBufferEL->TransferBuffer = malloc(gXfers.TransferBufferSize);
+
+				if (!IsochK_Init(&nextBufferEL->IsoHandle, usbHandle, gPipeInfo.PipeId, ISO_PACKETS_PER_TRANSFER, nextBufferEL->TransferBuffer, gXfers.TransferBufferSize))
+				{
+					errorCode = GetLastError();
+					printf("IsochK_Init Failed.\n");
+					goto Done;
+				}
+				if (!IsochK_SetPacketOffsets(nextBufferEL->IsoHandle, ISO_PACKETS_PER_TRANSFER, gPipeInfo.MaximumBytesPerInterval))
+				{
+					errorCode = GetLastError();
+					printf("IsochK_SetPacketOffsets Failed.\n");
+					goto Done;
+
+				}
+
+				if (!OvlK_Acquire(&nextBufferEL->OvlHandle, gXfers.OvlPool))
+				{
+					errorCode = GetLastError();
+					printf("OvlK_Acquire Failed.\n");
+					goto Done;
+
+				}
+
+				DL_APPEND(gXfers.Completed, nextBufferEL);
+			}
+		}
+	} while (0);
+
+	//Usb.ResetPipe(usbHandle, gPipeInfo.PipeId);
+	
+	/*
+	Set a start frame. Add 5ms of startup delay.
+	*/
+	Usb.GetCurrentFrameNumber(usbHandle, &gXfers.FrameNumber);
+
+	// Give plenty of time to queue up all of our transfers BEFORE the bus starts consuming them
+	// Note that this is also the startup delay in milliseconds. IE: (6*2)=12ms
+	gXfers.FrameNumber += (MAX_OUTSTANDING_TRANSFERS * 2);
+	
+	mDcs_Init(&Dcs);
+
+	/*
+	Start reading until an error occurs or MAX_TRANSFERS_TOTAL is reached.
+	*/
+	do
+	{
+
+		while (errorCode == ERROR_SUCCESS && gXfers.Completed && gXfers.SubmittedCount < MAX_TRANSFERS_TOTAL)
+		{
+			nextBufferEL = gXfers.Completed;
+			DL_DELETE(gXfers.Completed, nextBufferEL);
+			DL_APPEND(gXfers.Outstanding, nextBufferEL);
+
+			OvlK_ReUse(nextBufferEL->OvlHandle);
+
+			nextBufferEL->FrameNumber = gXfers.FrameNumber;
+			if (gPipeInfo.PipeId & 0x80)
+				Usb.IsochReadPipe(nextBufferEL->IsoHandle, gXfers.TransferBufferSize, &gXfers.FrameNumber,ISO_PACKETS_PER_TRANSFER, nextBufferEL->OvlHandle);
+			else
+				Usb.IsochWritePipe(nextBufferEL->IsoHandle, gXfers.TransferBufferSize, &gXfers.FrameNumber, ISO_PACKETS_PER_TRANSFER, nextBufferEL->OvlHandle);
+
+			errorCode = GetLastError();
+			if (errorCode != ERROR_IO_PENDING)
+			{
+				printf("Usb.IsochReadPipe failed. ErrorCode: %08lXh\n", errorCode);
+				goto Done;
+			}
+			gXfers.SubmittedCount++;
+			errorCode = ERROR_SUCCESS;
+		}
+
+		nextBufferEL = gXfers.Outstanding;
+		if (!nextBufferEL)
+		{
+			printf("Done!\n");
+			goto Done;
+		}
+
+		//success = Usb.GetOverlappedResult(usbHandle, nextXfer->OvlHandle, &transferred, TRUE);
+		success = OvlK_Wait(nextBufferEL->OvlHandle, 1000, KOVL_WAIT_FLAG_NONE, (PUINT)&transferred);
+		if (!success)
+		{
+			errorCode = GetLastError();
+			printf("OvlK_Wait failed. ErrorCode: %08lXh\n", errorCode);
+			goto Done;
+		}
+		DL_DELETE(gXfers.Outstanding, nextBufferEL);
+		DL_APPEND(gXfers.Completed, nextBufferEL);
+
+		IsoXferComplete(&gXfers, nextBufferEL, transferred);
+
+	} while (errorCode == ERROR_SUCCESS);
 
 Done:
-	// Close the device handle.
-	UsbK_Free(handle);
 
-	// Free the device list.
-	LstK_Free(&deviceList);
 
-	// Free the iso context.
-	IsoK_Free(isoCtx);
+	/*
+	Cancel all transfers left outstanding.
+	*/
+	DL_FOREACH_SAFE(gXfers.Outstanding, nextBufferEL, nextBufferELTemp)
+	{
+		DL_DELETE(gXfers.Outstanding, nextBufferEL);
+		DL_APPEND(gXfers.Completed, nextBufferEL);
+		OvlK_WaitOrCancel(nextBufferEL->OvlHandle, 0, (PUINT)&transferred);
+	}
+
+	/*
+	Free the iso buffer resources.
+	*/
+	DL_FOREACH_SAFE(gXfers.Completed, nextBufferEL, nextBufferELTemp)
+	{
+		DL_DELETE(gXfers.Completed, nextBufferEL);
+		OvlK_Release(nextBufferEL->OvlHandle);
+		IsochK_Free(nextBufferEL->IsoHandle);
+		free(nextBufferEL->TransferBuffer);
+		free(nextBufferEL);
+	}
 
 	// Free the overlapped pool.
-	OvlK_Free(ovlPool);
+	OvlK_Free(gXfers.OvlPool);
 
+	// Close the device handle.
+	Usb.Free(usbHandle);
+
+	// Free the device list.
+	LstK_Free(deviceList);
+
+	// Close the log file.
+	if (gOutFile)
+	{
+		fflush(gOutFile);
+		fclose(gOutFile);
+		gOutFile = NULL;
+	}
 	return errorCode;
 }
-/*!
-Looking for device vid/pid 04D8/FA2E..
-Using 04D8:FA2E (LUSBW1): Benchmark Device - Microchip Technology, Inc.
-Device opened successfully!
-ISO StartFrame=24905D5Ch ErrorCount=0 Transferred=2048
-  IsoPacket[0] Length=64 Status=00000000h
-  Data:00h 00h 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
 
-
-  IsoPacket[1] Length=64 Status=00000000h
-  Data:00h 01h 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[2] Length=64 Status=00000000h
-  Data:00h 02h 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[3] Length=64 Status=00000000h
-  Data:00h 03h 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[4] Length=64 Status=00000000h
-  Data:00h 04h 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[5] Length=64 Status=00000000h
-  Data:00h 05h 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[6] Length=64 Status=00000000h
-  Data:00h 06h 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[7] Length=64 Status=00000000h
-  Data:00h 07h 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[8] Length=64 Status=00000000h
-  Data:00h 08h 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[9] Length=64 Status=00000000h
-  Data:00h 09h 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[10] Length=64 Status=00000000h
-  Data:00h 0Ah 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[11] Length=64 Status=00000000h
-  Data:00h 0Bh 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[12] Length=64 Status=00000000h
-  Data:00h 0Ch 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[13] Length=64 Status=00000000h
-  Data:00h 0Dh 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[14] Length=64 Status=00000000h
-  Data:00h 0Eh 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[15] Length=64 Status=00000000h
-  Data:00h 0Fh 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[16] Length=64 Status=00000000h
-  Data:00h 10h 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[17] Length=64 Status=00000000h
-  Data:00h 11h 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[18] Length=64 Status=00000000h
-  Data:00h 12h 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[19] Length=64 Status=00000000h
-  Data:00h 13h 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[20] Length=64 Status=00000000h
-  Data:00h 14h 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[21] Length=64 Status=00000000h
-  Data:00h 15h 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[22] Length=64 Status=00000000h
-  Data:00h 16h 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[23] Length=64 Status=00000000h
-  Data:00h 17h 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[24] Length=64 Status=00000000h
-  Data:00h 18h 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[25] Length=64 Status=00000000h
-  Data:00h 19h 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[26] Length=64 Status=00000000h
-  Data:00h 1Ah 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[27] Length=64 Status=00000000h
-  Data:00h 1Bh 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[28] Length=64 Status=00000000h
-  Data:00h 1Ch 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[29] Length=64 Status=00000000h
-  Data:00h 1Dh 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[30] Length=64 Status=00000000h
-  Data:00h 1Eh 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[31] Length=64 Status=00000000h
-  Data:00h 1Fh 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-*/
