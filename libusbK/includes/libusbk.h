@@ -4356,6 +4356,14 @@ extern "C" {
 		_in BOOL IsHighSpeed,
 		_in PWINUSB_PIPE_INFORMATION_EX PipeInformationEx,
 		_out PKISOCH_PACKET_INFORMATION PacketInformation);
+
+	KUSB_EXP BOOL KUSB_API IsochK_GetNumberOfPackets(
+		_in KUSB_ISOCH_HANDLE IsochHandle,
+		_out PUINT NumberOfPackets);
+	
+	KUSB_EXP BOOL KUSB_API IsochK_SetNumberOfPackets(
+		_in KUSB_ISOCH_HANDLE IsochHandle,
+		_in UINT NumberOfPackets);
 	
 	/*! @} */
 #endif

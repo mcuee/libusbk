@@ -24,12 +24,12 @@
 */
 #include "examples.h"
 
-#define MAX_OUTSTANDING_TRANSFERS	6
+#define MAX_OUTSTANDING_TRANSFERS	3
 #define MAX_TRANSFERS_TOTAL			64
-#define ISO_PACKETS_PER_TRANSFER	(16)
+#define ISO_PACKETS_PER_TRANSFER	(8)
 
 // Remove this define to disable logging.
-#define ISO_LOG_FILENAME "xfer-iso-read.txt"
+#define ISO_LOG_FILENAME "xfer-iso.txt"
 
 KUSB_DRIVER_API Usb;
 
@@ -111,40 +111,58 @@ VOID IsoXferComplete(PMY_ISO_XFERS myXfers, PMY_ISO_BUFFER_EL myBufferEL, ULONG 
 	int packetPos;
 	UINT goodPackets, badPackets;
 	char packetCounters[ISO_PACKETS_PER_TRANSFER * 3 + 1];
-	Dcs.TotalBytes = 0;
-	transferLength = 0;
-
 	goodPackets = 0;
 	badPackets = 0;
-	for (packetPos = 0; packetPos < ISO_PACKETS_PER_TRANSFER; packetPos++)
+
+	printf("transferLength=%lu\n", transferLength);
+	if (TRUE)
 	{
-		UINT offset, length, status;
-		IsochK_GetPacket(myBufferEL->IsoHandle, packetPos, &offset, &length, &status);
-		sprintf(&packetCounters[packetPos * 3], "%02X ", myBufferEL->TransferBuffer[offset+1]);
-		if (status == 0 && length != 0)
+		transferLength = 0;
+		for (packetPos = 0; packetPos < ISO_PACKETS_PER_TRANSFER; packetPos++)
 		{
-			goodPackets++;
-			transferLength += length;
+			UINT offset, length, status;
+			IsochK_GetPacket(myBufferEL->IsoHandle, packetPos, &offset, &length, &status);
+			sprintf(&packetCounters[packetPos * 3], "%02X ", myBufferEL->TransferBuffer[offset + 1]);
+			if (status == 0 && length != 0)
+			{
+				goodPackets++;
+				transferLength += length;
+			}
+			else
+			{
+				badPackets++;
+			}
+		}
+	}
+	else
+	{
+		transferLength = gXfers.TransferBufferSize;
+	}
+	Dcs.TotalBytes = 0;
+	mDcs_MarkStop(&Dcs, transferLength);
+
+	if (TRUE)
+	{
+		if (myXfers->LastStartFrame != 0)
+		{
+			write_output(gOutFile,
+				"#%u: StartFrame=%08Xh TransferLength=%u GoodPackets=%u, BadPackets=%u, BPS-average:%.2f\n\t%s\n",
+				myXfers->CompletedCount, myBufferEL->FrameNumber, transferLength, goodPackets, badPackets, Dcs.Bps, packetCounters);
 		}
 		else
 		{
-			badPackets++;
+			write_output(gOutFile,
+				"#%u: StartFrame=%08Xh TransferLength=%u GoodPackets=%u, BadPackets=%u, BPS-average:unknown\n\t%s\n",
+				myXfers->CompletedCount, myBufferEL->FrameNumber, transferLength, goodPackets, badPackets, packetCounters);
 		}
-	}
-	mDcs_MarkStop(&Dcs, transferLength);
-
-	if (myXfers->LastStartFrame != 0)
-	{
-		write_output(gOutFile,
-			"#%u: StartFrame=%08Xh TransferLength=%u GoodPackets=%u, BadPackets=%u, BPS-average:%.2f\n\t%s\n",
-			myXfers->CompletedCount, myBufferEL->FrameNumber, transferLength, goodPackets, badPackets, Dcs.Bps, packetCounters);
 	}
 	else
 	{
 		write_output(gOutFile,
-			"#%u: StartFrame=%08Xh TransferLength=%u GoodPackets=%u, BadPackets=%u, BPS-average:unknown\n\t%s\n",
-			myXfers->CompletedCount, myBufferEL->FrameNumber, transferLength, goodPackets, badPackets, packetCounters);
+			"#%u: StartFrame=%08Xh TransferLength=%u\n",
+			myXfers->CompletedCount, myBufferEL->FrameNumber, transferLength);
 	}
+	
 	Dcs.Start = Dcs.Stop;
 	myXfers->CompletedCount++;
 	myXfers->LastStartFrame = myBufferEL->FrameNumber;
@@ -170,7 +188,7 @@ int __cdecl main(int argc, char* argv[])
 
 #ifdef ISO_LOG_FILENAME
 	// Create a new log file.
-	gOutFile = fopen("xfer-iso-read.txt", "w");
+	gOutFile = fopen(ISO_LOG_FILENAME, "w");
 #else
 	gOutFile = NULL;
 #endif
@@ -232,27 +250,28 @@ int __cdecl main(int argc, char* argv[])
 				UCHAR pipeIndex = (UCHAR)-1;
 				while (Usb.QueryPipeEx(usbHandle, gAltsettingIndex, ++pipeIndex, &gPipeInfo))
 				{
-					if (gEpID == UINT_MAX || gEpID == gPipeInfo.PipeId)
+					if (gPipeInfo.PipeType == UsbdPipeTypeIsochronous && gPipeInfo.MaximumPacketSize)
 					{
-						if (gPipeInfo.PipeType == UsbdPipeTypeIsochronous && gPipeInfo.MaximumPacketSize)
-						{
-							// use first endpoint
-							if (gEpID == UINT_MAX)
-								break;
+						// use first endpoint
+						if (gEpID == UINT_MAX)
+							break;
 							
-							if ((gEpID & 0x0F) == 0 && (gEpID & 0x80) == (gPipeInfo.PipeId & 0x80))
-							{
-								// using first read or write endpoint
-								break;
-							}
-							if (gEpID == gPipeInfo.PipeId)
-							{
-								// using a user specified read or write endpoint
-								break;
-							}
+						if ((gEpID == 0) && (gPipeInfo.PipeId & 0x80)==0)
+						{
+							// using first write endpoint
+							break;
+						}
+						if ((gEpID == 0x80) && (gPipeInfo.PipeId & 0x80) == 0x80)
+						{
+							// using first read endpoint
+							break;
+						}
+						if (gEpID == gPipeInfo.PipeId)
+						{
+							// using a user specified read or write endpoint
+							break;
 						}
 					}
-
 				}
 				if (gPipeInfo.PipeId) break;
 				memset(&gPipeInfo, 0, sizeof(gPipeInfo));
@@ -429,8 +448,8 @@ int __cdecl main(int argc, char* argv[])
 			goto Done;
 		}
 
-		//success = Usb.GetOverlappedResult(usbHandle, nextXfer->OvlHandle, &transferred, TRUE);
-		success = OvlK_Wait(nextBufferEL->OvlHandle, 1000, KOVL_WAIT_FLAG_NONE, (PUINT)&transferred);
+		success = Usb.GetOverlappedResult(usbHandle, nextBufferEL->OvlHandle, &transferred, TRUE);
+		//success = OvlK_Wait(nextBufferEL->OvlHandle, 1000, KOVL_WAIT_FLAG_NONE, (PUINT)&transferred);
 		if (!success)
 		{
 			errorCode = GetLastError();

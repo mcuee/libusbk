@@ -110,6 +110,8 @@ EXPORTS
     IsochK_GetPacket
     IsochK_EnumPackets
     IsochK_CalcPacketInformation
+    IsochK_SetNumberOfPackets
+    IsochK_GetNumberOfPackets
 
 	WinUsb_Initialize
 	WinUsb_Free

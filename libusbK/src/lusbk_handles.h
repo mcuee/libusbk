@@ -23,14 +23,14 @@ binary distributions.
 
 #define KHOT_HANDLE_COUNT				8
 #define KLST_HANDLE_COUNT				64
-#define KLST_DEVINFO_HANDLE_COUNT		1024
-#define KUSB_HANDLE_COUNT				64
-#define KDEV_HANDLE_COUNT				32
+#define KLST_DEVINFO_HANDLE_COUNT		2048
+#define KUSB_HANDLE_COUNT				128
+#define KDEV_HANDLE_COUNT				64
 #define KDEV_SHARED_INTERFACE_COUNT		128
-#define KOVL_HANDLE_COUNT				4096
+#define KOVL_HANDLE_COUNT				2048
 #define KOVL_POOL_HANDLE_COUNT			64
 #define KSTM_HANDLE_COUNT				32
-#define KISOCH_HANDLE_COUNT				64
+#define KISOCH_HANDLE_COUNT				2048
 
 #define ALLK_HANDLE_COUNT(AllKSection) (sizeof(AllK->AllKSection.Handles)/sizeof(AllK->AllKSection.Handles[0]))
 
