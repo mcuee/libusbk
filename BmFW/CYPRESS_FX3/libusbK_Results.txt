@@ -1,0 +1,377 @@
+BMFW_BulkLoopAuto - libusbK
+-----------------------------------------------------------------------------------------------------------------
+PS E:\GitHub\libusbk\libusbK\bin\kBench\Win32\Debug> .\kbench list loop buffercount=3 buffersize=16384 mode=async
+device-count=1
+1. FX3 BULKLOOP (USB\VID_04B4&PID_00FE\6&28C5070&0&1) [libusbK]
+Select device (1-1) :1
+
+opened FX3 BULKLOOP (USB\VID_04B4&PID_00FE\6&28C5070&0&1)..
+Loop Test Information
+        Driver          : libusbK
+        Vid / Pid       : 04B4h / 00FEh
+        DevicePath      : \\?\usb#vid_04b4&pid_00fe#6&28c5070&0&1#{6fdf830b-d408-f859-c1e6-a7ca5e1936e8}
+        Device Speed    : High
+        Interface #     : 00h
+        Alt Interface # : 00h
+        Num Endpoints   : 2
+        Priority        : 0
+        Read Size       : 16384
+        Write Size      : 16384
+        Buffer Count    : 3
+        Display Refresh : 1000 (ms)
+        Transfer Timeout: 5000 (ms)
+        Retry Count     : 0
+        Verify Data     : Off
+
+Bulk Read (Ep81h) max packet size: 1024
+Bulk Write (Ep01h) max packet size: 1024
+
+While the test is running:
+Press 'Q' to quit
+Press 'T' for test details
+Press 'I' for status information
+Press 'R' to reset averages
+
+Press 'Q' to exit, any other key to begin..
+Avg. Bytes/s: 194638691.63 Transfers: 12058 Bytes/s: 194638691.63
+Avg. Bytes/s: 194349250.62 Transfers: 24092 Bytes/s: 194060094.49
+Avg. Bytes/s: 194662028.37 Transfers: 36012 Bytes/s: 195297280.00
+Avg. Bytes/s: 194982199.95 Transfers: 47972 Bytes/s: 195952640.00
+Avg. Bytes/s: 194997842.68 Transfers: 60068 Bytes/s: 195059905.51
+Avg. Bytes/s: 195089061.04 Transfers: 72182 Bytes/s: 195542636.45
+Avg. Bytes/s: 195327347.49 Transfers: 84192 Bytes/s: 196771840.00
+Avg. Bytes/s: 195453681.96 Transfers: 96176 Bytes/s: 196345856.00
+Avg. Bytes/s: 195278645.42 Transfers: 108104 Bytes/s: 193889546.08
+Avg. Bytes/s: 195343190.32 Transfers: 120158 Bytes/s: 195937675.09
+Avg. Bytes/s: 195261005.68 Transfers: 132204 Bytes/s: 194444989.16
+Avg. Bytes/s: 195128521.95 Transfers: 144024 Bytes/s: 193658880.00
+Avg. Bytes/s: 195196470.79 Transfers: 155988 Bytes/s: 196018176.00
+Avg. Bytes/s: 195231525.44 Transfers: 167932 Bytes/s: 195690496.00
+Avg. Bytes/s: 195265529.15 Transfers: 180070 Bytes/s: 195737196.85
+Avg. Bytes/s: 195338695.14 Transfers: 192060 Bytes/s: 196444160.00
+Avg. Bytes/s: 195222655.07 Transfers: 204052 Bytes/s: 193382803.15
+waiting for Ep81h thread..
+stopped Ep81h thread.   ExitCode=0
+stopped Ep01h thread.   ExitCode=0
+Loop Test Information
+        Driver          : libusbK
+        Vid / Pid       : 04B4h / 00FEh
+        DevicePath      : \\?\usb#vid_04b4&pid_00fe#6&28c5070&0&1#{6fdf830b-d408-f859-c1e6-a7ca5e1936e8}
+        Device Speed    : High
+        Interface #     : 00h
+        Alt Interface # : 00h
+        Num Endpoints   : 2
+        Priority        : 0
+        Read Size       : 16384
+        Write Size      : 16384
+        Buffer Count    : 3
+        Display Refresh : 1000 (ms)
+        Transfer Timeout: 5000 (ms)
+        Retry Count     : 0
+        Verify Data     : Off
+
+Bulk Read (Ep81h) max packet size: 1024
+        Total Bytes     : 1671610368
+        Total Transfers : 102027
+        Avg. Bytes/sec  : 97612284.26
+        Elapsed Time    : 17.12 seconds
+
+Bulk Write (Ep01h) max packet size: 1024
+        Total Bytes     : 1671610368
+        Total Transfers : 102027
+        Avg. Bytes/sec  : 97612284.26
+        Elapsed Time    : 17.12 seconds
+
+Press any key to exit..
+
+BMFW_IsochLoopAuto - libusbK
+-----------------------------------------------------------------------------------------------------------------
+PS E:\GitHub\libusbk\libusbK\bin\kBench\Win32\Debug> .\kbench list loop buffercount=3 buffersize=16384 mode=async
+device-count=1
+1. FX3 ISOLOOP (USB\VID_04B4&PID_00FC\6&28C5070&0&1) [libusbK]
+Select device (1-1) :1
+
+opened FX3 ISOLOOP (USB\VID_04B4&PID_00FC\6&28C5070&0&1)..
+Loop Test Information
+        Driver          : libusbK
+        Vid / Pid       : 04B4h / 00FCh
+        DevicePath      : \\?\usb#vid_04b4&pid_00fc#6&28c5070&0&1#{a771237b-50d4-e084-150e-0953f1136f05}
+        Device Speed    : High
+        Interface #     : 00h
+        Alt Interface # : 01h
+        Num Endpoints   : 2
+        Priority        : 0
+        Read Size       : 16384
+        Write Size      : 16384
+        Buffer Count    : 3
+        Display Refresh : 1000 (ms)
+        Transfer Timeout: 5000 (ms)
+        Retry Count     : 0
+        Verify Data     : Off
+
+Isochronous Read (Ep83h) max packet size: 1024
+Isochronous Write (Ep03h) max packet size: 1024
+
+While the test is running:
+Press 'Q' to quit
+Press 'T' for test details
+Press 'I' for status information
+Press 'R' to reset averages
+
+Press 'Q' to exit, any other key to begin..
+Avg. Bytes/s: 16416768.00 Transfers: 1002 Bytes/s: 16416768.00
+  ISO-Total Packets:16128 ISO-Good Packets:16128 ISO-Bad Packets:0
+Avg. Bytes/s: 16384000.00 Transfers: 2016 Bytes/s: 16351748.03
+  ISO-Total Packets:32352 ISO-Good Packets:32352 ISO-Bad Packets:0
+Avg. Bytes/s: 16367783.57 Transfers: 3028 Bytes/s: 16335574.38
+  ISO-Total Packets:48544 ISO-Good Packets:48544 ISO-Bad Packets:0
+Avg. Bytes/s: 16379935.50 Transfers: 4030 Bytes/s: 16416768.00
+  ISO-Total Packets:64576 ISO-Good Packets:64576 ISO-Bad Packets:0
+Avg. Bytes/s: 16371014.86 Transfers: 5043 Bytes/s: 16335622.05
+  ISO-Total Packets:80784 ISO-Good Packets:80784 ISO-Bad Packets:0
+Avg. Bytes/s: 16370488.54 Transfers: 6058 Bytes/s: 16367874.02
+  ISO-Total Packets:97024 ISO-Good Packets:97024 ISO-Bad Packets:0
+Avg. Bytes/s: 16373590.87 Transfers: 7066 Bytes/s: 16393039.45
+  ISO-Total Packets:113152 ISO-Good Packets:113152 ISO-Bad Packets:0
+Avg. Bytes/s: 16365745.98 Transfers: 8069 Bytes/s: 16311603.70
+  ISO-Total Packets:129200 ISO-Good Packets:129200 ISO-Bad Packets:0
+Avg. Bytes/s: 16365983.73 Transfers: 9084 Bytes/s: 16367874.02
+  ISO-Total Packets:145440 ISO-Good Packets:145440 ISO-Bad Packets:0
+Avg. Bytes/s: 16374261.15 Transfers: 10088 Bytes/s: 16449536.00
+  ISO-Total Packets:161504 ISO-Good Packets:161504 ISO-Bad Packets:0
+Avg. Bytes/s: 16381046.33 Transfers: 11092 Bytes/s: 16449536.00
+  ISO-Total Packets:177568 ISO-Good Packets:177568 ISO-Bad Packets:0
+Avg. Bytes/s: 16385354.72 Transfers: 12095 Bytes/s: 16433152.00
+  ISO-Total Packets:193616 ISO-Good Packets:193616 ISO-Bad Packets:0
+Avg. Bytes/s: 16387753.78 Transfers: 13097 Bytes/s: 16416768.00
+  ISO-Total Packets:209648 ISO-Good Packets:209648 ISO-Bad Packets:0
+Avg. Bytes/s: 16386322.49 Transfers: 14111 Bytes/s: 16367858.13
+  ISO-Total Packets:225872 ISO-Good Packets:225872 ISO-Bad Packets:0
+waiting for Ep83h thread..
+stopped Ep83h thread.   ExitCode=0
+waiting for Ep03h thread..
+stopped Ep03h thread.   ExitCode=0
+Loop Test Information
+        Driver          : libusbK
+        Vid / Pid       : 04B4h / 00FCh
+        DevicePath      : \\?\usb#vid_04b4&pid_00fc#6&28c5070&0&1#{a771237b-50d4-e084-150e-0953f1136f05}
+        Device Speed    : High
+        Interface #     : 00h
+        Alt Interface # : 01h
+        Num Endpoints   : 2
+        Priority        : 0
+        Read Size       : 16384
+        Write Size      : 16384
+        Buffer Count    : 3
+        Display Refresh : 1000 (ms)
+        Transfer Timeout: 5000 (ms)
+        Retry Count     : 0
+        Verify Data     : Off
+
+Isochronous Read (Ep83h) max packet size: 1024
+        Total Bytes     : 115605504
+        Total Transfers : 7056
+        Avg. Bytes/sec  : 8193741.87
+        Elapsed Time    : 14.11 seconds
+
+Isochronous Write (Ep03h) max packet size: 1024
+        Total Bytes     : 115621888
+        Total Transfers : 7057
+        Avg. Bytes/sec  : 8185620.39
+        Elapsed Time    : 14.12 seconds
+
+Press any key to exit..
+
+BMFW_IsoSrcSnk - libusbK
+-----------------------------------------------------------------------------------------------------------------
+PS E:\GitHub\libusbk\libusbK\bin\kBench\Win32\Debug> .\kbench list loop buffercount=3 buffersize=393216 mode=async
+device-count=1
+1. FX3 ISOSRCSNK (USB\VID_04B5&PID_00FD\6&28C5070&0&1) [libusbK]
+Select device (1-1) :1
+
+opened FX3 ISOSRCSNK (USB\VID_04B5&PID_00FD\6&28C5070&0&1)..
+Loop Test Information
+        Driver          : libusbK
+        Vid / Pid       : 04B5h / 00FDh
+        DevicePath      : \\?\usb#vid_04b5&pid_00fd#6&28c5070&0&1#{713018ce-a0bd-16d3-6719-3f882ead0ad8}
+        Device Speed    : High
+        Interface #     : 00h
+        Alt Interface # : 01h
+        Num Endpoints   : 2
+        Priority        : 0
+        Read Size       : 393216
+        Write Size      : 393216
+        Buffer Count    : 3
+        Display Refresh : 1000 (ms)
+        Transfer Timeout: 5000 (ms)
+        Retry Count     : 0
+        Verify Data     : Off
+
+Isochronous Read (Ep83h) max packet size: 1024
+Isochronous Write (Ep03h) max packet size: 1024
+
+While the test is running:
+Press 'Q' to quit
+Press 'T' for test details
+Press 'I' for status information
+Press 'R' to reset averages
+
+Press 'Q' to exit, any other key to begin..
+Avg. Bytes/s: 339124224.00 Transfers: 1001 Bytes/s: 339124224.00
+  ISO-Total Packets:16112 ISO-Good Packets:14739 ISO-Bad Packets:0
+Avg. Bytes/s: 339480576.00 Transfers: 2004 Bytes/s: 339836928.00
+  ISO-Total Packets:32160 ISO-Good Packets:29421 ISO-Bad Packets:0
+Avg. Bytes/s: 339621205.33 Transfers: 3007 Bytes/s: 339902464.00
+  ISO-Total Packets:48208 ISO-Good Packets:44129 ISO-Bad Packets:0
+Avg. Bytes/s: 338861206.95 Transfers: 4009 Bytes/s: 336619858.65
+  ISO-Total Packets:64240 ISO-Good Packets:58822 ISO-Bad Packets:0
+Avg. Bytes/s: 339400472.09 Transfers: 5023 Bytes/s: 341571535.62
+  ISO-Total Packets:80464 ISO-Good Packets:73718 ISO-Bad Packets:0
+Avg. Bytes/s: 339264509.28 Transfers: 6038 Bytes/s: 338593259.84
+  ISO-Total Packets:96704 ISO-Good Packets:88614 ISO-Bad Packets:0
+Avg. Bytes/s: 338997223.65 Transfers: 7040 Bytes/s: 337411288.91
+  ISO-Total Packets:112736 ISO-Good Packets:103339 ISO-Bad Packets:0
+Avg. Bytes/s: 339046183.67 Transfers: 8050 Bytes/s: 339409087.68
+  ISO-Total Packets:128896 ISO-Good Packets:118161 ISO-Bad Packets:0
+Avg. Bytes/s: 338993601.24 Transfers: 9065 Bytes/s: 338577133.86
+  ISO-Total Packets:145136 ISO-Good Packets:133054 ISO-Bad Packets:0
+Avg. Bytes/s: 339006386.98 Transfers: 10080 Bytes/s: 339120551.72
+  ISO-Total Packets:161376 ISO-Good Packets:147950 ISO-Bad Packets:0
+Avg. Bytes/s: 339050300.78 Transfers: 11082 Bytes/s: 339492864.00
+  ISO-Total Packets:177408 ISO-Good Packets:162641 ISO-Bad Packets:0
+Avg. Bytes/s: 338945185.38 Transfers: 12095 Bytes/s: 337799055.12
+  ISO-Total Packets:193616 ISO-Good Packets:177474 ISO-Bad Packets:0
+Avg. Bytes/s: 338968243.16 Transfers: 13096 Bytes/s: 339247104.00
+  ISO-Total Packets:209632 ISO-Good Packets:192118 ISO-Bad Packets:0
+Avg. Bytes/s: 338963616.86 Transfers: 14097 Bytes/s: 338903040.00
+  ISO-Total Packets:225648 ISO-Good Packets:206737 ISO-Bad Packets:0
+Avg. Bytes/s: 338917840.90 Transfers: 15111 Bytes/s: 338282834.65
+  ISO-Total Packets:241872 ISO-Good Packets:221683 ISO-Bad Packets:0
+Avg. Bytes/s: 338831788.65 Transfers: 16122 Bytes/s: 337550754.68
+  ISO-Total Packets:258048 ISO-Good Packets:236490 ISO-Bad Packets:0
+Avg. Bytes/s: 338817889.27 Transfers: 17137 Bytes/s: 338597291.34
+  ISO-Total Packets:274288 ISO-Good Packets:251331 ISO-Bad Packets:0
+Avg. Bytes/s: 338886255.00 Transfers: 18141 Bytes/s: 340058112.00
+  ISO-Total Packets:290352 ISO-Good Packets:266041 ISO-Bad Packets:0
+Avg. Bytes/s: 338934637.90 Transfers: 19144 Bytes/s: 339812352.00
+  ISO-Total Packets:306400 ISO-Good Packets:280726 ISO-Bad Packets:0
+waiting for Ep83h thread..
+stopped Ep83h thread.   ExitCode=0
+stopped Ep03h thread.   ExitCode=0
+Loop Test Information
+        Driver          : libusbK
+        Vid / Pid       : 04B5h / 00FDh
+        DevicePath      : \\?\usb#vid_04b5&pid_00fd#6&28c5070&0&1#{713018ce-a0bd-16d3-6719-3f882ead0ad8}
+        Device Speed    : High
+        Interface #     : 00h
+        Alt Interface # : 01h
+        Num Endpoints   : 2
+        Priority        : 0
+        Read Size       : 393216
+        Write Size      : 393216
+        Buffer Count    : 3
+        Display Refresh : 1000 (ms)
+        Transfer Timeout: 5000 (ms)
+        Retry Count     : 0
+        Verify Data     : Off
+
+Isochronous Read (Ep83h) max packet size: 1024
+        Total Bytes     : 2724003840
+        Total Transfers : 9573
+        Avg. Bytes/sec  : 142312514.50
+        Elapsed Time    : 19.14 seconds
+
+Isochronous Write (Ep03h) max packet size: 1024
+        Total Bytes     : 3764256768
+        Total Transfers : 9573
+        Avg. Bytes/sec  : 196659357.82
+        Elapsed Time    : 19.14 seconds
+
+Press any key to exit..
+
+BMFW_BulkSourceSink - libusbK
+-----------------------------------------------------------------------------------------------------------------
+PS E:\GitHub\libusbk\libusbK\bin\kBench\Win32\Debug> .\kbench list loop buffercount=3 buffersize=393216 mode=async
+device-count=1
+1. FX3 BULKSRCSNK (USB\VID_04B4&PID_00FB\6&28C5070&0&1) [libusbK]
+Select device (1-1) :1
+
+opened FX3 BULKSRCSNK (USB\VID_04B4&PID_00FB\6&28C5070&0&1)..
+Loop Test Information
+        Driver          : libusbK
+        Vid / Pid       : 04B4h / 00FBh
+        DevicePath      : \\?\usb#vid_04b4&pid_00fb#6&28c5070&0&1#{98de0124-4264-d053-3897-262417a53588}
+        Device Speed    : High
+        Interface #     : 00h
+        Alt Interface # : 00h
+        Num Endpoints   : 2
+        Priority        : 0
+        Read Size       : 393216
+        Write Size      : 393216
+        Buffer Count    : 3
+        Display Refresh : 1000 (ms)
+        Transfer Timeout: 5000 (ms)
+        Retry Count     : 0
+        Verify Data     : Off
+
+Bulk Read (Ep81h) max packet size: 1024
+Bulk Write (Ep01h) max packet size: 1024
+
+While the test is running:
+Press 'Q' to quit
+Press 'T' for test details
+Press 'I' for status information
+Press 'R' to reset averages
+
+Press 'Q' to exit, any other key to begin..
+Avg. Bytes/s: 619315200.00 Transfers: 1575 Bytes/s: 619315200.00
+Avg. Bytes/s: 620888064.00 Transfers: 3158 Bytes/s: 622460928.00
+Avg. Bytes/s: 619755367.16 Transfers: 4752 Bytes/s: 617523452.22
+Avg. Bytes/s: 619939546.70 Transfers: 6330 Bytes/s: 620494848.00
+Avg. Bytes/s: 618859926.06 Transfers: 7918 Bytes/s: 614593511.81
+Avg. Bytes/s: 620043800.36 Transfers: 9510 Bytes/s: 625999872.00
+Avg. Bytes/s: 618979010.64 Transfers: 11093 Bytes/s: 612658393.70
+Avg. Bytes/s: 619118518.70 Transfers: 12670 Bytes/s: 620101632.00
+Avg. Bytes/s: 619531431.86 Transfers: 14254 Bytes/s: 622854144.00
+Avg. Bytes/s: 619524274.30 Transfers: 15853 Bytes/s: 619460476.85
+Avg. Bytes/s: 619391514.71 Transfers: 17450 Bytes/s: 618076724.41
+Avg. Bytes/s: 619515421.76 Transfers: 19029 Bytes/s: 620888064.00
+Avg. Bytes/s: 619590312.89 Transfers: 20607 Bytes/s: 620494848.00
+Avg. Bytes/s: 619608863.41 Transfers: 22207 Bytes/s: 619847881.77
+Avg. Bytes/s: 619641512.22 Transfers: 23784 Bytes/s: 620101632.00
+Avg. Bytes/s: 619542820.54 Transfers: 25381 Bytes/s: 618076724.41
+Avg. Bytes/s: 620012159.21 Transfers: 26977 Bytes/s: 627572736.00
+waiting for Ep81h thread..
+stopped Ep81h thread.   ExitCode=0
+waiting for Ep01h thread..
+stopped Ep01h thread.   ExitCode=0
+Loop Test Information
+        Driver          : libusbK
+        Vid / Pid       : 04B4h / 00FBh
+        DevicePath      : \\?\usb#vid_04b4&pid_00fb#6&28c5070&0&1#{98de0124-4264-d053-3897-262417a53588}
+        Device Speed    : High
+        Interface #     : 00h
+        Alt Interface # : 00h
+        Num Endpoints   : 2
+        Priority        : 0
+        Read Size       : 393216
+        Write Size      : 393216
+        Buffer Count    : 3
+        Display Refresh : 1000 (ms)
+        Transfer Timeout: 5000 (ms)
+        Retry Count     : 0
+        Verify Data     : Off
+
+Bulk Read (Ep81h) max packet size: 1024
+        Total Bytes     : 5499125760
+        Total Transfers : 13985
+        Avg. Bytes/sec  : 321417134.84
+        Elapsed Time    : 17.11 seconds
+
+Bulk Write (Ep01h) max packet size: 1024
+        Total Bytes     : 5109055488
+        Total Transfers : 12993
+        Avg. Bytes/sec  : 298618007.36
+        Elapsed Time    : 17.11 seconds
+
+Press any key to exit.. 

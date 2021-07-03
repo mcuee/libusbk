@@ -1,0 +1,366 @@
+BMFW_BulkLoopAuto - WinUsb
+-----------------------------------------------------------------------------------------------------------------
+PS E:\GitHub\libusbk\libusbK\bin\kBench\Win32\Debug> .\kbench list loop buffercount=3 buffersize=16384 mode=async
+device-count=1
+1. FX3 BULKLOOP (USB\VID_04B4&PID_00FE\6&28C5070&0&1) [WinUSB]
+Select device (1-1) :1
+
+opened FX3 BULKLOOP (USB\VID_04B4&PID_00FE\6&28C5070&0&1)..
+Loop Test Information
+        Driver          : WinUSB
+        Vid / Pid       : 04B4h / 00FEh
+        DevicePath      : \\?\usb#vid_04b4&pid_00fe#6&28c5070&0&1#{8d57b0ee-ba9f-a623-1844-e87881a820e0}
+        Device Speed    : High
+        Interface #     : 00h
+        Alt Interface # : 00h
+        Num Endpoints   : 2
+        Priority        : 0
+        Read Size       : 16384
+        Write Size      : 16384
+        Buffer Count    : 3
+        Display Refresh : 1000 (ms)
+        Transfer Timeout: 5000 (ms)
+        Retry Count     : 0
+        Verify Data     : Off
+
+Bulk Read (Ep81h) max packet size: 1024
+Bulk Write (Ep01h) max packet size: 1024
+
+While the test is running:
+Press 'Q' to quit
+Press 'T' for test details
+Press 'I' for status information
+Press 'R' to reset averages
+
+Press 'Q' to exit, any other key to begin..
+Avg. Bytes/s: 190700074.88 Transfers: 11814 Bytes/s: 190700074.88
+Avg. Bytes/s: 190025358.94 Transfers: 23556 Bytes/s: 189351307.09
+Avg. Bytes/s: 190413589.76 Transfers: 35412 Bytes/s: 191189669.29
+Avg. Bytes/s: 191077843.34 Transfers: 47198 Bytes/s: 193101824.00
+Avg. Bytes/s: 191228662.19 Transfers: 59082 Bytes/s: 191830005.91
+Avg. Bytes/s: 190984929.25 Transfers: 70850 Bytes/s: 189770582.68
+Avg. Bytes/s: 190625403.07 Transfers: 82526 Bytes/s: 188472496.55
+Avg. Bytes/s: 190866615.59 Transfers: 94280 Bytes/s: 192577536.00
+Avg. Bytes/s: 190765950.16 Transfers: 106060 Bytes/s: 189964094.49
+Avg. Bytes/s: 190727559.90 Transfers: 117866 Bytes/s: 190383370.08
+Avg. Bytes/s: 190560333.21 Transfers: 129568 Bytes/s: 188892185.22
+Avg. Bytes/s: 190659015.49 Transfers: 141272 Bytes/s: 191758336.00
+waiting for Ep81h thread..
+stopped Ep81h thread.   ExitCode=0
+stopped Ep01h thread.   ExitCode=0
+Loop Test Information
+        Driver          : WinUSB
+        Vid / Pid       : 04B4h / 00FEh
+        DevicePath      : \\?\usb#vid_04b4&pid_00fe#6&28c5070&0&1#{8d57b0ee-ba9f-a623-1844-e87881a820e0}
+        Device Speed    : High
+        Interface #     : 00h
+        Alt Interface # : 00h
+        Num Endpoints   : 2
+        Priority        : 0
+        Read Size       : 16384
+        Write Size      : 16384
+        Buffer Count    : 3
+        Display Refresh : 1000 (ms)
+        Transfer Timeout: 5000 (ms)
+        Retry Count     : 0
+        Verify Data     : Off
+
+Bulk Read (Ep81h) max packet size: 1024
+        Total Bytes     : 1157316608
+        Total Transfers : 70637
+        Avg. Bytes/sec  : 95330857.33
+        Elapsed Time    : 12.14 seconds
+
+Bulk Write (Ep01h) max packet size: 1024
+        Total Bytes     : 1157316608
+        Total Transfers : 70637
+        Avg. Bytes/sec  : 95330857.33
+        Elapsed Time    : 12.14 seconds
+
+Press any key to exit..
+
+BMFW_IsochLoopAuto - WinUsb
+-----------------------------------------------------------------------------------------------------------------
+PS E:\GitHub\libusbk\libusbK\bin\kBench\Win32\Debug> .\kbench list loop buffercount=3 buffersize=16384 mode=async
+device-count=1
+1. FX3 ISOLOOP (USB\VID_04B4&PID_00FC\6&28C5070&0&1) [WinUSB]
+Select device (1-1) :1
+
+opened FX3 ISOLOOP (USB\VID_04B4&PID_00FC\6&28C5070&0&1)..
+Loop Test Information
+        Driver          : WinUSB
+        Vid / Pid       : 04B4h / 00FCh
+        DevicePath      : \\?\usb#vid_04b4&pid_00fc#6&28c5070&0&1#{a431ea44-ebaa-dcdd-8ddd-78f8b33f1707}
+        Device Speed    : High
+        Interface #     : 00h
+        Alt Interface # : 01h
+        Num Endpoints   : 2
+        Priority        : 0
+        Read Size       : 16384
+        Write Size      : 16384
+        Buffer Count    : 3
+        Display Refresh : 1000 (ms)
+        Transfer Timeout: 5000 (ms)
+        Retry Count     : 0
+        Verify Data     : Off
+
+Isochronous Read (Ep83h) max packet size: 1024
+Isochronous Write (Ep03h) max packet size: 1024
+
+While the test is running:
+Press 'Q' to quit
+Press 'T' for test details
+Press 'I' for status information
+Press 'R' to reset averages
+
+Press 'Q' to exit, any other key to begin..
+Avg. Bytes/s: 16303628.09 Transfers: 1003 Bytes/s: 16303628.09
+  ISO-Total Packets:16144 ISO-Good Packets:16144 ISO-Bad Packets:0
+Avg. Bytes/s: 16359749.08 Transfers: 2005 Bytes/s: 16416768.00
+  ISO-Total Packets:32176 ISO-Good Packets:32176 ISO-Bad Packets:0
+Avg. Bytes/s: 16373222.20 Transfers: 3006 Bytes/s: 16400384.00
+  ISO-Total Packets:48192 ISO-Good Packets:48192 ISO-Bad Packets:0
+Avg. Bytes/s: 16392240.96 Transfers: 4010 Bytes/s: 16449536.00
+  ISO-Total Packets:64256 ISO-Good Packets:64256 ISO-Bad Packets:0
+Avg. Bytes/s: 16385633.50 Transfers: 5016 Bytes/s: 16360513.58
+  ISO-Total Packets:80352 ISO-Good Packets:80352 ISO-Bad Packets:0
+Avg. Bytes/s: 16378584.80 Transfers: 6021 Bytes/s: 16344129.58
+  ISO-Total Packets:96432 ISO-Good Packets:96432 ISO-Bad Packets:0
+Avg. Bytes/s: 16377038.34 Transfers: 7036 Bytes/s: 16367874.02
+  ISO-Total Packets:112672 ISO-Good Packets:112672 ISO-Bad Packets:0
+Avg. Bytes/s: 16398282.69 Transfers: 8046 Bytes/s: 16547840.00
+  ISO-Total Packets:128832 ISO-Good Packets:128832 ISO-Bad Packets:0
+Avg. Bytes/s: 16376774.44 Transfers: 9050 Bytes/s: 16206439.41
+  ISO-Total Packets:144896 ISO-Good Packets:144896 ISO-Bad Packets:0
+Avg. Bytes/s: 16377491.97 Transfers: 10050 Bytes/s: 16384000.00
+  ISO-Total Packets:160896 ISO-Good Packets:160896 ISO-Bad Packets:0
+Avg. Bytes/s: 16385489.69 Transfers: 11055 Bytes/s: 16465920.00
+  ISO-Total Packets:176976 ISO-Good Packets:176976 ISO-Bad Packets:0
+Avg. Bytes/s: 16389444.09 Transfers: 12058 Bytes/s: 16433152.00
+  ISO-Total Packets:193024 ISO-Good Packets:193024 ISO-Bad Packets:0
+Avg. Bytes/s: 16394046.91 Transfers: 13062 Bytes/s: 16449536.00
+  ISO-Total Packets:209088 ISO-Good Packets:209088 ISO-Bad Packets:0
+Avg. Bytes/s: 16379347.44 Transfers: 14066 Bytes/s: 16190488.19
+  ISO-Total Packets:225152 ISO-Good Packets:225152 ISO-Bad Packets:0
+waiting for Ep83h thread..
+stopped Ep83h thread.   ExitCode=0
+stopped Ep03h thread.   ExitCode=0
+Loop Test Information
+        Driver          : WinUSB
+        Vid / Pid       : 04B4h / 00FCh
+        DevicePath      : \\?\usb#vid_04b4&pid_00fc#6&28c5070&0&1#{a431ea44-ebaa-dcdd-8ddd-78f8b33f1707}
+        Device Speed    : High
+        Interface #     : 00h
+        Alt Interface # : 01h
+        Num Endpoints   : 2
+        Priority        : 0
+        Read Size       : 16384
+        Write Size      : 16384
+        Buffer Count    : 3
+        Display Refresh : 1000 (ms)
+        Transfer Timeout: 5000 (ms)
+        Retry Count     : 0
+        Verify Data     : Off
+
+Isochronous Read (Ep83h) max packet size: 1024
+        Total Bytes     : 115245056
+        Total Transfers : 7034
+        Avg. Bytes/sec  : 8195495.38
+        Elapsed Time    : 14.06 seconds
+
+Isochronous Write (Ep03h) max packet size: 1024
+        Total Bytes     : 115245056
+        Total Transfers : 7034
+        Avg. Bytes/sec  : 8186180.99
+        Elapsed Time    : 14.08 seconds
+
+Press any key to exit..
+
+BMFW_IsoSrcSnk - WinUsb
+-----------------------------------------------------------------------------------------------------------------
+PS E:\GitHub\libusbk\libusbK\bin\kBench\Win32\Debug> .\kbench list loop buffercount=3 buffersize=393216 mode=async
+device-count=1
+1. FX3 ISOSRCSNK (USB\VID_04B5&PID_00FD\6&28C5070&0&1) [WinUSB]
+Select device (1-1) :1
+
+opened FX3 ISOSRCSNK (USB\VID_04B5&PID_00FD\6&28C5070&0&1)..
+Loop Test Information
+        Driver          : WinUSB
+        Vid / Pid       : 04B5h / 00FDh
+        DevicePath      : \\?\usb#vid_04b5&pid_00fd#6&28c5070&0&1#{fcfb7e61-95be-cd6b-29fc-7ef3d0f6ff65}
+        Device Speed    : High
+        Interface #     : 00h
+        Alt Interface # : 01h
+        Num Endpoints   : 2
+        Priority        : 0
+        Read Size       : 393216
+        Write Size      : 393216
+        Buffer Count    : 3
+        Display Refresh : 1000 (ms)
+        Transfer Timeout: 5000 (ms)
+        Retry Count     : 0
+        Verify Data     : Off
+
+Isochronous Read (Ep83h) max packet size: 1024
+Isochronous Write (Ep03h) max packet size: 1024
+
+While the test is running:
+Press 'Q' to quit
+Press 'T' for test details
+Press 'I' for status information
+Press 'R' to reset averages
+
+Press 'Q' to exit, any other key to begin..
+Avg. Bytes/s: 337260544.00 Transfers: 996 Bytes/s: 337260544.00
+  ISO-Total Packets:16032 ISO-Good Packets:14659 ISO-Bad Packets:0
+Avg. Bytes/s: 337858560.00 Transfers: 1996 Bytes/s: 338456576.00
+  ISO-Total Packets:32032 ISO-Good Packets:29309 ISO-Bad Packets:0
+Avg. Bytes/s: 338257237.33 Transfers: 2997 Bytes/s: 339054592.00
+  ISO-Total Packets:48048 ISO-Good Packets:43952 ISO-Bad Packets:0
+Avg. Bytes/s: 338761728.00 Transfers: 4001 Bytes/s: 340275200.00
+  ISO-Total Packets:64112 ISO-Good Packets:58673 ISO-Bad Packets:0
+Avg. Bytes/s: 337924899.52 Transfers: 5004 Bytes/s: 334630299.21
+  ISO-Total Packets:80160 ISO-Good Packets:73390 ISO-Bad Packets:0
+Avg. Bytes/s: 338364595.74 Transfers: 6010 Bytes/s: 340570112.00
+  ISO-Total Packets:96256 ISO-Good Packets:88090 ISO-Bad Packets:0
+Avg. Bytes/s: 338606558.72 Transfers: 7015 Bytes/s: 340062208.00
+  ISO-Total Packets:112336 ISO-Good Packets:102792 ISO-Bad Packets:0
+Avg. Bytes/s: 338453454.02 Transfers: 8019 Bytes/s: 337407192.91
+  ISO-Total Packets:128400 ISO-Good Packets:117511 ISO-Bad Packets:0
+Avg. Bytes/s: 338741150.26 Transfers: 9032 Bytes/s: 341052088.12
+  ISO-Total Packets:144608 ISO-Good Packets:132340 ISO-Bad Packets:0
+Avg. Bytes/s: 338803839.30 Transfers: 10034 Bytes/s: 339369984.00
+  ISO-Total Packets:160640 ISO-Good Packets:147037 ISO-Bad Packets:0
+Avg. Bytes/s: 338442242.78 Transfers: 11038 Bytes/s: 334872188.98
+  ISO-Total Packets:176704 ISO-Good Packets:161751 ISO-Bad Packets:0
+Avg. Bytes/s: 338535573.01 Transfers: 12042 Bytes/s: 339566592.00
+  ISO-Total Packets:192768 ISO-Good Packets:176416 ISO-Bad Packets:0
+Avg. Bytes/s: 338682721.85 Transfers: 13047 Bytes/s: 340455424.00
+  ISO-Total Packets:208848 ISO-Good Packets:191154 ISO-Bad Packets:0
+Avg. Bytes/s: 338431198.98 Transfers: 14052 Bytes/s: 335198076.85
+  ISO-Total Packets:224928 ISO-Good Packets:205879 ISO-Bad Packets:0
+Avg. Bytes/s: 338440489.19 Transfers: 15067 Bytes/s: 338569070.87
+  ISO-Total Packets:241168 ISO-Good Packets:220741 ISO-Bad Packets:0
+Avg. Bytes/s: 338531928.85 Transfers: 16072 Bytes/s: 339910656.00
+  ISO-Total Packets:257248 ISO-Good Packets:235455 ISO-Bad Packets:0
+Avg. Bytes/s: 338588436.12 Transfers: 17075 Bytes/s: 339496960.00
+  ISO-Total Packets:273296 ISO-Good Packets:250132 ISO-Bad Packets:0
+waiting for Ep83h thread..
+stopped Ep83h thread.   ExitCode=0
+waiting for Ep03h thread..
+stopped Ep03h thread.   ExitCode=0
+Loop Test Information
+        Driver          : WinUSB
+        Vid / Pid       : 04B5h / 00FDh
+        DevicePath      : \\?\usb#vid_04b5&pid_00fd#6&28c5070&0&1#{fcfb7e61-95be-cd6b-29fc-7ef3d0f6ff65}
+        Device Speed    : High
+        Interface #     : 00h
+        Alt Interface # : 01h
+        Num Endpoints   : 2
+        Priority        : 0
+        Read Size       : 393216
+        Write Size      : 393216
+        Buffer Count    : 3
+        Display Refresh : 1000 (ms)
+        Transfer Timeout: 5000 (ms)
+        Retry Count     : 0
+        Verify Data     : Off
+
+Isochronous Read (Ep83h) max packet size: 1024
+        Total Bytes     : 2425430016
+        Total Transfers : 8538
+        Avg. Bytes/sec  : 142020729.36
+        Elapsed Time    : 17.08 seconds
+
+Isochronous Write (Ep03h) max packet size: 1024
+        Total Bytes     : 3357671424
+        Total Transfers : 8539
+        Avg. Bytes/sec  : 196608000.00
+        Elapsed Time    : 17.08 seconds
+
+Press any key to exit..
+
+BMFW_BulkSourceSink - WinUsb
+-----------------------------------------------------------------------------------------------------------------
+PS E:\GitHub\libusbk\libusbK\bin\kBench\Win32\Debug> .\kbench list loop buffercount=3 buffersize=393216 mode=async
+device-count=1
+1. FX3 BULKSRCSNK (USB\VID_04B4&PID_00FB\6&28C5070&0&1) [WinUSB]
+Select device (1-1) :1
+
+opened FX3 BULKSRCSNK (USB\VID_04B4&PID_00FB\6&28C5070&0&1)..
+Loop Test Information
+        Driver          : WinUSB
+        Vid / Pid       : 04B4h / 00FBh
+        DevicePath      : \\?\usb#vid_04b4&pid_00fb#6&28c5070&0&1#{74cdb6e8-a96c-bdb4-d8d7-1905da833f53}
+        Device Speed    : High
+        Interface #     : 00h
+        Alt Interface # : 00h
+        Num Endpoints   : 2
+        Priority        : 0
+        Read Size       : 393216
+        Write Size      : 393216
+        Buffer Count    : 3
+        Display Refresh : 1000 (ms)
+        Transfer Timeout: 5000 (ms)
+        Retry Count     : 0
+        Verify Data     : Off
+
+Bulk Read (Ep81h) max packet size: 1024
+Bulk Write (Ep01h) max packet size: 1024
+
+While the test is running:
+Press 'Q' to quit
+Press 'T' for test details
+Press 'I' for status information
+Press 'R' to reset averages
+
+Press 'Q' to exit, any other key to begin..
+Avg. Bytes/s: 620494848.00 Transfers: 1578 Bytes/s: 620494848.00
+Avg. Bytes/s: 620494848.00 Transfers: 3156 Bytes/s: 620494848.00
+Avg. Bytes/s: 621019136.00 Transfers: 4738 Bytes/s: 622067712.00
+Avg. Bytes/s: 620372653.39 Transfers: 6336 Bytes/s: 618463748.03
+Avg. Bytes/s: 618502511.92 Transfers: 7915 Bytes/s: 611110299.21
+Avg. Bytes/s: 618702429.71 Transfers: 9491 Bytes/s: 619708416.00
+Avg. Bytes/s: 619292832.76 Transfers: 11075 Bytes/s: 622854144.00
+Avg. Bytes/s: 619638310.76 Transfers: 12657 Bytes/s: 622067712.00
+Avg. Bytes/s: 618836012.82 Transfers: 14238 Bytes/s: 612487188.18
+Avg. Bytes/s: 619001120.33 Transfers: 15816 Bytes/s: 620494848.00
+Avg. Bytes/s: 619029551.55 Transfers: 17391 Bytes/s: 619315200.00
+Avg. Bytes/s: 619249103.68 Transfers: 18972 Bytes/s: 621674496.00
+Avg. Bytes/s: 619465138.65 Transfers: 20554 Bytes/s: 622067712.00
+Avg. Bytes/s: 619678407.63 Transfers: 22137 Bytes/s: 622460928.00
+Avg. Bytes/s: 619074383.59 Transfers: 23715 Bytes/s: 610723275.59
+Avg. Bytes/s: 619285212.48 Transfers: 25298 Bytes/s: 622460928.00
+waiting for Ep81h thread..
+stopped Ep81h thread.   ExitCode=0
+stopped Ep01h thread.   ExitCode=0
+Loop Test Information
+        Driver          : WinUSB
+        Vid / Pid       : 04B4h / 00FBh
+        DevicePath      : \\?\usb#vid_04b4&pid_00fb#6&28c5070&0&1#{74cdb6e8-a96c-bdb4-d8d7-1905da833f53}
+        Device Speed    : High
+        Interface #     : 00h
+        Alt Interface # : 00h
+        Num Endpoints   : 2
+        Priority        : 0
+        Read Size       : 393216
+        Write Size      : 393216
+        Buffer Count    : 3
+        Display Refresh : 1000 (ms)
+        Transfer Timeout: 5000 (ms)
+        Retry Count     : 0
+        Verify Data     : Off
+
+Bulk Read (Ep81h) max packet size: 1024
+        Total Bytes     : 5187698688
+        Total Transfers : 13193
+        Avg. Bytes/sec  : 322959514.91
+        Elapsed Time    : 16.06 seconds
+
+Bulk Write (Ep01h) max packet size: 1024
+        Total Bytes     : 4760666112
+        Total Transfers : 12107
+        Avg. Bytes/sec  : 296374656.79
+        Elapsed Time    : 16.06 seconds
+
+Press any key to exit..
