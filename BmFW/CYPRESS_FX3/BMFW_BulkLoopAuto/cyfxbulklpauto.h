@@ -29,7 +29,7 @@
 #include "cyu3usbconst.h"
 #include "cyu3externcstart.h"
 
-#define BWFW_PID (0x00FA)
+#define BWFW_PID (0x00FE)
 
 #define CY_FX_BULKLP_DMA_BUF_COUNT      (8)                       /* Bulk loop channel buffer count */
 #define CY_FX_BULKLP_DMA_TX_SIZE        (0)                       /* DMA transfer size is set to infinite */
