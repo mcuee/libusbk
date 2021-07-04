@@ -476,7 +476,7 @@ KUSB_EXP BOOL KUSB_API UsbK_SetPipePolicy(
 	libusb_request* request = NULL;
 	PKUSB_HANDLE_INTERNAL handle;
 	BOOL success = FALSE;
-
+	
 	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
 	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
 
@@ -493,6 +493,20 @@ KUSB_EXP BOOL KUSB_API UsbK_SetPipePolicy(
 		success = Ioctl_Sync(Dev_Handle(), LIBUSB_IOCTL_SET_PIPE_POLICY,
 		                     request, requestLength,
 		                     NULL, 0, NULL);
+
+		if (success && Value)
+		{
+			// cache these ones
+			switch (PolicyType)
+			{
+			case PIPE_TRANSFER_TIMEOUT:
+				GetSetPipePolicy(handle->Device->Backend.CtxK, PipeID).timeout = (*((PULONG)Value));
+				break;
+			case ISO_ALWAYS_START_ASAP:
+				GetSetPipePolicy(handle->Device->Backend.CtxK, PipeID).isoasap = (*((PBYTE)Value));
+				break;
+			}
+		}
 	}
 	else
 	{
@@ -1151,7 +1165,7 @@ Error:
 KUSB_EXP BOOL KUSB_API UsbK_IsochReadPipe(
 	_in KUSB_ISOCH_HANDLE IsochHandle,
 	_inopt UINT DataLength,
-	_ref PUINT FrameNumber,
+	_refopt PUINT FrameNumber,
 	_inopt UINT NumberOfPackets,
 	_in LPOVERLAPPED Overlapped)
 {
@@ -1164,7 +1178,6 @@ KUSB_EXP BOOL KUSB_API UsbK_IsochReadPipe(
 	ErrorSetAction(!PoolHandle_Inc_IsochK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_IsochK");
 
 	ErrorParam(!IsHandleValid(Overlapped), Error, "Overlapped");
-	ErrorParam(!FrameNumber, Error, "FrameNumber");
 
 	if (NumberOfPackets)
 		handle->Context.UsbK->NumberOfPackets = (SHORT) NumberOfPackets;
@@ -1174,8 +1187,18 @@ KUSB_EXP BOOL KUSB_API UsbK_IsochReadPipe(
 	
 	IsoContextSize = sizeof(KISO_CONTEXT) + (handle->Context.UsbK->NumberOfPackets * sizeof(KISO_PACKET));
 
-	handle->Context.UsbK->StartFrame = *FrameNumber;
-	*FrameNumber = CalclNextIsoFrameNumber(*FrameNumber, handle);
+	if (FrameNumber)
+	{
+		handle->Context.UsbK->StartFrame = *FrameNumber;
+		*FrameNumber = CalclNextIsoFrameNumber(*FrameNumber, handle);
+		handle->Context.UsbK->Flags = KISO_FLAG_SET_START_FRAME;
+
+	}
+	else
+	{
+		handle->Context.UsbK->StartFrame = 0;
+		handle->Context.UsbK->Flags = KISO_FLAG_NONE;
+	}
 	
 	Mem_Zero(&request, sizeof(request));
 	request.IsoEx.IsoContext = handle->Context.UsbK;
@@ -1212,7 +1235,6 @@ KUSB_EXP BOOL KUSB_API UsbK_IsochWritePipe(
 	ErrorSetAction(!PoolHandle_Inc_IsochK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_IsochK");
 
 	ErrorParam(!IsHandleValid(Overlapped), Error, "Overlapped");
-	ErrorParam(!FrameNumber, Error, "FrameNumber");
 
 	if (NumberOfPackets)
 		handle->Context.UsbK->NumberOfPackets = (SHORT)NumberOfPackets;
@@ -1222,9 +1244,18 @@ KUSB_EXP BOOL KUSB_API UsbK_IsochWritePipe(
 
 	IsoContextSize = sizeof(KISO_CONTEXT) + (handle->Context.UsbK->NumberOfPackets * sizeof(KISO_PACKET));
 
-	handle->Context.UsbK->StartFrame = *FrameNumber;
-	*FrameNumber = CalclNextIsoFrameNumber(*FrameNumber, handle);
-
+	if (FrameNumber)
+	{
+		handle->Context.UsbK->StartFrame = *FrameNumber;
+		*FrameNumber = CalclNextIsoFrameNumber(*FrameNumber, handle);
+		handle->Context.UsbK->Flags = KISO_FLAG_SET_START_FRAME;
+	}
+	else
+	{
+		handle->Context.UsbK->StartFrame = 0;
+		handle->Context.UsbK->Flags = KISO_FLAG_NONE;
+	}
+	
 	Mem_Zero(&request, sizeof(request));
 	request.IsoEx.IsoContext = handle->Context.UsbK;
 	request.IsoEx.IsoContextSize = IsoContextSize;

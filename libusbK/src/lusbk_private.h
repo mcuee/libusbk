@@ -129,6 +129,7 @@
 typedef struct _USER_PIPE_POLICY
 {
 	volatile ULONG timeout;
+	volatile ULONG isoasap;
 
 }* PUSER_PIPE_POLICY, USER_PIPE_POLICY;
 

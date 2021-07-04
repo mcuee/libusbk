@@ -644,6 +644,10 @@ int TransferSync(PBENCHMARK_TRANSFER_PARAM transferParam)
 BOOL WINAPI CalcIsochTransfeResultsCb(_in UINT PacketIndex, _ref PUINT Offset, _ref PUINT Length, _ref PUINT Status, _in PVOID UserState)
 {
 	BENCHMARK_ISOCH_RESULTS* pResults = UserState;
+	
+	UNREFERENCED_PARAMETER(PacketIndex);
+	UNREFERENCED_PARAMETER(Offset);
+
 	if (*Status)
 	{
 		pResults->BadPackets++;
@@ -1407,6 +1411,7 @@ PBENCHMARK_TRANSFER_PARAM CreateTransferParam(PBENCHMARK_TEST_PARAM test, int en
 
 	if (transferParam)
 	{
+		UINT numIsoPackets;
 		memset(transferParam, 0, allocSize);
 		transferParam->Test = test;
 
@@ -1423,7 +1428,7 @@ PBENCHMARK_TRANSFER_PARAM CreateTransferParam(PBENCHMARK_TEST_PARAM test, int en
 				FreeTransferParam(&transferParam);
 				goto Done;
 			}
-			const UINT numIsoPackets = transferParam->Test->AllocBufferSize / transferParam->Ep.MaximumBytesPerInterval;
+			numIsoPackets = transferParam->Test->AllocBufferSize / transferParam->Ep.MaximumBytesPerInterval;
 			transferParam->NumberOfIsoPackets = numIsoPackets;
 			if (numIsoPackets == 0 || ((numIsoPackets % 8) && test->DeviceSpeed >= 3) || transferParam->Test->AllocBufferSize % transferParam->Ep.MaximumBytesPerInterval)
 			{

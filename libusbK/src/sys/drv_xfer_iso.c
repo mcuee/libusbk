@@ -236,7 +236,7 @@ VOID XferIsoEx(__in WDFQUEUE Queue,
 	// Allocate URB memory 	///////////////////////////////////////////
 	WDF_OBJECT_ATTRIBUTES_INIT(&attributes);
 	attributes.ParentObject = Request;
-	status = WdfMemoryCreate(&attributes, NonPagedPool, POOL_TAG, urbSize, &requestContext->IsoEx.UrbMemory, &urb);
+	status = WdfMemoryCreate(&attributes, NonPagedPool, POOL_TAG, urbSize, &requestContext->IsoEx.UrbMemory,(PVOID*) &urb);
 	if (!NT_SUCCESS(status))
 	{
 		USBERR("WdfMemoryCreate failed. size=%u Status=%08Xh\n", urbSize, status);
@@ -325,7 +325,7 @@ VOID XferIsoExComplete(
 	status = CompletionParams->IoStatus.Status;
 	Xfer_CheckPipeStatus(status, requestContext->QueueContext->Info.EndpointAddress);
 
-	urb = WdfMemoryGetBuffer(requestContext->IsoEx.UrbMemory, NULL);
+	urb = (PURB)WdfMemoryGetBuffer(requestContext->IsoEx.UrbMemory, NULL);
 
 	if (!urb || !requestContext || !IsoContext)
 	{
@@ -401,7 +401,7 @@ VOID XferIsoRdComplete(
 
 	Xfer_CheckPipeStatus(status, requestContext->QueueContext->Info.EndpointAddress);
 
-	urb = WdfMemoryGetBuffer(requestContext->AutoIso.UrbMemory, NULL);
+	urb = (PURB)WdfMemoryGetBuffer(requestContext->AutoIso.UrbMemory, NULL);
 
 	mXfer_HandlePipeResetScenariosForComplete(status, requestContext->QueueContext, requestContext);
 
@@ -423,7 +423,7 @@ VOID XferIsoRdComplete(
 				{
 					if (dataBuffer == NULL)
 					{
-						status = WdfRequestRetrieveOutputBuffer(Request, requestContext->Length, &dataBuffer, NULL);
+						status = WdfRequestRetrieveOutputBuffer(Request, requestContext->Length, (PVOID*)&dataBuffer, NULL);
 						if (!NT_SUCCESS(status))
 						{
 							transferred = urb->UrbIsochronousTransfer.TransferBufferLength;
@@ -463,7 +463,7 @@ VOID XferIsoWrComplete(
 	UNREFERENCED_PARAMETER(Target);
 
 	status = CompletionParams->IoStatus.Status;
-	urb = WdfMemoryGetBuffer(requestContext->AutoIso.UrbMemory, NULL);
+	urb = (PURB)WdfMemoryGetBuffer(requestContext->AutoIso.UrbMemory, NULL);
 
 	Xfer_CheckPipeStatus(status, requestContext->QueueContext->Info.EndpointAddress);
 
@@ -563,7 +563,7 @@ VOID XferIsoRead(
 	// Allocate URB memory 	///////////////////////////////////////////
 	WDF_OBJECT_ATTRIBUTES_INIT(&attributes);
 	attributes.ParentObject = Request;
-	status = WdfMemoryCreate(&attributes, NonPagedPool, POOL_TAG, urbSize, &requestContext->AutoIso.UrbMemory, &urb);
+	status = WdfMemoryCreate(&attributes, NonPagedPool, POOL_TAG, urbSize, &requestContext->AutoIso.UrbMemory, (PVOID*)&urb);
 	if (!NT_SUCCESS(status))
 	{
 		USBERR("WdfMemoryCreate failed. size=%u Status=%08Xh\n", urbSize, status);
@@ -736,7 +736,7 @@ VOID XferIsoWrite(
 
 	WDF_OBJECT_ATTRIBUTES_INIT(&attributes);
 	attributes.ParentObject = Request;
-	status = WdfMemoryCreate(&attributes, NonPagedPool, POOL_TAG, urbSize, &requestContext->AutoIso.UrbMemory, &urb);
+	status = WdfMemoryCreate(&attributes, NonPagedPool, POOL_TAG, urbSize, &requestContext->AutoIso.UrbMemory, (PVOID*)&urb);
 	if (!NT_SUCCESS(status))
 	{
 		USBERR("WdfMemoryCreate failed. size=%u Status=%08Xh\n", urbSize, status);

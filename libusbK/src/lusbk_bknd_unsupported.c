@@ -406,7 +406,7 @@ KUSB_EXP BOOL KUSB_API Unsupported_GetCurrentFrameNumber(
 KUSB_EXP BOOL KUSB_API Unsupported_IsochReadPipe(
 	_in KUSB_ISOCH_HANDLE IsochHandle,
 	_inopt UINT DataLength,
-	_ref PUINT FrameNumber,
+	_refopt PUINT FrameNumber,
 	_inopt UINT NumberOfPackets,
 	_in LPOVERLAPPED Overlapped)
 {

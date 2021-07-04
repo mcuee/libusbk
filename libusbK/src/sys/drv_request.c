@@ -271,7 +271,7 @@ VOID Request_PreIoInitialize(__in WDFDEVICE Device,
 	}
 
 	// All io control request must send the libusb_request struct.
-	status = WdfRequestRetrieveInputBuffer(Request, sizeof(libusb_request), &libusbRequest, &libusbRequestSize);
+	status = WdfRequestRetrieveInputBuffer(Request, sizeof(libusb_request), (PVOID*)&libusbRequest, &libusbRequestSize);
 	if(!NT_SUCCESS(status))
 	{
 		USBERR("WdfRequestRetrieveInputBuffer failed. status=%08Xh\n", status);

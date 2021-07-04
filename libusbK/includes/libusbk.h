@@ -739,6 +739,12 @@ typedef struct _USB_ENDPOINT_DESCRIPTOR
 //! pointer to a \c USB_ENDPOINT_DESCRIPTOR
 typedef USB_ENDPOINT_DESCRIPTOR* PUSB_ENDPOINT_DESCRIPTOR;
 
+#if _MSC_VER >= 1200
+#pragma warning(push)
+#endif
+#pragma warning (disable:4201)
+#pragma warning(disable:4214) // named type definition in parentheses
+
 typedef struct _USB_SUPERSPEED_ENDPOINT_COMPANION_DESCRIPTOR {
 	UCHAR  bLength;
 	UCHAR  bDescriptorType;
@@ -757,6 +763,10 @@ typedef struct _USB_SUPERSPEED_ENDPOINT_COMPANION_DESCRIPTOR {
 	} bmAttributes;
 	USHORT wBytesPerInterval;
 } USB_SUPERSPEED_ENDPOINT_COMPANION_DESCRIPTOR, * PUSB_SUPERSPEED_ENDPOINT_COMPANION_DESCRIPTOR;
+
+#if _MSC_VER >= 1200
+#pragma warning(pop)
+#endif
 
 //! A structure representing the standard USB configuration descriptor.
 /*
@@ -1277,14 +1287,14 @@ typedef BOOL KUSB_API KUSB_GetProperty (
 typedef BOOL KUSB_API KUSB_IsochReadPipe(
 	_in KUSB_ISOCH_HANDLE IsochHandle,
 	_inopt UINT DataLength,
-	_ref PUINT FrameNumber,
+	_refopt PUINT FrameNumber,
 	_inopt UINT NumberOfPackets,
 	_in LPOVERLAPPED Overlapped);
 
 typedef BOOL KUSB_API KUSB_IsochWritePipe(
 	_in KUSB_ISOCH_HANDLE IsochHandle,
 	_inopt UINT DataLength,
-	_ref PUINT FrameNumber,
+	_refopt PUINT FrameNumber,
 	_inopt UINT NumberOfPackets,
 	_in LPOVERLAPPED Overlapped);
 
@@ -3139,7 +3149,10 @@ extern "C" {
 	* to use the entire transfer buffer.
 	*
 	* \param[in,out] FrameNumber
-	* The frame number this transfer should start on. Use \ref UsbK_GetCurrentFrameNumber when this is unknown.
+	* Pointer to the frame number this transfer should start on. Use \ref UsbK_GetCurrentFrameNumber when this is unknown.
+	* When the function returns, this value will be updated to the next frame number for a subsequent transfer.
+	* This parameter is ignored if the /b ISO_ALWAYS_START_ASAP pipe policy is set and required otherwise.
+	* /sa UsbK_SetPipePolicy
 	* \code
 	* // Get the current frame number
 	* UINT StartFrameNumber;
@@ -3169,7 +3182,7 @@ extern "C" {
 	KUSB_EXP BOOL KUSB_API UsbK_IsochReadPipe(
 		_in KUSB_ISOCH_HANDLE IsochHandle,
 		_inopt UINT DataLength,
-		_ref PUINT FrameNumber,
+		_refopt PUINT FrameNumber,
 		_inopt UINT NumberOfPackets,
 		_in LPOVERLAPPED Overlapped);
 
@@ -3185,11 +3198,19 @@ extern "C" {
 	* to use the entire transfer buffer.
 	*
 	* \param[in,out] FrameNumber
-	* The frame number this transfer should start on. Use \ref UsbK_GetCurrentFrameNumber when this is unknown.
+	* Pointer to the frame number this transfer should start on. Use \ref UsbK_GetCurrentFrameNumber when this is unknown.
+	* When the function returns, this value will be updated to the next frame number for a subsequent transfer.
+	* This parameter is ignored if the /b ISO_ALWAYS_START_ASAP pipe policy is set and required otherwise.
+	* /sa UsbK_SetPipePolicy
 	* \code
 	* // Get the current frame number
 	* UINT StartFrameNumber;
 	* Usb.GetCurrentFrameNumber(usbHandle, &StartFrameNumber);
+	*
+	* // Give plenty of time to queue up all of our transfers BEFORE the bus starts consuming them
+	* // Note that this is also the startup delay in milliseconds.
+	* StartFrameNumber += 12
+	* \endcode
 	*
 	* // Give plenty of time to queue up all of our transfers BEFORE the bus starts consuming them
 	* // Note that this is also the startup delay in milliseconds.

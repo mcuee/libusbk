@@ -113,7 +113,6 @@ KUSB_EXP BOOL KUSB_API IsochK_Init(
 	{
 	case KUSB_DRVID_LIBUSBK:
 		ErrorMemory(!IsoK_Init(&handle->Context.UsbK, handle->PacketCount, 0), Error);
-		handle->Context.UsbK->Flags = KISO_FLAG_SET_START_FRAME;
 		break;
 	case KUSB_DRVID_WINUSB:
 		if (!WinUsb.RegisterIsochBuffer(Get_PipeInterfaceHandle(usbHandle, handle->PipeID), handle->PipeID, handle->TransferBuffer, handle->TransferBufferSize, &handle->Context.UsbW.BufferHandle))
@@ -262,7 +261,7 @@ KUSB_EXP BOOL KUSB_API IsochK_SetNumberOfPackets(
 	Pub_To_Priv_IsochK(IsochHandle, handle, return FALSE);
 	ErrorNoSetAction(!PoolHandle_Inc_IsochK(IsochHandle), return FALSE, "IsochHandle is invalid");
 
-	ErrorSetAction(NumberOfPackets > handle->PacketCount, ERROR_TOO_MANY_DESCRIPTORS, goto Error, "NumberOfPackets must be less than or equal to MaxNumberOfPackets");
+	ErrorSetAction(NumberOfPackets > handle->PacketCount, ERROR_OUT_OF_STRUCTURES, goto Error, "NumberOfPackets must be less than or equal to MaxNumberOfPackets");
 	drvId = handle->UsbHandle->Device->DriverAPI->Info.DriverID;
 	switch (drvId)
 	{

@@ -374,7 +374,28 @@ KUSB_EXP BOOL KUSB_API WUsb_SetPipePolicy(
 	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
 	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
 
-	success = WinUsb.SetPipePolicy(Intf_Handle(), PipeID, PolicyType, ValueLength, Value);
+	if (PolicyType == ISO_ALWAYS_START_ASAP && Value && ValueLength)
+	{
+		GetSetPipePolicy(handle->Device->Backend.CtxW, PipeID).isoasap = (*((PBYTE)Value));
+		success = TRUE;
+
+	}
+	else
+	{
+		success = WinUsb.SetPipePolicy(Intf_Handle(), PipeID, PolicyType, ValueLength, Value);
+		if (success)
+		{
+			// cache these ones
+			switch (PolicyType)
+			{
+			case PIPE_TRANSFER_TIMEOUT:
+				GetSetPipePolicy(handle->Device->Backend.CtxW, PipeID).timeout = (*((PULONG)Value));
+				break;
+			default: ;
+			}
+
+		}
+	}
 	ErrorNoSet(!success, Error, "PipeID=%02Xh PolicyType=%04Xh ValueLength=%u", PipeID, PolicyType, ValueLength);
 
 	PoolHandle_Dec_UsbK(handle);
@@ -399,7 +420,18 @@ KUSB_EXP BOOL KUSB_API WUsb_GetPipePolicy(
 	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
 	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
 
-	success = WinUsb.GetPipePolicy(Intf_Handle(), PipeID, PolicyType, ValueLength, Value);
+	if (PolicyType == ISO_ALWAYS_START_ASAP && Value && ValueLength)
+	{
+		(*((PBYTE)Value)) = (BYTE)GetSetPipePolicy(handle->Device->Backend.CtxW, PipeID).isoasap;
+		*ValueLength = 1;
+		success = TRUE;
+
+	}
+	else
+	{
+		success = WinUsb.GetPipePolicy(Intf_Handle(), PipeID, PolicyType, ValueLength, Value);
+	}
+
 	ErrorNoSet(!success, Error, "PipeID=%02Xh PolicyType=%04Xh ValueLength=%p", PipeID, PolicyType, ValueLength);
 
 	PoolHandle_Dec_UsbK(handle);
@@ -777,7 +809,7 @@ KUSB_EXP BOOL KUSB_API WUsb_WritePipe(
 KUSB_EXP BOOL KUSB_API WUsb_IsochReadPipe(
 	_in KUSB_ISOCH_HANDLE IsochHandle,
 	_inopt UINT DataLength,
-	_ref PUINT FrameNumber,
+	_refopt PUINT FrameNumber,
 	_inopt UINT NumberOfPackets,
 	_in LPOVERLAPPED Overlapped)
 {
@@ -793,8 +825,15 @@ KUSB_EXP BOOL KUSB_API WUsb_IsochReadPipe(
 		handle->Context.UsbW.NumberOfPackets = NumberOfPackets;
 	if (!DataLength)
 		DataLength = handle->TransferBufferSize;
-	
-	success = WinUsb.ReadIsochPipe(handle->Context.UsbW.BufferHandle, 0, DataLength, (PULONG)FrameNumber, handle->Context.UsbW.NumberOfPackets, handle->Context.UsbW.Packets, Overlapped);
+
+	if (!FrameNumber || GetSetPipePolicy(handle->UsbHandle->Device->Backend.CtxW, handle->PipeID).isoasap)
+	{
+		success = WinUsb.ReadIsochPipeAsap(handle->Context.UsbW.BufferHandle, 0, DataLength, FALSE, handle->Context.UsbW.NumberOfPackets, handle->Context.UsbW.Packets, Overlapped);
+	}
+	else
+	{
+		success = WinUsb.ReadIsochPipe(handle->Context.UsbW.BufferHandle, 0, DataLength, (PULONG)FrameNumber, handle->Context.UsbW.NumberOfPackets, handle->Context.UsbW.Packets, Overlapped);
+	}
 
 
 	PoolHandle_Dec_IsochK(handle);
@@ -804,7 +843,7 @@ KUSB_EXP BOOL KUSB_API WUsb_IsochReadPipe(
 KUSB_EXP BOOL KUSB_API WUsb_IsochWritePipe(
 	_in KUSB_ISOCH_HANDLE IsochHandle,
 	_inopt UINT DataLength,
-	_ref PUINT FrameNumber,
+	_refopt PUINT FrameNumber,
 	_inopt UINT NumberOfPackets,
 	_in LPOVERLAPPED Overlapped)
 {
@@ -820,9 +859,15 @@ KUSB_EXP BOOL KUSB_API WUsb_IsochWritePipe(
 		handle->Context.UsbW.NumberOfPackets = NumberOfPackets;
 	if (!DataLength)
 		DataLength = handle->TransferBufferSize;
-
-	success = WinUsb.WriteIsochPipe(handle->Context.UsbW.BufferHandle, 0, DataLength, (PULONG)FrameNumber, Overlapped);
-
+	
+	if (!FrameNumber || GetSetPipePolicy(handle->UsbHandle->Device->Backend.CtxW, handle->PipeID).isoasap)
+	{
+		success = WinUsb.WriteIsochPipeAsap(handle->Context.UsbW.BufferHandle, 0, DataLength, FALSE, Overlapped);
+	}
+	else
+	{
+		success = WinUsb.WriteIsochPipe(handle->Context.UsbW.BufferHandle, 0, DataLength, (PULONG)FrameNumber, Overlapped);
+	}
 	PoolHandle_Dec_IsochK(handle);
 	return success;
 }
