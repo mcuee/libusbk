@@ -384,7 +384,7 @@ CyFxIsoSrcSinkApplnStart (
 
     /* Update the flag so that the application thread is notified of this. */
     glIsApplnActive = CyTrue;
-    CyU3PDebugPrint (2, "App Started\r\n");
+    CyU3PDebugPrint (8, "App Started\r\n");
 }
 
 /* This function stops the ISO loop application. This shall be called whenever
@@ -431,7 +431,7 @@ CyFxIsoSrcSinkApplnStop (
         CyFxAppErrorHandler (apiRetStatus);
     }
     glPacketCounter = 0;
-    CyU3PDebugPrint (2, "App Stopped\r\n");
+    CyU3PDebugPrint (8, "App Stopped\r\n");
 }
 
 /* Callback to handle the USB setup requests. */
@@ -770,6 +770,8 @@ CyFxIsoSrcSinkApplnInit (void)
         CyU3PDebugPrint (4, "USB Connect failed, Error code = %d\n", apiRetStatus);
         CyFxAppErrorHandler(apiRetStatus);
     }
+
+    CyU3PDebugPrint(8,"App Initialized\r\n");
 }
 
 /* Entry function for the IsoSrcSinkAppThread. */

@@ -446,6 +446,8 @@ CyFxBulkSrcSinkApplnStart (
 
     /* Update the flag so that the application thread is notified of this. */
     glIsApplnActive = CyTrue;
+
+    CyU3PDebugPrint(8,"App Started\r\n");
 }
 
 /* This function stops the application. This shall be called whenever a RESET
@@ -488,6 +490,7 @@ CyFxBulkSrcSinkApplnStop (
         CyU3PDebugPrint (4, "CyU3PSetEpConfig failed, Error code = %d\n", apiRetStatus);
         CyFxAppErrorHandler (apiRetStatus);
     }
+    CyU3PDebugPrint(8,"App Stopped\r\n");
 }
 
 /* Callback to handle the USB setup requests. */
@@ -624,7 +627,7 @@ CyFxBulkSrcSinkApplnUSBEventCB (
     case CY_U3P_USB_EVENT_CONNECT:
         break;
 
-    case CY_U3P_USB_EVENT_SETCONF:
+    case CY_U3P_USB_EVENT_SETINTF:
         /* If the application is already active
          * stop it before re-enabling. */
         if (glIsApplnActive)
@@ -632,9 +635,10 @@ CyFxBulkSrcSinkApplnUSBEventCB (
             CyFxBulkSrcSinkApplnStop ();
         }
 
-        /* Start the source sink function. */
-        CyFxBulkSrcSinkApplnStart ();
-        break;
+        /* Start the app if alternate setting 1 has been selected. */
+        if (evdata == 0x0001)
+        	CyFxBulkSrcSinkApplnStart ();
+         break;
 
     case CY_U3P_USB_EVENT_RESET:
     case CY_U3P_USB_EVENT_DISCONNECT:
@@ -819,7 +823,7 @@ CyFxBulkSrcSinkApplnInit (void)
         CyFxBulkSrcSinkApplnStart ();
     }
 
-    CyU3PDebugPrint (8, "CyFxBulkSrcSinkApplnInit complete\r\n");
+    CyU3PDebugPrint(8,"App Initialized\r\n");
 }
 
 /*
@@ -836,6 +840,7 @@ CyFxBulkSrcSinkApplnDeinit (
     CyU3PThreadSleep (1000);
     CyU3PUsbStop ();
     CyU3PThreadSleep (1000);
+    CyU3PDebugPrint(8,"App Uninitialized\r\n");
 }
 
 /* Entry function for the BulkSrcSinkAppThread. */

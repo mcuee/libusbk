@@ -233,6 +233,8 @@ CyFxIsoLpApplnStart (
 
     /* Update the status flag. */
     glIsApplnActive = CyTrue;
+
+    CyU3PDebugPrint(8,"App Started\r\n");
 }
 
 /* This function stops the ISO loop application. This shall be called whenever
@@ -274,6 +276,8 @@ CyFxIsoLpApplnStop (
         CyU3PDebugPrint (4, "CyU3PSetEpConfig failed, Error code = %d\n", apiRetStatus);
         CyFxAppErrorHandler (apiRetStatus);
     }
+
+    CyU3PDebugPrint(8,"App Stopped\r\n");
 }
 
 /* Callback to handle the USB setup requests. */
@@ -508,6 +512,8 @@ CyFxIsoLpApplnInit (void)
         CyU3PDebugPrint (4, "USB Connect failed, Error code = %d\n", apiRetStatus);
         CyFxAppErrorHandler(apiRetStatus);
     }
+
+    CyU3PDebugPrint(8,"App Initialized\r\n");
 }
 
 /* Entry function for the IsoLpAppThread. */

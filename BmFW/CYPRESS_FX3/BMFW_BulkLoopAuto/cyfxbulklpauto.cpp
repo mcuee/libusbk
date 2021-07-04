@@ -229,6 +229,8 @@ CyFxBulkLpApplnStart (
 
     /* Update the status flag. */
     glBulkLoop_p->isApplnActive = CyTrue;
+
+    CyU3PDebugPrint(8,"App Started\r\n");
 }
 
 /* This function stops the bulk loop application. This shall be called whenever
@@ -270,6 +272,8 @@ CyFxBulkLpApplnStop (
         CyU3PDebugPrint (4, "CyU3PSetEpConfig failed, Error code = %d\n", apiRetStatus);
         glBulkLoop_p->CyFxAppErrorHandler (apiRetStatus);
     }
+
+    CyU3PDebugPrint(8,"App Stopped\r\n");
 }
 
 /* Callback to handle the USB setup requests. */
@@ -396,26 +400,30 @@ void CyFxBulkLoopApplication::CyFxBulkLpApplnUSBEventCB (
 {
     switch (evtype)
     {
-        case CY_U3P_USB_EVENT_SETCONF:
-            /* Disable the low power entry to optimize USB throughput */
-            CyU3PUsbLPMDisable();
-            /* Stop the application before re-starting. */
-            if (glBulkLoop_p->isApplnActive)
-            {
-                CyFxBulkLpApplnStop ();
-            }
-            /* Start the loop back function. */
-            CyFxBulkLpApplnStart ();
-            break;
+		case CY_U3P_USB_EVENT_SETINTF:
+			/* Stop the application before re-enabling. */
+			if (glBulkLoop_p->isApplnActive)
+			{
+				CyFxBulkLpApplnStop ();
+			}
 
-        case CY_U3P_USB_EVENT_RESET:
-        case CY_U3P_USB_EVENT_DISCONNECT:
-            /* Stop the loop back function. */
-            if (glBulkLoop_p->isApplnActive)
-            {
-                CyFxBulkLpApplnStop ();
-            }
-            break;
+			/* If alt. setting 1 is selected, start the loop back function. */
+			if (evdata == 0x0001)
+			{
+				/* Disable the low power entry to optimize USB throughput */
+				CyU3PUsbLPMDisable();
+				CyFxBulkLpApplnStart ();
+			}
+			break;
+
+		case CY_U3P_USB_EVENT_RESET:
+		case CY_U3P_USB_EVENT_DISCONNECT:
+			/* Stop the loop back function. */
+			if (glBulkLoop_p->isApplnActive)
+			{
+				CyFxBulkLpApplnStop ();
+			}
+			break;
 
         default:
             break;
@@ -553,6 +561,8 @@ CyFxBulkLpApplnInit (void)
         CyU3PDebugPrint (4, "USB Connect failed, Error code = %d\n", apiRetStatus);
         glBulkLoop_p->CyFxAppErrorHandler(apiRetStatus);
     }
+
+    CyU3PDebugPrint(8,"App Initialized\r\n");
 }
 
 

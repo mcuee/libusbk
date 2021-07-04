@@ -125,18 +125,29 @@ const uint8_t CyFxUSBSSConfigDscr[] __attribute__ ((aligned (32))) =
     /* Configuration descriptor */
     0x09,                           /* Descriptor size */
     CY_U3P_USB_CONFIG_DESCR,        /* Configuration descriptor type */
-    0x2C,0x00,                      /* Length of this descriptor and all sub descriptors */
+    0x35,0x00,                      /* Length of this descriptor and all sub descriptors */
     0x01,                           /* Number of interfaces */
     0x01,                           /* Configuration number */
     0x00,                           /* COnfiguration string index */
     0x80,                           /* Config characteristics - Bus powered */
     0x32,                           /* Max power consumption of device (in 8mA unit) : 400mA */
 
-    /* Interface descriptor */
+    /* Interface descriptor: Interface 0, Alt setting 0 - No endpoints */
+    0x09,                               /* Descriptor size */
+    CY_U3P_USB_INTRFC_DESCR,            /* Interface Descriptor type */
+    0x00,                               /* Interface number */
+    0x00,                               /* Alternate setting number */
+    0x00,                               /* Number of end points */
+    0xFF,                               /* Interface class */
+    0x00,                               /* Interface sub class */
+    0x00,                               /* Interface protocol code */
+    0x00,                               /* Interface descriptor string index */
+
+    /* Interface descriptor:  Interface 0, Alt setting 1 - 2 endpoints */
     0x09,                           /* Descriptor size */
     CY_U3P_USB_INTRFC_DESCR,        /* Interface Descriptor type */
     0x00,                           /* Interface number */
-    0x00,                           /* Alternate setting number */
+    0x01,                           /* Alternate setting number */
     0x02,                           /* Number of end points */
     0xFF,                           /* Interface class */
     0x00,                           /* Interface sub class */
@@ -180,19 +191,30 @@ const uint8_t CyFxUSBHSConfigDscr[] __attribute__ ((aligned (32))) =
     /* Configuration descriptor */
     0x09,                           /* Descriptor size */
     CY_U3P_USB_CONFIG_DESCR,        /* Configuration descriptor type */
-    0x20,0x00,                      /* Length of this descriptor and all sub descriptors */
+    0x29,0x00,                      /* Length of this descriptor and all sub descriptors */
     0x01,                           /* Number of interfaces */
     0x01,                           /* Configuration number */
     0x00,                           /* COnfiguration string index */
     0x80,                           /* Config characteristics - bus powered */
     0x32,                           /* Max power consumption of device (in 2mA unit) : 100mA */
 
-    /* Interface descriptor */
+    /* Interface descriptor: Interface 0, Alt setting 0 - No endpoints */
+    0x09,                               /* Descriptor size */
+    CY_U3P_USB_INTRFC_DESCR,            /* Interface Descriptor type */
+    0x00,                               /* Interface number */
+    0x00,                               /* Alternate setting number */
+    0x00,                               /* Number of end points */
+    0xFF,                               /* Interface class */
+    0x00,                               /* Interface sub class */
+    0x00,                               /* Interface protocol code */
+    0x00,                               /* Interface descriptor string index */
+
+    /* Interface descriptor:  Interface 0, Alt setting 1 - 2 endpoints */
     0x09,                           /* Descriptor size */
     CY_U3P_USB_INTRFC_DESCR,        /* Interface Descriptor type */
     0x00,                           /* Interface number */
-    0x00,                           /* Alternate setting number */
-    0x02,                           /* Number of endpoints */
+    0x01,                           /* Alternate setting number */
+    0x02,                           /* Number of end points */
     0xFF,                           /* Interface class */
     0x00,                           /* Interface sub class */
     0x00,                           /* Interface protocol code */
@@ -221,19 +243,30 @@ const uint8_t CyFxUSBFSConfigDscr[] __attribute__ ((aligned (32))) =
     /* Configuration descriptor */
     0x09,                           /* Descriptor size */
     CY_U3P_USB_CONFIG_DESCR,        /* Configuration descriptor type */
-    0x20,0x00,                      /* Length of this descriptor and all sub descriptors */
+    0x29,0x00,                      /* Length of this descriptor and all sub descriptors */
     0x01,                           /* Number of interfaces */
     0x01,                           /* Configuration number */
     0x00,                           /* COnfiguration string index */
     0x80,                           /* Config characteristics - bus powered */
     0x32,                           /* Max power consumption of device (in 2mA unit) : 100mA */
 
-    /* Interface descriptor */
+    /* Interface descriptor: Interface 0, Alt setting 0 - No endpoints */
+    0x09,                               /* Descriptor size */
+    CY_U3P_USB_INTRFC_DESCR,            /* Interface Descriptor type */
+    0x00,                               /* Interface number */
+    0x00,                               /* Alternate setting number */
+    0x00,                               /* Number of end points */
+    0xFF,                               /* Interface class */
+    0x00,                               /* Interface sub class */
+    0x00,                               /* Interface protocol code */
+    0x00,                               /* Interface descriptor string index */
+
+    /* Interface descriptor:  Interface 0, Alt setting 1 - 2 endpoints */
     0x09,                           /* Descriptor size */
-    CY_U3P_USB_INTRFC_DESCR,        /* Interface descriptor type */
+    CY_U3P_USB_INTRFC_DESCR,        /* Interface Descriptor type */
     0x00,                           /* Interface number */
-    0x00,                           /* Alternate setting number */
-    0x02,                           /* Number of endpoints */
+    0x01,                           /* Alternate setting number */
+    0x02,                           /* Number of end points */
     0xFF,                           /* Interface class */
     0x00,                           /* Interface sub class */
     0x00,                           /* Interface protocol code */
