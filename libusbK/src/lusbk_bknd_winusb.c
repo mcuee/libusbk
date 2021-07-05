@@ -193,6 +193,12 @@ Error:
 	return success;
 }
 
+static BOOL w_Init_Backend(PKUSB_HANDLE_INTERNAL handle)
+{
+	handle->Device->Backend.CtxW = Mem_Alloc(sizeof(*handle->Device->Backend.CtxW));
+	return IsHandleValid(handle->Device->Backend.CtxW);
+}
+
 KUSB_EXP BOOL KUSB_API WUsb_GetAssociatedInterface(
     _in KUSB_HANDLE InterfaceHandle,
     _in UCHAR AssociatedInterfaceIndex,
@@ -205,14 +211,14 @@ KUSB_EXP BOOL KUSB_API WUsb_Initialize(
     _in HANDLE DeviceHandle,
     _out KUSB_HANDLE* InterfaceHandle)
 {
-	return UsbStack_Init(InterfaceHandle, KUSB_DRVID_WINUSB, TRUE, DeviceHandle, NULL, NULL, w_Init_Config, NULL, w_Cleanup_UsbK, w_Cleanup_DevK);
+	return UsbStack_Init(InterfaceHandle, KUSB_DRVID_WINUSB, TRUE, DeviceHandle, NULL, NULL, w_Init_Config, w_Init_Backend, w_Cleanup_UsbK, w_Cleanup_DevK);
 }
 
 KUSB_EXP BOOL KUSB_API WUsb_Init(
     _out KUSB_HANDLE* InterfaceHandle,
     _in KLST_DEVINFO_HANDLE DevInfo)
 {
-	return UsbStack_Init(InterfaceHandle, KUSB_DRVID_WINUSB, TRUE, NULL, DevInfo, NULL, w_Init_Config, NULL, w_Cleanup_UsbK, w_Cleanup_DevK);
+	return UsbStack_Init(InterfaceHandle, KUSB_DRVID_WINUSB, TRUE, NULL, DevInfo, NULL, w_Init_Config, w_Init_Backend, w_Cleanup_UsbK, w_Cleanup_DevK);
 
 }
 
@@ -828,14 +834,16 @@ KUSB_EXP BOOL KUSB_API WUsb_IsochReadPipe(
 
 	if (!FrameNumber || GetSetPipePolicy(handle->UsbHandle->Device->Backend.CtxW, handle->PipeID).isoasap)
 	{
+		if (!WinUsb.ReadIsochPipeAsap) { success = FALSE;  SetLastError(ERROR_NOT_SUPPORTED); goto Done; }
 		success = WinUsb.ReadIsochPipeAsap(handle->Context.UsbW.BufferHandle, 0, DataLength, FALSE, handle->Context.UsbW.NumberOfPackets, handle->Context.UsbW.Packets, Overlapped);
 	}
 	else
 	{
+		if (!WinUsb.ReadIsochPipe) { success = FALSE;  SetLastError(ERROR_NOT_SUPPORTED); goto Done; }
 		success = WinUsb.ReadIsochPipe(handle->Context.UsbW.BufferHandle, 0, DataLength, (PULONG)FrameNumber, handle->Context.UsbW.NumberOfPackets, handle->Context.UsbW.Packets, Overlapped);
 	}
 
-
+	Done:
 	PoolHandle_Dec_IsochK(handle);
 	return success;
 }
@@ -850,7 +858,6 @@ KUSB_EXP BOOL KUSB_API WUsb_IsochWritePipe(
 	PKISOCH_HANDLE_INTERNAL handle;
 	BOOL success;
 
-	if (!WinUsb.WriteIsochPipe) { SetLastError(ERROR_NOT_SUPPORTED); return FALSE; }
 
 	Pub_To_Priv_IsochK(IsochHandle, handle, return FALSE);
 	ErrorSetAction(!PoolHandle_Inc_IsochK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_IsochK");
@@ -862,12 +869,15 @@ KUSB_EXP BOOL KUSB_API WUsb_IsochWritePipe(
 	
 	if (!FrameNumber || GetSetPipePolicy(handle->UsbHandle->Device->Backend.CtxW, handle->PipeID).isoasap)
 	{
+		if (!WinUsb.WriteIsochPipeAsap) { success = FALSE;  SetLastError(ERROR_NOT_SUPPORTED); goto Done; }
 		success = WinUsb.WriteIsochPipeAsap(handle->Context.UsbW.BufferHandle, 0, DataLength, FALSE, Overlapped);
 	}
 	else
 	{
+		if (!WinUsb.WriteIsochPipe) { success = FALSE;  SetLastError(ERROR_NOT_SUPPORTED); goto Done; }
 		success = WinUsb.WriteIsochPipe(handle->Context.UsbW.BufferHandle, 0, DataLength, (PULONG)FrameNumber, Overlapped);
 	}
+	Done:
 	PoolHandle_Dec_IsochK(handle);
 	return success;
 }
