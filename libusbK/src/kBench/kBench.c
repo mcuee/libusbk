@@ -166,6 +166,7 @@ typedef struct _BENCHMARK_TEST_PARAM
 
 	UCHAR UseRawIO;
 	UCHAR DefaultAltSetting;
+	BOOL UseIsoAsap;
 
 
 } BENCHMARK_TEST_PARAM, * PBENCHMARK_TEST_PARAM;
@@ -1303,6 +1304,10 @@ int ParseBenchmarkArgs(PBENCHMARK_TEST_PARAM testParams, int argc, char** argv)
 		{
 			testParams->Use_UsbK_Init = TRUE;
 		}
+		else if (!_stricmp(arg, "isoasap"))
+		{
+			testParams->UseIsoAsap = TRUE;
+		}
 		else
 		{
 			CONERR("invalid argument! %s\n", argv[iarg]);
@@ -1454,7 +1459,7 @@ PBENCHMARK_TRANSFER_PARAM CreateTransferParam(PBENCHMARK_TEST_PARAM test, int en
 					goto Done;
 				}
 
-				if (!IsochK_SetPacketOffsets(transferParam->TransferHandles[i].IsochHandle, numIsoPackets, transferParam->Ep.MaximumBytesPerInterval))
+				if (!IsochK_SetPacketOffsets(transferParam->TransferHandles[i].IsochHandle, transferParam->Ep.MaximumBytesPerInterval))
 				{
 					CONERR("IsochK_SetPacketOffsets failed for isochornous pipe %02X\n", transferParam->Ep.PipeId);
 					CONERR("- ErrorCode = %u\n", GetLastError());
@@ -1617,7 +1622,7 @@ void ShowRunningStatus(PBENCHMARK_TRANSFER_PARAM readParam, PBENCHMARK_TRANSFER_
 
 		if (totalIsoPackets)
 		{
-			CONMSG("Avg. Bytes/s: %.2f Transfers: %d Bytes/s: %.2f\n  ISO-Total Packets:%u ISO-Good Packets:%u ISO-Bad Packets:%u\n",
+			CONMSG("Avg. Bytes/s: %.2f Transfers: %d Bytes/s: %.2f ISO-Packets (Total/Good/Bad):%u/%u/%u\n",
 				bpsReadOverall + bpsWriteOverall, totalPackets, bpsReadLastTransfer + bpsWriteLastTransfer, totalIsoPackets, goodIsoPackets, badIsoPackets);
 		}
 		else
@@ -1864,6 +1869,7 @@ int __cdecl main(int argc, char** argv)
 	int key;
 	LONG ec;
 	UINT count, length;
+	UCHAR bIsoAsap;
 
 
 	if (argc == 1)
@@ -2044,7 +2050,12 @@ int __cdecl main(int argc, char** argv)
 			ReadTest->FrameNumber = frameNumber;
 			frameNumber++;
 		}
+
 	}
+
+	bIsoAsap = (UCHAR)Test.UseIsoAsap;
+	if (ReadTest) K.SetPipePolicy(Test.InterfaceHandle, ReadTest->Ep.PipeId, ISO_ALWAYS_START_ASAP, 1, &bIsoAsap);
+	if (WriteTest) K.SetPipePolicy(Test.InterfaceHandle, WriteTest->Ep.PipeId, ISO_ALWAYS_START_ASAP, 1, &bIsoAsap);
 
 	// Set the thread priority and start it.
 	if (ReadTest)

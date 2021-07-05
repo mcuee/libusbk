@@ -39,6 +39,7 @@ BOOL Examples_GetTestDevice(KLST_HANDLE* DeviceList,
 BOOL Examples_GetArgVal(int argc, char* argv[], LPCSTR argName, PUINT argValue, BOOL isHex)
 {
 	int argPos;
+	BOOL useNextArg = FALSE;
 	for (argPos = 1; argPos < argc; argPos++)
 	{
 		CHAR buf[128];
@@ -49,16 +50,91 @@ BOOL Examples_GetArgVal(int argc, char* argv[], LPCSTR argName, PUINT argValue, 
 			buf[i] = (char) tolower(argv[argPos][i]);
 		buf[i] = 0;
 		
+		if (useNextArg)
+		{
+			PCHAR pBuf = buf;
+			if (pBuf[0] == '\"') pBuf++;
+			if (pBuf[0] == '0' && (pBuf[1] == 'x'))
+			{
+				pBuf += 2;
+				isHex = TRUE;
+			}
+
+			*argValue = strtoul(pBuf, NULL, (isHex ? 16 : 10));
+			return TRUE;
+		}
+
 		char* pFound = strstr(buf, argName);
 		if (pFound)
 		{
 			pFound += strlen(argName);
+			if (pFound[0] == '=') pFound++;
+			if (pFound[0]=='\0')
+			{
+				useNextArg = TRUE;
+				continue;
+			}
 			if (pFound[0] == '0' && (pFound[1] == 'x'))
 			{
 				pFound += 2;
 				isHex = TRUE;
 			}
 			*argValue = strtoul(pFound, NULL, (isHex?16:10));
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+BOOL Examples_GetArgStr(int argc, char* argv[], LPCSTR argName, LPSTR argValue, PUINT argValLength)
+{
+	int argPos;
+	BOOL useNextArg = FALSE;
+	for (argPos = 1; argPos < argc; argPos++)
+	{
+		CHAR buf[128];
+		UINT i;
+
+		const UINT len = strlen(argv[argPos]);
+		for (i = 0; i < len && i < _countof(buf) - 1; i++)
+			buf[i] = (char)tolower(argv[argPos][i]);
+		buf[i] = 0;
+
+		if (useNextArg)
+		{
+			PCHAR pBuf = buf;
+			*argValLength = min(strlen(buf), *argValLength);
+			if (buf[0]=='\"' && buf[strlen(buf)-1]=='\"')
+			{
+				pBuf++;
+				*argValLength = *argValLength-2;
+				
+			}
+			strncpy(argValue, pBuf, *argValLength);
+			argValue[*argValLength] = '\0';
+			return TRUE;
+		}
+		char* pFound = strstr(buf, argName);
+		if (pFound)
+		{
+			pFound += strlen(argName);
+			
+			if (pFound[0] == '=') pFound++;
+			
+			if (pFound[0] == '\0')
+			{
+				useNextArg = TRUE;
+				continue;
+			}
+			
+			*argValLength = min(strlen(pFound), *argValLength);
+			if (pFound[0] == '\"' && pFound[strlen(pFound)-1]=='\"')
+			{
+				pFound++;
+				*argValLength = *argValLength - 2;
+			}
+			strncpy(argValue, pFound, *argValLength);
+			argValue[*argValLength] = '\0';
 			return TRUE;
 		}
 	}

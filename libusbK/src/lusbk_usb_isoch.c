@@ -154,7 +154,6 @@ Error:
 
 KUSB_EXP BOOL KUSB_API IsochK_SetPacketOffsets(
 	_in KUSB_ISOCH_HANDLE IsochHandle,
-	_in UINT NumberOfPackets,
 	_in UINT PacketSize)
 {
 	UINT packetIndex;
@@ -165,14 +164,12 @@ KUSB_EXP BOOL KUSB_API IsochK_SetPacketOffsets(
 	Pub_To_Priv_IsochK(IsochHandle, handle, return FALSE);
 	ErrorNoSetAction(!PoolHandle_Inc_IsochK(IsochHandle), return FALSE, "IsochHandle is invalid");
 	
-	ErrorParam(NumberOfPackets > handle->PacketCount, Error, "NumberOfPackets");
 	
 	drvId = handle->UsbHandle->Device->DriverAPI->Info.DriverID;
 	switch(drvId)
 	{
 	case KUSB_DRVID_LIBUSBK:
-		handle->Context.UsbK->NumberOfPackets = (SHORT)NumberOfPackets;
-		for (packetIndex = 0; packetIndex < NumberOfPackets; packetIndex++)
+		for (packetIndex = 0; packetIndex < handle->PacketCount; packetIndex++)
 		{
 			// length and status are set by the driver on transfer completion
 			handle->Context.UsbK->IsoPackets[packetIndex].Offset = nextOffSet;
@@ -182,8 +179,7 @@ KUSB_EXP BOOL KUSB_API IsochK_SetPacketOffsets(
 		}
 		break;
 	case KUSB_DRVID_WINUSB:
-		handle->Context.UsbW.NumberOfPackets = (UINT)NumberOfPackets;
-		for (packetIndex = 0; packetIndex < NumberOfPackets; packetIndex++)
+		for (packetIndex = 0; packetIndex < handle->PacketCount; packetIndex++)
 		{
 			// length and status are set by the driver on transfer completion for read endpoints (0x8?)
 			// WinUsb does not use packets at all for write endpoints. (0x0?)

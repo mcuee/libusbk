@@ -28,12 +28,7 @@
 #define MAX_TRANSFERS_TOTAL			64
 #define ISO_PACKETS_PER_TRANSFER	(8)
 
-// Remove this define to disable logging.
-#define ISO_LOG_FILENAME "xfer-iso.txt"
-
 KUSB_DRIVER_API Usb;
-
-
 
 // UINT_MAX for first interface found.
 // NOTE: use "intf=" on the command line to specify a specific one. EG: intf=1
@@ -59,7 +54,7 @@ typedef struct _MY_ISO_BUFFER_EL
 
 	struct _MY_ISO_BUFFER_EL* prev;
 	struct _MY_ISO_BUFFER_EL* next;
-} MY_ISO_BUFFER_EL, *PMY_ISO_BUFFER_EL;
+} MY_ISO_BUFFER_EL, * PMY_ISO_BUFFER_EL;
 
 typedef struct _MY_ISO_XFERS
 {
@@ -114,8 +109,7 @@ VOID IsoXferComplete(PMY_ISO_XFERS myXfers, PMY_ISO_BUFFER_EL myBufferEL, ULONG 
 	goodPackets = 0;
 	badPackets = 0;
 
-	printf("transferLength=%lu\n", transferLength);
-	if (TRUE)
+	if (gPipeInfo.PipeId & 0x80)
 	{
 		transferLength = 0;
 		for (packetPos = 0; packetPos < ISO_PACKETS_PER_TRANSFER; packetPos++)
@@ -141,7 +135,7 @@ VOID IsoXferComplete(PMY_ISO_XFERS myXfers, PMY_ISO_BUFFER_EL myBufferEL, ULONG 
 	Dcs.TotalBytes = 0;
 	mDcs_MarkStop(&Dcs, transferLength);
 
-	if (TRUE)
+	if (gPipeInfo.PipeId & 0x80)
 	{
 		if (myXfers->LastStartFrame != 0)
 		{
@@ -162,7 +156,7 @@ VOID IsoXferComplete(PMY_ISO_XFERS myXfers, PMY_ISO_BUFFER_EL myBufferEL, ULONG 
 			"#%u: StartFrame=%08Xh TransferLength=%u\n",
 			myXfers->CompletedCount, myBufferEL->FrameNumber, transferLength);
 	}
-	
+
 	Dcs.Start = Dcs.Stop;
 	myXfers->CompletedCount++;
 	myXfers->LastStartFrame = myBufferEL->FrameNumber;
@@ -183,15 +177,13 @@ int __cdecl main(int argc, char* argv[])
 	PMY_ISO_BUFFER_EL nextBufferEL;
 	PMY_ISO_BUFFER_EL nextBufferELTemp;
 	ULONG transferred;
+	BYTE bTemp;
+	char logFilename[128];
+	UINT logFilenameLength;
 
 	memset(&gXfers, 0, sizeof(gXfers));
-
-#ifdef ISO_LOG_FILENAME
-	// Create a new log file.
-	gOutFile = fopen(ISO_LOG_FILENAME, "w");
-#else
-	gOutFile = NULL;
-#endif
+	memset(&gInterfaceDescriptor, 0, sizeof(gInterfaceDescriptor));
+	memset(&gPipeInfo, 0, sizeof(gPipeInfo));
 
 	/*
 	Find the test device. Uses "vid=hhhh pid=hhhh" arguments supplied on the
@@ -204,6 +196,9 @@ int __cdecl main(int argc, char* argv[])
 	Examples_GetArgVal(argc, argv, "intf=", &gIntfIndex, FALSE);
 	Examples_GetArgVal(argc, argv, "altf=", &gAltfSetting, TRUE);
 	Examples_GetArgVal(argc, argv, "ep=", &gEpID, TRUE);
+	logFilenameLength = sizeof(logFilename) - 1;
+	if (Examples_GetArgStr(argc, argv, "logfile", logFilename, &logFilenameLength))
+		gOutFile = fopen(logFilename, "w");
 
 	if (!LibK_LoadDriverAPI(&Usb, deviceInfo->DriverID))
 	{
@@ -215,10 +210,10 @@ int __cdecl main(int argc, char* argv[])
 	if (!LibK_IsFunctionSupported(&Usb, KUSB_FNID_IsochReadPipe))
 	{
 		errorCode = ERROR_NOT_SUPPORTED;
-		printf("DriverID %i does not support isochronous transfers using 'Isoch' functions. ErrorCode: %08lXh\n" ,Usb.Info.DriverID, errorCode);
+		printf("DriverID %i does not support isochronous transfers using 'Isoch' functions. ErrorCode: %08lXh\n", Usb.Info.DriverID, errorCode);
 		goto Done;
 	}
-	
+
 	/*
 	Initialize the device. This creates the physical usb handle.
 	*/
@@ -239,7 +234,7 @@ int __cdecl main(int argc, char* argv[])
 	while (Usb.SelectInterface(usbHandle, ++interfaceIndex, TRUE))
 	{
 		if (gIntfIndex != UINT_MAX && gIntfIndex != interfaceIndex) continue;
-		
+
 		memset(&gInterfaceDescriptor, 0, sizeof(gInterfaceDescriptor));
 		memset(&gPipeInfo, 0, sizeof(gPipeInfo));
 		UCHAR gAltsettingIndex = (UCHAR)-1;
@@ -255,8 +250,8 @@ int __cdecl main(int argc, char* argv[])
 						// use first endpoint
 						if (gEpID == UINT_MAX)
 							break;
-							
-						if ((gEpID == 0) && (gPipeInfo.PipeId & 0x80)==0)
+
+						if ((gEpID == 0) && (gPipeInfo.PipeId & 0x80) == 0)
 						{
 							// using first write endpoint
 							break;
@@ -316,6 +311,10 @@ int __cdecl main(int argc, char* argv[])
 		goto Done;
 	}
 
+	// make sure ISO_ALWAYS_START_ASAP is disabled
+	bTemp = FALSE;
+	Usb.SetPipePolicy(usbHandle, gPipeInfo.PipeId, ISO_ALWAYS_START_ASAP, 1, &bTemp);
+
 	// get the iso packet information to help with frame calculations.
 	success = IsochK_CalcPacketInformation(deviceSpeed >= 3, &gPipeInfo, &isoPacketInformation);
 	if (!success)
@@ -342,7 +341,7 @@ int __cdecl main(int argc, char* argv[])
 	write_output(gOutFile, "Device Name       : %s\n", deviceInfo->DeviceDesc);
 	write_output(gOutFile, "Interface         : %u\n", gInterfaceDescriptor.bInterfaceNumber);
 	write_output(gOutFile, "Alt Setting       : %u\n", gInterfaceDescriptor.bAlternateSetting);
-	write_output(gOutFile, "Pipe ID           : 0x%02X (%s)\n", gPipeInfo.PipeId, (gPipeInfo.PipeId & 0x80)?"Read":"Write");
+	write_output(gOutFile, "Pipe ID           : 0x%02X (%s)\n", gPipeInfo.PipeId, (gPipeInfo.PipeId & 0x80) ? "Read" : "Write");
 	write_output(gOutFile, "Bytes Per Interval: %u\n", gPipeInfo.MaximumBytesPerInterval);
 	write_output(gOutFile, "Interval Period   : %uus\n", isoPacketInformation.PollingPeriodMicroseconds);
 	write_output(gOutFile, "\n");
@@ -361,7 +360,7 @@ int __cdecl main(int argc, char* argv[])
 			printf("OvlK_Init Failed.\n");
 			goto Done;
 		}
-		
+
 		for (pos = 0; pos < MAX_OUTSTANDING_TRANSFERS; pos++)
 		{
 			nextBufferEL = malloc(sizeof(MY_ISO_BUFFER_EL));
@@ -377,7 +376,7 @@ int __cdecl main(int argc, char* argv[])
 					printf("IsochK_Init Failed.\n");
 					goto Done;
 				}
-				if (!IsochK_SetPacketOffsets(nextBufferEL->IsoHandle, ISO_PACKETS_PER_TRANSFER, gPipeInfo.MaximumBytesPerInterval))
+				if (!IsochK_SetPacketOffsets(nextBufferEL->IsoHandle, gPipeInfo.MaximumBytesPerInterval))
 				{
 					errorCode = GetLastError();
 					printf("IsochK_SetPacketOffsets Failed.\n");
@@ -399,7 +398,7 @@ int __cdecl main(int argc, char* argv[])
 	} while (0);
 
 	//Usb.ResetPipe(usbHandle, gPipeInfo.PipeId);
-	
+
 	/*
 	Set a start frame. Add 5ms of startup delay.
 	*/
@@ -408,7 +407,7 @@ int __cdecl main(int argc, char* argv[])
 	// Give plenty of time to queue up all of our transfers BEFORE the bus starts consuming them
 	// Note that this is also the startup delay in milliseconds. IE: (6*2)=12ms
 	gXfers.FrameNumber += (MAX_OUTSTANDING_TRANSFERS * 2);
-	
+
 	mDcs_Init(&Dcs);
 
 	/*
@@ -427,7 +426,7 @@ int __cdecl main(int argc, char* argv[])
 
 			nextBufferEL->FrameNumber = gXfers.FrameNumber;
 			if (gPipeInfo.PipeId & 0x80)
-				Usb.IsochReadPipe(nextBufferEL->IsoHandle, gXfers.TransferBufferSize, &gXfers.FrameNumber,ISO_PACKETS_PER_TRANSFER, nextBufferEL->OvlHandle);
+				Usb.IsochReadPipe(nextBufferEL->IsoHandle, gXfers.TransferBufferSize, &gXfers.FrameNumber, ISO_PACKETS_PER_TRANSFER, nextBufferEL->OvlHandle);
 			else
 				Usb.IsochWritePipe(nextBufferEL->IsoHandle, gXfers.TransferBufferSize, &gXfers.FrameNumber, ISO_PACKETS_PER_TRANSFER, nextBufferEL->OvlHandle);
 
@@ -490,6 +489,9 @@ Done:
 
 	// Free the overlapped pool.
 	OvlK_Free(gXfers.OvlPool);
+
+	// return the device interface back to alt setting #0
+	Usb.SetAltInterface(usbHandle, gInterfaceDescriptor.bInterfaceNumber, TRUE, 0);
 
 	// Close the device handle.
 	Usb.Free(usbHandle);

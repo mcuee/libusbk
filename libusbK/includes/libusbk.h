@@ -1531,15 +1531,28 @@ typedef struct _KUSB_DRIVER_API
 	*/
 	KUSB_GetProperty* GetProperty;
 
+	/*! \fn BOOL KUSB_API IsochReadPipe (_in KUSB_ISOCH_HANDLE IsochHandle, _inopt UINT DataLength, _refopt PUINT FrameNumber, _inopt UINT NumberOfPackets, _in LPOVERLAPPED Overlapped)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_IsochReadPipe
+	*/
 	KUSB_IsochReadPipe* IsochReadPipe;
 	
+	/*! \fn BOOL KUSB_API IsochWritePipe (_in KUSB_ISOCH_HANDLE IsochHandle, _inopt UINT DataLength, _refopt PUINT FrameNumber, _inopt UINT NumberOfPackets, _in LPOVERLAPPED Overlapped)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_IsochWritePipe
+	*/
 	KUSB_IsochWritePipe* IsochWritePipe;
 	
+	/*! \fn BOOL KUSB_API QueryPipeEx (_in KUSB_HANDLE InterfaceHandle, _in UCHAR AltSettingNumber, _in UCHAR PipeIndex, _out PWINUSB_PIPE_INFORMATION_EX PipeInformation)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_QueryPipeEx
+	*/
 	KUSB_QueryPipeEx* QueryPipeEx;
 	
 	//! fixed structure padding.
 	UCHAR z_F_i_x_e_d[512 - sizeof(KUSB_DRIVER_API_INFO) -  sizeof(UINT_PTR) * KUSB_FNID_COUNT - (KUSB_FNID_COUNT & (sizeof(UINT_PTR) - 1) ? (KUSB_FNID_COUNT & (~(sizeof(UINT_PTR) - 1))) + sizeof(UINT_PTR) : KUSB_FNID_COUNT)];
 
+	//! function supported array.
 	UCHAR FuncSupported[(KUSB_FNID_COUNT & (sizeof(UINT_PTR) - 1) ? (KUSB_FNID_COUNT & (~(sizeof(UINT_PTR) - 1))) + sizeof(UINT_PTR) : KUSB_FNID_COUNT)];
 
 } KUSB_DRIVER_API;
@@ -4258,21 +4271,13 @@ extern "C" {
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*
-	* \c IsoK_SetPackets updates all \ref KISO_PACKET::Offset fields in a \ref KISO_CONTEXT so all offset are
-	* \c PacketSize apart. For example:
+	* \c IsoK_SetPackets updates iso packet offsets so all offset are \c PacketSize apart. For example:
 	* - The offset of the first (0-index) packet is 0.
 	* - The offset of the second (1-index) packet is PacketSize.
 	* - The offset of the third (2-index) packet is PacketSize*2.
-	*
-	* \code
-	* for (packetIndex = 0; packetIndex < IsoContext->NumberOfPackets; packetIndex++)
-	* 	IsoContext->IsoPackets[packetIndex].Offset = packetIndex * PacketSize;
-	* \endcode
-	*
 	*/
 	KUSB_EXP BOOL KUSB_API IsochK_SetPacketOffsets(
 		_in KUSB_ISOCH_HANDLE IsochHandle,
-		_in UINT NumberOfPackets,
 		_in UINT PacketSize);
 	
 
@@ -4294,8 +4299,9 @@ extern "C" {
 	* The transfer status of this packet. This is set by the driver when the transfer completes.
 	*
 	* \remarks
-	* WinUsb only uses/sets these values for incomming (read) transfers.
-	* WinUsb ignores the ISO packets for outgoing (write) transfers.
+	* - For \b Read operations, the length and status are updated by the driver on transfer completion
+	* - For \b Write operations, WinUSB does not use the ISO packet structures.
+	* - For \b Write operations, libusbK will update the status field only.
 	*
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*/
@@ -4324,8 +4330,9 @@ extern "C" {
 	* The transfer status of this packet. This is set by the driver when the transfer completes. 
 	*
 	* \remarks
-	* WinUsb only uses/sets these values for incomming (read) transfers.
-	* WinUsb ignores the ISO packets for outgoing (write) transfers. 
+	* - For \b Read operations, the length and status are updated by the driver on transfer completion
+	* - For \b Write operations, WinUSB does not use the ISO packet structures.
+	* - For \b Write operations, libusbK will update the status field only.
 	* 
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*/
@@ -4378,10 +4385,30 @@ extern "C" {
 		_in PWINUSB_PIPE_INFORMATION_EX PipeInformationEx,
 		_out PKISOCH_PACKET_INFORMATION PacketInformation);
 
+	//! Gets the number of iso packets that will be used.
+	/*!
+	* \param[in] IsochHandle
+	* A pointer to an isochronous transfer context.
+	*
+	* \param[out] NumberOfPackets
+	* A pointer to variable that will receive the number of ISO packets.
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*/
 	KUSB_EXP BOOL KUSB_API IsochK_GetNumberOfPackets(
 		_in KUSB_ISOCH_HANDLE IsochHandle,
 		_out PUINT NumberOfPackets);
 	
+	//! Sets the number of iso packets that will be used.
+	/*!
+	* \param[in] IsochHandle
+	* A pointer to an isochronous transfer context.
+	*
+	* \param[in] NumberOfPackets
+	* The number of ISO packets. This value must be less than or equal to the \b MaxNumberOfIsoPackets that this transfer handle was initialized with. See \ref IsochK_Init 
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*/
 	KUSB_EXP BOOL KUSB_API IsochK_SetNumberOfPackets(
 		_in KUSB_ISOCH_HANDLE IsochHandle,
 		_in UINT NumberOfPackets);

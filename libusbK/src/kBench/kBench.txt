@@ -53,15 +53,13 @@ Switches:
                       (first read/write endpoint(s) in the interface)
          intf       : The interface id the read/write endpoints reside in.
          altf       : The alt interface id the read/write endpoints reside in.
-         log		: Enable read and write logging. Log files are saved to
+         log        : Enable read and write logging. Log files are saved to
                       current folder as "read.log" and "write.log".
                       
 ISO Specific Switches:
-         fixedisopackets : (libusbK only) Sets a fixed number of ISO packets
-                           for write transfers. Bytes are distributed evenly
-                           amongst all of the packets. If not specified, the
-                           driver automatically calculates packet lengths
-                           based the write size.
+         isoasap    : Transfer using ASAP.  Without this switch, transfers are
+                      scheduled on specific frame numbers. Using this switch,
+                      transfers are started on as soon as possible.
         
 WARNING:
           This program should only be used with USB devices which implement
