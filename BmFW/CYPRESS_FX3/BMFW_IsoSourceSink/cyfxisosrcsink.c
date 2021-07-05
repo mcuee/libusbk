@@ -69,6 +69,15 @@ CyU3PEvent glIsoLpEvent;       /* Event group used to signal the thread that the
 
 static volatile uint8_t glBenchmarkMode = 0;
 
+#ifdef BMFW_REPORT_STATISTICS
+static volatile uint32_t glStatRxStartTickMS = 0;
+static volatile uint64_t glStatRxByteCount = 0;
+static volatile uint32_t glStatRxBPS = 0;
+static volatile uint32_t glStatTxStartTickMS = 0;
+static volatile uint64_t glStatTxByteCount = 0;
+static volatile uint32_t glStatTxBPS = 0;
+#endif
+
 static volatile CyBool_t glIsApplnActive = CyFalse;     /* Whether the loopback application is active or not. */
 static volatile CyBool_t glIsDevConfigured = CyFalse;   /* Whether the device configuration has been completed. */
 static volatile uint32_t glDmaPktsReceived  = 0;        /* Number of OUT packets received. */
@@ -217,6 +226,19 @@ CyFxIsoSrcSinkDmaCallback (
 
     if (type == CY_U3P_DMA_CB_PROD_EVENT)
     {
+#ifdef BMFW_REPORT_STATISTICS
+    	if (glStatRxStartTickMS == 0)
+    	{
+    		glStatRxStartTickMS = CyU3PGetTime();
+    		glStatRxByteCount = 0;
+    		glStatRxBPS = 0;
+    	}
+    	else
+    	{
+    		glStatRxByteCount+=input->buffer_p.count;
+    		glStatRxBPS = (uint32_t)((glStatRxByteCount*1000) / ((uint64_t)CyU3PGetTime() - (uint64_t)glStatRxStartTickMS));
+    	}
+#endif
         glDmaPktsReceived++;
 		status = CyU3PDmaChannelDiscardBuffer (chHandle);
 		if (status == CY_U3P_SUCCESS)
@@ -227,8 +249,21 @@ CyFxIsoSrcSinkDmaCallback (
     }
     else if (type == CY_U3P_DMA_CB_CONS_EVENT)
     {
-        glDmaPktsSent++;
-        status = CyU3PDmaChannelGetBuffer (chHandle, &buffer_p, 0);
+    	glDmaPktsSent++;
+    	status = CyU3PDmaChannelGetBuffer (chHandle, &buffer_p, 0);
+#ifdef BMFW_REPORT_STATISTICS
+    	if (glStatTxStartTickMS == 0)
+    	{
+    		glStatTxStartTickMS = CyU3PGetTime();
+    		glStatTxByteCount = 0;
+    		glStatTxBPS = 0;
+    	}
+    	else
+    	{
+    		glStatTxByteCount+=buffer_p.size;
+    		glStatTxBPS = (uint32_t)((glStatTxByteCount*1000) / ((uint64_t)CyU3PGetTime() - (uint64_t)glStatTxStartTickMS));
+    	}
+#endif
         if (status == CY_U3P_SUCCESS)
         {
         	buffer_p.buffer[0] = 0;
@@ -446,6 +481,12 @@ CyFxIsoSrcSinkApplnStop (
         CyFxAppErrorHandler (apiRetStatus);
     }
     glPacketCounter = 0;
+
+#ifdef BMFW_REPORT_STATISTICS
+    glStatTxStartTickMS = 0;
+    glStatRxStartTickMS = 0;
+#endif
+
     CyU3PDebugPrint (8, "App Stopped\r\n");
 }
 
@@ -812,8 +853,11 @@ IsoSrcSinkAppThread_Entry (
 
     for (;;)
     {
-
+#ifdef BMFW_REPORT_STATISTICS
+        stat = CyU3PEventGet (&glIsoLpEvent, eventMask, CYU3P_EVENT_OR_CLEAR, &eventStat, 1000);
+#else
         stat = CyU3PEventGet (&glIsoLpEvent, eventMask, CYU3P_EVENT_OR_CLEAR, &eventStat, CYU3P_WAIT_FOREVER);
+#endif
         if (stat == CY_U3P_SUCCESS)
         {
 			if (glResetDevice)
@@ -824,6 +868,13 @@ IsoSrcSinkAppThread_Entry (
 				CyU3PThreadSleep (1000);
 			}
         }
+#ifdef BMFW_REPORT_STATISTICS
+		else if (stat == TX_NO_EVENTS && (glStatTxStartTickMS || glStatRxStartTickMS))
+		{
+			CyU3PDebugPrint(1,"RX BPS=%u TX BPS=%u\r\n", glStatRxBPS, glStatTxBPS);
+		}
+#endif
+
     }
 }
 

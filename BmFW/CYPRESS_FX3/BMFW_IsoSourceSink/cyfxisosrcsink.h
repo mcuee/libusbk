@@ -31,10 +31,13 @@
 
 #define BWFW_PID (0x00FD)
 
+// when defined, transfer statistics are reported every 1 second.
+#define BMFW_REPORT_STATISTICS
+
 #define CY_FX_ISOSRCSINK_DMA_BUF_COUNT      (3)                       /* Bulk loop channel buffer count */
 #define CY_FX_ISOSRCSINK_DMA_TX_SIZE        (0)                       /* DMA transfer size is set to infinite */
 #define CY_FX_ISOSRCSINK_THREAD_STACK       (0x1000)                  /* Bulk loop application thread stack size */
-#define CY_FX_ISOSRCSINK_THREAD_PRIORITY    (8)                       /* Bulk loop application thread priority */
+#define CY_FX_ISOSRCSINK_THREAD_PRIORITY    (1)                       /* Bulk loop application thread priority */
 #define CY_FX_ISOSRCSINK_PATTERN            (0xAA)                    /* 8-bit pattern to be loaded to the source buffers. */
 
 /* Endpoint and socket definitions for the bulkloop application */
