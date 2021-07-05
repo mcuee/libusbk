@@ -118,8 +118,15 @@ standard C library are provided for the folllowing languages:
 
 /*! @} */
 
-/*! \addtogroup isok Advanced ISO
-* \brief Module for advanced isochronous transfers.
+/*! \addtogroup isok libusbK Advanced ISO
+* \brief Module for advanced isochronous transfers. (libusbK only)
+*  @{
+*/
+
+/*! @} */
+
+/*! \addtogroup isochk libusbK/WinUsb ISO
+* \brief Module for isochronous transfers. (libusbK & WinUSB)
 *  @{
 */
 

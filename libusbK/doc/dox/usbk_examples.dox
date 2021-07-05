@@ -310,268 +310,26 @@ Device opened successfully!
 \endverbatim
 */
 
-//! Performs a one-shot isochronous transfer.
+//! Transfers data over an isochronous pipe at a fixed interval.
 /*!
 * \example xfer-iso.c
 *
+* \remark
+* This is a rough example of how to transfer data isochronously that is time sensitive.
+* A fixed frequency audio sample would be an example of such data. 
+*
 * \par  xfer-iso example:
-* -# Finds a device by vid/pid (use vid=hhhh, pid=hhhhh and the command line).
-* -# Initializes a new UsbK (usb device) handle.
-* -# Configures the benchmark test device to accept/send data.
-* -# Initializes a IsoK (iso context) handle.
-* -# Sets the iso packet offsets.
-* -# Initializes a new OvlPoolK (overlapped pool) handle.
-* -# Submits/Completes 1 isochronous transfer.
-* -# Reports isochronous transfer packet information.
-* -# Frees the UsbK (usb device) handle.
-* -# Frees the LstK (device list) handle.
-* -# Frees the IsoK (iso context) handle.
-* -# Frees the OvlPoolK (overlapped pool) handle.
-*
-* \par Console Output
-* \verbatim
-Looking for device vid/pid 04D8/FA2E..
-Using 04D8:FA2E (LUSBW1): Benchmark Device - Microchip Technology, Inc.
-Device opened successfully!
-ISO StartFrame=24905D5Ch ErrorCount=0 Transferred=2048
-  IsoPacket[0] Length=64 Status=00000000h
-  Data:00h 00h 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[1] Length=64 Status=00000000h
-  Data:00h 01h 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[2] Length=64 Status=00000000h
-  Data:00h 02h 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[3] Length=64 Status=00000000h
-  Data:00h 03h 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[4] Length=64 Status=00000000h
-  Data:00h 04h 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[5] Length=64 Status=00000000h
-  Data:00h 05h 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[6] Length=64 Status=00000000h
-  Data:00h 06h 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[7] Length=64 Status=00000000h
-  Data:00h 07h 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[8] Length=64 Status=00000000h
-  Data:00h 08h 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[9] Length=64 Status=00000000h
-  Data:00h 09h 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[10] Length=64 Status=00000000h
-  Data:00h 0Ah 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[11] Length=64 Status=00000000h
-  Data:00h 0Bh 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[12] Length=64 Status=00000000h
-  Data:00h 0Ch 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[13] Length=64 Status=00000000h
-  Data:00h 0Dh 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[14] Length=64 Status=00000000h
-  Data:00h 0Eh 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[15] Length=64 Status=00000000h
-  Data:00h 0Fh 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[16] Length=64 Status=00000000h
-  Data:00h 10h 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[17] Length=64 Status=00000000h
-  Data:00h 11h 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[18] Length=64 Status=00000000h
-  Data:00h 12h 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[19] Length=64 Status=00000000h
-  Data:00h 13h 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[20] Length=64 Status=00000000h
-  Data:00h 14h 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[21] Length=64 Status=00000000h
-  Data:00h 15h 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[22] Length=64 Status=00000000h
-  Data:00h 16h 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[23] Length=64 Status=00000000h
-  Data:00h 17h 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[24] Length=64 Status=00000000h
-  Data:00h 18h 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[25] Length=64 Status=00000000h
-  Data:00h 19h 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[26] Length=64 Status=00000000h
-  Data:00h 1Ah 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[27] Length=64 Status=00000000h
-  Data:00h 1Bh 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[28] Length=64 Status=00000000h
-  Data:00h 1Ch 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[29] Length=64 Status=00000000h
-  Data:00h 1Dh 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[30] Length=64 Status=00000000h
-  Data:00h 1Eh 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-
-
-  IsoPacket[31] Length=64 Status=00000000h
-  Data:00h 1Fh 02h 03h 04h 05h 06h 07h 08h 09h 0Ah 0Bh 0Ch 0Dh 0Eh 0Fh
-       10h 11h 12h 13h 14h 15h 16h 17h 18h 19h 1Ah 1Bh 1Ch 1Dh 1Eh 1Fh
-       20h 21h 22h 23h 24h 25h 26h 27h 28h 29h 2Ah 2Bh 2Ch 2Dh 2Eh 2Fh
-       30h 31h 32h 33h 34h 35h 36h 37h 38h 39h 3Ah 3Bh 3Ch 3Dh 3Eh 3Fh
-\endverbatim
-*/
-
-//! Reads a specified number of ISO transfers.
-/*!
-* \example xfer-iso-read.c
-*
-* \par  xfer-iso-read example:
-* -# Create a new log file.
-* -# Finds a device by vid/pid (use vid=hhhh, pid=hhhhh and the command line).
+* -# Finds the first EP of a device by vid/pid (use vid=hhhh, pid=hhhhh and the command line).
+* -# use "intf=" on the command line to specify a specific interface. EG: intf=0
+* -# use "altf=" on the command line to specify a specific alternate setting. EG: altf=1
+* -# use "ep=" on the command line to specify a specific endpoint. EG: ep=81
+* -# use "logfile=" on the command line to write output to a file. EG: logfile=log.txt
 * -# Initializes a new UsbK (usb device) handle.
 * -# Selects interface by pipe id and get descriptors.
 * -# Sets the desired alternate setting.
-* -# Configures the benchmark test device to send data.
+* -# Configures the benchmark test device to send/receive data.
 * -# Allocates iso buffer resources.
-* -# Starts reading until an error occurs or MAX_TRANSFERS_TOTAL is reached.
+* -# Starts transferring until an error occurs or MAX_TRANSFERS_TOTAL is reached.
 * -# Reports isochronous transfer packet information to log file.
 * -# Cancels all transfers left outstanding.
 * -# Frees the iso buffer resources.
@@ -579,37 +337,328 @@ ISO StartFrame=24905D5Ch ErrorCount=0 Transferred=2048
 * -# Frees the LstK (device list) handle.
 * -# Closes log file.
 *
-* \par Console Output
+* \par Console Output using CYPRESS_FX3\BMFW_IsoSourceSink Firmware
 * \verbatim
-Looking for device vid/pid 04D8/FA2E..
-Using 04D8:FA2E (LUSBW1): Benchmark Device - Microchip Technology, Inc.
+.\xfer-iso vid=04b4 pid=00fd ep=80
+Looking for device vid/pid 04B4/00FD..
+Using 04B4:00FD (6&28C5070&0&1): FX3 ISOSRCSNK - Cypress Semiconductor Corp.
 Device opened successfully!
+Device hardware fully prepared..
+XFER-ISO TEST
+----------------------------------------------------------
+Device ID         : USB\VID_04B4&PID_00FD\6&28C5070&0&1
+Device Name       : FX3 ISOSRCSNK
+Interface         : 0
+Alt Setting       : 1
+Pipe ID           : 0x83 (Read)
+Bytes Per Interval: 24576
+Interval Period   : 125us
 
+#0: StartFrame=09FC72A3h TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:unknown
+        00 01 02 03 04 05 06 07
+#1: StartFrame=09FC72A4h TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:197377773.32
+        08 09 0A 0B 0C 0D 0E 0F
+#2: StartFrame=09FC72A5h TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196274333.63
+        10 11 12 13 14 15 16 17
+#3: StartFrame=09FC72A6h TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:197695324.28
+        18 19 1A 1B 1C 1D 1E 1F
+#4: StartFrame=09FC72A7h TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196117705.74
+        20 21 22 23 24 25 26 27
+#5: StartFrame=09FC72A8h TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196706353.18
+        28 29 2A 2B 2C 2D 2E 2F
+#6: StartFrame=09FC72A9h TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:191364609.69
+        30 31 32 33 34 35 36 37
+#7: StartFrame=09FC72AAh TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:202146822.95
+        38 39 3A 3B 3C 3D 3E 3F
+#8: StartFrame=09FC72ABh TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:197179821.48
+        40 41 42 43 44 45 46 47
+#9: StartFrame=09FC72ACh TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196215568.86
+        48 49 4A 4B 4C 4D 4E 4F
+#10: StartFrame=09FC72ADh TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196450839.33
+        50 51 52 53 54 55 56 57
+#11: StartFrame=09FC72AEh TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196883637.09
+        58 59 5A 5B 5C 5D 5E 5F
+#12: StartFrame=09FC72AFh TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196824506.96
+        60 61 62 63 64 65 66 67
+#13: StartFrame=09FC72B0h TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196254741.47
+        68 69 6A 6B 6C 6D 6E 6F
+#14: StartFrame=09FC72B1h TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196667000.10
+        70 71 72 73 74 75 76 77
+#15: StartFrame=09FC72B2h TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196686674.67
+        78 79 7A 7B 7C 7D 7E 7F
+#16: StartFrame=09FC72B3h TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196137270.55
+        80 81 82 83 84 85 86 87
+#17: StartFrame=09FC72B4h TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196923076.92
+        88 89 8A 8B 8C 8D 8E 8F
+#18: StartFrame=09FC72B5h TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:197002004.01
+        90 91 92 93 94 95 96 97
+#19: StartFrame=09FC72B6h TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196078587.81
+        98 99 9A 9B 9C 9D 9E 9F
+#20: StartFrame=09FC72B7h TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:197002004.01
+        A0 A1 A2 A3 A4 A5 A6 A7
+#21: StartFrame=09FC72B8h TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196765412.33
+        A8 A9 AA AB AC AD AE AF
+#22: StartFrame=09FC72B9h TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:195941797.89
+        B0 B1 B2 B3 B4 B5 B6 B7
+#23: StartFrame=09FC72BAh TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196962532.56
+        B8 B9 BA BB BC BD BE BF
+#24: StartFrame=09FC72BBh TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196765412.33
+        C0 C1 C2 C3 C4 C5 C6 C7
+#25: StartFrame=09FC72BCh TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196176411.89
+        C8 C9 CA CB CC CD CE CF
+#26: StartFrame=09FC72BDh TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:197100751.88
+        D0 D1 D2 D3 D4 D5 D6 D7
+#27: StartFrame=09FC72BEh TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196627662.77
+        D8 D9 DA DB DC DD DE DF
+#28: StartFrame=09FC72BFh TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:192790743.28
+        E0 E1 E2 E3 E4 E5 E6 E7
+#29: StartFrame=09FC72C0h TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:198834951.46
+        E8 E9 EA EB EC ED EE EF
+#30: StartFrame=09FC72C1h TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:197794768.61
+        F0 F1 F2 F3 F4 F5 F6 F7
+#31: StartFrame=09FC72C2h TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196608000.00
+        F8 F9 FA FB FC FD FE FF
+#32: StartFrame=09FC72C3h TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196785106.60
+        00 01 02 03 04 05 06 07
+#33: StartFrame=09FC72C4h TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196726035.62
+        08 09 0A 0B 0C 0D 0E 0F
+#34: StartFrame=09FC72C5h TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196470470.67
+        10 11 12 13 14 15 16 17
+#35: StartFrame=09FC72C6h TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196765412.33
+        18 19 1A 1B 1C 1D 1E 1F
+#36: StartFrame=09FC72C7h TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:197041491.28
+        20 21 22 23 24 25 26 27
+#37: StartFrame=09FC72C8h TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:195902750.10
+        28 29 2A 2B 2C 2D 2E 2F
+#38: StartFrame=09FC72C9h TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:195008926.80
+        30 31 32 33 34 35 36 37
+#39: StartFrame=09FC72CAh TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:198593939.39
+        38 39 3A 3B 3C 3D 3E 3F
+#40: StartFrame=09FC72CBh TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196254741.47
+        40 41 42 43 44 45 46 47
+#41: StartFrame=09FC72CCh TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196962532.56
+        48 49 4A 4B 4C 4D 4E 4F
+#42: StartFrame=09FC72CDh TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196726035.62
+        50 51 52 53 54 55 56 57
+#43: StartFrame=09FC72CEh TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:192942100.10
+        58 59 5A 5B 5C 5D 5E 5F
+#44: StartFrame=09FC72CFh TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:198153598.06
+        60 61 62 63 64 65 66 67
+#45: StartFrame=09FC72D0h TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:198493690.06
+        68 69 6A 6B 6C 6D 6E 6F
+#46: StartFrame=09FC72D1h TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196588341.17
+        70 71 72 73 74 75 76 77
+#47: StartFrame=09FC72D2h TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196923076.92
+        78 79 7A 7B 7C 7D 7E 7F
+#48: StartFrame=09FC72D3h TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196785106.60
+        80 81 82 83 84 85 86 87
+#49: StartFrame=09FC72D4h TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196195988.42
+        88 89 8A 8B 8C 8D 8E 8F
+#50: StartFrame=09FC72D5h TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:197160048.13
+        90 91 92 93 94 95 96 97
+#51: StartFrame=09FC72D6h TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:195941797.89
+        98 99 9A 9B 9C 9D 9E 9F
+#52: StartFrame=09FC72D7h TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196647329.47
+        A0 A1 A2 A3 A4 A5 A6 A7
+#53: StartFrame=09FC72D8h TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196923076.92
+        A8 A9 AA AB AC AD AE AF
+#54: StartFrame=09FC72D9h TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196509745.13
+        B0 B1 B2 B3 B4 B5 B6 B7
+#55: StartFrame=09FC72DAh TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196509745.13
+        B8 B9 BA BB BC BD BE BF
+#56: StartFrame=09FC72DBh TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196785106.60
+        C0 C1 C2 C3 C4 C5 C6 C7
+#57: StartFrame=09FC72DCh TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196608000.00
+        C8 C9 CA CB CC CD CE CF
+#58: StartFrame=09FC72DDh TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196765412.33
+        D0 D1 D2 D3 D4 D5 D6 D7
+#59: StartFrame=09FC72DEh TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:193074732.40
+        D8 D9 DA DB DC DD DE DF
+#60: StartFrame=09FC72DFh TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:200313805.40
+        E0 E1 E2 E3 E4 E5 E6 E7
+#61: StartFrame=09FC72E0h TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:195396541.44
+        E8 E9 EA EB EC ED EE EF
+#62: StartFrame=09FC72E1h TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:197417411.39
+        F0 F1 F2 F3 F4 F5 F6 F7
+#63: StartFrame=09FC72E2h TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:197100751.88
+        F8 F9 FA FB FC FD FE FF
+Done!
 \endverbatim
 */
 
-//! Gets, sets, various pipe policies and transfers synchronously.
+//! Transfers data over an isochronous pipe as soon as possible (ASAP).
 /*!
-* \example pipe-policy-other.c
+* \example xfer-iso-asap.c
 *
-* \par pipe-polcy-other example:
-* -# Finds a device by vid/pid (use vid=hhhh, pid=hhhhh and the command line).
+* \remark
+* This is a rough example of how to transfer data isochronously as fast as possible.
+* Real-time telemetry would be an example of such data. 
+*
+* \par  xfer-iso-asap example:
+* -# Finds the first EP of a device by vid/pid (use vid=hhhh, pid=hhhhh and the command line).
+* -# use "intf=" on the command line to specify a specific interface. EG: intf=0
+* -# use "altf=" on the command line to specify a specific alternate setting. EG: altf=1
+* -# use "ep=" on the command line to specify a specific endpoint. EG: ep=81
+* -# use "logfile=" on the command line to write output to a file. EG: logfile=log.txt
 * -# Initializes a new UsbK (usb device) handle.
-* -# Gets and sets various pipe policies.
-* -# Configures the benchmark test device to not accept/send data.
-* -# Submits/Completes \c SYNC_TRANSFER_COUNT number of I/O request one at a time.
+* -# Selects interface by pipe id and get descriptors.
+* -# Sets the desired alternate setting.
+* -# Configures the benchmark test device to send/receive data.
+* -# Allocates iso buffer resources.
+* -# Starts transferring until an error occurs or MAX_TRANSFERS_TOTAL is reached.
+* -# Reports isochronous transfer packet information to log file.
+* -# Cancels all transfers left outstanding.
+* -# Frees the iso buffer resources.
 * -# Frees the UsbK (usb device) handle.
-* -# Frees the LstK (device list) handle created in step #1.
+* -# Frees the LstK (device list) handle.
+* -# Closes log file.
 *
-* \par Console Output
+* \par Console Output using CYPRESS_FX3\BMFW_IsoSourceSink Firmware
 * \verbatim
-Looking for device vid/pid 04D8/FA2E..
-Using 04D8:FA2E (LUSBW1): Benchmark Device - Microchip Technology, Inc.
+.\xfer-iso-asap vid=04b4 pid=00fd ep=80
+Looking for device vid/pid 04B4/00FD..
+Using 04B4:00FD (6&28C5070&0&1): FX3 ISOSRCSNK - Cypress Semiconductor Corp.
 Device opened successfully!
-Transfer #0 completed with 4096 bytes.
-Transfer #1 completed with 4096 bytes.
-Transfer #2 completed with 4096 bytes.
-Transferred 12288 bytes in 3 transfers. errorCode=00000000h
+Device hardware fully prepared..
+XFER-ISO TEST
+----------------------------------------------------------
+Device ID         : USB\VID_04B4&PID_00FD\6&28C5070&0&1
+Device Name       : FX3 ISOSRCSNK
+Interface         : 0
+Alt Setting       : 1
+Pipe ID           : 0x83 (Read)
+Bytes Per Interval: 24576
+Interval Period   : 125us
+
+#0: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:unknown
+        00 01 02 03 04 05 06 07
+#1: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:197357960.25
+        08 09 0A 0B 0C 0D 0E 0F
+#2: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196333133.61
+        10 11 12 13 14 15 16 17
+#3: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:197219380.08
+        18 19 1A 1B 1C 1D 1E 1F
+#4: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196000398.76
+        20 21 22 23 24 25 26 27
+#5: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:197595979.90
+        28 29 2A 2B 2C 2D 2E 2F
+#6: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196372353.18
+        30 31 32 33 34 35 36 37
+#7: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196549035.29
+        38 39 3A 3B 3C 3D 3E 3F
+#8: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:192885313.45
+        40 41 42 43 44 45 46 47
+#9: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:200436333.98
+        48 49 4A 4B 4C 4D 4E 4F
+#10: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196450839.33
+        50 51 52 53 54 55 56 57
+#11: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196706353.18
+        58 59 5A 5B 5C 5D 5E 5F
+#12: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196568686.26
+        60 61 62 63 64 65 66 67
+#13: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196863923.10
+        68 69 6A 6B 6C 6D 6E 6F
+#14: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196274333.63
+        70 71 72 73 74 75 76 77
+#15: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196706353.18
+        78 79 7A 7B 7C 7D 7E 7F
+#16: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196667000.10
+        80 81 82 83 84 85 86 87
+#17: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196667000.10
+        88 89 8A 8B 8C 8D 8E 8F
+#18: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196588341.17
+        90 91 92 93 94 95 96 97
+#19: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196726035.62
+        98 99 9A 9B 9C 9D 9E 9F
+#20: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196726035.62
+        A0 A1 A2 A3 A4 A5 A6 A7
+#21: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196490105.94
+        A8 A9 AA AB AC AD AE AF
+#22: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196235153.21
+        B0 B1 B2 B3 B4 B5 B6 B7
+#23: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:192356912.24
+        B8 B9 BA BB BC BD BE BF
+#24: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196352741.44
+        C0 C1 C2 C3 C4 C5 C6 C7
+#25: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:201215842.80
+        C8 C9 CA CB CC CD CE CF
+#26: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196923076.92
+        D0 D1 D2 D3 D4 D5 D6 D7
+#27: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196352741.44
+        D8 D9 DA DB DC DD DE DF
+#28: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196824506.96
+        E0 E1 E2 E3 E4 E5 E6 E7
+#29: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196962532.56
+        E8 E9 EA EB EC ED EE EF
+#30: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196411588.41
+        F0 F1 F2 F3 F4 F5 F6 F7
+#31: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196333133.61
+        F8 F9 FA FB FC FD FE FF
+#32: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:197002004.01
+        00 01 02 03 04 05 06 07
+#33: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196509745.13
+        08 09 0A 0B 0C 0D 0E 0F
+#34: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196235153.21
+        10 11 12 13 14 15 16 17
+#35: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:197219380.08
+        18 19 1A 1B 1C 1D 1E 1F
+#36: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196824506.96
+        20 21 22 23 24 25 26 27
+#37: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:195922272.05
+        28 29 2A 2B 2C 2D 2E 2F
+#38: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:192885313.45
+        30 31 32 33 34 35 36 37
+#39: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:201030674.85
+        38 39 3A 3B 3C 3D 3E 3F
+#40: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:195454816.58
+        40 41 42 43 44 45 46 47
+#41: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:195513126.49
+        48 49 4A 4B 4C 4D 4E 4F
+#42: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:198794742.16
+        50 51 52 53 54 55 56 57
+#43: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196274333.63
+        58 59 5A 5B 5C 5D 5E 5F
+#44: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196804804.80
+        60 61 62 63 64 65 66 67
+#45: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:197021745.67
+        68 69 6A 6B 6C 6D 6E 6F
+#46: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:195805198.69
+        70 71 72 73 74 75 76 77
+#47: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:197298544.91
+        78 79 7A 7B 7C 7D 7E 7F
+#48: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196529388.24
+        80 81 82 83 84 85 86 87
+#49: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196411588.41
+        88 89 8A 8B 8C 8D 8E 8F
+#50: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196647329.47
+        90 91 92 93 94 95 96 97
+#51: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196509745.13
+        98 99 9A 9B 9C 9D 9E 9F
+#52: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196391968.83
+        A0 A1 A2 A3 A4 A5 A6 A7
+#53: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196962532.56
+        A8 A9 AA AB AC AD AE AF
+#54: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:192771840.38
+        B0 B1 B2 B3 B4 B5 B6 B7
+#55: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:197695324.28
+        B8 B9 BA BB BC BD BE BF
+#56: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:197735090.01
+        C0 C1 C2 C3 C4 C5 C6 C7
+#57: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:197278747.74
+        C8 C9 CA CB CC CD CE CF
+#58: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:197377773.32
+        D0 D1 D2 D3 D4 D5 D6 D7
+#59: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:197061240.85
+        D8 D9 DA DB DC DD DE DF
+#60: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196509745.13
+        E0 E1 E2 E3 E4 E5 E6 E7
+#61: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196509745.13
+        E8 E9 EA EB EC ED EE EF
+#62: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:197199598.80
+        F0 F1 F2 F3 F4 F5 F6 F7
+#63: TransferLength=196608 GoodPackets=8, BadPackets=0, BPS-average:196391968.83
+        F8 F9 FA FB FC FD FE FF
+Done!
 \endverbatim
 */
 
