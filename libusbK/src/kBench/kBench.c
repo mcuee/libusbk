@@ -1649,12 +1649,22 @@ void ShowTransferInfo(PBENCHMARK_TRANSFER_PARAM transferParam)
 
 	if (!transferParam) return;
 
-	CONMSG("%s %s (Ep%02Xh) max packet size: %d\n",
-		EndpointTypeDisplayString[ENDPOINT_TYPE(transferParam)],
-		TRANSFER_DISPLAY(transferParam, "Read", "Write"),
-		transferParam->Ep.PipeId,
-		transferParam->Ep.MaximumPacketSize);
-
+	if (transferParam->Ep.MaximumBytesPerInterval != 0)
+	{
+		CONMSG("%s %s (Ep%02Xh) max bytes per interval: %lu\n",
+			EndpointTypeDisplayString[ENDPOINT_TYPE(transferParam)],
+			TRANSFER_DISPLAY(transferParam, "Read", "Write"),
+			transferParam->Ep.PipeId,
+			transferParam->Ep.MaximumBytesPerInterval);
+	}
+	else
+	{
+		CONMSG("%s %s (Ep%02Xh) max packet size: %d\n",
+			EndpointTypeDisplayString[ENDPOINT_TYPE(transferParam)],
+			TRANSFER_DISPLAY(transferParam, "Read", "Write"),
+			transferParam->Ep.PipeId,
+			transferParam->Ep.MaximumPacketSize);
+	}
 	if (transferParam->StartTick)
 	{
 		GetAverageBytesSec(transferParam, &bpsAverage);
