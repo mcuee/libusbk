@@ -65,6 +65,7 @@
 CyU3PThread     isoSrcSinkAppThread;	 /* ISO loop application thread structure */
 CyU3PDmaChannel glChHandleIsoSink;       /* DMA MANUAL_IN channel handle */
 CyU3PDmaChannel glChHandleIsoSrc;        /* DMA MANUAL_OUT channel handle */
+CyU3PEvent glIsoLpEvent;       /* Event group used to signal the thread that there is a pending request. */
 
 static volatile uint8_t glBenchmarkMode = 0;
 
@@ -108,6 +109,8 @@ uint8_t glEp0Buffer[32] __attribute__ ((aligned (32))); /* Local buffer used for
 {                                                                                       \
     CY_FX_USB3_EPM_CTRL_REG = (CY_FX_USB3_EPM_CTRL_REG & 0xFFFCFFFF);                   \
 }
+
+#define CYFX_USB_CTRL_TASK      (1 << 0)        /* Event that indicates that there is a pending USB control request. */
 
 /* Application Error Handler */
 void
@@ -209,25 +212,37 @@ CyFxIsoSrcSinkDmaCallback (
         CyU3PDmaCbType_t  type,      /* Callback type.             */
         CyU3PDmaCBInput_t *input)    /* Callback status.           */
 {
+	CyU3PReturnStatus_t status;
+	CyU3PDmaBuffer_t buffer_p;
+
     if (type == CY_U3P_DMA_CB_PROD_EVENT)
     {
-        /* If all buffers are full, enable entry into LOW POWER mode. */
         glDmaPktsReceived++;
-        if ((glDmaPktsReceived - glDmaPktsDiscarded) >= CY_FX_ISOSRCSINK_DMA_BUF_COUNT)
-            CyU3PUsbLPMEnable ();
-
-        /* Data is discarded in the thread. Callback only tracks the number of buffers. */
+		status = CyU3PDmaChannelDiscardBuffer (chHandle);
+		if (status == CY_U3P_SUCCESS)
+		{
+			/* If we have freed up at least one buffer, keep LOW POWER mode disabled. */
+			glDmaPktsDiscarded++;
+		}
     }
-
-    if (type == CY_U3P_DMA_CB_CONS_EVENT)
+    else if (type == CY_U3P_DMA_CB_CONS_EVENT)
     {
-        /* If all buffers have become empty, enable entry into LOW POWER mode. */
         glDmaPktsSent++;
-        if (glDmaPktsCommitted == glDmaPktsSent)
-            CyU3PUsbLPMEnable ();
-    }
+        status = CyU3PDmaChannelGetBuffer (chHandle, &buffer_p, 0);
+        if (status == CY_U3P_SUCCESS)
+        {
+        	buffer_p.buffer[0] = 0;
+        	buffer_p.buffer[1] = glPacketCounter;
+            glPacketCounter++;
 
-    if (type == CY_U3P_DMA_CB_ERROR)
+            status = CyU3PDmaChannelCommitBuffer (chHandle, buffer_p.size, 0);
+            if (status == CY_U3P_SUCCESS)
+            {
+                glDmaPktsCommitted++;
+            }
+        }
+    }
+    else if (type == CY_U3P_DMA_CB_ERROR)
         CyU3PDebugPrint (2, "DMA Error\r\n");
 }
 
@@ -497,6 +512,8 @@ CyFxIsoSrcSinkApplnUSBSetupCB (
             CyU3PUsbAckSetup ();
             glResetDevice = CyTrue;
             isHandled     = CyTrue;
+            CyU3PEventSet (&glIsoLpEvent, CYFX_USB_CTRL_TASK, CYU3P_EVENT_OR);
+
         }
 
         if (bRequest == 0xE1)
@@ -779,9 +796,11 @@ void
 IsoSrcSinkAppThread_Entry (
         uint32_t input)
 {
-    CyU3PDmaBuffer_t    dmaInfo;
-    CyU3PReturnStatus_t status;
+    uint32_t eventMask = CYFX_USB_CTRL_TASK;   /* Events that we are interested in. */
+    uint32_t eventStat;
+    uint32_t stat;
 
+    /* Current status of the events. */
     /* Initialize the debug module */
     CyFxIsoSrcSinkApplnDebugInit();
 
@@ -793,55 +812,17 @@ IsoSrcSinkAppThread_Entry (
 
     for (;;)
     {
-        if (glDmaPktsReceived > glDmaPktsDiscarded)
+
+        stat = CyU3PEventGet (&glIsoLpEvent, eventMask, CYU3P_EVENT_OR_CLEAR, &eventStat, CYU3P_WAIT_FOREVER);
+        if (stat == CY_U3P_SUCCESS)
         {
-            /* Check if there is any data on the OUT endpoint. Wait up to 2 ms for data. */
-            status = CyU3PDmaChannelGetBuffer (&glChHandleIsoSink, &dmaInfo, 2);
-            if (status == CY_U3P_SUCCESS)
-            {
-                //CyU3PDebugPrint (2, "ISOOUT: size=%d\r\n", dmaInfo.count);
-
-                status = CyU3PDmaChannelDiscardBuffer (&glChHandleIsoSink);
-                if (status == CY_U3P_SUCCESS)
-                {
-                    /* If we have freed up at least one buffer, keep LOW POWER mode disabled. */
-                    glDmaPktsDiscarded++;
-                    CyU3PUsbLPMDisable ();
-                }
-            }
-        }
-
-        /* Check if there is a free buffer on the IN endpoint. Wait up to 2 ms for data. */
-        status = CyU3PDmaChannelGetBuffer (&glChHandleIsoSrc, &dmaInfo, 2);
-        if (status == CY_U3P_SUCCESS)
-        {
-        	dmaInfo.buffer[0] = 0;
-        	dmaInfo.buffer[1] = glPacketCounter;
-            glPacketCounter++;
-
-        	//uint32_t j;
-            //for (j = 0; j < CY_FX_ISO_PKTS * CY_FX_ISO_BURST * CY_FX_DMA_MULTIPLIER; j++)
-    		//{
-            //	dmaInfo.buffer[j*CY_FX_ISO_MAXPKT] = (glPacketCounter >> 8) & 0xFF;
-            //	dmaInfo.buffer[j*CY_FX_ISO_MAXPKT+1] = glPacketCounter & 0xFF;
-            //	glPacketCounter++;
-    		//}
-
-            status = CyU3PDmaChannelCommitBuffer (&glChHandleIsoSrc, dmaInfo.size, 0);
-            if (status == CY_U3P_SUCCESS)
-            {
-                /* If we have committed at least one buffer, keep LOW POWER mode disabled. */
-                glDmaPktsCommitted++;
-                CyU3PUsbLPMDisable ();
-            }
-        }
-
-        if (glResetDevice)
-        {
-            CyU3PConnectState (CyFalse, CyTrue);
-            CyU3PThreadSleep (1000);
-            CyU3PDeviceReset (CyFalse);
-            CyU3PThreadSleep (1000);
+			if (glResetDevice)
+			{
+				CyU3PConnectState (CyFalse, CyTrue);
+				CyU3PThreadSleep (1000);
+				CyU3PDeviceReset (CyFalse);
+				CyU3PThreadSleep (1000);
+			}
         }
     }
 }
@@ -853,6 +834,13 @@ CyFxApplicationDefine (
 {
     void *ptr = NULL;
     uint32_t retThrdCreate = CY_U3P_SUCCESS;
+
+    retThrdCreate = CyU3PEventCreate (&glIsoLpEvent);
+    if (retThrdCreate != 0)
+    {
+        /* Loop indefinitely */
+        while (1);
+    }
 
     /* Allocate the memory for the threads */
     ptr = CyU3PMemAlloc (CY_FX_ISOSRCSINK_THREAD_STACK);

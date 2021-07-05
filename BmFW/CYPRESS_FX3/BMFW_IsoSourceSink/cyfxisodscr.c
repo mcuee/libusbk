@@ -47,7 +47,7 @@ const uint8_t CyFxUSB30DeviceDscr[] __attribute__ ((aligned (32))) =
     0x00,                           /* Device sub-class */
     0x00,                           /* Device protocol */
     0x09,                           /* Maxpacket size for EP0 : 2^9 */
-    0xB5,0x04,                      /* Vendor ID */
+    0xB4,0x04,                      /* Vendor ID */
 
     /* Product ID */
     CY_U3P_GET_LSB(BWFW_PID),CY_U3P_GET_MSB(BWFW_PID),
@@ -69,7 +69,7 @@ const uint8_t CyFxUSB20DeviceDscr[] __attribute__ ((aligned (32))) =
     0x00,                           /* Device sub-class */
     0x00,                           /* Device protocol */
     0x40,                           /* Maxpacket size for EP0 : 64 bytes */
-    0xB5,0x04,                      /* Vendor ID */
+    0xB4,0x04,                      /* Vendor ID */
 
     /* Product ID */
     CY_U3P_GET_LSB(BWFW_PID),CY_U3P_GET_MSB(BWFW_PID),
