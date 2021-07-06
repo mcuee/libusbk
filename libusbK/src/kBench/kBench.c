@@ -192,6 +192,8 @@ typedef struct _BENCHMARK_TRANSFER_PARAM
 	HANDLE ThreadHandle;
 	DWORD ThreadID;
 	WINUSB_PIPE_INFORMATION_EX Ep;
+	USB_SUPERSPEED_ENDPOINT_COMPANION_DESCRIPTOR EpCompanionDescriptor;
+	BOOL HasEpCompanionDescriptor;
 	BOOL IsRunning;
 
 	LONGLONG TotalTransferred;
@@ -1370,28 +1372,28 @@ void FreeTransferParam(PBENCHMARK_TRANSFER_PARAM* testTransferRef)
 PBENCHMARK_TRANSFER_PARAM CreateTransferParam(PBENCHMARK_TEST_PARAM test, int endpointID)
 {
 	PBENCHMARK_TRANSFER_PARAM transferParam = NULL;
-	int i;
+	int pipeIndex, bufferIndex;
 	int allocSize;
 
 	PWINUSB_PIPE_INFORMATION_EX pipeInfo = NULL;
 
 	/// Get Pipe Information
-	for (i = 0; i < test->InterfaceDescriptor.bNumEndpoints; i++)
+	for (pipeIndex = 0; pipeIndex < test->InterfaceDescriptor.bNumEndpoints; pipeIndex++)
 	{
 		if (!(endpointID & USB_ENDPOINT_ADDRESS_MASK))
 		{
 			// Use first endpoint that matches the direction
-			if ((test->PipeInformation[i].PipeId & USB_ENDPOINT_DIRECTION_MASK) == endpointID)
+			if ((test->PipeInformation[pipeIndex].PipeId & USB_ENDPOINT_DIRECTION_MASK) == endpointID)
 			{
-				pipeInfo = &test->PipeInformation[i];
+				pipeInfo = &test->PipeInformation[pipeIndex];
 				break;
 			}
 		}
 		else
 		{
-			if ((int)test->PipeInformation[i].PipeId == endpointID)
+			if ((int)test->PipeInformation[pipeIndex].PipeId == endpointID)
 			{
-				pipeInfo = &test->PipeInformation[i];
+				pipeInfo = &test->PipeInformation[pipeIndex];
 				break;
 			}
 		}
@@ -1421,6 +1423,7 @@ PBENCHMARK_TRANSFER_PARAM CreateTransferParam(PBENCHMARK_TEST_PARAM test, int en
 		transferParam->Test = test;
 
 		memcpy(&transferParam->Ep, pipeInfo, sizeof(transferParam->Ep));
+		transferParam->HasEpCompanionDescriptor = K.GetSuperSpeedPipeCompanionDescriptor(test->InterfaceHandle, test->InterfaceDescriptor.bAlternateSetting, (UCHAR)pipeIndex, &transferParam->EpCompanionDescriptor);
 
 		if (ENDPOINT_TYPE(transferParam) == USB_ENDPOINT_TYPE_ISOCHRONOUS)
 		{
@@ -1444,14 +1447,14 @@ PBENCHMARK_TRANSFER_PARAM CreateTransferParam(PBENCHMARK_TEST_PARAM test, int en
 				goto Done;
 			}
 
-			for (i = 0; i < transferParam->Test->BufferCount; i++)
+			for (bufferIndex = 0; bufferIndex < transferParam->Test->BufferCount; bufferIndex++)
 			{
-				transferParam->TransferHandles[i].Overlapped.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+				transferParam->TransferHandles[bufferIndex].Overlapped.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
 
 				// Data buffer(s) are located at the end of the transfer param.
-				transferParam->TransferHandles[i].Data = transferParam->Buffer + (i * transferParam->Test->AllocBufferSize);
+				transferParam->TransferHandles[bufferIndex].Data = transferParam->Buffer + (bufferIndex * transferParam->Test->AllocBufferSize);
 
-				if (!IsochK_Init(&transferParam->TransferHandles[i].IsochHandle, test->InterfaceHandle, transferParam->Ep.PipeId, numIsoPackets, transferParam->TransferHandles[i].Data, transferParam->Test->AllocBufferSize))
+				if (!IsochK_Init(&transferParam->TransferHandles[bufferIndex].IsochHandle, test->InterfaceHandle, transferParam->Ep.PipeId, numIsoPackets, transferParam->TransferHandles[bufferIndex].Data, transferParam->Test->AllocBufferSize))
 				{
 					CONERR("IsochK_Init failed for isochornous pipe %02X\n", transferParam->Ep.PipeId);
 					CONERR("- ErrorCode = %u\n", GetLastError());
@@ -1459,7 +1462,7 @@ PBENCHMARK_TRANSFER_PARAM CreateTransferParam(PBENCHMARK_TEST_PARAM test, int en
 					goto Done;
 				}
 
-				if (!IsochK_SetPacketOffsets(transferParam->TransferHandles[i].IsochHandle, transferParam->Ep.MaximumBytesPerInterval))
+				if (!IsochK_SetPacketOffsets(transferParam->TransferHandles[bufferIndex].IsochHandle, transferParam->Ep.MaximumBytesPerInterval))
 				{
 					CONERR("IsochK_SetPacketOffsets failed for isochornous pipe %02X\n", transferParam->Ep.PipeId);
 					CONERR("- ErrorCode = %u\n", GetLastError());
@@ -1649,17 +1652,54 @@ void ShowTransferInfo(PBENCHMARK_TRANSFER_PARAM transferParam)
 
 	if (!transferParam) return;
 
-	if (transferParam->Ep.MaximumBytesPerInterval != 0)
+	if (transferParam->HasEpCompanionDescriptor)
 	{
-		CONMSG("%s %s (Ep%02Xh) max bytes per interval: %lu\n",
-			EndpointTypeDisplayString[ENDPOINT_TYPE(transferParam)],
-			TRANSFER_DISPLAY(transferParam, "Read", "Write"),
-			transferParam->Ep.PipeId,
-			transferParam->Ep.MaximumBytesPerInterval);
+		if (transferParam->EpCompanionDescriptor.wBytesPerInterval)
+		{
+			if (transferParam->Ep.PipeType == UsbdPipeTypeIsochronous)
+			{
+				CONMSG("%s %s (Ep%02Xh) Maximum Bytes Per Interval:%lu Max Bursts:%u Multi:%u\n",
+					EndpointTypeDisplayString[ENDPOINT_TYPE(transferParam)],
+					TRANSFER_DISPLAY(transferParam, "Read", "Write"),
+					transferParam->Ep.PipeId,
+					transferParam->Ep.MaximumBytesPerInterval,
+					transferParam->EpCompanionDescriptor.bMaxBurst+1,
+					transferParam->EpCompanionDescriptor.bmAttributes.Isochronous.Mult+1);
+
+			}
+			else if (transferParam->Ep.PipeType == UsbdPipeTypeBulk)
+			{
+				CONMSG("%s %s (Ep%02Xh) Maximum Bytes Per Interval:%lu Max Bursts:%u Max Streams:%u\n",
+					EndpointTypeDisplayString[ENDPOINT_TYPE(transferParam)],
+					TRANSFER_DISPLAY(transferParam, "Read", "Write"),
+					transferParam->Ep.PipeId,
+					transferParam->Ep.MaximumBytesPerInterval,
+					transferParam->EpCompanionDescriptor.bMaxBurst + 1,
+					transferParam->EpCompanionDescriptor.bmAttributes.Bulk.MaxStreams + 1);
+
+			}
+			else
+			{
+				CONMSG("%s %s (Ep%02Xh) Maximum Bytes Per Interval:%lu\n",
+					EndpointTypeDisplayString[ENDPOINT_TYPE(transferParam)],
+					TRANSFER_DISPLAY(transferParam, "Read", "Write"),
+					transferParam->Ep.PipeId,
+					transferParam->Ep.MaximumBytesPerInterval);
+
+			}
+		}
+		else
+		{
+			CONMSG("%s %s (Ep%02Xh) Maximum Packet Size:%d\n",
+				EndpointTypeDisplayString[ENDPOINT_TYPE(transferParam)],
+				TRANSFER_DISPLAY(transferParam, "Read", "Write"),
+				transferParam->Ep.PipeId,
+				transferParam->Ep.MaximumPacketSize);
+		}
 	}
 	else
 	{
-		CONMSG("%s %s (Ep%02Xh) max packet size: %d\n",
+		CONMSG("%s %s (Ep%02Xh) Maximum Packet Size: %d\n",
 			EndpointTypeDisplayString[ENDPOINT_TYPE(transferParam)],
 			TRANSFER_DISPLAY(transferParam, "Read", "Write"),
 			transferParam->Ep.PipeId,
