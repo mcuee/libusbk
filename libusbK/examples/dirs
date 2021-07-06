@@ -13,6 +13,7 @@ DIRS= \
      xfer-control \
      xfer-control-loop \
      xfer-iso \
+     xfer-iso-asap \
      xfer-stream \
      xfer-stream-loop \
      xfer-sync

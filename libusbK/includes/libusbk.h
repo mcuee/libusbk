@@ -1543,7 +1543,7 @@ typedef struct _KUSB_DRIVER_API
 	*/
 	KUSB_IsochWritePipe* IsochWritePipe;
 	
-	/*! \fn BOOL KUSB_API QueryPipeEx (_in KUSB_HANDLE InterfaceHandle, _in UCHAR AltSettingNumber, _in UCHAR PipeIndex, _out PWINUSB_PIPE_INFORMATION_EX PipeInformation)
+	/*! \fn BOOL KUSB_API QueryPipeEx (_in KUSB_HANDLE InterfaceHandle, _in UCHAR AltSettingNumber, _in UCHAR PipeIndex, _out PWINUSB_PIPE_INFORMATION_EX PipeInformationEx)
 	* \memberof KUSB_DRIVER_API
 	* \copydoc UsbK_QueryPipeEx
 	*/
@@ -2781,6 +2781,38 @@ extern "C" {
 	    _in UCHAR PipeIndex,
 	    _out PWINUSB_PIPE_INFORMATION PipeInformation);
 	
+//! Retrieves information about a pipe that is associated with an interface.
+	/*!
+	*
+	* \param[in] InterfaceHandle
+	* An initialized usb handle, see \ref UsbK_Init.
+	*
+	* \param[in] AltSettingNumber
+	* A value that specifies the alternate interface to return the information for.
+	*
+	* \param[in] PipeIndex
+	* A value that specifies the pipe to return information about. This value is not the same as the
+	* bEndpointAddress field in the endpoint descriptor. A PipeIndex value of 0 signifies the first endpoint
+	* that is associated with the interface, a value of 1 signifies the second endpoint, and so on. PipeIndex
+	* must be less than the value in the bNumEndpoints field of the interface descriptor.
+	*
+	* \param[out] PipeInformationEx
+	* A pointer, on output, to a caller-allocated \ref WINUSB_PIPE_INFORMATION_EX structure that contains pipe
+	* information.
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
+	* The \ref UsbK_QueryPipeEx function does not retrieve information about the control pipe.
+	*
+	* Each interface on the USB device can have multiple endpoints. To communicate with each of these endpoints,
+	* the bus driver creates pipes for each endpoint on the interface. The pipe indices are zero-based.
+	* Therefore for n number of endpoints, the pipes' indices are set from n-1. \ref UsbK_QueryPipeEx parses the
+	* configuration descriptor to get the interface specified by the caller. It searches the interface
+	* descriptor for the endpoint descriptor associated with the caller-specified pipe. If the endpoint is
+	* found, the function populates the caller-allocated \ref WINUSB_PIPE_INFORMATION_EX structure with information
+	* from the endpoint descriptor.
+	*
+	*/
 	KUSB_EXP BOOL KUSB_API UsbK_QueryPipeEx(
 		_in KUSB_HANDLE InterfaceHandle,
 		_in UCHAR AltSettingNumber,
@@ -3219,11 +3251,6 @@ extern "C" {
 	* // Get the current frame number
 	* UINT StartFrameNumber;
 	* Usb.GetCurrentFrameNumber(usbHandle, &StartFrameNumber);
-	*
-	* // Give plenty of time to queue up all of our transfers BEFORE the bus starts consuming them
-	* // Note that this is also the startup delay in milliseconds.
-	* StartFrameNumber += 12
-	* \endcode
 	*
 	* // Give plenty of time to queue up all of our transfers BEFORE the bus starts consuming them
 	* // Note that this is also the startup delay in milliseconds.
@@ -4373,7 +4400,7 @@ extern "C" {
 	* False if the calculations are for a FullSpeed device.  True for HighSpeed and SuperSpeed.
 	*
 	* \param[in] PipeInformationEx
-	* A pointer to a \ref WINUSB_PIPE_INFORMATION structure the was obtained from \ref UsbK_QueryPipEx. 
+	* A pointer to a \ref WINUSB_PIPE_INFORMATION_EX structure the was obtained from \ref UsbK_QueryPipeEx. 
 	*
 	* \param[out] PacketInformation
 	* Pointer to a /ref KISOCH_PACKET_INFORMATION structure that receives the information

@@ -337,7 +337,7 @@ Device opened successfully!
 * -# Frees the LstK (device list) handle.
 * -# Closes log file.
 *
-* \par Console Output using CYPRESS_FX3\BMFW_IsoSourceSink Firmware
+* \par Console Output using CYPRESS_FX3\\BMFW_IsoSourceSink Firmware
 * \verbatim
 .\xfer-iso vid=04b4 pid=00fd ep=80
 Looking for device vid/pid 04B4/00FD..
@@ -513,7 +513,7 @@ Done!
 * -# Frees the LstK (device list) handle.
 * -# Closes log file.
 *
-* \par Console Output using CYPRESS_FX3\BMFW_IsoSourceSink Firmware
+* \par Console Output using CYPRESS_FX3\\BMFW_IsoSourceSink Firmware
 * \verbatim
 .\xfer-iso-asap vid=04b4 pid=00fd ep=80
 Looking for device vid/pid 04B4/00FD..

@@ -88,7 +88,7 @@ typedef struct _WINUSB_PIPE_INFORMATION
 typedef WINUSB_PIPE_INFORMATION* PWINUSB_PIPE_INFORMATION;
 USBK_C_ASSERT(WINUSB_PIPE_INFORMATION,sizeof(WINUSB_PIPE_INFORMATION) == 12);
 
-//! The \c WINUSB_PIPE_INFORMATION structure contains pipe information that the \ref UsbK_QueryPipe routine retrieves.
+//! The \c WINUSB_PIPE_INFORMATION_EX structure contains pipe information that the \ref UsbK_QueryPipeEx routine retrieves.
 typedef struct _WINUSB_PIPE_INFORMATION_EX
 {
 	//! A \c USBD_PIPE_TYPE enumeration value that specifies the pipe type
@@ -112,7 +112,7 @@ typedef struct _WINUSB_PIPE_INFORMATION_EX
 	ULONG MaximumBytesPerInterval;
 
 } WINUSB_PIPE_INFORMATION_EX;
-//! Pointer to a \ref WINUSB_PIPE_INFORMATION structure
+//! Pointer to a \ref WINUSB_PIPE_INFORMATION_EX structure
 typedef WINUSB_PIPE_INFORMATION_EX* PWINUSB_PIPE_INFORMATION_EX;
 USBK_C_ASSERT(WINUSB_PIPE_INFORMATION_EX, sizeof(WINUSB_PIPE_INFORMATION_EX) == 16);
 
