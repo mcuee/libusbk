@@ -174,6 +174,9 @@ BOOL GetProcAddress_UsbK(__out KPROC* ProcAddress, __in LONG FunctionID)
 	case KUSB_FNID_QueryPipeEx:
 		*ProcAddress = (KPROC)UsbK_QueryPipeEx;
 		break;
+	case KUSB_FNID_GetSuperSpeedPipeCompanionDescriptor:
+		*ProcAddress = (KPROC)UsbK_GetSuperSpeedPipeCompanionDescriptor;
+		break;
 	default:
 		return FALSE;
 

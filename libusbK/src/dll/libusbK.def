@@ -48,6 +48,7 @@ EXPORTS
     UsbK_IsochReadPipe
     UsbK_IsochWritePipe
     UsbK_QueryPipeEx
+    UsbK_GetSuperSpeedPipeCompanionDescriptor
 
     UsbK_GetCurrentFrameNumber
     UsbK_GetOverlappedResult

@@ -745,24 +745,50 @@ typedef USB_ENDPOINT_DESCRIPTOR* PUSB_ENDPOINT_DESCRIPTOR;
 #pragma warning (disable:4201)
 #pragma warning(disable:4214) // named type definition in parentheses
 
+//! A structure representing additional information about super speed (or higher) endpoints.
+/*
+*
+* This descriptor is documented in the USB 3.0 specification.
+* All multiple-byte fields are represented in host-endian format.
+*
+*/
 typedef struct _USB_SUPERSPEED_ENDPOINT_COMPANION_DESCRIPTOR {
+	
+	//! Size of this descriptor (in bytes)
 	UCHAR  bLength;
+	
+	//! Descriptor type
 	UCHAR  bDescriptorType;
+
+	//! Specifies the maximum number of packets that the endpoint can send or receive as a part of a burst.
 	UCHAR  bMaxBurst;
-	union {
+	
+	union
+	{
 		UCHAR AsUchar;
-		struct {
+		struct
+		{
+
+			//! Specifies the maximum number of streams supported by the bulk endpoint.
 			UCHAR MaxStreams : 5;
+			
 			UCHAR Reserved1 : 3;
 		} Bulk;
-		struct {
+		struct
+		{
+
+			//! Specifies a zero-based number that determines the maximum number of packets (bMaxBurst * (Mult + 1)) that can be sent to the endpoint within a service interval.
 			UCHAR Mult : 2;
+			
 			UCHAR Reserved2 : 5;
+			
 			UCHAR SspCompanion : 1;
 		} Isochronous;
 	} bmAttributes;
+
+	//! Number of bytes per interval
 	USHORT wBytesPerInterval;
-} USB_SUPERSPEED_ENDPOINT_COMPANION_DESCRIPTOR, * PUSB_SUPERSPEED_ENDPOINT_COMPANION_DESCRIPTOR;
+} USB_SUPERSPEED_ENDPOINT_COMPANION_DESCRIPTOR, *PUSB_SUPERSPEED_ENDPOINT_COMPANION_DESCRIPTOR;
 
 #if _MSC_VER >= 1200
 #pragma warning(pop)
@@ -1086,6 +1112,9 @@ typedef enum _KUSB_FNID
 
 	//! \ref UsbK_QueryPipeEx dynamic driver function id.
 	KUSB_FNID_QueryPipeEx,
+
+	//! \ref UsbK_GetSuperSpeedPipeCompanionDescriptor dynamic driver function id.
+	KUSB_FNID_GetSuperSpeedPipeCompanionDescriptor,
 	
 	//! Supported function count
     KUSB_FNID_COUNT,
@@ -1209,6 +1238,12 @@ typedef BOOL KUSB_API KUSB_QueryPipeEx(
 	_in UCHAR AlternateSettingNumber,
 	_in UCHAR PipeIndex,
 	_out PWINUSB_PIPE_INFORMATION_EX PipeInformationEx);
+
+typedef BOOL KUSB_API KUSB_GetSuperSpeedPipeCompanionDescriptor(
+	__in KUSB_HANDLE Handle,
+	__in UCHAR AltSettingNumber,
+	__in UCHAR PipeIndex,
+	__out PUSB_SUPERSPEED_ENDPOINT_COMPANION_DESCRIPTOR PipeCompanionDescriptor);
 
 typedef BOOL KUSB_API KUSB_SetPipePolicy (
     _in KUSB_HANDLE InterfaceHandle,
@@ -1548,6 +1583,12 @@ typedef struct _KUSB_DRIVER_API
 	* \copydoc UsbK_QueryPipeEx
 	*/
 	KUSB_QueryPipeEx* QueryPipeEx;
+	
+	/*! \fn BOOL KUSB_API GetSuperSpeedPipeCompanionDescriptor (_in KUSB_HANDLE InterfaceHandle, _in UCHAR AltSettingNumber, _in UCHAR PipeIndex, _out PUSB_SUPERSPEED_ENDPOINT_COMPANION_DESCRIPTOR PipeCompanionDescriptor)
+	* \memberof KUSB_DRIVER_API
+	* \copydoc UsbK_GetSuperSpeedPipeCompanionDescriptor
+	*/
+	KUSB_GetSuperSpeedPipeCompanionDescriptor* GetSuperSpeedPipeCompanionDescriptor;
 	
 	//! fixed structure padding.
 	UCHAR z_F_i_x_e_d[512 - sizeof(KUSB_DRIVER_API_INFO) -  sizeof(UINT_PTR) * KUSB_FNID_COUNT - (KUSB_FNID_COUNT & (sizeof(UINT_PTR) - 1) ? (KUSB_FNID_COUNT & (~(sizeof(UINT_PTR) - 1))) + sizeof(UINT_PTR) : KUSB_FNID_COUNT)];
@@ -2819,6 +2860,36 @@ extern "C" {
 		_in UCHAR PipeIndex,
 		_out PWINUSB_PIPE_INFORMATION_EX PipeInformationEx);
 
+//! Retrieves a pipes super speed endpoint companion descriptor associated with an interface.
+	/*!
+	*
+	* \param[in] InterfaceHandle
+	* An initialized usb handle, see \ref UsbK_Init.
+	*
+	* \param[in] AltSettingNumber
+	* A value that specifies the alternate interface to return the information for.
+	*
+	* \param[in] PipeIndex
+	* A value that specifies the pipe to return information about. This value is not the same as the
+	* bEndpointAddress field in the endpoint descriptor. A PipeIndex value of 0 signifies the first endpoint
+	* that is associated with the interface, a value of 1 signifies the second endpoint, and so on. PipeIndex
+	* must be less than the value in the bNumEndpoints field of the interface descriptor.
+	*
+	* \param[out] PipeCompanionDescriptor
+	* A pointer, on output, to a caller-allocated \ref USB_SUPERSPEED_ENDPOINT_COMPANION_DESCRIPTOR structure that
+	* contains pipe	super speed companion descriptor.
+	*
+	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
+	*
+	* The \ref UsbK_GetSuperSpeedPipeCompanionDescriptor function does not retrieve information about the control pipe.
+	*
+	*/
+	KUSB_EXP BOOL KUSB_API UsbK_GetSuperSpeedPipeCompanionDescriptor(
+		_in KUSB_HANDLE InterfaceHandle,
+		_in UCHAR AltSettingNumber,
+		_in UCHAR PipeIndex,
+		_out PUSB_SUPERSPEED_ENDPOINT_COMPANION_DESCRIPTOR PipeCompanionDescriptor);
+	
 //! Sets the policy for a specific pipe associated with an endpoint on the device. This is a synchronous operation.
 	/*!
 	*

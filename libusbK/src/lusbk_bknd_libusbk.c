@@ -465,6 +465,20 @@ KUSB_EXP BOOL KUSB_API UsbK_QueryPipeEx(
 		PipeInformationEx);
 
 }
+
+KUSB_EXP BOOL KUSB_API UsbK_GetSuperSpeedPipeCompanionDescriptor(
+	__in KUSB_HANDLE InterfaceHandle,
+	__in UCHAR AltSettingNumber,
+	__in UCHAR PipeIndex,
+	__out PUSB_SUPERSPEED_ENDPOINT_COMPANION_DESCRIPTOR PipeCompanionDescriptor)
+{
+	return UsbStack_GetSuperSpeedPipeCompanionDescriptor(
+		InterfaceHandle,
+		AltSettingNumber,
+		PipeIndex,
+		PipeCompanionDescriptor);
+}
+
 KUSB_EXP BOOL KUSB_API UsbK_SetPipePolicy(
     _in KUSB_HANDLE InterfaceHandle,
     _in UCHAR PipeID,

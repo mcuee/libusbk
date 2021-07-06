@@ -598,7 +598,7 @@ BOOL UsbStack_QueryPipeEx(
 	__in KUSB_HANDLE Handle,
 	__in UCHAR AltSettingNumber,
 	__in UCHAR PipeIndex,
-	__out PWINUSB_PIPE_INFORMATION_EX PipeInformation)
+	__out PWINUSB_PIPE_INFORMATION_EX PipeInformationEx)
 {
 	PKUSB_HANDLE_INTERNAL handle;
 	PKUSB_INTERFACE_EL intfEL;
@@ -607,7 +607,7 @@ BOOL UsbStack_QueryPipeEx(
 	
 	ErrorParamAction(AltSettingNumber > 0x7F, "AltSettingNumber", return FALSE);
 	ErrorParamAction(PipeIndex > 0x1F, "PipeIndex", return FALSE);
-	ErrorParamAction(!IsHandleValid(PipeInformation), "PipeInformation", return FALSE);
+	ErrorParamAction(!IsHandleValid(PipeInformationEx), "PipeInformation", return FALSE);
 
 	Pub_To_Priv_UsbK(Handle, handle, return FALSE);
 	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
@@ -621,18 +621,57 @@ BOOL UsbStack_QueryPipeEx(
 	FindPipeEL(altfEL, pipeEL, TRUE, PipeIndex);
 	ErrorSet(!pipeEL, Error, ERROR_NO_MORE_ITEMS, "PipeIndex %u does not exists.", PipeIndex);
 	
-	PipeInformation->PipeType = pipeEL->Descriptor->bmAttributes & 0x03;
-	PipeInformation->MaximumPacketSize = (pipeEL->Descriptor->wMaxPacketSize & 0x7FF) * (((pipeEL->Descriptor->wMaxPacketSize >> 11) & 0x3) + 1);
-	PipeInformation->PipeId = pipeEL->Descriptor->bEndpointAddress;
-	PipeInformation->Interval = pipeEL->Descriptor->bInterval;
+	PipeInformationEx->PipeType = pipeEL->Descriptor->bmAttributes & 0x03;
+	PipeInformationEx->MaximumPacketSize = (pipeEL->Descriptor->wMaxPacketSize & 0x7FF) * (((pipeEL->Descriptor->wMaxPacketSize >> 11) & 0x3) + 1);
+	PipeInformationEx->PipeId = pipeEL->Descriptor->bEndpointAddress;
+	PipeInformationEx->Interval = pipeEL->Descriptor->bInterval;
 	if (pipeEL->SuperSpeedCompanionDescriptor)
 	{
-		PipeInformation->MaximumBytesPerInterval = pipeEL->SuperSpeedCompanionDescriptor->wBytesPerInterval;
+		PipeInformationEx->MaximumBytesPerInterval = pipeEL->SuperSpeedCompanionDescriptor->wBytesPerInterval;
 	}
 	else
 	{
-		PipeInformation->MaximumBytesPerInterval = PipeInformation->MaximumPacketSize;
+		PipeInformationEx->MaximumBytesPerInterval = PipeInformationEx->MaximumPacketSize;
 	}
+	PoolHandle_Dec_UsbK(handle);
+	return TRUE;
+
+Error:
+	PoolHandle_Dec_UsbK(handle);
+	return FALSE;
+}
+
+BOOL UsbStack_GetSuperSpeedPipeCompanionDescriptor(
+	__in KUSB_HANDLE Handle,
+	__in UCHAR AltSettingNumber,
+	__in UCHAR PipeIndex,
+	__out PUSB_SUPERSPEED_ENDPOINT_COMPANION_DESCRIPTOR PipeCompanionDescriptor)
+{
+	PKUSB_HANDLE_INTERNAL handle;
+	PKUSB_INTERFACE_EL intfEL;
+	PKUSB_ALT_INTERFACE_EL altfEL;
+	PKUSB_PIPE_EL pipeEL;
+	
+	ErrorParamAction(AltSettingNumber > 0x7F, "AltSettingNumber", return FALSE);
+	ErrorParamAction(PipeIndex > 0x1F, "PipeIndex", return FALSE);
+	ErrorParamAction(!IsHandleValid(PipeCompanionDescriptor), "PipeCompanionDescriptor", return FALSE);
+
+	Pub_To_Priv_UsbK(Handle, handle, return FALSE);
+	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
+
+	FindInterfaceEL(handle->Device->UsbStack, intfEL, TRUE, handle->Selected_SharedInterface_Index);
+	ErrorSet(!intfEL, Error, ERROR_NO_MORE_ITEMS, "Failed locating interface number %u.", handle->Selected_SharedInterface_Index);
+
+	FindAltInterfaceEL(intfEL, altfEL, FALSE, AltSettingNumber);
+	ErrorSet(!altfEL, Error, ERROR_NO_MORE_ITEMS, "AltSettingNumber %u does not exists.", AltSettingNumber);
+
+	FindPipeEL(altfEL, pipeEL, TRUE, PipeIndex);
+	ErrorSet(!pipeEL, Error, ERROR_NO_MORE_ITEMS, "PipeIndex %u does not exists.", PipeIndex);
+
+	ErrorSet(!pipeEL->SuperSpeedCompanionDescriptor, Error, ERROR_NOT_FOUND, "PipeIndex %u does not have a super speed endpoint companion descriptor.", PipeIndex);
+
+	memcpy(PipeCompanionDescriptor, pipeEL->SuperSpeedCompanionDescriptor, sizeof(*PipeCompanionDescriptor));
+
 	PoolHandle_Dec_UsbK(handle);
 	return TRUE;
 

@@ -70,6 +70,12 @@ BOOL UsbStack_QueryPipeEx(
     __in UCHAR PipeIndex,
     __out PWINUSB_PIPE_INFORMATION_EX PipeInformationEx);
 
+BOOL UsbStack_GetSuperSpeedPipeCompanionDescriptor(
+    __in KUSB_HANDLE Handle,
+    __in UCHAR AltSettingNumber,
+    __in UCHAR PipeIndex,
+    __out PUSB_SUPERSPEED_ENDPOINT_COMPANION_DESCRIPTOR PipeCompanionDescriptor);
+
 BOOL UsbStack_SelectInterface (
     __in KUSB_HANDLE Handle,
     __in UCHAR IndexOrNumber,
