@@ -310,6 +310,7 @@ KUSB_EXP BOOL KUSB_API LibK_LoadDriverAPI(
 			CASE_FNID_LOAD(GetOverlappedResult);
 			CASE_FNID_LOAD(GetProperty);
 			CASE_FNID_LOAD(QueryPipeEx);
+			CASE_FNID_LOAD(GetSuperSpeedPipeCompanionDescriptor);
 
 		default:
 			USBERRN("undeclared api function %u!", fnIdIndex);
