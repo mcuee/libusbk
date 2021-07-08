@@ -120,7 +120,7 @@ namespace Xfer.UsbStream
 
         public override int Read(byte[] buffer, int offset, int count)
         {
-            int transferred;
+            uint transferred;
             bool success = mStm.Read(buffer, offset, count, out transferred);
 
             Debug.WriteLineIf(!success,
@@ -128,7 +128,7 @@ namespace Xfer.UsbStream
                                             Marshal.GetLastWin32Error()),
                               "ERROR");
 
-            return !success ? 0 : transferred;
+            return !success ? 0 : (int)transferred;
         }
 
         public bool Start()
@@ -143,7 +143,7 @@ namespace Xfer.UsbStream
 
         public override void Write(byte[] buffer, int offset, int count)
         {
-            int transferred;
+            uint transferred;
 
             bool success = mStm.Write(buffer, offset, count, out transferred);
             if (!success)
@@ -183,8 +183,8 @@ namespace Xfer.UsbStream
                                   int xferContextIndex,
                                   IntPtr nativeOverlapped)
         {
-            int notUsedForAsync;
-            int bufferSize = xferContext.BufferSize;
+            uint notUsedForAsync;
+            uint bufferSize = (uint) xferContext.BufferSize;
 
             bool success = mUsb.ReadPipe(mPipeId, xferContext.Buffer, bufferSize, out notUsedForAsync, nativeOverlapped);
             int errorCode = Marshal.GetLastWin32Error();
@@ -204,8 +204,8 @@ namespace Xfer.UsbStream
                                    int xferContextIndex,
                                    IntPtr nativeOverlapped)
         {
-            int notUsedForAsync;
-            int bufferSize = xferContext.TransferLength;
+            uint notUsedForAsync;
+            uint bufferSize = (uint) xferContext.TransferLength;
 
             bool success = mUsb.WritePipe(mPipeId, xferContext.Buffer, bufferSize, out notUsedForAsync, nativeOverlapped);
             int errorCode = Marshal.GetLastWin32Error();

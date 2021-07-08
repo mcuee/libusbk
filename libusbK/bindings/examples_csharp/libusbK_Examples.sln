@@ -1,6 +1,8 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 10.00
-# Visual Studio 2008
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.1525
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Read.Isochronous", "Read.Isochronous\Read.Isochronous.csproj", "{97DB9A34-994D-470E-A415-AC54ACD96713}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Xfer.Stm", "Xfer.Threaded.Stream\Xfer.Stm.csproj", "{AB79B52F-49BA-4424-8DD3-CC61489EFC1E}"
@@ -58,5 +60,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {1FB80B66-D7D9-493B-A34D-AB025C65D16F}
 	EndGlobalSection
 EndGlobal

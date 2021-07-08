@@ -75,10 +75,10 @@ namespace Xfer.UsbStream
         {
             bool success;
             UsbK usb;
-            WINUSB_PIPE_INFORMATION pipeInfoRead;
+            WINUSB_PIPE_INFORMATION_EX pipeInfoRead;
             USB_INTERFACE_DESCRIPTOR interfaceDescriptorRead;
 
-            WINUSB_PIPE_INFORMATION pipeInfoWrite;
+            WINUSB_PIPE_INFORMATION_EX pipeInfoWrite;
             USB_INTERFACE_DESCRIPTOR interfaceDescriptorWrite;
 
             // Find the IN endpoint and configure the device.

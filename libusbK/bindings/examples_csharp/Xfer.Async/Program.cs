@@ -53,7 +53,7 @@ namespace Xfer.Async
         {
             bool success;
 
-            WINUSB_PIPE_INFORMATION pipeInfo;
+            WINUSB_PIPE_INFORMATION_EX pipeInfo;
             UsbK usb;
             USB_INTERFACE_DESCRIPTOR interfaceDescriptor;
 
@@ -82,8 +82,8 @@ namespace Xfer.Async
             */
             int[] pipeTimeoutMS = new[] {0};
             usb.SetPipePolicy((byte) Test.PipeId,
-                              (int) PipePolicyType.PIPE_TRANSFER_TIMEOUT,
-                              Marshal.SizeOf(typeof (int)),
+                              (uint) PipePolicyType.PIPE_TRANSFER_TIMEOUT,
+                              (uint) Marshal.SizeOf(typeof (int)),
                               pipeTimeoutMS);
 
 
@@ -94,8 +94,8 @@ namespace Xfer.Async
             */
             int[] useRawIO = new[] {1};
             usb.SetPipePolicy((byte)Test.PipeId,
-                              (int)PipePolicyType.RAW_IO,
-                              Marshal.SizeOf(typeof(int)),
+                              (uint)PipePolicyType.RAW_IO,
+                              (uint) Marshal.SizeOf(typeof(int)),
                               useRawIO);
 
             int totalSubmittedTransfers = 0;
@@ -114,7 +114,7 @@ namespace Xfer.Async
             while (success && totalCompletedTransfers < Test.MaxTransfersTotal)
             {
                 KOVL_HANDLE ovlHandle;
-                int transferred;
+                uint transferred;
                 while (success && totalSubmittedTransfers < Test.MaxTransfersTotal)
                 {
                     // Get the next KOVL_HANDLE
@@ -143,15 +143,15 @@ namespace Xfer.Async
 
                     byte[] transferBuffer = transferBuffers[transferBufferIndex];
 
-                    int not_used_for_async;
+                    uint not_used_for_async;
                     if ((Test.PipeId & AllKConstants.USB_ENDPOINT_DIRECTION_MASK) > 0)
                     {
-                        success = usb.ReadPipe((byte) Test.PipeId, transferBuffer, transferBuffer.Length, out not_used_for_async, ovlHandle);
+                        success = usb.ReadPipe((byte) Test.PipeId, transferBuffer, (uint)transferBuffer.Length, out not_used_for_async, ovlHandle);
                     }
                     else
                     {
                         FillMyBufferForWrite(transferBuffer, out transferred);
-                        success = usb.WritePipe((byte)Test.PipeId, transferBuffer, transferred, out not_used_for_async, ovlHandle);
+                        success = usb.WritePipe((byte)Test.PipeId, transferBuffer, (uint)transferred, out not_used_for_async, ovlHandle);
                     }
 
                     if (Marshal.GetLastWin32Error() == ErrorCodes.IoPending)
@@ -196,13 +196,13 @@ namespace Xfer.Async
 
         #region TODO USER: Use these functions to process and fill the transfer buffers
 
-        private static void ProcessMyBufferFromRead(byte[] transferBuffer, int transferred)
+        private static void ProcessMyBufferFromRead(byte[] transferBuffer, uint transferred)
         {
         }
 
-        private static void FillMyBufferForWrite(byte[] transferBuffer, out int length)
+        private static void FillMyBufferForWrite(byte[] transferBuffer, out uint length)
         {
-            length = transferBuffer.Length;
+            length = (uint) transferBuffer.Length;
         }
 
         #endregion

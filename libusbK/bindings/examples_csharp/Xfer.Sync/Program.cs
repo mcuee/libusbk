@@ -50,7 +50,7 @@ namespace Xfer.Sync
         private static void Main()
         {
             bool success;
-            WINUSB_PIPE_INFORMATION pipeInfo;
+            WINUSB_PIPE_INFORMATION_EX pipeInfo;
             UsbK usb;
             USB_INTERFACE_DESCRIPTOR interfaceDescriptor;
 
@@ -79,8 +79,8 @@ namespace Xfer.Sync
             int[] pipeTimeoutMS = new[] {3000};
             usb.SetPipePolicy(
                               (byte) Test.PipeId,
-                              (int) PipePolicyType.PIPE_TRANSFER_TIMEOUT,
-                              Marshal.SizeOf(typeof (int)),
+                              (uint) PipePolicyType.PIPE_TRANSFER_TIMEOUT,
+                              (uint)Marshal.SizeOf(typeof (int)),
                               pipeTimeoutMS);
 
             int totalTransfers = 0;
@@ -88,11 +88,11 @@ namespace Xfer.Sync
             byte[] tempBuffer = new byte[Test.TransferBufferSize];
             while (success && totalTransfers++ < Test.MaxTransfersTotal)
             {
-                int transferred;
+                uint transferred;
                 if ((Test.PipeId & 0x80) > 0)
-                    success = usb.ReadPipe((byte) Test.PipeId, tempBuffer, tempBuffer.Length, out transferred, IntPtr.Zero);
+                    success = usb.ReadPipe((byte) Test.PipeId, tempBuffer, (uint)tempBuffer.Length, out transferred, IntPtr.Zero);
                 else
-                    success = usb.WritePipe((byte) Test.PipeId, tempBuffer, tempBuffer.Length, out transferred, IntPtr.Zero);
+                    success = usb.WritePipe((byte) Test.PipeId, tempBuffer, (uint)tempBuffer.Length, out transferred, IntPtr.Zero);
 
                 Console.WriteLine("#{0:0000} Transferred {1} bytes.", totalTransfers, transferred);
             }

@@ -60,7 +60,7 @@ namespace libusbK.Examples
         #region Public Members
         public int AltInterfaceId;
 
-        public bool ConfigureDevice(out WINUSB_PIPE_INFORMATION pipeInfo,
+        public bool ConfigureDevice(out WINUSB_PIPE_INFORMATION_EX pipeInfo,
                                     out UsbK usb,
                                     out USB_INTERFACE_DESCRIPTOR interfaceDescriptor)
         {
@@ -86,7 +86,7 @@ namespace libusbK.Examples
                                        ref patternMatch);
             KLST_DEVINFO_HANDLE deviceInfo;
             interfaceDescriptor = new USB_INTERFACE_DESCRIPTOR();
-            pipeInfo = new WINUSB_PIPE_INFORMATION();
+            pipeInfo = new WINUSB_PIPE_INFORMATION_EX();
             usb = null;
 
             // Iterate the devices looking for a matching alt-interface and endpoint id.
@@ -213,7 +213,7 @@ namespace libusbK.Examples
 
         public bool FindPipeAndInterface(UsbK usb,
                                          out USB_INTERFACE_DESCRIPTOR interfaceDescriptor,
-                                         out WINUSB_PIPE_INFORMATION pipeInfo)
+                                         out WINUSB_PIPE_INFORMATION_EX pipeInfo)
         {
             if (FindPipeAndInterface(usb,
                                      out interfaceDescriptor,
@@ -231,13 +231,13 @@ namespace libusbK.Examples
 
         public static bool FindPipeAndInterface(UsbK usb,
                                                 out USB_INTERFACE_DESCRIPTOR interfaceDescriptor,
-                                                out WINUSB_PIPE_INFORMATION pipeInfo,
+                                                out WINUSB_PIPE_INFORMATION_EX pipeInfo,
                                                 int altInterfaceId,
                                                 int pipeId)
         {
             byte interfaceIndex = 0;
             interfaceDescriptor = new USB_INTERFACE_DESCRIPTOR();
-            pipeInfo = new WINUSB_PIPE_INFORMATION();
+            pipeInfo = new WINUSB_PIPE_INFORMATION_EX();
             while (usb.SelectInterface(interfaceIndex,
                                        true))
             {
@@ -248,7 +248,7 @@ namespace libusbK.Examples
                     if (altInterfaceId == -1 || altInterfaceId == altSettingNumber)
                     {
                         byte pipeIndex = 0;
-                        while (usb.QueryPipe(altSettingNumber,
+                        while (usb.QueryPipeEx(altSettingNumber,
                                              pipeIndex++,
                                              out pipeInfo))
                         {
@@ -410,7 +410,7 @@ namespace libusbK.Examples
                                  int maxOutstandingTransfers,
                                  int maxTransfersTotal,
                                  string logFilename,
-                                 int isoPacketsPerTransfer)
+                                 uint isoPacketsPerTransfer)
             : base(vid,
                    pid,
                    altInterfaceId,
@@ -425,7 +425,7 @@ namespace libusbK.Examples
             Init();
         }
 
-        public int IsoPacketsPerTransfer;
+        public uint IsoPacketsPerTransfer;
         public int MaxOutstandingTransfers;
 
         public override string ToString()

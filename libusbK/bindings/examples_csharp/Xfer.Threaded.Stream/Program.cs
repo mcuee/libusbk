@@ -51,7 +51,7 @@ namespace Xfer.Stm
         private static void Main()
         {
             bool success;
-            WINUSB_PIPE_INFORMATION pipeInfo;
+            WINUSB_PIPE_INFORMATION_EX pipeInfo;
             UsbK usb;
             USB_INTERFACE_DESCRIPTOR interfaceDescriptor;
 
@@ -93,7 +93,7 @@ namespace Xfer.Stm
             long totalTransferCount = 0;
             while (success)
             {
-                int transferred;
+                uint transferred;
                 if ((pipeInfo.PipeId & 0x80) == 0x80)
                 {
                     success = stm.Read(tempBuffer, 0, tempBuffer.Length, out transferred);

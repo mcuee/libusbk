@@ -52,7 +52,7 @@ namespace Read.Isochronous
         private static void Main(string[] args)
         {
             bool success;
-            WINUSB_PIPE_INFORMATION pipeInfo;
+            WINUSB_PIPE_INFORMATION_EX pipeInfo;
             UsbK usb;
             USB_INTERFACE_DESCRIPTOR interfaceDescriptor;
 
@@ -84,10 +84,10 @@ namespace Read.Isochronous
             unchecked
             {
                 // Add some start latency
-                readXfers.FrameNumber += 32;
+                readXfers.FrameNumber += (uint)Test.MaxOutstandingTransfers;
 
                 // Start FrameNumber at an interval of 8.
-                readXfers.FrameNumber -= ((readXfers.FrameNumber)%8);
+                if (readXfers.FrameNumber % 8 > 0) readXfers.FrameNumber = (uint) ((readXfers.FrameNumber & (~0x7)) + 8);
             }
 
             // This is a counter/timer used only for statistics gathering.
@@ -98,7 +98,7 @@ namespace Read.Isochronous
             do
             {
                 IsoTransferItem isoTransferItem;
-                int transferred;
+                uint transferred;
                 int errorCode;
                 // While buffers exist in the completed list, submit them. 
                 while (readXfers.Completed.Count > 0 && readXfers.TotalSubmittedCount < Test.MaxTransfersTotal)
@@ -139,40 +139,44 @@ namespace Read.Isochronous
             usb.Free();
         }
 
-        private static void IsoXferReport(ReadIsoTransferQueue readIsoTransfers, IsoTransferItem isoTransferItem, int transferLength)
+        private static void IsoXferReport(ReadIsoTransferQueue readIsoTransfers, IsoTransferItem isoTransferItem, uint transferLength)
         {
             int packetPos;
-            Test.Dcs.Stop(transferLength);
+            Test.Dcs.Stop((int) transferLength);
             if (readIsoTransfers.LastStartFrame == 0)
             {
                 Test.LogLn("#{0}: StartFrame={1:X8}h TransferLength={2} BPS-average:{3}",
                            readIsoTransfers.CompletedCount,
-                           isoTransferItem.Iso.StartFrame,
+                           isoTransferItem.FrameNumber,
                            transferLength,
                            Math.Round(Test.Dcs.Bps, 2));
             }
             else
             {
-                int lastFrameCount = isoTransferItem.Iso.StartFrame - readIsoTransfers.LastStartFrame;
+                uint lastFrameCount = isoTransferItem.FrameNumber - readIsoTransfers.LastStartFrame;
                 Test.LogLn("#{0}: StartFrame={1:X8}h TransferLength={2} BPS-average:{3} LastFrameCount={4}",
                            readIsoTransfers.CompletedCount,
-                           isoTransferItem.Iso.StartFrame,
+                           isoTransferItem.FrameNumber,
                            transferLength,
                            Math.Round(Test.Dcs.Bps, 2),
                            lastFrameCount);
             }
 
-            int numPackets = isoTransferItem.Iso.NumberOfPackets;
+            uint numPackets;
+            isoTransferItem.Iso.GetNumberOfPackets(out numPackets);
             for (packetPos = 0; packetPos < numPackets; packetPos++)
             {
                 KISO_PACKET isoPacket;
-                isoTransferItem.Iso.GetPacket(packetPos, out isoPacket);
-                if (isoPacket.Length > 1)
+                uint packetOffset;
+                uint packetLength;
+                uint packetStatus;
+                isoTransferItem.Iso.GetPacket((uint) packetPos,out packetOffset, out packetLength, out packetStatus);
+                if (packetLength > 1)
                 {
                     // This is somewhat specific to data that is returned by the benchmark firmware.
-                    byte firstPacketByte = isoTransferItem.Buffer[isoPacket.Offset];
-                    byte secondPacketByte = isoTransferItem.Buffer[isoPacket.Offset + 1];
-                    Test.LogLn("  [{0:000}] Length={1} B0={2:X2}h B1={3:X2}h", packetPos, isoPacket.Length, firstPacketByte, secondPacketByte);
+                    byte firstPacketByte = isoTransferItem.Buffer[packetOffset];
+                    byte secondPacketByte = isoTransferItem.Buffer[packetOffset + 1];
+                    Test.LogLn("  [{0:000}] Length={1} B0={2:X2}h B1={3:X2}h", packetPos, packetLength, firstPacketByte, secondPacketByte);
                 }
                 else
                 {
@@ -181,16 +185,23 @@ namespace Read.Isochronous
             }
 
             readIsoTransfers.CompletedCount++;
-            readIsoTransfers.LastStartFrame = isoTransferItem.Iso.StartFrame;
+            readIsoTransfers.LastStartFrame = isoTransferItem.FrameNumber;
         }
     }
 
     internal class IsoTransferItem
     {
+        public readonly ReadIsoTransferQueue Container;
+
+        public IsoTransferItem(ReadIsoTransferQueue container)
+        {
+            Container = container;
+        }
         public byte[] Buffer;
         public GCHandle BufferGC;
-        public IsoK Iso;
+        public IsochK Iso;
         public KOVL_HANDLE Ovl;
+        public uint FrameNumber;
     }
 
     internal class ReadIsoTransferQueue
@@ -207,15 +218,15 @@ namespace Read.Isochronous
 
         public readonly int DataBufferSize;
         public readonly OvlK OvlPool;
-        public readonly WINUSB_PIPE_INFORMATION PipeInfo;
+        public readonly WINUSB_PIPE_INFORMATION_EX PipeInfo;
         public readonly UsbK Usb;
 
         #endregion
 
         #region Frame management
 
-        public int FrameNumber;
-        public int LastStartFrame;
+        public uint FrameNumber;
+        public uint LastStartFrame;
 
         #endregion
 
@@ -226,21 +237,21 @@ namespace Read.Isochronous
 
         #endregion
 
-        public ReadIsoTransferQueue(UsbK usb, ref WINUSB_PIPE_INFORMATION pipeInfo, int maxPendingTransfers, int numberOfPackets)
+        public ReadIsoTransferQueue(UsbK usb, ref WINUSB_PIPE_INFORMATION_EX pipeInfo, int maxPendingTransfers, uint numberOfPackets)
         {
             PipeInfo = pipeInfo;
             Usb = usb;
             OvlPool = new OvlK(usb.Handle, maxPendingTransfers, KOVL_POOL_FLAG.NONE);
-            DataBufferSize = (pipeInfo.MaximumPacketSize*numberOfPackets);
+            DataBufferSize = (int) (pipeInfo.MaximumPacketSize*numberOfPackets);
             for (int pos = 0; pos < maxPendingTransfers; pos++)
             {
-                IsoTransferItem isoTransferItem = new IsoTransferItem();
+                IsoTransferItem isoTransferItem = new IsoTransferItem(this);
 
                 isoTransferItem.Buffer = new byte[pipeInfo.MaximumPacketSize*numberOfPackets];
                 isoTransferItem.BufferGC = GCHandle.Alloc(isoTransferItem.Buffer, GCHandleType.Pinned);
 
-                isoTransferItem.Iso = new IsoK(numberOfPackets, 0);
-                isoTransferItem.Iso.SetPackets(pipeInfo.MaximumPacketSize);
+                isoTransferItem.Iso = new IsochK(usb.Handle, pipeInfo.PipeId, numberOfPackets, isoTransferItem.BufferGC.AddrOfPinnedObject(), (uint) isoTransferItem.Buffer.Length);
+                isoTransferItem.Iso.SetPacketOffsets(pipeInfo.MaximumPacketSize);
 
                 OvlPool.Acquire(out isoTransferItem.Ovl);
 
@@ -254,7 +265,7 @@ namespace Read.Isochronous
             // Cancel any outstanding IO and release the OvlK.
             foreach (IsoTransferItem myIsoBuffer in Outstanding)
             {
-                int transferred;
+                uint transferred;
                 OvlPool.WaitAndRelease(myIsoBuffer.Ovl, 0, out transferred);
             }
             Completed.Clear();
@@ -269,10 +280,6 @@ namespace Read.Isochronous
             OvlPool.Free();
         }
 
-        private static void SetNextFrameNumber(IsoTransferItem isoTransferItem)
-        {
-        }
-
         public int SubmitNextRead()
         {
             // Pull from head of Completed list and push to end of Outstanding list
@@ -280,20 +287,16 @@ namespace Read.Isochronous
             Completed.RemoveFirst();
             Outstanding.AddLast(isoTransferItem);
 
-            // If managing a start frame manually, set it here and update the the frame counter for the next transfer.
-            SetNextFrameNumber(isoTransferItem);
-
             // Prepare the OvlK handle to be submitted.
             OvlPool.ReUse(isoTransferItem.Ovl);
 
-            // The data buffer was pinned earlier when it was allocated.  Always pin managed memory before using it
-            // in an asynchronous function to keep the framework from tampering with it.
-            Usb.IsoReadPipe(PipeInfo.PipeId,
-                            isoTransferItem.Buffer,
-                            DataBufferSize,
-                            isoTransferItem.Ovl,
-                            isoTransferItem.Iso.Handle);
+            // Set the frame number this transfer will be submitted on (used for logging only)
+            isoTransferItem.FrameNumber = isoTransferItem.Container.FrameNumber;
 
+            // submit the transfer. use 0 for length and 0 for number of packets to use the values the isoch handle was initialized with
+            Usb.IsochReadPipe(isoTransferItem.Iso.Handle, 0, ref isoTransferItem.Container.FrameNumber, 0, isoTransferItem.Ovl);
+
+            // IsochReadPipe will always return false so we need to check the error code
             int errorCode = Marshal.GetLastWin32Error();
 
             // 997 is ERROR_IO_PENDING. For async, this means so far so good.
@@ -305,7 +308,7 @@ namespace Read.Isochronous
             return 0;
         }
 
-        public int WaitRead(out IsoTransferItem isoTransferItem, int i, out int transferred)
+        public int WaitRead(out IsoTransferItem isoTransferItem, int i, out uint transferred)
         {
             isoTransferItem = Outstanding.First.Value;
             bool success = OvlPool.Wait(isoTransferItem.Ovl, 1000, KOVL_WAIT_FLAG.NONE, out transferred);
