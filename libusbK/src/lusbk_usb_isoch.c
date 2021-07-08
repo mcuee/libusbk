@@ -70,7 +70,7 @@ static void KUSB_API Isoch_Cleanup(PKISOCH_HANDLE_INTERNAL handle)
 }
 
 KUSB_EXP BOOL KUSB_API IsochK_Init(
-	_out KUSB_ISOCH_HANDLE* IsochHandle,
+	_out KISOCH_HANDLE* IsochHandle,
 	_in KUSB_HANDLE InterfaceHandle,
 	_in UCHAR PipeId,
 	_in UINT MaxNumberOfPackets,
@@ -142,7 +142,7 @@ Error:
 }
 
 KUSB_EXP BOOL KUSB_API IsochK_Free(
-	_in KUSB_ISOCH_HANDLE IsochHandle)
+	_in KISOCH_HANDLE IsochHandle)
 {
 	ErrorHandle(!IsHandleValid(IsochHandle), Error, "IsochHandle");
 
@@ -153,7 +153,7 @@ Error:
 }
 
 KUSB_EXP BOOL KUSB_API IsochK_SetPacketOffsets(
-	_in KUSB_ISOCH_HANDLE IsochHandle,
+	_in KISOCH_HANDLE IsochHandle,
 	_in UINT PacketSize)
 {
 	UINT packetIndex;
@@ -202,7 +202,7 @@ Error:
 }
 
 KUSB_EXP BOOL KUSB_API IsochK_GetPacket(
-	_in KUSB_ISOCH_HANDLE IsochHandle,
+	_in KISOCH_HANDLE IsochHandle,
 	_in UINT PacketIndex,
 	_outopt PUINT Offset,
 	_outopt PUINT Length,
@@ -248,7 +248,7 @@ Error:
 }
 
 KUSB_EXP BOOL KUSB_API IsochK_SetNumberOfPackets(
-	_in KUSB_ISOCH_HANDLE IsochHandle,
+	_in KISOCH_HANDLE IsochHandle,
 	_in UINT NumberOfPackets)
 {
 	PKISOCH_HANDLE_INTERNAL handle;
@@ -281,7 +281,7 @@ Error:
 }
 
 KUSB_EXP BOOL KUSB_API IsochK_GetNumberOfPackets(
-	_in KUSB_ISOCH_HANDLE IsochHandle,
+	_in KISOCH_HANDLE IsochHandle,
 	_out PUINT NumberOfPackets)
 {
 	PKISOCH_HANDLE_INTERNAL handle;
@@ -315,7 +315,7 @@ Error:
 }
 
 KUSB_EXP BOOL KUSB_API IsochK_SetPacket(
-	_in KUSB_ISOCH_HANDLE IsochHandle,
+	_in KISOCH_HANDLE IsochHandle,
 	_in UINT PacketIndex,
 	_in UINT Offset,
 	_in UINT Length,
@@ -356,7 +356,7 @@ Error:
 
 
 KUSB_EXP BOOL KUSB_API IsochK_EnumPackets(
-	_in KUSB_ISOCH_HANDLE IsochHandle,
+	_in KISOCH_HANDLE IsochHandle,
 	_in KISOCH_ENUM_PACKETS_CB* EnumPackets,
 	_inopt UINT StartPacketIndex,
 	_inopt PVOID UserState)

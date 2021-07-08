@@ -30,11 +30,11 @@ volatile long AllKInitLock = 0;
 
 #define CASE_FNID_LOAD(FunctionName)															\
 	case KUSB_FNID_##FunctionName:  															\
-	DriverAPI->FuncSupported[fnIdIndex]=TRUE;													\
+	DriverAPI->z_FuncSupported[fnIdIndex]=TRUE;													\
 	if (LibK_GetProcAddress((KPROC*)&DriverAPI->FunctionName, DriverID, fnIdIndex) == FALSE)	\
 	{   																						\
 		USBWRNN("function id %u for driver id %u does not exist.",fnIdIndex,DriverID);  		\
-		DriverAPI->FuncSupported[fnIdIndex]=FALSE;												\
+		DriverAPI->z_FuncSupported[fnIdIndex]=FALSE;												\
 	}   																						\
 	else																						\
 		fnIdCount++;																			\
@@ -656,5 +656,5 @@ KUSB_EXP BOOL KUSB_API LibK_IsFunctionSupported(
 		return FALSE;
 	}
 
-	return DriverAPI->FuncSupported[FunctionID];
+	return DriverAPI->z_FuncSupported[FunctionID];
 }

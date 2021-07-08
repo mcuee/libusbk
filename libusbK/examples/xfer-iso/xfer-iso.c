@@ -49,7 +49,7 @@ typedef struct _MY_ISO_BUFFER_EL
 	PUCHAR			TransferBuffer;
 	KOVL_HANDLE		OvlHandle;
 
-	KUSB_ISOCH_HANDLE	IsoHandle;
+	KISOCH_HANDLE	IsoHandle;
 	UINT FrameNumber;
 
 	struct _MY_ISO_BUFFER_EL* prev;

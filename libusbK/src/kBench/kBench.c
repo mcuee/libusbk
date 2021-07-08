@@ -174,7 +174,7 @@ typedef struct _BENCHMARK_TEST_PARAM
 // The benchmark transfer context used for asynchronous transfers.  see TransferAsync().
 typedef struct _BENCHMARK_TRANSFER_HANDLE
 {
-	KUSB_ISOCH_HANDLE IsochHandle;
+	KISOCH_HANDLE IsochHandle;
 	OVERLAPPED Overlapped;
 	BOOL InUse;
 	PUCHAR Data;

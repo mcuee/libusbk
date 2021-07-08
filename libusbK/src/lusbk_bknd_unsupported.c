@@ -404,7 +404,7 @@ KUSB_EXP BOOL KUSB_API Unsupported_GetCurrentFrameNumber(
 }
 
 KUSB_EXP BOOL KUSB_API Unsupported_IsochReadPipe(
-	_in KUSB_ISOCH_HANDLE IsochHandle,
+	_in KISOCH_HANDLE IsochHandle,
 	_inopt UINT DataLength,
 	_refopt PUINT FrameNumber,
 	_inopt UINT NumberOfPackets,
@@ -422,7 +422,7 @@ KUSB_EXP BOOL KUSB_API Unsupported_IsochReadPipe(
 }
 
 KUSB_EXP BOOL KUSB_API Unsupported_IsochWritePipe(
-	_in KUSB_ISOCH_HANDLE IsochHandle,
+	_in KISOCH_HANDLE IsochHandle,
 	_inopt UINT DataLength,
 	_ref PUINT FrameNumber,
 	_inopt UINT NumberOfPackets,

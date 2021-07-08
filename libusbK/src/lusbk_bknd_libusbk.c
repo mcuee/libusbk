@@ -1177,7 +1177,7 @@ Error:
 }
 
 KUSB_EXP BOOL KUSB_API UsbK_IsochReadPipe(
-	_in KUSB_ISOCH_HANDLE IsochHandle,
+	_in KISOCH_HANDLE IsochHandle,
 	_inopt UINT DataLength,
 	_refopt PUINT FrameNumber,
 	_inopt UINT NumberOfPackets,
@@ -1234,7 +1234,7 @@ Error:
 
 
 KUSB_EXP BOOL KUSB_API UsbK_IsochWritePipe(
-	_in KUSB_ISOCH_HANDLE IsochHandle,
+	_in KISOCH_HANDLE IsochHandle,
 	_inopt UINT DataLength,
 	_ref PUINT FrameNumber,
 	_inopt UINT NumberOfPackets,

@@ -150,7 +150,7 @@ typedef KLIB_HANDLE KOVL_POOL_HANDLE;
 typedef KLIB_HANDLE KSTM_HANDLE;
 
 //! Opaque IsochK handle, see \ref IsochK_Init.
-typedef KLIB_HANDLE KUSB_ISOCH_HANDLE;
+typedef KLIB_HANDLE KISOCH_HANDLE;
 
 //! Handle type enumeration.
 typedef enum _KLIB_HANDLE_TYPE
@@ -752,8 +752,8 @@ typedef USB_ENDPOINT_DESCRIPTOR* PUSB_ENDPOINT_DESCRIPTOR;
 * All multiple-byte fields are represented in host-endian format.
 *
 */
-typedef struct _USB_SUPERSPEED_ENDPOINT_COMPANION_DESCRIPTOR {
-	
+typedef struct _USB_SUPERSPEED_ENDPOINT_COMPANION_DESCRIPTOR 
+{
 	//! Size of this descriptor (in bytes)
 	UCHAR  bLength;
 	
@@ -1320,14 +1320,14 @@ typedef BOOL KUSB_API KUSB_GetProperty (
     _out PVOID Value);
 
 typedef BOOL KUSB_API KUSB_IsochReadPipe(
-	_in KUSB_ISOCH_HANDLE IsochHandle,
+	_in KISOCH_HANDLE IsochHandle,
 	_inopt UINT DataLength,
 	_refopt PUINT FrameNumber,
 	_inopt UINT NumberOfPackets,
 	_in LPOVERLAPPED Overlapped);
 
 typedef BOOL KUSB_API KUSB_IsochWritePipe(
-	_in KUSB_ISOCH_HANDLE IsochHandle,
+	_in KISOCH_HANDLE IsochHandle,
 	_inopt UINT DataLength,
 	_refopt PUINT FrameNumber,
 	_inopt UINT NumberOfPackets,
@@ -1566,13 +1566,13 @@ typedef struct _KUSB_DRIVER_API
 	*/
 	KUSB_GetProperty* GetProperty;
 
-	/*! \fn BOOL KUSB_API IsochReadPipe (_in KUSB_ISOCH_HANDLE IsochHandle, _inopt UINT DataLength, _refopt PUINT FrameNumber, _inopt UINT NumberOfPackets, _in LPOVERLAPPED Overlapped)
+	/*! \fn BOOL KUSB_API IsochReadPipe (_in KISOCH_HANDLE IsochHandle, _inopt UINT DataLength, _refopt PUINT FrameNumber, _inopt UINT NumberOfPackets, _in LPOVERLAPPED Overlapped)
 	* \memberof KUSB_DRIVER_API
 	* \copydoc UsbK_IsochReadPipe
 	*/
 	KUSB_IsochReadPipe* IsochReadPipe;
 	
-	/*! \fn BOOL KUSB_API IsochWritePipe (_in KUSB_ISOCH_HANDLE IsochHandle, _inopt UINT DataLength, _refopt PUINT FrameNumber, _inopt UINT NumberOfPackets, _in LPOVERLAPPED Overlapped)
+	/*! \fn BOOL KUSB_API IsochWritePipe (_in KISOCH_HANDLE IsochHandle, _inopt UINT DataLength, _refopt PUINT FrameNumber, _inopt UINT NumberOfPackets, _in LPOVERLAPPED Overlapped)
 	* \memberof KUSB_DRIVER_API
 	* \copydoc UsbK_IsochWritePipe
 	*/
@@ -1590,11 +1590,11 @@ typedef struct _KUSB_DRIVER_API
 	*/
 	KUSB_GetSuperSpeedPipeCompanionDescriptor* GetSuperSpeedPipeCompanionDescriptor;
 	
-	//! fixed structure padding.
+	//! fixed structure padding. (reserved for internal use!)
 	UCHAR z_F_i_x_e_d[512 - sizeof(KUSB_DRIVER_API_INFO) -  sizeof(UINT_PTR) * KUSB_FNID_COUNT - (KUSB_FNID_COUNT & (sizeof(UINT_PTR) - 1) ? (KUSB_FNID_COUNT & (~(sizeof(UINT_PTR) - 1))) + sizeof(UINT_PTR) : KUSB_FNID_COUNT)];
 
-	//! function supported array.
-	UCHAR FuncSupported[(KUSB_FNID_COUNT & (sizeof(UINT_PTR) - 1) ? (KUSB_FNID_COUNT & (~(sizeof(UINT_PTR) - 1))) + sizeof(UINT_PTR) : KUSB_FNID_COUNT)];
+	//! function supported array. Do not access directly! see \ref LibK_IsFunctionSupported
+	UCHAR z_FuncSupported[(KUSB_FNID_COUNT & (sizeof(UINT_PTR) - 1) ? (KUSB_FNID_COUNT & (~(sizeof(UINT_PTR) - 1))) + sizeof(UINT_PTR) : KUSB_FNID_COUNT)];
 
 } KUSB_DRIVER_API;
 typedef KUSB_DRIVER_API* PKUSB_DRIVER_API;
@@ -3296,7 +3296,7 @@ extern "C" {
 	*
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_IsochReadPipe(
-		_in KUSB_ISOCH_HANDLE IsochHandle,
+		_in KISOCH_HANDLE IsochHandle,
 		_inopt UINT DataLength,
 		_refopt PUINT FrameNumber,
 		_inopt UINT NumberOfPackets,
@@ -3346,7 +3346,7 @@ extern "C" {
 	*
 	*/
 	KUSB_EXP BOOL KUSB_API UsbK_IsochWritePipe(
-		_in KUSB_ISOCH_HANDLE IsochHandle,
+		_in KISOCH_HANDLE IsochHandle,
 		_inopt UINT DataLength,
 		_ref PUINT FrameNumber,
 		_inopt UINT NumberOfPackets,
@@ -4342,7 +4342,7 @@ extern "C" {
 	*
 	*/
 	KUSB_EXP BOOL KUSB_API IsochK_Init(
-		_out KUSB_ISOCH_HANDLE* IsochHandle,
+		_out KISOCH_HANDLE* IsochHandle,
 		_in KUSB_HANDLE InterfaceHandle,
 		_in UCHAR PipeId,
 		_in UINT MaxNumberOfPackets,
@@ -4357,7 +4357,7 @@ extern "C" {
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*/
 	KUSB_EXP BOOL KUSB_API IsochK_Free(
-		_in KUSB_ISOCH_HANDLE IsochHandle);
+		_in KISOCH_HANDLE IsochHandle);
 	
 //! Convenience function for setting the offsets and lengths of all ISO packets of an isochronous transfer handle.
 	/*!
@@ -4375,7 +4375,7 @@ extern "C" {
 	* - The offset of the third (2-index) packet is PacketSize*2.
 	*/
 	KUSB_EXP BOOL KUSB_API IsochK_SetPacketOffsets(
-		_in KUSB_ISOCH_HANDLE IsochHandle,
+		_in KISOCH_HANDLE IsochHandle,
 		_in UINT PacketSize);
 	
 
@@ -4404,7 +4404,7 @@ extern "C" {
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*/
 	KUSB_EXP BOOL KUSB_API IsochK_SetPacket(
-		_in KUSB_ISOCH_HANDLE IsochHandle,
+		_in KISOCH_HANDLE IsochHandle,
 		_in UINT PacketIndex,
 		_in UINT Offset,
 		_in UINT Length,
@@ -4435,7 +4435,7 @@ extern "C" {
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*/
 	KUSB_EXP BOOL KUSB_API IsochK_GetPacket(
-		_in KUSB_ISOCH_HANDLE IsochHandle,
+		_in KISOCH_HANDLE IsochHandle,
 		_in UINT PacketIndex,
 		_outopt PUINT Offset,
 		_outopt PUINT Length,
@@ -4459,7 +4459,7 @@ extern "C" {
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*/
 	KUSB_EXP BOOL KUSB_API IsochK_EnumPackets(
-		_in KUSB_ISOCH_HANDLE IsochHandle,
+		_in KISOCH_HANDLE IsochHandle,
 		_in KISOCH_ENUM_PACKETS_CB* EnumPackets,
 		_inopt UINT StartPacketIndex,
 		_inopt PVOID UserState);
@@ -4494,7 +4494,7 @@ extern "C" {
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*/
 	KUSB_EXP BOOL KUSB_API IsochK_GetNumberOfPackets(
-		_in KUSB_ISOCH_HANDLE IsochHandle,
+		_in KISOCH_HANDLE IsochHandle,
 		_out PUINT NumberOfPackets);
 	
 	//! Sets the number of iso packets that will be used.
@@ -4508,7 +4508,7 @@ extern "C" {
 	* \returns On success, TRUE. Otherwise FALSE. Use \c GetLastError() to get extended error information.
 	*/
 	KUSB_EXP BOOL KUSB_API IsochK_SetNumberOfPackets(
-		_in KUSB_ISOCH_HANDLE IsochHandle,
+		_in KISOCH_HANDLE IsochHandle,
 		_in UINT NumberOfPackets);
 	
 	/*! @} */
