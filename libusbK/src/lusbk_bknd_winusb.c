@@ -306,7 +306,7 @@ KUSB_EXP BOOL KUSB_API WUsb_QueryDeviceInformation(
     _in KUSB_HANDLE InterfaceHandle,
     _in UINT InformationType,
     _ref PUINT BufferLength,
-    _ref PVOID Buffer)
+    _ref PUCHAR Buffer)
 {
 	PKUSB_HANDLE_INTERNAL handle;
 	BOOL success;

@@ -1217,7 +1217,7 @@ typedef BOOL KUSB_API KUSB_QueryDeviceInformation (
     _in KUSB_HANDLE InterfaceHandle,
     _in UINT InformationType,
     _ref PUINT BufferLength,
-    _ref PVOID Buffer);
+    _ref PUCHAR Buffer);
 
 typedef BOOL KUSB_API KUSB_SetCurrentAlternateSetting (
     _in KUSB_HANDLE InterfaceHandle,
@@ -1470,7 +1470,7 @@ typedef struct _KUSB_DRIVER_API
 	*/
 	KUSB_QueryInterfaceSettings* QueryInterfaceSettings;
 
-	/*! \fn BOOL KUSB_API QueryDeviceInformation (_in KUSB_HANDLE InterfaceHandle, _in UINT InformationType, _ref PUINT BufferLength, _ref PVOID Buffer)
+	/*! \fn BOOL KUSB_API QueryDeviceInformation (_in KUSB_HANDLE InterfaceHandle, _in UINT InformationType, _ref PUINT BufferLength, _ref PUCHAR Buffer)
 	* \memberof KUSB_DRIVER_API
 	* \copydoc UsbK_QueryDeviceInformation
 	*/
@@ -2739,7 +2739,7 @@ extern "C" {
 	    _in KUSB_HANDLE InterfaceHandle,
 	    _in UINT InformationType,
 	    _ref PUINT BufferLength,
-	    _ref PVOID Buffer);
+	    _ref PUCHAR Buffer);
 
 //! Sets the alternate setting of an interface.
 	/*!

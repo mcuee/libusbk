@@ -3147,6 +3147,12 @@ namespace libusbK
             return driverAPI.QueryDeviceInformation(mHandleStruct, InformationType, ref BufferLength, Buffer);
         }
 
+        /// <Summary>Retrieves information about the physical device that is associated with a libusbK handle.</Summary>
+        public virtual bool QueryDeviceInformation(uint InformationType, ref uint BufferLength, Array Buffer)
+        {
+            return driverAPI.QueryDeviceInformation(mHandleStruct, InformationType, ref BufferLength, Marshal.UnsafeAddrOfPinnedArrayElement(Buffer, 0));
+        }
+
         /// <Summary>Sets the alternate setting of an interface.</Summary>
         public virtual bool SetCurrentAlternateSetting(byte AltSettingNumber)
         {

@@ -1997,7 +1997,7 @@ int __cdecl main(int argc, char** argv)
 
 	// Get the device speed.
 	length = sizeof(Test.DeviceSpeed);
-	K.QueryDeviceInformation(Test.InterfaceHandle, DEVICE_SPEED, &length, &Test.DeviceSpeed);
+	K.QueryDeviceInformation(Test.InterfaceHandle, DEVICE_SPEED, &length, (PUCHAR)&Test.DeviceSpeed);
 
 	// If reading from the device create the read transfer param. This will also create
 	// a thread in a suspended state.

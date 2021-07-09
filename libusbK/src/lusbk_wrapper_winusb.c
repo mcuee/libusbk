@@ -65,7 +65,7 @@ KUSB_EXP BOOL KUSB_API WinUsb_QueryDeviceInformation(
     _in KUSB_HANDLE InterfaceHandle,
     _in UINT InformationType,
     _ref PUINT BufferLength,
-    _ref PVOID Buffer)
+    _ref PUCHAR Buffer)
 {
 	return UsbK_QueryDeviceInformation (InterfaceHandle, InformationType, BufferLength, Buffer);
 }
