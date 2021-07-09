@@ -628,6 +628,8 @@ BOOL UsbStack_QueryPipeEx(
 	if (pipeEL->SuperSpeedCompanionDescriptor)
 	{
 		PipeInformationEx->MaximumBytesPerInterval = pipeEL->SuperSpeedCompanionDescriptor->wBytesPerInterval;
+		if (PipeInformationEx->MaximumBytesPerInterval == 0)
+			PipeInformationEx->MaximumBytesPerInterval = PipeInformationEx->MaximumPacketSize;
 	}
 	else
 	{
