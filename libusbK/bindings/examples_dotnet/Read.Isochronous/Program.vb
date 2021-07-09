@@ -12,8 +12,8 @@ Namespace Read.Isochronous
     Friend Class Program
 #Region "TODO USER: Set the test parameters for your device."
 
-        'public static IsoTestParameters Test = new IsoTestParameters(0x04d8, 0xfa2e, 0, 0x82, 3, 64,null, 24);
-        Public Shared Test As IsoTestParameters = New IsoTestParameters(&H04b4, &H00fD, 1, &H83, 3, 12, Nothing, 24)
+        public static IsoTestParameters Test = new IsoTestParameters(0x04d8, 0xfa2e, 0, 0x82, 3, 64,null, 24);
+        'Public Shared Test As IsoTestParameters = New IsoTestParameters(&H04b4, &H00fD, 1, &H83, 3, 12, Nothing, 24)
 
 #End Region
 
