@@ -237,8 +237,11 @@ LRESULT CPageInstall::OnWizardNext()
 		prepareOptions.driver_type |= WDI_PACKAGE_FLAG_CREATE_NORMAL;
 	}
 
-	prepareOptions.disable_signing = 1;
-	prepareOptions.disable_cat = 1;
+	if (!bInstallOnly)
+	{
+		prepareOptions.disable_signing = 1;
+		prepareOptions.disable_cat = 1;
+	}
 
 	errorCode = g_App->Wdi.PrepareDriver(&deviceInfo, infPathA.GetBuffer(0), infNameA.GetBuffer(0), &prepareOptions);
 	if (errorCode != ERROR_SUCCESS)
