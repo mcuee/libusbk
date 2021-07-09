@@ -59,8 +59,12 @@ static void KUSB_API Isoch_Cleanup(PKISOCH_HANDLE_INTERNAL handle)
 			if (handle->Context.UsbW.BufferHandle != NULL)
 			{
 				WinUsb.UnregisterIsochBuffer(handle->Context.UsbW.BufferHandle);
+				handle->Context.UsbW.BufferHandle = NULL;
 			}
-			if (handle->Context.UsbW.Packets != NULL) Mem_Free((PVOID)handle->Context.UsbW.Packets);
+			if (handle->Context.UsbW.Packets != NULL) 
+			{
+				Mem_Free((PVOID*)&handle->Context.UsbW.Packets);
+			}
 
 			break;
 		}
