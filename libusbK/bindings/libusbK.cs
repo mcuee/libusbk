@@ -2890,7 +2890,7 @@ namespace libusbK
         }
 
         /// <Summary>Frees all hot-plug handles initialized with \ref HotK_Init.</Summary>
-        public virtual void FreeAll()
+        public static void FreeAll()
         {
             AllKFunctions.HotK_FreeAll();
         }
@@ -3446,7 +3446,7 @@ namespace libusbK
         }
 
         /// <Summary>Returns an \c OverlappedK structure to it's pool.</Summary>
-        public virtual bool Release(KOVL_HANDLE OverlappedK)
+        public static bool Release(KOVL_HANDLE OverlappedK)
         {
             return AllKFunctions.OvlK_Release(OverlappedK);
         }
@@ -3463,13 +3463,13 @@ namespace libusbK
         }
 
         /// <Summary>Returns the internal event handle used to signal IO operations.</Summary>
-        public virtual IntPtr GetEventHandle(KOVL_HANDLE OverlappedK)
+        public static IntPtr GetEventHandle(KOVL_HANDLE OverlappedK)
         {
             return AllKFunctions.OvlK_GetEventHandle(OverlappedK);
         }
 
         /// <Summary>Waits for overlapped I/O completion, and performs actions specified in \c WaitFlags.</Summary>
-        public virtual bool Wait(KOVL_HANDLE OverlappedK, int TimeoutMS, KOVL_WAIT_FLAG WaitFlags, out uint TransferredLength)
+        public static bool Wait(KOVL_HANDLE OverlappedK, int TimeoutMS, KOVL_WAIT_FLAG WaitFlags, out uint TransferredLength)
         {
             return AllKFunctions.OvlK_Wait(OverlappedK, TimeoutMS, WaitFlags, out TransferredLength);
         }
@@ -3484,7 +3484,7 @@ namespace libusbK
         }
 
         /// <Summary>Waits for overlapped I/O completion, cancels on a timeout error.</Summary>
-        public virtual bool WaitOrCancel(KOVL_HANDLE OverlappedK, int TimeoutMS, out uint TransferredLength)
+        public static bool WaitOrCancel(KOVL_HANDLE OverlappedK, int TimeoutMS, out uint TransferredLength)
         {
             return AllKFunctions.OvlK_WaitOrCancel(OverlappedK, TimeoutMS, out TransferredLength);
         }
@@ -3493,19 +3493,19 @@ namespace libusbK
         ///     Waits for overlapped I/O completion, cancels on a timeout error and always releases the OvlK handle back to
         ///     its pool.
         /// </Summary>
-        public virtual bool WaitAndRelease(KOVL_HANDLE OverlappedK, int TimeoutMS, out uint TransferredLength)
+        public static bool WaitAndRelease(KOVL_HANDLE OverlappedK, int TimeoutMS, out uint TransferredLength)
         {
             return AllKFunctions.OvlK_WaitAndRelease(OverlappedK, TimeoutMS, out TransferredLength);
         }
 
         /// <Summary>Checks for i/o completion; returns immediately. (polling)</Summary>
-        public virtual bool IsComplete(KOVL_HANDLE OverlappedK)
+        public static bool IsComplete(KOVL_HANDLE OverlappedK)
         {
             return AllKFunctions.OvlK_IsComplete(OverlappedK);
         }
 
         /// <Summary>Initializes an overlappedK for re-use. The overlappedK is not return to its pool.</Summary>
-        public virtual bool ReUse(KOVL_HANDLE OverlappedK)
+        public static bool ReUse(KOVL_HANDLE OverlappedK)
         {
             return AllKFunctions.OvlK_ReUse(OverlappedK);
         }
@@ -3906,7 +3906,7 @@ namespace libusbK
         }
 
         /// <Summary>Helper function for isochronous packet/transfer calculations.</Summary>
-        public virtual bool CalcPacketInformation(bool IsHighSpeed, ref WINUSB_PIPE_INFORMATION_EX PipeInformationEx, out KISOCH_PACKET_INFORMATION PacketInformation)
+        public static bool CalcPacketInformation(bool IsHighSpeed, ref WINUSB_PIPE_INFORMATION_EX PipeInformationEx, out KISOCH_PACKET_INFORMATION PacketInformation)
         {
             return AllKFunctions.IsochK_CalcPacketInformation(IsHighSpeed, ref PipeInformationEx, out PacketInformation);
         }
