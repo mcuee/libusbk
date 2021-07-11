@@ -42,12 +42,11 @@ typedef INT_PTR (FAR WINAPI* KPROC)();
 #define KUSB_API WINAPI
 #endif
 
-#pragma warning(disable:4201)
-
 #if _MSC_VER >= 1200
 #pragma warning(push)
 #endif
-#pragma warning (disable:4201)
+#pragma warning(disable:4200)
+#pragma warning(disable:4201)
 #pragma warning(disable:4214) // named type definition in parentheses
 
 //! User defined handle context space, see \ref LibK_GetContext.
@@ -121,11 +120,6 @@ typedef union _KUSB_SETUP_PACKET
 } KUSB_SETUP_PACKET;
 // setup packet is eight bytes -- defined by spec
 USBK_C_ASSERT(KUSB_SETUP_PACKET,sizeof(KUSB_SETUP_PACKET) == 8);
-
-#if _MSC_VER >= 1200
-#pragma warning(pop)
-#endif
-
 
 //! Base handle type for all library handles, See \ref KLIB_HANDLE_TYPE.
 typedef void* KLIB_HANDLE;
@@ -505,10 +499,17 @@ typedef enum _USB_DESCRIPTOR_TYPE
 
     //! Interface power descriptor type.
     USB_DESCRIPTOR_TYPE_INTERFACE_POWER = 0x08,
-
+	
     //! Interface association descriptor type.
     USB_DESCRIPTOR_TYPE_INTERFACE_ASSOCIATION = 0x0B,
 
+	//! BOS descriptor type
+	USB_DESCRIPTOR_TYPE_BOS = 0x0F,
+	
+	//! Device capabilities descriptor type
+	USB_DESCRIPTOR_TYPE_DEVICE_CAPS = 0x10,
+
+	//! Superspeed endpoint companion descriptor type
 	USB_SUPERSPEED_ENDPOINT_COMPANION = 0x30,
 } USB_DESCRIPTOR_TYPE;
 
@@ -789,6 +790,290 @@ typedef struct _USB_SUPERSPEED_ENDPOINT_COMPANION_DESCRIPTOR
 	//! Number of bytes per interval
 	USHORT wBytesPerInterval;
 } USB_SUPERSPEED_ENDPOINT_COMPANION_DESCRIPTOR, *PUSB_SUPERSPEED_ENDPOINT_COMPANION_DESCRIPTOR;
+
+//! BOS device capability descriptor
+/*
+ * This is a variable length descriptor.  The length of the \b CapabilityData is determined using the \b bLength member.
+ * 
+ */
+typedef struct _BOS_DEV_CAPABILITY_DESCRIPTOR
+{
+	//! Size of this descriptor (in bytes)
+	UCHAR  bLength;
+
+	//! Descriptor type
+	UCHAR  bDescriptorType;
+
+	//! Capability type
+	UCHAR  bDevCapabilityType;
+
+	//! Capability Data
+	UCHAR  CapabilityData[0];
+}BOS_DEV_CAPABILITY_DESCRIPTOR, *PBOS_DEV_CAPABILITY_DESCRIPTOR;
+
+//! USB BOS capability types
+enum BOS_CAPABILITY_TYPE
+{
+	//! Wireless USB device capability. 
+	BOS_CAPABILITY_TYPE_WIRELESS_USB_DEVICE_CAPABILITY = 0x01,
+
+	//! USB 2.0 extensions. 
+	BOS_CAPABILITY_TYPE_USB_2_0_EXTENSION = 0x02,
+
+	//! SuperSpeed USB device capability. 
+	BOS_CAPABILITY_TYPE_SS_USB_DEVICE_CAPABILITY = 0x03,
+
+	//! Container ID type. 
+	BOS_CAPABILITY_TYPE_CONTAINER_ID = 0x04,
+
+	//! Platform specific capability.
+	BOS_CAPABILITY_TYPE_PLATFORM = 0x05
+};
+
+//!  USB 3.0 and USB 2.0 LPM Binary Device Object Store (BOS).
+/*
+ * The BOS descriptor returns a set of device - level capability descriptors for the USB device.
+ *
+ * This descriptor is followed by and array of /ref BOS_DEV_CAPABILITY_DESCRIPTOR descriptors.
+ * The number of elements in this array is specified by /b bNumDeviceCaps.
+ */
+typedef struct _BOS_DESCRIPTOR
+{
+	//! Size of this descriptor (in bytes)
+	UCHAR  bLength;
+
+	//! Descriptor type
+	UCHAR  bDescriptorType;
+	
+	//! Length of this descriptor and all sub descriptors
+	USHORT wTotalLength;
+
+	//! Number of device capability descriptors
+	UCHAR bNumDeviceCaps;
+
+	UCHAR DevCapabilityDescriptors[0];
+	
+}BOS_DESCRIPTOR, *PBOS_DESCRIPTOR;
+
+typedef struct _BOS_USB_2_0_EXTENSION_DESCRIPTOR
+{
+	//! Size of this descriptor (in bytes)
+	UCHAR  bLength;
+
+	//! Descriptor type
+	UCHAR  bDescriptorType;
+
+	UCHAR  bDevCapabilityType;
+
+	UINT bmAttributes;
+}BOS_USB_2_0_EXTENSION_DESCRIPTOR, *PBOS_USB_2_0_EXTENSION_DESCRIPTOR;
+
+typedef struct _BOS_SS_USB_DEVICE_CAPABILITY_DESCRIPTOR
+{
+	//! Size of this descriptor (in bytes)
+	UCHAR  bLength;
+
+	//! Descriptor type
+	UCHAR  bDescriptorType;
+
+	UCHAR  bDevCapabilityType;
+
+	UCHAR  bmAttributes;
+
+	USHORT wSpeedSupported;
+
+	UCHAR  bFunctionalitySupport;
+
+	UCHAR  bU1DevExitLat;
+
+	USHORT bU2DevExitLat;
+}BOS_SS_USB_DEVICE_CAPABILITY_DESCRIPTOR, *PBOS_SS_USB_DEVICE_CAPABILITY_DESCRIPTOR;
+
+typedef struct _BOS_CONTAINER_ID_DESCRIPTOR
+{
+	//! Size of this descriptor (in bytes)
+	UCHAR  bLength;
+
+	//! Descriptor type
+	UCHAR  bDescriptorType;
+
+	UCHAR  bDevCapabilityType;
+
+	UCHAR  bReserved;
+
+	UCHAR  ContainerID[16];
+}BOS_CONTAINER_ID_DESCRIPTOR, *PBOS_CONTAINER_ID_DESCRIPTOR;
+
+typedef struct _BOS_PLATFORM_DESCRIPTOR
+{
+	//! Size of this descriptor (in bytes)
+	UCHAR  bLength;
+
+	//! Descriptor type
+	UCHAR  bDescriptorType;
+
+	// Capability type. See \ref BOS_CAPABILITY_TYPE
+	UCHAR  bDevCapabilityType;
+
+	//! Reserved
+	UCHAR  bReserved;
+
+	//! A 128-bit number that uniquely identifies a platform-specific capability of the device.
+	/*
+	 * For Windows, this is "D8DD60DF-4589-4CC7-9CD2-659D9E648A9F" (dashes not included in actual data)
+	 */
+	UCHAR  PlatformCapabilityUUID[16];
+	
+	//! Capability Data
+	UCHAR CapabilityData[0];
+}BOS_PLATFORM_DESCRIPTOR, * PBOS_PLATFORM_DESCRIPTOR;
+
+enum MSOSV1_FEATURE_TYPE
+{
+	MSOSV1_FEATURE_TYPE_GENRE = 0x0001,
+	MSOSV1_FEATURE_TYPE_EXTENDED_COMPAT_ID = 0x0004,
+	MSOSV1_FEATURE_TYPE_EXTENDED_PROPS = 0x0005,
+};
+
+// !The extended compat ID OS descriptor has two components:
+/*
+*
+* - A fixed-length header section, which contains information about the entire descriptor including the version number,
+*   the number of function sections, and the descriptor’s total length.
+* - One or more fixed-length function sections, which follow the header section. Each function section contains the
+*   data for the device, or a single interface, function, or single-function group of interfaces. It is not necessary
+*   to define IDs for every function or interface, but each of them must still have an associated function section.
+*
+*/
+typedef struct _MSOSV1_EXTENDED_COMPAT_ID_DESCRIPTOR
+{
+	//! The length, in bytes, of the complete extended compat ID descriptor
+	UINT dwLength;
+
+	//! The descriptor’s version number, in binary coded decimal (BCD) format
+	USHORT bcdVersion;
+
+	//! An index that identifies the particular OS feature descriptor
+	USHORT wIndex;
+	
+	//! The number of custom property sections
+	UCHAR bCount;
+	
+	//! Reserved
+	UCHAR Rsvd[7];
+	
+}MSOSV1_EXTENDED_COMPAT_ID_DESCRIPTOR, *PMSOSV1_EXTENDED_COMPAT_ID_DESCRIPTOR;
+
+//! A function section defines the compatible ID and a subcompatible ID for a specified interface or function. 
+typedef struct _MSOSV1_FUNCTION_DESCRIPTOR
+{
+	//! The interface or function number
+	/*
+	 * This field specifies the interface or function that is associated with the IDs in this section. To use this
+	 * function section to associate a single-function group of interfaces with a single pair of IDs, set
+	 * bFirstInterfaceNumber to the first interface in the group. Then use an IAD in that interface’s interface
+	 * descriptor to specify which additional interfaces should be included in the group. The interfaces in the
+	 * group must be consecutively numbered. For details, see “Support for USB Interface Association Descriptor
+	 * in Windows.”
+	 */
+	UCHAR bFirstInterfaceNumber;
+
+	//! Reserved
+	UCHAR Rsvd1[1];
+
+	//! The function’s compatible ID
+	/*
+	 * This field contains the value of the compatible ID to be associated with this function. Any unused bytes
+	 * should be filled with NULLs. If the function does not have a compatible ID, fill the entire field with
+	 * NULLs.
+	 */
+	UCHAR CompatibleID[8];
+
+	//! The function’s subcompatible ID
+	/*
+	 * This field contains the value of the subcompatible ID to be associated with this function. Any
+	 * remaining bytes should be filled with NULLs. If the function does not have a subcompatible ID, fill the
+	 * entire field with NULLs.
+	 */
+	UCHAR SubCompatibleID[8];
+	
+	//! Reserved
+	UCHAR Rsvd2[6];
+	
+}MSOSV1_FUNCTION_DESCRIPTOR, *PMSOSV1_FUNCTION_DESCRIPTOR;
+
+
+// !The extended properties OS descriptor is a Microsoft OS feature descriptor that can be used to store vendor-specific property data.
+/*
+* The extended properties OS descriptor has two components:
+* - A fixed-length header section, which contains information about the entire descriptor, including the
+*   version number and total size.
+* - One or more variable-length custom properties sections, which follow the header section. Each section
+*   contains the data for a single custom property. Although the length of custom properties sections can
+*   vary, the format is fixed and vendors must not deviate from it.
+*/
+typedef struct _MSOSV1_EXTENDED_PROP_DESCRIPTOR
+{
+	//! The length, in bytes, of the complete extended prop descriptor
+	UINT dwLength;
+
+	//! The descriptor’s version number, in binary coded decimal (BCD) format
+	USHORT bcdVersion;
+
+	//! The index for extended properties OS descriptors
+	USHORT wIndex;
+
+	//! The number of custom property sections that follow this header section
+	USHORT wCount;
+
+}MSOSV1_EXTENDED_PROP_DESCRIPTOR, * PMSOSV1_EXTENDED_PROP_DESCRIPTOR;
+
+//! A custom property section contains the information for a single property
+/*
+ * An interface that has an associated extended properties OS feature descriptor can have one or more
+ * custom property sections following the header section.
+ *
+ * This section is followed by a variable length property name and data field:
+ * - wPropertyNameLength in bytes (USHORT)
+ *   The length of bPropertyName, in bytes, including the trailing NULL character. wPropertyNameLength
+ *   is an unsigned 2-byte value, to support the use of long property names.
+ * - bPropertyName[wPropertyNameLength]
+ *   The property name, as a NULL-terminated Unicode string.
+ * - wPropertyDataLength in bytes (USHORT)
+ *   The size of the bPropertyData field, in bytes.
+ * - bPropertyData[wPropertyDataLength]
+ *   The property data.
+ * 
+*/
+typedef struct _MSOSV1_CUSTOM_PROP_DESCRIPTOR
+{
+	//! The size of this custom properties section
+	UINT dwSize;
+
+	//! The type of data associated with the section
+	/*
+     * - 0   RESERVED
+     * - 1   A NULL-terminated Unicode String (REG_SZ)
+	 * - 2   A NULL-terminated Unicode String that includes environment variables (REG_EXPAND_SZ)
+	 * - 3   Free-form binary (REG_BINARY)
+	 * - 4   A little-endian 32-bit integer (REG_DWORD_LITTLE_ENDIAN)
+	 * - 5   A big-endian 32-bit integer (REG_DWORD_BIG_ENDIAN)
+	 * - 6   A NULL-terminated Unicode string that contains a symbolic link (REG_LINK)
+	 * - 7   Multiple NULL-terminated Unicode strings (REG_MULTI_SZ)
+	 * - 8   and higher	RESERVED
+	 */
+	UINT dwPropertyDataType;
+
+}MSOSV1_CUSTOM_PROP_DESCRIPTOR, * PMSOSV1_CUSTOM_PROP_DESCRIPTOR;
+
+//! Helper structure for parsing a /ref MSOSV1_CUSTOM_PROP_DESCRIPTOR
+typedef struct _MSOSV1_CUSTOM_PROP_ELEMENT
+{
+	USHORT wPropertyNameLength;
+	PWCHAR pPropertyName;
+	USHORT wPropertyDataLength;
+	PUCHAR pPropertyData;
+}MSOSV1_CUSTOM_PROP_ELEMENT,*PMSOSV1_CUSTOM_PROP_ELEMENT;
 
 #if _MSC_VER >= 1200
 #pragma warning(pop)
@@ -4591,6 +4876,10 @@ extern "C" {
 
 #ifdef __cplusplus
 }
+#endif
+
+#if _MSC_VER >= 1200
+#pragma warning(pop)
 #endif
 
 #endif // _LIBUSBK_H__

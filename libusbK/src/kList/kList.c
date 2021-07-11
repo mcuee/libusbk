@@ -49,10 +49,20 @@ typedef struct _HID_DESCRIPTOR
 	{
 		UCHAR   bReportType;
 		USHORT  wReportLength;
-	} DescriptorList [1];
+	} DescriptorList[1];
 
-}* PHID_DESCRIPTOR, HID_DESCRIPTOR;
+}*PHID_DESCRIPTOR, HID_DESCRIPTOR;
 
+typedef struct _USBMS_OS_STRING_DESCRIPTOR_V1_0
+{
+	//! Size of this descriptor (in bytes)
+	UCHAR bLength;			// 0x12
+	UCHAR bDescriptorType;	// 0x3
+	UCHAR qwSignature[14];	// MSFT100
+	UCHAR bMS_VendorCode;	// Vendor specific vendor code
+	UCHAR bPad;
+	//! Descriptor type
+}USBMS_OS_STRING_DESCRIPTOR_V1_0;
 typedef struct _UNI_DESCRIPTOR
 {
 	union
@@ -66,8 +76,9 @@ typedef struct _UNI_DESCRIPTOR
 		USB_SUPERSPEED_ENDPOINT_COMPANION_DESCRIPTOR SSEndpointCompanion;
 		USB_INTERFACE_ASSOCIATION_DESCRIPTOR InterfaceAssociation;
 		HID_DESCRIPTOR Hid;
+		USBMS_OS_STRING_DESCRIPTOR_V1_0 OsStringDescriptor;
 	};
-} UNI_DESCRIPTOR, *PUNI_DESCRIPTOR, ** PPUNI_DESCRIPTOR;
+} UNI_DESCRIPTOR, * PUNI_DESCRIPTOR, ** PPUNI_DESCRIPTOR;
 #include <POPPACK.h>
 #pragma warning(default:4201)
 
@@ -77,15 +88,15 @@ static KUSB_HANDLE InterfaceHandle;
 LONG WinError(__in_opt DWORD errorCode);
 
 BOOL OpenDeviceFileHandle(__in LPCSTR deviceFileName,
-                          __out HANDLE* fileHandle);
+	__out HANDLE* fileHandle);
 
 BOOL GetDescriptorReport(__in KLST_DEVINFO_HANDLE deviceElement,
-                         __in BOOL detailed);
+	__in BOOL detailed);
 
 BOOL GetRealConfigDescriptor(__in UCHAR Index,
-                             __out_opt PUCHAR Buffer,
-                             __in ULONG BufferLength,
-                             __out PUINT LengthTransferred);
+	__out_opt PUCHAR Buffer,
+	__in ULONG BufferLength,
+	__out PUINT LengthTransferred);
 
 LPCSTR LoadResourceUsbIds(void);
 
@@ -96,41 +107,41 @@ CONST PCHAR GetDescriptorString(USHORT stringIndex);
 VOID DumpDescriptorDevice(__in PUSB_DEVICE_DESCRIPTOR desc);
 
 BOOL DumpDescriptorConfig(__inout PPUNI_DESCRIPTOR uniRef,
-                          __inout PLONG remainingLength);
+	__inout PLONG remainingLength);
 
 BOOL DumpDescriptorInterface(__inout PPUNI_DESCRIPTOR uniRef,
-                             __inout PLONG remainingLength);
+	__inout PLONG remainingLength);
 
 BOOL DumpDescriptorInterfaceAssociation(__inout PPUNI_DESCRIPTOR uniRef,
-                                        __inout PLONG remainingLength);
+	__inout PLONG remainingLength);
 
 BOOL DumpDescriptorEndpoint(__inout PPUNI_DESCRIPTOR uniRef,
-                            __inout PLONG remainingLength);
+	__inout PLONG remainingLength);
 
 BOOL DumpDescriptorCommon(__inout PPUNI_DESCRIPTOR uniRef,
-                          __inout PLONG remainingLength);
+	__inout PLONG remainingLength);
 
 BOOL DumpDescriptorHid(__inout PPUNI_DESCRIPTOR uniRef,
-                       __in PUSB_INTERFACE_DESCRIPTOR currentInterface,
-                       __inout PLONG remainingLength);
+	__in PUSB_INTERFACE_DESCRIPTOR currentInterface,
+	__inout PLONG remainingLength);
 
 BOOL DumpDescriptorHidPhysical(__in PHID_DESCRIPTOR desc,
-                               __in PUSB_INTERFACE_DESCRIPTOR currentInterface,
-                               __in UCHAR descriptorPos);
+	__in PUSB_INTERFACE_DESCRIPTOR currentInterface,
+	__in UCHAR descriptorPos);
 BOOL DumpDescriptorHidReport(__in PHID_DESCRIPTOR desc,
-                             __in PUSB_INTERFACE_DESCRIPTOR currentInterface,
-                             __in UCHAR descriptorPos);
+	__in PUSB_INTERFACE_DESCRIPTOR currentInterface,
+	__in UCHAR descriptorPos);
 BOOL DumpDescriptorSSEndpointCompanion(
 	__inout PPUNI_DESCRIPTOR uniRef,
 	__in PUSB_ENDPOINT_DESCRIPTOR endpoint,
 	__inout PLONG remainingLength);
 
 
-static LPCSTR DrvIdNames[8] = {"libusbK", "libusb0", "WinUSB", "libusb0 filter", "Unknown", "Unknown", "Unknown"};
+static LPCSTR DrvIdNames[8] = { "libusbK", "libusb0", "WinUSB", "libusb0 filter", "Unknown", "Unknown", "Unknown" };
 #define GetDrvIdString(DriverID)	(DrvIdNames[((((LONG)(DriverID))<0) || ((LONG)(DriverID)) >= KUSB_DRVID_COUNT)?KUSB_DRVID_COUNT:(DriverID)])
 
 #define MAX_TAB 9
-static LPCSTR gTabIndents[MAX_TAB] =
+static LPCSTR gTabIndents[MAX_TAB + 1] =
 {
 	"",
 	" ",
@@ -141,6 +152,7 @@ static LPCSTR gTabIndents[MAX_TAB] =
 	"           ",
 	"             ",
 	"               ",
+	"                 ",
 };
 
 static int gTab = 0;
@@ -205,8 +217,24 @@ static LPCSTR DescriptorTypeString[] =
 	(DescriptorTypeString[												\
 	        (DescriptorId)-1>((sizeof(DescriptorTypeString)/sizeof(LPCSTR))) ?	\
 	        ((sizeof(DescriptorTypeString)/sizeof(LPCSTR))-1) :					\
-	        ((DescriptorId)-1)													\
-	                     ])
+	        ((DescriptorId)-1)])
+
+static LPCSTR BOSCapabilityTypeString[] =
+{
+	UNUSED_DESCRIPTOR_STRING,
+	"Wireless USB specific device level capabilities",		// Wireless USB specific device level capabilities.
+	"USB 2.0 extension",									// USB 2.0 extension descriptor.
+	"Super speed USB specific device level capabilities",	// Super speed USB specific device level capabilities.
+	"Container ID",											// Unique ID used to identify the instance across all
+	"Platform",												// Unique ID used to identify the instance across all
+	UNUSED_DESCRIPTOR_STRING,
+};
+#define GetBOSCapabilityTypeString(CapType)							\
+	(BOSCapabilityTypeString[												\
+	        (CapType)>=((sizeof(BOSCapabilityTypeString)/sizeof(LPCSTR))) ?	\
+	        ((sizeof(BOSCapabilityTypeString)/sizeof(LPCSTR))-1) :					\
+	        ((CapType))])
+
 
 #define KF_X "0x%X"
 #define KF_X2 "0x%02X"
@@ -241,6 +269,9 @@ static LPCSTR DescriptorTypeString[] =
 #define DESC_VALUE_EX(DisplayName,FieldName,format,...) \
 	WRITE_LN(KLIST_CATEGORY_FORMAT_SEP format,DisplayName, FieldName,__VA_ARGS__)
 
+#define DESC_VALUE_EX2(CategoryFormat,DisplayName,FieldName,format,...) \
+	WRITE_LN(CategoryFormat KLIST_CATEGORY_SEP format,DisplayName, FieldName,__VA_ARGS__)
+
 #define DESC_HID_VALUE(Descriptor,DescriptorIndex,FieldName,format,...)	\
 	WRITE_LN(KLIST_CATEGORY_FORMAT_SEP format,DEFINE_TO_STR(FieldName), (Descriptor)->DescriptorList[DescriptorIndex].FieldName,__VA_ARGS__)
 
@@ -248,6 +279,7 @@ static LPCSTR DescriptorTypeString[] =
 	DESC_VALUE(Descriptor, StringIndex, KF_U"%s", GetDescriptorString(Descriptor->StringIndex))
 
 #define DESC_MARK_DEVICE "-"
+#define DESC_MARK_MSOS "-"
 #define DESC_MARK_CONFIG "-"
 #define DESC_MARK_HID "*"
 #define DESC_MARK_END "!"
@@ -274,7 +306,20 @@ static LPCSTR DescriptorTypeString[] =
 #define HID_END(CategoryName,format,...)	\
 	_TAB_DEC();								\
 	WRITERAW(DESC_MARK_END KLIST_CATEGORY_FORMAT format KLIST_LN,CategoryName,__VA_ARGS__) \
- 
+
+#define DESC_MSOS_BEGIN(DescTitle) \
+	WRITERAW("%s%s%s" KLIST_LN,DESC_MARK_MSOS,DescTitle,KLIST_CATEGORY_SEP); \
+	_TAB_INC()
+
+#define DESC_MSOS_BEGIN_FMT(DescTitle, format,...) \
+	WRITERAW("%s%s%s" format KLIST_LN,DESC_MARK_MSOS,DescTitle,KLIST_CATEGORY_SEP,__VA_ARGS__); \
+	_TAB_INC()
+
+#define DESC_MSOS_END(DescTitle) \
+	_TAB_DEC(); \
+	WRITERAW(DESC_MARK_END "End %s" KLIST_LN,DescTitle)
+
+
 #define PrintfDeviceElementEx(DeviceListFieldName,mFieldFormat) printf("    %-21s: " DEFINE_TO_STR(mFieldFormat) "\n",DEFINE_TO_STR(DeviceListFieldName),deviceElement->DeviceListFieldName)
 #define PrintfDeviceElement(DeviceListFieldName) printf("    %-21s: %s\n",DEFINE_TO_STR(DeviceListFieldName),deviceElement->DeviceListFieldName)
 
@@ -303,6 +348,7 @@ static LPCSTR DescriptorTypeString[] =
 
 void ShowHelp(void);
 void ShowCopyright(void);
+
 
 int __cdecl main(int argc, char** argv)
 {
@@ -372,13 +418,13 @@ int __cdecl main(int argc, char** argv)
 		goto Done;
 	}
 
-	while(LstK_MoveNext(deviceList, &deviceElement))
+	while (LstK_MoveNext(deviceList, &deviceElement))
 	{
 		printf("%2d. %s (%s) [%s]\n",
-		       devicePos + 1,
-		       deviceElement->DeviceDesc,
-		       deviceElement->Mfg,
-		       deviceElement->Connected ? "Connected" : "Not Connected");
+			devicePos + 1,
+			deviceElement->DeviceDesc,
+			deviceElement->Mfg,
+			deviceElement->Connected ? "Connected" : "Not Connected");
 
 		PrintfDeviceElement(Service);
 		PrintfDeviceElement(ClassGUID);
@@ -404,11 +450,11 @@ int __cdecl main(int argc, char** argv)
 	}
 
 	printf("Select device (1-%u) :", devicePos);
-	while(_kbhit()) _getch();
+	while (_kbhit()) _getch();
 	if (
-	    ((((LONG)scanf_s("%u", &selection)) != 1) ||
-	     (selection) > devicePos)
-	)
+		((((LONG)scanf_s("%u", &selection)) != 1) ||
+			(selection) > devicePos)
+		)
 	{
 		printf("\ninvalid selection\n");
 		ec = -1;
@@ -417,7 +463,7 @@ int __cdecl main(int argc, char** argv)
 	printf("\n");
 
 	devicePos = 1;
-	while(LstK_MoveNext(deviceList, &deviceElement))
+	while (LstK_MoveNext(deviceList, &deviceElement))
 	{
 		if (devicePos == selection)
 			break;
@@ -452,9 +498,9 @@ Done:
 }
 
 BOOL GetRealConfigDescriptor(__in UCHAR Index,
-                             __out_opt PUCHAR Buffer,
-                             __in ULONG BufferLength,
-                             __out PUINT LengthTransferred)
+	__out_opt PUCHAR Buffer,
+	__in ULONG BufferLength,
+	__out PUINT LengthTransferred)
 {
 	WINUSB_SETUP_PACKET Pkt;
 	KUSB_SETUP_PACKET* defPkt = (KUSB_SETUP_PACKET*)&Pkt;
@@ -472,12 +518,12 @@ BOOL GetRealConfigDescriptor(__in UCHAR Index,
 BOOL OpenDeviceFileHandle(__in LPCSTR deviceFileName, __out HANDLE* fileHandle)
 {
 	HANDLE handle = CreateFileA(deviceFileName,
-	                            GENERIC_READ | GENERIC_WRITE,
-	                            FILE_SHARE_READ | FILE_SHARE_WRITE,
-	                            NULL,
-	                            OPEN_EXISTING,
-	                            FILE_FLAG_OVERLAPPED,
-	                            NULL);
+		GENERIC_READ | GENERIC_WRITE,
+		FILE_SHARE_READ | FILE_SHARE_WRITE,
+		NULL,
+		OPEN_EXISTING,
+		FILE_FLAG_OVERLAPPED,
+		NULL);
 
 	if (!handle || handle == INVALID_HANDLE_VALUE)
 	{
@@ -489,6 +535,242 @@ BOOL OpenDeviceFileHandle(__in LPCSTR deviceFileName, __out HANDLE* fileHandle)
 	return TRUE;
 }
 
+LPCSTR UnicodeBytesAsString(PUCHAR data, UINT dataLength)
+{
+	static char str[4096];
+	int len = WideCharToMultiByte(CP_ACP, 0, (LPCWCH)data, dataLength / 2, str, sizeof(str) - 1, NULL, NULL);
+	str[len] = 0;
+	return str;
+}
+LPCSTR UnicodeBytesAsMultiString(PUCHAR data, INT dataLength)
+{
+	static char str[4096];
+	int len = 0;
+	int destLength = 0;
+	int srcLength = 0;
+	str[0] = 0;
+	do
+	{
+		len = WideCharToMultiByte(CP_ACP, 0, (LPCWCH)&data[srcLength], -1, &str[destLength], sizeof(str) - 1 - destLength, NULL, NULL);
+
+		if (len == 0) break;
+		srcLength += len;
+		destLength += len;
+		dataLength -= (len * 2);
+		if (dataLength > 2)
+		{
+			// overwrite the terminating null with a comma because there are more strings
+			str[destLength - 1] = ',';
+		}
+	} while (dataLength > 1);
+
+	return str;
+}
+
+LPCSTR BytesToHexString(PUCHAR data, UINT dataLength)
+{
+	static char str[4096];
+	UINT index;
+
+	if (dataLength * 3 > sizeof(str) - 1) dataLength = sizeof(str) / 3 - 1;
+	str[0] = 0;
+	for (index = 0; index < dataLength; index++)
+	{
+		sprintf(&str[index * 3], "%02X ", data[index]);
+		str[index * 3 + 3] = 0;
+	}
+
+	return str;
+}
+
+LPCSTR BytesAsString(PUCHAR data, UINT dataLength)
+{
+	static char str[4096];
+	if (dataLength > sizeof(str) - 1) dataLength = sizeof(str) - 1;
+	memcpy(str, data, dataLength);
+	str[dataLength] = 0;
+	return str;
+}
+
+BOOL DumpMSOSV1Descriptors(VOID)
+{
+	UINT length, capIndex;
+	USBMS_OS_STRING_DESCRIPTOR_V1_0 msosV1Descr;
+	WINUSB_SETUP_PACKET setupPacket;
+	MSOSV1_EXTENDED_COMPAT_ID_DESCRIPTOR compatIdDescriptorHeader;
+	PUCHAR compatIdDescriptorBuffer;
+	MSOSV1_EXTENDED_PROP_DESCRIPTOR extPropDescriptorHeader;
+	PUCHAR extPropDescriptorBuffer;
+
+
+	// Get the 0xEE string descriptor.
+	if (K.GetDescriptor(InterfaceHandle, USB_DESCRIPTOR_TYPE_STRING, 0xEE, 0, (PUCHAR)&msosV1Descr, sizeof(msosV1Descr), &length))
+	{
+		DESC_MSOS_BEGIN("MSOSV1");
+
+		DESC_VALUE_EX("bDescriptorType", msosV1Descr.bDescriptorType, KF_X2);
+		DESC_VALUE_EX("bLength", msosV1Descr.bLength, KF_U2);
+		DESC_VALUE_EX("bMS_VendorCode", msosV1Descr.bMS_VendorCode, KF_X2);
+		DESC_VALUE_EX("qwSignature", UnicodeBytesAsString(msosV1Descr.qwSignature, sizeof(msosV1Descr.qwSignature)), "%s");
+
+		// get the campatible ID descriptor header
+		setupPacket.RequestType = 0xC0;
+		setupPacket.Request = msosV1Descr.bMS_VendorCode;
+		setupPacket.Value = 0;
+		setupPacket.Index = MSOSV1_FEATURE_TYPE_EXTENDED_COMPAT_ID;
+		setupPacket.Length = sizeof(compatIdDescriptorHeader);
+		if (K.ControlTransfer(InterfaceHandle, setupPacket, (PUCHAR)&compatIdDescriptorHeader, sizeof(compatIdDescriptorHeader), &length, NULL))
+		{
+			// get the compatible ID descriptor
+			setupPacket.Length = (USHORT)(compatIdDescriptorHeader.dwLength > 0xFFFF ? 0xFFFF : compatIdDescriptorHeader.dwLength);
+			compatIdDescriptorBuffer = malloc(setupPacket.Length);
+			if (K.ControlTransfer(InterfaceHandle, setupPacket, compatIdDescriptorBuffer, setupPacket.Length, &length, NULL))
+			{
+				PMSOSV1_FUNCTION_DESCRIPTOR funcDescr;
+				DESC_MSOS_BEGIN("Extended Compatible IDs");
+
+				DESC_VALUE((&compatIdDescriptorHeader), dwLength, KF_U);
+				DESC_VALUE((&compatIdDescriptorHeader), bcdVersion, KF_X4);
+				DESC_VALUE((&compatIdDescriptorHeader), wIndex, KF_U);
+				DESC_VALUE((&compatIdDescriptorHeader), bCount, KF_U);
+
+				funcDescr = (PMSOSV1_FUNCTION_DESCRIPTOR)&compatIdDescriptorBuffer[sizeof(compatIdDescriptorHeader)];
+				for (capIndex = 0; capIndex < compatIdDescriptorHeader.bCount; capIndex++)
+				{
+					DESC_MSOS_BEGIN_FMT("Function", " #%u", capIndex);
+
+					DESC_VALUE(funcDescr, bFirstInterfaceNumber, KF_X2);
+					DESC_VALUE_EX("CompatibleID", BytesAsString(funcDescr->CompatibleID, sizeof(funcDescr->CompatibleID)), "%s");
+					DESC_VALUE_EX("SubCompatibleID", BytesAsString(funcDescr->SubCompatibleID, sizeof(funcDescr->SubCompatibleID)), "%s");
+
+
+					setupPacket.Index = MSOSV1_FEATURE_TYPE_EXTENDED_PROPS;
+					setupPacket.Length = sizeof(extPropDescriptorHeader);
+					setupPacket.Value = (USHORT)funcDescr->bFirstInterfaceNumber << 8;
+
+					if (K.ControlTransfer(InterfaceHandle, setupPacket, (PUCHAR)&extPropDescriptorHeader, sizeof(extPropDescriptorHeader), &length, NULL))
+					{
+						setupPacket.Length = (USHORT)(extPropDescriptorHeader.dwLength > 0xFFFF ? 0xFFFF : extPropDescriptorHeader.dwLength);
+						extPropDescriptorBuffer = malloc(setupPacket.Length);
+						if (K.ControlTransfer(InterfaceHandle, setupPacket, extPropDescriptorBuffer, setupPacket.Length, &length, NULL))
+						{
+							PUCHAR pData;
+							UINT propIndex;
+							DESC_MSOS_BEGIN("Extended Properties");
+							DESC_VALUE((&extPropDescriptorHeader), dwLength, KF_U);
+							DESC_VALUE((&extPropDescriptorHeader), bcdVersion, KF_X4);
+							DESC_VALUE((&extPropDescriptorHeader), wIndex, KF_U);
+							DESC_VALUE((&extPropDescriptorHeader), wCount, KF_U);
+
+							pData = &extPropDescriptorBuffer[sizeof(extPropDescriptorHeader)];
+							for (propIndex = 0; propIndex < extPropDescriptorHeader.wCount; propIndex++)
+							{
+								PMSOSV1_CUSTOM_PROP_DESCRIPTOR propHeader = (PMSOSV1_CUSTOM_PROP_DESCRIPTOR)pData;
+								MSOSV1_CUSTOM_PROP_ELEMENT prop;
+								pData += sizeof(MSOSV1_CUSTOM_PROP_DESCRIPTOR);
+
+								prop.wPropertyNameLength = ((USHORT)pData[1] << 8) | (USHORT)pData[0]; pData += 2;
+								prop.pPropertyName = (PWCHAR)pData; pData += prop.wPropertyNameLength;
+								prop.wPropertyDataLength = ((USHORT)pData[3] << 24) | ((USHORT)pData[2] << 16) | ((USHORT)pData[1] << 8) | ((USHORT)pData[0] << 0); pData += 4;
+								prop.pPropertyData = pData;  pData += prop.wPropertyDataLength;
+								DESC_MSOS_BEGIN_FMT("Property", " #%u", propIndex);
+
+								DESC_VALUE_EX2("%-28s", "PropertyName", UnicodeBytesAsString((PUCHAR)prop.pPropertyName, prop.wPropertyNameLength), "%s");
+								switch (propHeader->dwPropertyDataType)
+								{
+								case REG_SZ:
+									DESC_VALUE_EX2("%-28s", "PropertyData (REG_SZ)", UnicodeBytesAsString((PUCHAR)prop.pPropertyData, prop.wPropertyDataLength), "%s");
+									break;
+								case REG_MULTI_SZ:
+									DESC_VALUE_EX2("%-28s", "PropertyData (REG_MULTI_SZ)", UnicodeBytesAsMultiString((PUCHAR)prop.pPropertyData, prop.wPropertyDataLength), "%s");
+									break;
+								case REG_EXPAND_SZ:
+									DESC_VALUE_EX2("%-28s", "PropertyData (REG_EXPAND_SZ)", UnicodeBytesAsString((PUCHAR)prop.pPropertyData, prop.wPropertyDataLength), "%s");
+									break;
+								case REG_LINK:
+									DESC_VALUE_EX2("%-28s", "PropertyData (REG_LINK)", UnicodeBytesAsString((PUCHAR)prop.pPropertyData, prop.wPropertyDataLength), "%s");
+									break;
+								case REG_BINARY:
+									DESC_VALUE_EX2("%-28s", "PropertyData (REG_BINARY)", BytesToHexString((PUCHAR)prop.pPropertyData, prop.wPropertyDataLength), "%s");
+									break;
+								case REG_DWORD_LITTLE_ENDIAN:
+									DESC_VALUE_EX2("%-28s", "PropertyData (REG_DWORD)", (((UINT)prop.pPropertyData[3] << 24) | ((UINT)prop.pPropertyData[2] << 16) | ((UINT)prop.pPropertyData[1] << 8) | ((UINT)prop.pPropertyData[0] << 0)), "%08X");
+									break;
+								case REG_DWORD_BIG_ENDIAN:
+									DESC_VALUE_EX2("%-28s", "PropertyData (REG_DWORD_BE)", (((UINT)prop.pPropertyData[0] << 24) | ((UINT)prop.pPropertyData[1] << 16) | ((UINT)prop.pPropertyData[2] << 8) | ((UINT)prop.pPropertyData[3] << 0)), "%08X");
+									break;
+
+								}
+								DESC_MSOS_END("");
+							}
+							DESC_MSOS_END("");
+
+						}
+
+						free(extPropDescriptorBuffer);
+					}
+
+					DESC_MSOS_END("Function");
+
+					funcDescr = (PMSOSV1_FUNCTION_DESCRIPTOR)((PBYTE)funcDescr + sizeof(MSOSV1_FUNCTION_DESCRIPTOR));
+
+				}
+				DESC_MSOS_END("Extended Compatible IDs");
+
+			}
+
+			free(compatIdDescriptorBuffer);
+		}
+
+		DESC_MSOS_END("MSOSV1");
+
+		return TRUE;
+	}
+
+	return FALSE;
+}
+
+BOOL DumpBOSDescriptor(VOID)
+{
+	BOS_DESCRIPTOR bosDescrHeader;
+	UINT length;
+
+	if (K.GetDescriptor(InterfaceHandle, USB_DESCRIPTOR_TYPE_BOS, 0, 0, (PUCHAR)&bosDescrHeader, sizeof(bosDescrHeader), &length))
+	{
+		UCHAR* pBosDescBuffer = malloc(bosDescrHeader.wTotalLength);
+		if (K.GetDescriptor(InterfaceHandle, USB_DESCRIPTOR_TYPE_BOS, 0, 0, pBosDescBuffer, bosDescrHeader.wTotalLength, &length))
+		{
+			UINT capIndex;
+			PBOS_DEV_CAPABILITY_DESCRIPTOR pCapDescr;
+			DESC_MSOS_BEGIN("BOS");
+
+			DESC_VALUE_EX("bDescriptorType", bosDescrHeader.bDescriptorType, KF_X2);
+			DESC_VALUE_EX("bLength", bosDescrHeader.bLength, KF_U);
+			DESC_VALUE_EX("wTotalLength", bosDescrHeader.wTotalLength, KF_U);
+			DESC_VALUE_EX("bNumDeviceCapabilities", bosDescrHeader.bNumDeviceCaps, KF_U);
+
+			pCapDescr = (PBOS_DEV_CAPABILITY_DESCRIPTOR)&pBosDescBuffer[sizeof(BOS_DESCRIPTOR)];
+			for (capIndex = 0; capIndex < bosDescrHeader.bNumDeviceCaps; capIndex++)
+			{
+				DESC_MSOS_BEGIN_FMT("Capability"," #%u", capIndex);
+				DESC_VALUE(pCapDescr, bLength, KF_U);
+				DESC_VALUE(pCapDescr, bDescriptorType, KF_X2);
+				DESC_VALUE(pCapDescr, bDevCapabilityType, "0x%02X (%s)", GetBOSCapabilityTypeString(pCapDescr->bDevCapabilityType));
+				DESC_VALUE_EX2(KLIST_CATEGORY_FORMAT, "CapabilityData", BytesToHexString(pCapDescr->CapabilityData, pCapDescr->bLength - 3), "%s");
+				DESC_MSOS_END("Capability");
+
+				pCapDescr = (PBOS_DEV_CAPABILITY_DESCRIPTOR)((PUCHAR)pCapDescr + pCapDescr->bLength);
+			}
+
+			DESC_MSOS_END("BOS");
+		}
+		free(pBosDescBuffer);
+
+		return TRUE;
+	}
+
+	return FALSE;
+}
 BOOL GetDescriptorReport(__in KLST_DEVINFO_HANDLE deviceElement, __in BOOL detailed)
 {
 	HANDLE fileHandle = NULL;
@@ -510,17 +792,19 @@ BOOL GetDescriptorReport(__in KLST_DEVINFO_HANDLE deviceElement, __in BOOL detai
 		}
 
 		if (!K.GetDescriptor(InterfaceHandle,
-		                     USB_DESCRIPTOR_TYPE_DEVICE,
-		                     0, 0,
-		                     (PUCHAR)&deviceDescriptor,
-		                     sizeof(deviceDescriptor),
-		                     &length))
+			USB_DESCRIPTOR_TYPE_DEVICE,
+			0,
+			0,
+			(PUCHAR)&deviceDescriptor,
+			sizeof(deviceDescriptor),
+			&length))
 		{
 			WinError(0);
 			goto Error;
 		}
 
 		WRITE_LN("");
+
 
 		DESC_BEGIN_DEV(USB_DESCRIPTOR_TYPE_DEVICE);
 		DumpDescriptorDevice(&deviceDescriptor);
@@ -549,6 +833,10 @@ BOOL GetDescriptorReport(__in KLST_DEVINFO_HANDLE deviceElement, __in BOOL detai
 			success = DumpDescriptorConfig(&hdr, &remainingLength);
 			if (!success && !remainingLength)
 				success = TRUE;
+
+			DumpMSOSV1Descriptors();
+			DumpBOSDescriptor();
+
 		}
 	}
 
@@ -570,7 +858,12 @@ LONG WinError(__in_opt DWORD errorCode)
 	if (!errorCode) return errorCode;
 
 	if (FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER,
-	                   NULL, errorCode, 0, (LPSTR)&buffer, 0, NULL) > 0)
+		NULL,
+		errorCode,
+		0,
+		(LPSTR)&buffer,
+		0,
+		NULL) > 0)
 	{
 		printf("%s\n", buffer);
 	}
@@ -611,9 +904,9 @@ CONST PCHAR GetDescriptorString(USHORT stringIndex)
 		dst[1] = '(';
 		dst += 2;
 
-		while(length-- && *src)
+		while (length-- && *src)
 		{
-			*dst = (CHAR) * src;
+			*dst = (CHAR)*src;
 			dst++;
 			src++;
 		}
@@ -653,8 +946,12 @@ VOID DumpDescriptorDevice(PUSB_DEVICE_DESCRIPTOR desc)
 
 	GetHwIdDisplayText(desc->idVendor, desc->idProduct, vendorName, productName);
 
-	GetClassDisplayText(desc->bDeviceClass, desc->bDeviceSubClass, desc->bDeviceProtocol,
-	                    className, subClassName, protocolName);
+	GetClassDisplayText(desc->bDeviceClass,
+		desc->bDeviceSubClass,
+		desc->bDeviceProtocol,
+		className,
+		subClassName,
+		protocolName);
 
 
 	DESC_VALUE(desc, bLength, KF_U);
@@ -769,19 +1066,19 @@ BOOL DumpDescriptorInterface(PPUNI_DESCRIPTOR uniRef, PLONG remainingLength)
 
 	INT numEndpoints = (INT)(desc->bNumEndpoints);
 	USB_INTERFACE_DESCRIPTOR currentInterface;
-	
+
 	if (!IsUniDescriptorValid(*uniRef, *remainingLength))
 		return FALSE;
 
 	DESC_BEGIN_CFG(USB_DESCRIPTOR_TYPE_INTERFACE);
 
 	GetClassDisplayText(
-	    desc->bInterfaceClass,
-	    desc->bInterfaceSubClass,
-	    desc->bInterfaceProtocol,
-	    className,
-	    subClassName,
-	    protocolName);
+		desc->bInterfaceClass,
+		desc->bInterfaceSubClass,
+		desc->bInterfaceProtocol,
+		className,
+		subClassName,
+		protocolName);
 
 	DESC_VALUE(desc, bLength, KF_U);
 	DESC_VALUE(desc, bDescriptorType, KF_X2);
@@ -810,7 +1107,7 @@ BOOL DumpDescriptorInterface(PPUNI_DESCRIPTOR uniRef, PLONG remainingLength)
 			}
 			success = DumpDescriptorEndpoint(uniRef, remainingLength);
 			break;
-			
+
 		case USB_HID_DESCRIPTOR_TYPE:
 			success = DumpDescriptorHid(uniRef, &currentInterface, remainingLength);
 			break;
@@ -835,7 +1132,7 @@ BOOL DumpDescriptorInterface(PPUNI_DESCRIPTOR uniRef, PLONG remainingLength)
 
 int GetHidDescriptorItemValue(UCHAR itemType, PUCHAR data)
 {
-	switch(itemType & 0x3)
+	switch (itemType & 0x3)
 	{
 	case 1:	// byte
 		return (int)(((PUCHAR)data)[0]);
@@ -848,14 +1145,14 @@ int GetHidDescriptorItemValue(UCHAR itemType, PUCHAR data)
 }
 
 BOOL DumpDescriptorHidReport(__in PHID_DESCRIPTOR desc,
-                             __in PUSB_INTERFACE_DESCRIPTOR currentInterface,
-                             __in UCHAR descriptorPos)
+	__in PUSB_INTERFACE_DESCRIPTOR currentInterface,
+	__in UCHAR descriptorPos)
 {
 	static CHAR usageName[MAX_PATH];
 	static CHAR usagePage[MAX_PATH];
 	static CHAR usageText[MAX_PATH];
 
-	static const LPCSTR collectionNames[] = {"Physical", "Application", "Logical", "Vendor Defined"};
+	static const LPCSTR collectionNames[] = { "Physical", "Application", "Logical", "Vendor Defined" };
 	BOOL success = TRUE;
 	INT transferred;
 	FIND_USBIDS_CONTEXT idContext;
@@ -886,7 +1183,7 @@ BOOL DumpDescriptorHidReport(__in PHID_DESCRIPTOR desc,
 		PUCHAR data = reportBuffer;
 		UCHAR usageID;
 		BOOL WasHidValueHandled;
-		while(transferred > 0)
+		while (transferred > 0)
 		{
 			int hidItemValue;
 
@@ -905,7 +1202,7 @@ BOOL DumpDescriptorHidReport(__in PHID_DESCRIPTOR desc,
 			}
 
 			hidItemValue = GetHidDescriptorItemValue(usageID, data);
-			switch(usageID & 0xFC)
+			switch (usageID & 0xFC)
 			{
 			case 0x04: // Usage Page
 				GetHidUsagePageText((UCHAR)hidItemValue, usagePage, &idContext);
@@ -933,7 +1230,7 @@ BOOL DumpDescriptorHidReport(__in PHID_DESCRIPTOR desc,
 				break;
 			}
 
-			switch(usageID & 0x3)
+			switch (usageID & 0x3)
 			{
 			case 0:	// zero length data
 				if (!WasHidValueHandled)
@@ -972,8 +1269,8 @@ BOOL DumpDescriptorHidReport(__in PHID_DESCRIPTOR desc,
 }
 
 BOOL DumpDescriptorHidPhysical(__in PHID_DESCRIPTOR desc,
-                               __in PUSB_INTERFACE_DESCRIPTOR currentInterface,
-                               __in UCHAR descriptorPos)
+	__in PUSB_INTERFACE_DESCRIPTOR currentInterface,
+	__in UCHAR descriptorPos)
 {
 	UNREFERENCED_PARAMETER(desc);
 	UNREFERENCED_PARAMETER(currentInterface);
@@ -982,8 +1279,8 @@ BOOL DumpDescriptorHidPhysical(__in PHID_DESCRIPTOR desc,
 }
 
 BOOL DumpDescriptorHid(__inout PPUNI_DESCRIPTOR uniRef,
-                       __in PUSB_INTERFACE_DESCRIPTOR currentInterface,
-                       __inout PLONG remainingLength)
+	__in PUSB_INTERFACE_DESCRIPTOR currentInterface,
+	__inout PLONG remainingLength)
 {
 	UCHAR descriptorPos;
 	BOOL success = TRUE;
@@ -1046,9 +1343,9 @@ BOOL DumpDescriptorHid(__inout PPUNI_DESCRIPTOR uniRef,
 }
 LPCSTR GetBmAttributes(UCHAR bmAttributes)
 {
-	CONST PCHAR PipeTypeStrings[4] = {"Control", "Isochronous", "Bulk", "Interrupt"};
-	CONST PCHAR IsoSynchronizationStrings[4] = {"No Synchonization", "Asynchronous", "Adaptive", "Synchronous"};
-	CONST PCHAR IsoUsageTypeStrings[4] = {"Data Endpoint", "Feedback Endpoint", "Explicit Feedback Data Endpoint", "Reserved"};
+	CONST PCHAR PipeTypeStrings[4] = { "Control", "Isochronous", "Bulk", "Interrupt" };
+	CONST PCHAR IsoSynchronizationStrings[4] = { "No Synchonization", "Asynchronous", "Adaptive", "Synchronous" };
+	CONST PCHAR IsoUsageTypeStrings[4] = { "Data Endpoint", "Feedback Endpoint", "Explicit Feedback Data Endpoint", "Reserved" };
 #define GetPipeTypeString(PipeType) PipeTypeStrings[(PipeType) & 0x3]
 #define GetIsoSyncronizationString(BmAttributes) IsoSynchronizationStrings[((BmAttributes)>>2) & 0x3]
 #define GetIsoUsageTypeString(BmAttributes) IsoUsageTypeStrings[((BmAttributes)>>4) & 0x3]
@@ -1072,7 +1369,7 @@ LPCSTR GetBmAttributes(UCHAR bmAttributes)
 
 LPCSTR GetConfigBmAttributes(UCHAR bmAttributes)
 {
-	LPCSTR BmStringsConfig[4] = {"", "Remote-Wakeup", "Self-Powered", "Remote-Wakeup, Self-Powered"};
+	LPCSTR BmStringsConfig[4] = { "", "Remote-Wakeup", "Self-Powered", "Remote-Wakeup, Self-Powered" };
 
 	return BmStringsConfig[(bmAttributes >> 4) & 0x3];
 }
@@ -1137,19 +1434,19 @@ BOOL DumpDescriptorSSEndpointCompanion(PPUNI_DESCRIPTOR uniRef, PUSB_ENDPOINT_DE
 	char bytesPerSecondSrc[64];
 	char bytesPerSecondDst[64];
 	NUMBERFMTA numberFmt;
-	
+
 	if (!IsUniDescriptorValid(*uniRef, *remainingLength))
 		return FALSE;
 
 	DESC_BEGIN_CFG(USB_SUPERSPEED_ENDPOINT_COMPANION);
 
-	
+
 	DESC_VALUE(desc, bLength, KF_U);
 	DESC_VALUE(desc, bDescriptorType, KF_X2);
-	DESC_VALUE(desc, bMaxBurst, KF_U " (%u Packets Per Burst)", desc->bMaxBurst+1);
+	DESC_VALUE(desc, bMaxBurst, KF_U " (%u Packets Per Burst)", desc->bMaxBurst + 1);
 	if (pipeType == UsbdPipeTypeIsochronous)
 	{
-		DESC_VALUE_EX("Multi", ((UINT)desc->bmAttributes.Isochronous.Mult), KF_U" (%u Bursts Per Interval)", desc->bmAttributes.Isochronous.Mult+1);
+		DESC_VALUE_EX("Multi", ((UINT)desc->bmAttributes.Isochronous.Mult), KF_U" (%u Bursts Per Interval)", desc->bmAttributes.Isochronous.Mult + 1);
 		if (endpoint->bInterval)
 		{
 
@@ -1162,7 +1459,7 @@ BOOL DumpDescriptorSSEndpointCompanion(PPUNI_DESCRIPTOR uniRef, PUSB_ENDPOINT_DE
 			numberFmt.lpDecimalSep = "";
 			numberFmt.lpThousandSep = ",";
 
-			GetNumberFormatA(LOCALE_USER_DEFAULT, 0, bytesPerSecondSrc, &numberFmt, bytesPerSecondDst, sizeof(bytesPerSecondDst)-1);
+			GetNumberFormatA(LOCALE_USER_DEFAULT, 0, bytesPerSecondSrc, &numberFmt, bytesPerSecondDst, sizeof(bytesPerSecondDst) - 1);
 
 		}
 
@@ -1233,7 +1530,7 @@ LPCSTR LoadResourceUsbIds(void)
 	res_data = LoadResource(NULL, hSrc);
 	if (!res_data)	return NULL;
 
-	src = (char*) LockResource(res_data);
+	src = (char*)LockResource(res_data);
 	if (!src) return NULL;
 	dst = LocalAlloc(LPTR, src_count + 1);
 
@@ -1266,7 +1563,7 @@ void ShowHelp(void)
 	res_data = LoadResource(NULL, hSrc);
 	if (!res_data)	return;
 
-	src = (char*) LockResource(res_data);
+	src = (char*)LockResource(res_data);
 	if (!src) return;
 
 	if ((handle = GetStdHandle(STD_ERROR_HANDLE)) != INVALID_HANDLE_VALUE)
@@ -1276,9 +1573,9 @@ void ShowHelp(void)
 void ShowCopyright(void)
 {
 	printf("%s v%s (%s)\n",
-	       RC_FILENAME_STR,
-	       RC_VERSION_STR,
-	       DEFINE_TO_STR(VERSION_DATE));
+		RC_FILENAME_STR,
+		RC_VERSION_STR,
+		DEFINE_TO_STR(VERSION_DATE));
 
 	printf("%s", "Copyright (c) 2011-2012 Travis Lee Robinson. <libusbdotnet@gmail.com>\n\n");
 }
