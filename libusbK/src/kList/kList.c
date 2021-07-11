@@ -227,6 +227,17 @@ static LPCSTR BOSCapabilityTypeString[] =
 	"Super speed USB specific device level capabilities",	// Super speed USB specific device level capabilities.
 	"Container ID",											// Unique ID used to identify the instance across all
 	"Platform",												// Unique ID used to identify the instance across all
+	"Power Delivery",
+	"Battery Info",
+	"Consumer Port Characteristics",
+	"Provider Port Characteristics",
+	"Super speed Plus",
+	"Precision Time Measurement",
+	"Wireless USB Ext.",
+	"Billboard",
+	"Authentication",
+	"Billboard Ex",
+	"Configuration Summary",
 	UNUSED_DESCRIPTOR_STRING,
 };
 #define GetBOSCapabilityTypeString(CapType)							\
@@ -240,6 +251,7 @@ static LPCSTR BOSCapabilityTypeString[] =
 #define KF_X2 "0x%02X"
 #define KF_X3 "0x%03X"
 #define KF_X4 "0x%04X"
+#define KF_X8 "0x%08X"
 
 #define KF_U "%u"
 #define KF_U2 "%02u"
@@ -592,6 +604,26 @@ LPCSTR BytesAsString(PUCHAR data, UINT dataLength)
 	return str;
 }
 
+LPCSTR BytesToGuidString(PUCHAR data)
+{
+	static char str[40];
+	UINT i, j;
+	j = 0;
+	for (i = 0; i < 16; i++)
+	{
+		//C801836E-0A76-45D0-9098-5E769DD00EA8
+		sprintf(&str[j], "%02X", data[i]);
+		j += 2;
+		if (i == 3 || i == 5 || i == 7)
+		{
+			str[j] = '-';
+			j++;
+		}
+	}
+	str[j] = 0;
+
+	return str;
+}
 BOOL DumpMSOSV1Descriptors(VOID)
 {
 	UINT length, capIndex;
@@ -730,11 +762,14 @@ BOOL DumpMSOSV1Descriptors(VOID)
 	return FALSE;
 }
 
+#define CatIf(CatIfTrue, StringBuffer, AddString) if (CatIfTrue) strcat(StringBuffer,AddString)
+
 BOOL DumpBOSDescriptor(VOID)
 {
 	BOS_DESCRIPTOR bosDescrHeader;
-	UINT length;
-
+	UINT length, i, j;
+	CHAR strTemp[256];
+	
 	if (K.GetDescriptor(InterfaceHandle, USB_DESCRIPTOR_TYPE_BOS, 0, 0, (PUCHAR)&bosDescrHeader, sizeof(bosDescrHeader), &length))
 	{
 		UCHAR* pBosDescBuffer = malloc(bosDescrHeader.wTotalLength);
@@ -752,11 +787,53 @@ BOOL DumpBOSDescriptor(VOID)
 			pCapDescr = (PBOS_DEV_CAPABILITY_DESCRIPTOR)&pBosDescBuffer[sizeof(BOS_DESCRIPTOR)];
 			for (capIndex = 0; capIndex < bosDescrHeader.bNumDeviceCaps; capIndex++)
 			{
+				PBOS_USB_2_0_EXTENSION_DESCRIPTOR pBosUsb20Ext;
+				PBOS_SS_USB_DEVICE_CAPABILITY_DESCRIPTOR pBosSS;
+				PBOS_CONTAINER_ID_DESCRIPTOR pBosContainer;
+				PBOS_PLATFORM_DESCRIPTOR pBosPlatform;
+				
 				DESC_MSOS_BEGIN_FMT("Capability"," #%u", capIndex);
 				DESC_VALUE(pCapDescr, bLength, KF_U);
 				DESC_VALUE(pCapDescr, bDescriptorType, KF_X2);
 				DESC_VALUE(pCapDescr, bDevCapabilityType, "0x%02X (%s)", GetBOSCapabilityTypeString(pCapDescr->bDevCapabilityType));
-				DESC_VALUE_EX2(KLIST_CATEGORY_FORMAT, "CapabilityData", BytesToHexString(pCapDescr->CapabilityData, pCapDescr->bLength - 3), "%s");
+
+				switch(pCapDescr->bDevCapabilityType)
+				{
+				case BOS_CAPABILITY_TYPE_USB_2_0_EXTENSION:
+					pBosUsb20Ext = (PBOS_USB_2_0_EXTENSION_DESCRIPTOR)pCapDescr;
+					strTemp[0] = 0;
+					CatIf(pBosUsb20Ext->bmAttributes & 0x02, strTemp, "LPM ");
+					DESC_VALUE(pBosUsb20Ext, bmAttributes, KF_X8 " %s", strTemp);
+					break;
+				case BOS_CAPABILITY_TYPE_SS_USB_DEVICE_CAPABILITY:
+					pBosSS = (PBOS_SS_USB_DEVICE_CAPABILITY_DESCRIPTOR)pCapDescr;
+					strTemp[0] = 0;
+					CatIf(pBosSS->bmAttributes & 0x02, strTemp, "LTM ");
+					DESC_VALUE(pBosSS, bmAttributes, KF_X2 " %s", strTemp);
+
+					strTemp[0] = 0;
+					CatIf(pBosSS->wSpeedSupported & (1 << 0), strTemp, "LS ");
+					CatIf(pBosSS->wSpeedSupported & (1 << 1), strTemp, "FS ");
+					CatIf(pBosSS->wSpeedSupported & (1 << 2), strTemp, "HS ");
+					CatIf(pBosSS->wSpeedSupported & (1 << 3), strTemp, "SS ");
+					DESC_VALUE(pBosSS, wSpeedSupported, KF_X4 " %s", strTemp);
+
+					DESC_VALUE(pBosSS, bFunctionalitySupport, KF_X2);
+
+					DESC_VALUE(pBosSS, bU1DevExitLat, KF_U " us");
+					DESC_VALUE(pBosSS, bU2DevExitLat, KF_U " us");
+					break;
+				case BOS_CAPABILITY_TYPE_CONTAINER_ID:
+					pBosContainer = (PBOS_CONTAINER_ID_DESCRIPTOR)pCapDescr;
+					DESC_VALUE_EX("ContainerID", BytesToGuidString(pBosContainer->ContainerID), "%s");
+					break;
+				case BOS_CAPABILITY_TYPE_PLATFORM:
+					pBosPlatform = (PBOS_PLATFORM_DESCRIPTOR)pCapDescr;
+					DESC_VALUE_EX("PlatformCapabilityUUID", BytesToGuidString(pBosPlatform->PlatformCapabilityUUID), "%s");
+					break;
+				default:
+					DESC_VALUE_EX2(KLIST_CATEGORY_FORMAT, "CapabilityData", BytesToHexString(pCapDescr->CapabilityData, pCapDescr->bLength - 3), "%s");
+				}
 				DESC_MSOS_END("Capability");
 
 				pCapDescr = (PBOS_DEV_CAPABILITY_DESCRIPTOR)((PUCHAR)pCapDescr + pCapDescr->bLength);

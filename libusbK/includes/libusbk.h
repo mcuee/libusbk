@@ -827,7 +827,40 @@ enum BOS_CAPABILITY_TYPE
 	BOS_CAPABILITY_TYPE_CONTAINER_ID = 0x04,
 
 	//! Platform specific capability.
-	BOS_CAPABILITY_TYPE_PLATFORM = 0x05
+	BOS_CAPABILITY_TYPE_PLATFORM = 0x05,
+
+	//! Defines the various PD Capabilities of this device.
+	BOS_POWER_DELIVERY_CAPABILITY = 0x06,
+
+	//! Provides information on each battery supported by the device.
+	BOS_BATTERY_INFO_CAPABILITY = 0x07,
+
+	//! The consumer characteristics of a port on the device.
+	BOS_PD_CONSUMER_PORT_CAPABILITY = 0x08,
+
+	//! The provider characteristics of a port on the device.
+	BOS_PD_PROVIDER_PORT_CAPABILITY = 0x09,
+
+	//! Defines the set of SuperSpeed Plus USB specific device level capabilities.
+	BOS_SUPERSPEED_PLUS = 0x0A,
+
+	//! Precision Time Measurement (PTM) Capability Descriptor.
+	BOS_PRECISION_TIME_MEASUREMENT = 0x0B,
+
+	//! Defines the set of Wireless USB 1.1-specific device level capabilities.
+	BOS_WIRELESS_USB_EXT = 0x0C,
+
+	//! Billboard capability.
+	BOS_BILLBOARD = 0x0D,
+
+	//! Authentication Capability Descriptor.
+	BOS_AUTHENTICATION = 0x0E,
+
+	//! Billboard Ex capability.
+	BOS_BILLBOARD_EX = 0x0F,
+
+	//! Summarizes configuration information for a function implemented by the device.
+	BOS_CONFIGURATION_SUMMARY = 0x10,
 };
 
 //!  USB 3.0 and USB 2.0 LPM Binary Device Object Store (BOS).
