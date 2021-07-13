@@ -953,13 +953,53 @@ typedef struct _BOS_PLATFORM_DESCRIPTOR
 
 	//! A 128-bit number that uniquely identifies a platform-specific capability of the device.
 	/*
-	 * For Windows, this is "D8DD60DF-4589-4CC7-9CD2-659D9E648A9F" (dashes not included in actual data)
+	 * For Windows OS 2.0 descriptor support, this is "D8DD60DF-4589-4CC7-9CD2-659D9E648A9F" (dashes not included in actual data)
 	 */
 	UCHAR  PlatformCapabilityUUID[16];
 	
 	//! Capability Data
 	UCHAR CapabilityData[0];
 }BOS_PLATFORM_DESCRIPTOR, * PBOS_PLATFORM_DESCRIPTOR;
+
+typedef struct _BOS_WINDOWS_PLATFORM_VERSION
+{
+	//! Minimum version of Windows
+/*
+ * The Windows version indicates the minimum version of Windows that the descriptor set can be applied to.The DWORD value
+ * corresponds to the published NTDDI version constants in SDKDDKVER.H
+ *
+ */
+	UINT dwWindowsVersion;
+
+	//! The length, in bytes of the MS OS 2.0 descriptor set.
+	USHORT wMSOSDescriptorSetTotalLength;
+
+	//! Vendor defined code.
+	/*
+	 * Vendor defined code to use to retrieve this version of the MS OS 2.0 descriptor and also to set alternate enumeration
+	 * behavior on the device.
+	 */
+	UCHAR bMS_VendorCode;
+
+	//! Alternate enumeration indicator.
+	/*
+	 * A non-zero value to send to the device to indicate that the device may return non-default USB descriptors for
+	 * enumeration.  If the device does not support alternate enumeration, this value shall be 0.
+	 */
+	UCHAR bAltEnumCode;
+
+}BOS_WINDOWS_PLATFORM_VERSION, *PBOS_WINDOWS_PLATFORM_VERSION;
+
+typedef struct _USB_MSOSV1_STRING_DESCRIPTOR
+{
+	//! Size of this descriptor (in bytes)
+	UCHAR bLength;			// 0x12
+	UCHAR bDescriptorType;	// 0x3
+	UCHAR qwSignature[14];	// MSFT100
+	UCHAR bMS_VendorCode;	// Vendor specific vendor code
+	UCHAR bPad;
+	//! Descriptor type
+}USB_MSOSV1_STRING_DESCRIPTOR, *PUSB_MSOSV1_STRING_DESCRIPTOR;
 
 enum MSOSV1_FEATURE_TYPE
 {
@@ -1059,6 +1099,9 @@ typedef struct _MSOSV1_EXTENDED_PROP_DESCRIPTOR
 	//! The number of custom property sections that follow this header section
 	USHORT wCount;
 
+	//! Placeholder for \b wCount number of custom properties.  See \ref MSOSV1_CUSTOM_PROP_DESCRIPTOR and \ref MSOS_CUSTOM_PROP_ELEMENT
+	UCHAR CustomProperties[0];
+
 }MSOSV1_EXTENDED_PROP_DESCRIPTOR, * PMSOSV1_EXTENDED_PROP_DESCRIPTOR;
 
 //! A custom property section contains the information for a single property
@@ -1097,16 +1140,287 @@ typedef struct _MSOSV1_CUSTOM_PROP_DESCRIPTOR
 	 */
 	UINT dwPropertyDataType;
 
+	//! Placeholder for variable length property name and data field. see \ref MSOS_CUSTOM_PROP_ELEMENT
+	UCHAR CustomProperty[0];
+
 }MSOSV1_CUSTOM_PROP_DESCRIPTOR, * PMSOSV1_CUSTOM_PROP_DESCRIPTOR;
 
-//! Helper structure for parsing a /ref MSOSV1_CUSTOM_PROP_DESCRIPTOR
-typedef struct _MSOSV1_CUSTOM_PROP_ELEMENT
+//! Helper structure for parsing a /ref MSOSV1_CUSTOM_PROP_DESCRIPTOR or a \ref MSOSV2_FEATURE_REG_PROPERTY_DESCRIPTOR
+typedef struct _MSOS_CUSTOM_PROP_ELEMENT
 {
 	USHORT wPropertyNameLength;
 	PWCHAR pPropertyName;
 	USHORT wPropertyDataLength;
 	PUCHAR pPropertyData;
-}MSOSV1_CUSTOM_PROP_ELEMENT,*PMSOSV1_CUSTOM_PROP_ELEMENT;
+}MSOS_CUSTOM_PROP_ELEMENT,*PMSOS_CUSTOM_PROP_ELEMENT;
+
+//! Microsoft OS 2.0 descriptor wDescriptorType values
+enum MSOSV2_DESCRIPTOR_TYPE
+{
+	//! The MS OS 2.0 descriptor set header.
+	MSOSV2_DESCRIPTOR_TYPE_SET_HEADER_DESCRIPTOR = 0x00,
+
+	//! Microsoft OS 2.0 configuration subset header.
+	MSOSV2_DESCRIPTOR_TYPE_SUBSET_HEADER_CONFIGURATION = 0x01,
+
+	//! Microsoft OS 2.0 function subset header.
+	MSOSV2_DESCRIPTOR_TYPE_SUBSET_HEADER_FUNCTION = 0x02,
+
+	//! Microsoft OS 2.0 compatible ID descriptor.
+	MSOSV2_DESCRIPTOR_TYPE_FEATURE_COMPATBLE_ID = 0x03,
+
+	//! Microsoft OS 2.0 registry property descriptor.
+	MSOSV2_DESCRIPTOR_TYPE_FEATURE_REG_PROPERTY = 0x04,
+
+	//! Microsoft OS 2.0 minimum USB resume time descriptor.
+	MSOSV2_DESCRIPTOR_TYPE_FEATURE_MIN_RESUME_TIME = 0x05,
+
+	//! Microsoft OS 2.0 model ID descriptor.
+	MSOSV2_DESCRIPTOR_TYPE_FEATURE_MODEL_ID = 0x06,
+
+	//! Microsoft OS 2.0 CCGP device descriptor.
+	MSOSV2_DESCRIPTOR_TYPE_FEATURE_CCGP_DEVICE = 0x07,
+
+	//! Microsoft OS 2.0 vendor revision descriptor.
+	MSOSV2_DESCRIPTOR_TYPE_FEATURE_VENDOR_REVISION = 0x08,
+};
+
+//! All MS OS V2.0 descriptors start with these two fields.
+typedef struct _MSOSV2_COMMON_DESCRIPTOR
+{
+	//! The length, in bytes, of this descriptor.
+	USHORT wLength;
+
+	//! See \ref MSOSV2_DESCRIPTOR_TYPE
+	USHORT wDescriptorType;
+	
+}MSOSV2_COMMON_DESCRIPTOR, * PMSOSV2_COMMON_DESCRIPTOR;
+
+//! Microsoft OS 2.0 descriptor set header
+typedef struct _MSOSV2_SET_HEADER_DESCRIPTOR
+{
+	//! The length, in bytes, of this header. Shall be set to 10.
+	USHORT wLength;
+
+	//! \ref MSOSV2_DESCRIPTOR_TYPE_SET_HEADER_DESCRIPTOR
+	USHORT wDescriptorType;
+
+	//! Windows version.
+	UINT dwWindowsVersion;
+
+	//! The size of entire MS OS 2.0 descriptor set. The value shall match the value in the descriptor set information structure.  See \ref BOS_WINDOWS_PLATFORM_DESCRIPTOR::wMSOSDescriptorSetTotalLength
+	USHORT wTotalLength;
+	
+}MSOSV2_SET_HEADER_DESCRIPTOR,*PMSOSV2_SET_HEADER_DESCRIPTOR;
+
+//! Microsoft OS 2.0 configuration subset header
+typedef struct _MSOSV2_SUBSET_HEADER_CONFIGURATION_DESCRIPTOR
+{
+	//! The length, in bytes, of this subset header. Shall be set to 8.
+	USHORT wLength;
+
+	//! \ref MSOSV2_DESCRIPTOR_TYPE_SUBSET_HEADER_CONFIGURATION
+	USHORT wDescriptorType;
+
+	//! The configuration value for the USB configuration to which this subset applies.
+	UCHAR bConfigurationValue;
+	
+	//! Reserved
+	UCHAR bReserved;
+	
+	//! The size of entire configuration subset including this header.
+	USHORT wTotalLength;
+
+}MSOSV2_SUBSET_HEADER_CONFIGURATION_DESCRIPTOR, * PMSOSV2_SUBSET_HEADER_CONFIGURATION_DESCRIPTOR;
+
+//! Microsoft OS 2.0 function subset header
+typedef struct _MSOSV2_SUBSET_HEADER_FUNCTION_DESCRIPTOR
+{
+	//! The length, in bytes, of this subset header. Shall be set to 8.
+	USHORT wLength;
+
+	//! \ref MSOSV2_DESCRIPTOR_TYPE_SUBSET_HEADER_FUNCTION
+	USHORT wDescriptorType;
+
+	//! The interface number for the first interface of the function to which this subset applies.
+	UCHAR bFirstInterface;
+
+	//! Reserved
+	UCHAR bReserved;
+
+	//! The size of entire function subset including this header.
+	USHORT wSubsetLength;
+
+}MSOSV2_SUBSET_HEADER_FUNCTION_DESCRIPTOR, * PMSOSV2_SUBSET_HEADER_FUNCTION_DESCRIPTOR;
+
+//! Microsoft OS 2.0 compatible ID descriptor
+/*
+ * The Microsoft OS 2.0 compatible ID descriptor is used to define a compatible device ID.  Its usage is
+ * identical to the Microsoft OS extended configuration descriptor defined in MS OS descriptors specification
+ * version 1.0.
+ *
+ * The compatible ID can be applied to the entire device or a specific function within a composite device.
+ */
+typedef struct _MSOSV2_FEATURE_COMPATBLE_ID_DESCRIPTOR
+{
+	//! The length, bytes, of the compatible ID descriptor including value descriptors. Shall be set to 20.
+	USHORT wLength;
+
+	//! \ref MSOSV2_DESCRIPTOR_TYPE_FEATURE_COMPATBLE_ID
+	USHORT wDescriptorType;
+
+	//! Compatible ID String
+	/*
+	 * This field contains the value of the compatible ID to be associated with this function. Any unused bytes
+	 * should be filled with NULLs. If the function does not have a compatible ID, fill the entire field with
+	 * NULLs.
+	 */
+	UCHAR CompatibleID[8];
+
+	//! Sub-compatible ID String
+	/*
+	 * This field contains the value of the subcompatible ID to be associated with this function. Any
+	 * remaining bytes should be filled with NULLs. If the function does not have a subcompatible ID, fill the
+	 * entire field with NULLs.
+	 */
+	UCHAR SubCompatibleID[8];
+
+}MSOSV2_FEATURE_COMPATBLE_ID_DESCRIPTOR, * PMSOSV2_FEATURE_COMPATBLE_ID_DESCRIPTOR;
+
+//! Microsoft OS 2.0 registry property descriptor
+/*
+ * The Microsoft OS 2.0 registry property descriptor is used to add per-device or per-function registry values
+ * that is read by the Windows USB driver stack or the device’s function driver.  Usage is similar to Microsoft
+ * OS extended property descriptor defined MS OS descriptors specification version 1.0.
+ *
+ * Windows retrieves MS OS 2.0 registry property descriptor values during device enumeration as part of the
+ * overall descriptor set. However, only the values that are retrieved during the first device enumeration are
+ * written to the registry and used subsequently. The behavior is to maintain registry values that might be
+ * changed by the user.
+ *
+ * The registry property descriptor can be applied to the entire device or a specific function within a
+ * composite device.
+ */
+typedef struct _MSOSV2_FEATURE_REG_PROPERTY_DESCRIPTOR
+{
+	//! The length, in bytes, of this descriptor.
+	USHORT wLength;
+
+	//! \ref MSOSV2_DESCRIPTOR_TYPE_FEATURE_REG_PROPERTY
+	USHORT wDescriptorType;
+
+	//! The type of data associated with the section
+	/*
+	 * - 0   RESERVED
+	 * - 1   A NULL-terminated Unicode String (REG_SZ)
+	 * - 2   A NULL-terminated Unicode String that includes environment variables (REG_EXPAND_SZ)
+	 * - 3   Free-form binary (REG_BINARY)
+	 * - 4   A little-endian 32-bit integer (REG_DWORD_LITTLE_ENDIAN)
+	 * - 5   A big-endian 32-bit integer (REG_DWORD_BIG_ENDIAN)
+	 * - 6   A NULL-terminated Unicode string that contains a symbolic link (REG_LINK)
+	 * - 7   Multiple NULL-terminated Unicode strings (REG_MULTI_SZ)
+	 * - 8   and higher	RESERVED
+	 */
+	USHORT wPropertyDataType;
+
+	//! Placeholder for variable length property name and data field. see \ref MSOS_CUSTOM_PROP_ELEMENT
+	UCHAR CustomProperty[0];
+
+}MSOSV2_FEATURE_REG_PROPERTY_DESCRIPTOR, * PMSOSV2_FEATURE_REG_PROPERTY_DESCRIPTOR;
+
+//! Microsoft OS 2.0 minimum USB resume time descriptor
+/*
+ * The Microsoft OS 2.0 minimum USB resume time descriptor is used to indicate to the Windows USB driver
+ * stack the minimum time needed to recover after resuming from suspend, and how long the device requires
+ * resume signaling to be asserted. This descriptor is used for a device operating at high, full, or
+ * low-speed.  It is not used for a device operating at SuperSpeed or higher.
+ *
+ * This descriptor allows devices to recover faster than the default 10 millisecond specified in the USB
+ * 2.0 specification.  It can also allow the host to assert resume signaling for less than the 20
+ * milliseconds required in the USB 2.0 specification, in cases where the timing of resume signaling is
+ * controlled by software.
+ *
+ * The USB resume time descriptor is applied to the entire device.
+ */
+typedef struct _MSOSV2_FEATURE_MIN_RESUME_TIME_DESCRIPTOR
+{
+	//! The length, in bytes, of this descriptor. Shall be set to 6.
+	USHORT wLength;
+
+	//! \ref MSOSV2_DESCRIPTOR_TYPE_FEATURE_MIN_RESUME_TIME
+	USHORT wDescriptorType;
+
+	//! The number of milliseconds the device requires to recover from port resume. (Valid values are 0 to 10)
+	UCHAR bResumeRecoveryTime;
+
+	//! The number of milliseconds the device requires resume signaling to be asserted.  (Valid values 1 to 20)
+	UCHAR bResumeSignalingTime;
+}MSOSV2_FEATURE_MIN_RESUME_TIME_DESCRIPTOR, * PMSOSV2_FEATURE_MIN_RESUME_TIME_DESCRIPTOR;
+
+//! Microsoft OS 2.0 model ID descriptor
+/*
+ * The Microsoft OS 2.0 model ID descriptor is used to uniquely identify the physical device.
+ * 
+ * The model ID descriptor is applied to the entire device.
+ */
+typedef struct _MSOSV2_FEATURE_MODEL_ID_DESCRIPTOR
+{
+	//! The length, in bytes, of this descriptor. Shall be set to 20.
+	USHORT wLength;
+
+	//! \ref MSOSV2_DESCRIPTOR_TYPE_FEATURE_MODEL_ID
+	USHORT wDescriptorType;
+
+	//! This is a 128-bit number that uniquely identifies a physical device. 
+	UCHAR ModelID[16];
+}MSOSV2_FEATURE_MODEL_ID_DESCRIPTOR, * PMSOSV2_FEATURE_MODEL_ID_DESCRIPTOR;
+
+//! Microsoft OS 2.0 CCGP device descriptor
+/*
+ * The Microsoft OS 2.0 CCGP device descriptor is used to indicate that the device should be treated as a
+ * composite device by Windows regardless of the number of interfaces, configuration, or class, subclass,
+ * and protocol codes, the device reports.
+ *
+ * The CCGP device descriptor must be applied to the entire device.
+ */
+typedef struct _MSOSV2_FEATURE_CCGP_DESCRIPTOR
+{
+	//! The length, in bytes, of this descriptor. Shall be set to 4.
+	USHORT wLength;
+
+	//! \ref MSOSV2_DESCRIPTOR_TYPE_FEATURE_CCGP_DEVICE
+	USHORT wDescriptorType;
+
+}MSOSV2_FEATURE_CCGP_DESCRIPTOR, * PMSOSV2_FEATURE_CCGP_DESCRIPTOR;
+
+//! Microsoft OS 2.0 vendor revision descriptor
+/*
+ * The Microsoft OS 2.0 vendor revision descriptor is used to indicate the revision of registry property
+ * and other MSOS descriptors. If this value changes between enumerations the registry property
+ * descriptors will be updated in registry during that enumeration. You must always change this value
+ * if you are adding/ modifying any registry property or other MSOS descriptors.
+ * 
+ * The vendor revision descriptor must be applied at the device scope for a non-composite device or for
+ * MSOS descriptors that apply to the device scope of a composite device.  Additionally, for a composite
+ * device, the vendor revision descriptor must be provided in every function subset and may be updated
+ * independently per-function.
+ */
+typedef struct _MSOSV2_FEATURE_VENDOR_REVISION_DESCRIPTOR
+{
+	//! The length, in bytes, of this descriptor. Shall be set to 6.
+	USHORT wLength;
+
+	//! \ref MSOSV2_DESCRIPTOR_TYPE_FEATURE_VENDOR_REVISION
+	USHORT wDescriptorType;
+
+	//! Revision number associated with the descriptor set.
+	/*
+	 * Modify it every time you add / modify a registry property or other MSOS descriptor.Shell set to
+	 * greater than or equal to 1.
+	 */
+	USHORT VendorRevision;
+	
+}MSOSV2_FEATURE_VENDOR_REVISION_DESCRIPTOR, * PMSOSV2_FEATURE_VENDOR_REVISION_DESCRIPTOR;
 
 #if _MSC_VER >= 1200
 #pragma warning(pop)

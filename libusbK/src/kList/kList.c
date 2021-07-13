@@ -16,11 +16,14 @@ License files are located in a license folder at the root of source and
 binary distributions.
 ********************************************************************!*/
 
-#include <windows.h>
+#define INITGUID
+#include <guiddef.h>
+
+#include <Windows.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <conio.h>
-#include <setupapi.h>
+#include <SetupAPI.h>
 
 #include "lusbk_version.h"
 #include "libusbk.h"
@@ -28,11 +31,14 @@ binary distributions.
 
 #pragma warning(disable:4296)
 #pragma warning(disable:4201)
-#include <PSHPACK1.h>
+#include <pshpack1.h>
 
 #define USB_HID_DESCRIPTOR_TYPE				0x21
 #define USB_HID_REPORT_DESCRIPTOR_TYPE		0x22
 #define USB_HID_PHYSICAL_DESCRIPTOR_TYPE	0x23
+
+// {D8DD60DF-4589-4CC7-9CD2-659D9E648A9F}
+DEFINE_GUID(BOS_WIN_PLATFORM_GUID,0xD8DD60DF, 0x4589, 0x4CC7, 0x9C, 0xD2, 0x65, 0x9D, 0x9E, 0x64, 0x8A, 0x9F);
 
 typedef struct _HID_DESCRIPTOR
 {
@@ -53,16 +59,6 @@ typedef struct _HID_DESCRIPTOR
 
 }*PHID_DESCRIPTOR, HID_DESCRIPTOR;
 
-typedef struct _USBMS_OS_STRING_DESCRIPTOR_V1_0
-{
-	//! Size of this descriptor (in bytes)
-	UCHAR bLength;			// 0x12
-	UCHAR bDescriptorType;	// 0x3
-	UCHAR qwSignature[14];	// MSFT100
-	UCHAR bMS_VendorCode;	// Vendor specific vendor code
-	UCHAR bPad;
-	//! Descriptor type
-}USBMS_OS_STRING_DESCRIPTOR_V1_0;
 typedef struct _UNI_DESCRIPTOR
 {
 	union
@@ -76,10 +72,27 @@ typedef struct _UNI_DESCRIPTOR
 		USB_SUPERSPEED_ENDPOINT_COMPANION_DESCRIPTOR SSEndpointCompanion;
 		USB_INTERFACE_ASSOCIATION_DESCRIPTOR InterfaceAssociation;
 		HID_DESCRIPTOR Hid;
-		USBMS_OS_STRING_DESCRIPTOR_V1_0 OsStringDescriptor;
 	};
 } UNI_DESCRIPTOR, * PUNI_DESCRIPTOR, ** PPUNI_DESCRIPTOR;
-#include <POPPACK.h>
+
+typedef struct _UNI_MSOSV2_DESCRIPTOR
+{
+	union
+	{
+		MSOSV2_COMMON_DESCRIPTOR Common;
+		MSOSV2_SET_HEADER_DESCRIPTOR SetHeader;
+		MSOSV2_SUBSET_HEADER_CONFIGURATION_DESCRIPTOR SubsetHeaderConfig;
+		MSOSV2_SUBSET_HEADER_FUNCTION_DESCRIPTOR SubsetHeaderFunction;
+		MSOSV2_FEATURE_COMPATBLE_ID_DESCRIPTOR FeatureCompatibleID;
+		MSOSV2_FEATURE_REG_PROPERTY_DESCRIPTOR FeatureRegProperty;
+		MSOSV2_FEATURE_MIN_RESUME_TIME_DESCRIPTOR FeatureMinResumeTime;
+		MSOSV2_FEATURE_MODEL_ID_DESCRIPTOR FeatureModelID;
+		MSOSV2_FEATURE_CCGP_DESCRIPTOR FeatureCCGP;
+		MSOSV2_FEATURE_VENDOR_REVISION_DESCRIPTOR FeatureVendorRevision;
+	};
+} UNI_MSOSV2_DESCRIPTOR, * PUNI_MSOSV2_DESCRIPTOR, ** PPUNI_MSOSV2_DESCRIPTOR;
+
+#include <poppack.h>
 #pragma warning(default:4201)
 
 static KUSB_DRIVER_API K;
@@ -140,7 +153,7 @@ BOOL DumpDescriptorSSEndpointCompanion(
 static LPCSTR DrvIdNames[8] = { "libusbK", "libusb0", "WinUSB", "libusb0 filter", "Unknown", "Unknown", "Unknown" };
 #define GetDrvIdString(DriverID)	(DrvIdNames[((((LONG)(DriverID))<0) || ((LONG)(DriverID)) >= KUSB_DRVID_COUNT)?KUSB_DRVID_COUNT:(DriverID)])
 
-#define MAX_TAB 9
+#define MAX_TAB 10
 static LPCSTR gTabIndents[MAX_TAB + 1] =
 {
 	"",
@@ -153,11 +166,13 @@ static LPCSTR gTabIndents[MAX_TAB + 1] =
 	"             ",
 	"               ",
 	"                 ",
+	"                   ",
 };
 
 static int gTab = 0;
 
 LPCSTR UsbIdsText = NULL;
+PBOS_PLATFORM_DESCRIPTOR g_pBosWindowsPlatformDescriptor = NULL;
 
 #define UNUSED_DESCRIPTOR_STRING "Unknown"
 static LPCSTR DescriptorTypeString[] =
@@ -246,6 +261,26 @@ static LPCSTR BOSCapabilityTypeString[] =
 	        ((sizeof(BOSCapabilityTypeString)/sizeof(LPCSTR))-1) :					\
 	        ((CapType))])
 
+static LPCSTR MSOSV2DescriptorTypeString[] =
+{
+	"Descriptor Set",
+	"Configuration Subset",
+	"Function Subset",
+	"Compatible ID",
+	"Registry Property",
+	"Minimum USB Resume Time",
+	"Model ID",
+	"CCGP",
+	"Vendor Revision",
+
+	UNUSED_DESCRIPTOR_STRING,
+};
+
+#define GetMSOSV2DescriptorTypeString(DescriptorType)							\
+	(MSOSV2DescriptorTypeString[												\
+	        (DescriptorType)>=((sizeof(MSOSV2DescriptorTypeString)/sizeof(LPCSTR))) ?	\
+	        ((sizeof(MSOSV2DescriptorTypeString)/sizeof(LPCSTR))-1) :					\
+	        ((DescriptorType))])
 
 #define KF_X "0x%X"
 #define KF_X2 "0x%02X"
@@ -288,7 +323,7 @@ static LPCSTR BOSCapabilityTypeString[] =
 	WRITE_LN(KLIST_CATEGORY_FORMAT_SEP format,DEFINE_TO_STR(FieldName), (Descriptor)->DescriptorList[DescriptorIndex].FieldName,__VA_ARGS__)
 
 #define DESC_iVALUE(Descriptor, StringIndex) \
-	DESC_VALUE(Descriptor, StringIndex, KF_U"%s", GetDescriptorString(Descriptor->StringIndex))
+	DESC_VALUE(Descriptor, StringIndex, KF_U"%s", GetDescriptorString((Descriptor)->StringIndex))
 
 #define DESC_MARK_DEVICE "-"
 #define DESC_MARK_MSOS "-"
@@ -340,8 +375,8 @@ static LPCSTR BOSCapabilityTypeString[] =
 
 #define AdvanceDescriptor(DescriptorPtr, RemainingLength)										\
 	{																								\
-		RemainingLength -= DescriptorPtr->bLength;													\
-		DescriptorPtr = (PUSB_COMMON_DESCRIPTOR)(((PUCHAR)DescriptorPtr) + DescriptorPtr->bLength);	\
+		(RemainingLength) -= (DescriptorPtr)->bLength;													\
+		(DescriptorPtr) = (PUSB_COMMON_DESCRIPTOR)(((PUCHAR)(DescriptorPtr)) + (DescriptorPtr)->bLength);	\
 	}
 
 #define IsUniDescriptorValid(DescriptorPtr, RemainingTotalSize)\
@@ -357,6 +392,19 @@ static LPCSTR BOSCapabilityTypeString[] =
 	AdvanceDescriptor(DescriptorPtr, RemainingLength);											\
 	if (!IsDescValid(DescriptorPtr, RemainingLength))											\
 		break
+
+#define IsMSOSV2UniDescriptorValid(DescriptorPtr, RemainingTotalSize)\
+	(((RemainingTotalSize) > sizeof(MSOSV2_COMMON_DESCRIPTOR)) && (RemainingTotalSize) >= (DescriptorPtr)->Common.wLength)
+
+#define AdvanceMSOSV2UniDescriptorEx(DescriptorPtr, AdvanceLength, RemainingLength)									\
+	{																												\
+		(RemainingLength) -= (AdvanceLength);																		\
+		(DescriptorPtr) = (PUNI_MSOSV2_DESCRIPTOR)(((PUCHAR)(DescriptorPtr)) + (AdvanceLength));					\
+	}
+#define AdvanceMSOSV2UniDescriptor(DescriptorPtr, RemainingLength)													\
+	AdvanceMSOSV2UniDescriptorEx(DescriptorPtr, (DescriptorPtr)->Common.wLength, RemainingLength)
+
+#define CatIf(CatIfTrue, StringBuffer, AddString) if (CatIfTrue) strcat(StringBuffer,AddString)
 
 void ShowHelp(void);
 void ShowCopyright(void);
@@ -550,7 +598,7 @@ BOOL OpenDeviceFileHandle(__in LPCSTR deviceFileName, __out HANDLE* fileHandle)
 LPCSTR UnicodeBytesAsString(PUCHAR data, UINT dataLength)
 {
 	static char str[4096];
-	int len = WideCharToMultiByte(CP_ACP, 0, (LPCWCH)data, dataLength / 2, str, sizeof(str) - 1, NULL, NULL);
+	int len = WideCharToMultiByte(CP_ACP, 0, (LPCWCH)data,(INT) (dataLength / 2), str, sizeof(str) - 1, NULL, NULL);
 	str[len] = 0;
 	return str;
 }
@@ -563,7 +611,7 @@ LPCSTR UnicodeBytesAsMultiString(PUCHAR data, INT dataLength)
 	str[0] = 0;
 	do
 	{
-		len = WideCharToMultiByte(CP_ACP, 0, (LPCWCH)&data[srcLength], -1, &str[destLength], sizeof(str) - 1 - destLength, NULL, NULL);
+		len = WideCharToMultiByte(CP_ACP, 0, (LPCWCH)&data[srcLength], -1, &str[destLength], (INT)sizeof(str) - 1 - destLength, NULL, NULL);
 
 		if (len == 0) break;
 		srcLength += len;
@@ -607,27 +655,83 @@ LPCSTR BytesAsString(PUCHAR data, UINT dataLength)
 LPCSTR BytesToGuidString(PUCHAR data)
 {
 	static char str[40];
-	UINT i, j;
-	j = 0;
-	for (i = 0; i < 16; i++)
+	UINT dw;
+	WORD w;
+	UINT i, dstIndex, srcIndex;
+
+	dstIndex = 0;
+	srcIndex = 0;
+	for (i = 0; i < 5; i++)
 	{
-		//C801836E-0A76-45D0-9098-5E769DD00EA8
-		sprintf(&str[j], "%02X", data[i]);
-		j += 2;
-		if (i == 3 || i == 5 || i == 7)
+		switch (i)
 		{
-			str[j] = '-';
-			j++;
+		case 0:
+			// DWORD LE
+			memcpy(&dw, &data[srcIndex], sizeof(dw));
+			sprintf(&str[dstIndex], "%08X-", dw);
+			srcIndex += sizeof(dw);
+			dstIndex += sizeof(dw) * 2 + 1;
+			break;
+		case 1:
+		case 2:
+			// WORD LE
+			memcpy(&w, &data[srcIndex], sizeof(w));
+			sprintf(&str[dstIndex], "%04X-", w);
+			srcIndex += sizeof(w);
+			dstIndex += sizeof(w) * 2 + 1;
+			break;
+		case 3:
+			// 2 BYTES
+			sprintf(&str[dstIndex], "%02X%02X-", data[srcIndex], data[srcIndex+1]);
+			srcIndex += 2;
+			dstIndex += 5;
+			break;
+		case 4:
+			// 6 BYTES
+			sprintf(&str[dstIndex], "%02X%02X%02X%02X%02X%02X", data[srcIndex], data[srcIndex + 1], data[srcIndex + 2], data[srcIndex + 3], data[srcIndex + 4], data[srcIndex + 5]);
+			srcIndex += 6;
+			dstIndex += 12;
+			break;
 		}
 	}
-	str[j] = 0;
+	str[dstIndex] = 0;
 
 	return str;
 }
+
+VOID DumpMSOSRegProperty(PMSOS_CUSTOM_PROP_ELEMENT prop, UINT propertyType)
+{
+	DESC_VALUE_EX2("%-28s", "PropertyName", UnicodeBytesAsString((PUCHAR)prop->pPropertyName, prop->wPropertyNameLength), "%s");
+	switch (propertyType)
+	{
+	case REG_SZ:
+		DESC_VALUE_EX2("%-28s", "PropertyData (REG_SZ)", UnicodeBytesAsString(prop->pPropertyData, prop->wPropertyDataLength), "%s");
+		break;
+	case REG_MULTI_SZ:
+		DESC_VALUE_EX2("%-28s", "PropertyData (REG_MULTI_SZ)", UnicodeBytesAsMultiString(prop->pPropertyData, prop->wPropertyDataLength), "%s");
+		break;
+	case REG_EXPAND_SZ:
+		DESC_VALUE_EX2("%-28s", "PropertyData (REG_EXPAND_SZ)", UnicodeBytesAsString(prop->pPropertyData, prop->wPropertyDataLength), "%s");
+		break;
+	case REG_LINK:
+		DESC_VALUE_EX2("%-28s", "PropertyData (REG_LINK)", UnicodeBytesAsString(prop->pPropertyData, prop->wPropertyDataLength), "%s");
+		break;
+	case REG_BINARY:
+		DESC_VALUE_EX2("%-28s", "PropertyData (REG_BINARY)", BytesToHexString(prop->pPropertyData, prop->wPropertyDataLength), "%s");
+		break;
+	case REG_DWORD_LITTLE_ENDIAN:
+		DESC_VALUE_EX2("%-28s", "PropertyData (REG_DWORD)", (((UINT)prop->pPropertyData[3] << 24) | ((UINT)prop->pPropertyData[2] << 16) | ((UINT)prop->pPropertyData[1] << 8) | ((UINT)prop->pPropertyData[0] << 0)), "%08X");
+		break;
+	case REG_DWORD_BIG_ENDIAN:
+		DESC_VALUE_EX2("%-28s", "PropertyData (REG_DWORD_BE)", (((UINT)prop->pPropertyData[0] << 24) | ((UINT)prop->pPropertyData[1] << 16) | ((UINT)prop->pPropertyData[2] << 8) | ((UINT)prop->pPropertyData[3] << 0)), "%08X");
+		break;
+	}
+}
+
 BOOL DumpMSOSV1Descriptors(VOID)
 {
 	UINT length, capIndex;
-	USBMS_OS_STRING_DESCRIPTOR_V1_0 msosV1Descr;
+	USB_MSOSV1_STRING_DESCRIPTOR msosV1Descr;
 	WINUSB_SETUP_PACKET setupPacket;
 	MSOSV1_EXTENDED_COMPAT_ID_DESCRIPTOR compatIdDescriptorHeader;
 	PUCHAR compatIdDescriptorBuffer;
@@ -698,7 +802,7 @@ BOOL DumpMSOSV1Descriptors(VOID)
 							for (propIndex = 0; propIndex < extPropDescriptorHeader.wCount; propIndex++)
 							{
 								PMSOSV1_CUSTOM_PROP_DESCRIPTOR propHeader = (PMSOSV1_CUSTOM_PROP_DESCRIPTOR)pData;
-								MSOSV1_CUSTOM_PROP_ELEMENT prop;
+								MSOS_CUSTOM_PROP_ELEMENT prop;
 								pData += sizeof(MSOSV1_CUSTOM_PROP_DESCRIPTOR);
 
 								prop.wPropertyNameLength = ((USHORT)pData[1] << 8) | (USHORT)pData[0]; pData += 2;
@@ -707,32 +811,8 @@ BOOL DumpMSOSV1Descriptors(VOID)
 								prop.pPropertyData = pData;  pData += prop.wPropertyDataLength;
 								DESC_MSOS_BEGIN_FMT("Property", " #%u", propIndex);
 
-								DESC_VALUE_EX2("%-28s", "PropertyName", UnicodeBytesAsString((PUCHAR)prop.pPropertyName, prop.wPropertyNameLength), "%s");
-								switch (propHeader->dwPropertyDataType)
-								{
-								case REG_SZ:
-									DESC_VALUE_EX2("%-28s", "PropertyData (REG_SZ)", UnicodeBytesAsString((PUCHAR)prop.pPropertyData, prop.wPropertyDataLength), "%s");
-									break;
-								case REG_MULTI_SZ:
-									DESC_VALUE_EX2("%-28s", "PropertyData (REG_MULTI_SZ)", UnicodeBytesAsMultiString((PUCHAR)prop.pPropertyData, prop.wPropertyDataLength), "%s");
-									break;
-								case REG_EXPAND_SZ:
-									DESC_VALUE_EX2("%-28s", "PropertyData (REG_EXPAND_SZ)", UnicodeBytesAsString((PUCHAR)prop.pPropertyData, prop.wPropertyDataLength), "%s");
-									break;
-								case REG_LINK:
-									DESC_VALUE_EX2("%-28s", "PropertyData (REG_LINK)", UnicodeBytesAsString((PUCHAR)prop.pPropertyData, prop.wPropertyDataLength), "%s");
-									break;
-								case REG_BINARY:
-									DESC_VALUE_EX2("%-28s", "PropertyData (REG_BINARY)", BytesToHexString((PUCHAR)prop.pPropertyData, prop.wPropertyDataLength), "%s");
-									break;
-								case REG_DWORD_LITTLE_ENDIAN:
-									DESC_VALUE_EX2("%-28s", "PropertyData (REG_DWORD)", (((UINT)prop.pPropertyData[3] << 24) | ((UINT)prop.pPropertyData[2] << 16) | ((UINT)prop.pPropertyData[1] << 8) | ((UINT)prop.pPropertyData[0] << 0)), "%08X");
-									break;
-								case REG_DWORD_BIG_ENDIAN:
-									DESC_VALUE_EX2("%-28s", "PropertyData (REG_DWORD_BE)", (((UINT)prop.pPropertyData[0] << 24) | ((UINT)prop.pPropertyData[1] << 16) | ((UINT)prop.pPropertyData[2] << 8) | ((UINT)prop.pPropertyData[3] << 0)), "%08X");
-									break;
-
-								}
+								DumpMSOSRegProperty(&prop, propHeader->dwPropertyDataType);
+								
 								DESC_MSOS_END("");
 							}
 							DESC_MSOS_END("");
@@ -762,12 +842,366 @@ BOOL DumpMSOSV1Descriptors(VOID)
 	return FALSE;
 }
 
-#define CatIf(CatIfTrue, StringBuffer, AddString) if (CatIfTrue) strcat(StringBuffer,AddString)
+BOOL DumpMSOSV2FeatureCompatID(PUNI_MSOSV2_DESCRIPTOR pUni)
+{
+	BOOL success = TRUE;
+	DESC_MSOS_BEGIN("Compatible ID");
+	
+	DESC_VALUE((&((pUni)->Common)), wLength, KF_U);
+	DESC_VALUE((&((pUni)->Common)), wDescriptorType, KF_X4 " (%s)", GetMSOSV2DescriptorTypeString((pUni)->Common.wDescriptorType));
+	DESC_VALUE_EX("CompatibleID", BytesAsString((pUni)->FeatureCompatibleID.CompatibleID, sizeof((pUni)->FeatureCompatibleID.CompatibleID)), "%s");
+	DESC_VALUE_EX("SubCompatibleID", BytesAsString((pUni)->FeatureCompatibleID.SubCompatibleID, sizeof((pUni)->FeatureCompatibleID.SubCompatibleID)), "%s");
+
+	DESC_MSOS_END("Compatible ID");
+	return success;
+}
+
+BOOL DumpMSOSV2RegProperty(PUNI_MSOSV2_DESCRIPTOR pUni)
+{
+	BOOL success = TRUE;
+	MSOS_CUSTOM_PROP_ELEMENT prop;
+	PUCHAR pStart;
+	
+	DESC_MSOS_BEGIN("Registry Property");
+	
+	DESC_VALUE((&((pUni)->Common)), wLength, KF_U);
+	DESC_VALUE((&((pUni)->Common)), wDescriptorType, KF_X4 " (%s)", GetMSOSV2DescriptorTypeString((pUni)->Common.wDescriptorType));
+	DESC_VALUE((&((pUni)->FeatureRegProperty)), wPropertyDataType, KF_X4);
+	
+	pStart = pUni->FeatureRegProperty.CustomProperty;
+	prop.wPropertyNameLength = (USHORT)pStart[0] | (USHORT)pStart[1] << 8; pStart += sizeof(prop.wPropertyNameLength);
+	prop.pPropertyName = (PWCHAR)pStart; pStart += prop.wPropertyNameLength;
+	prop.wPropertyDataLength = (USHORT)pStart[0] | (USHORT)pStart[1] << 8; pStart += sizeof(prop.wPropertyDataLength);
+	prop.pPropertyData = pStart;
+	
+	DumpMSOSRegProperty(&prop, pUni->FeatureRegProperty.wPropertyDataType);
+	
+	DESC_MSOS_END("Registry Property");
+	return success;
+}
+
+
+BOOL DumpMSOSV2MinResumeTime(PUNI_MSOSV2_DESCRIPTOR pUni)
+{
+	BOOL success = TRUE;
+
+	DESC_MSOS_BEGIN("Min Resume Time");
+
+	DESC_VALUE((&((pUni)->Common)), wLength, KF_U);
+	DESC_VALUE((&((pUni)->Common)), wDescriptorType, KF_X4 " (%s)", GetMSOSV2DescriptorTypeString((pUni)->Common.wDescriptorType));
+
+	DESC_VALUE((&((pUni)->FeatureMinResumeTime)), bResumeRecoveryTime, KF_U " ms");
+	DESC_VALUE((&((pUni)->FeatureMinResumeTime)), bResumeSignalingTime, KF_U " ms");
+	DESC_MSOS_END("Min Resume Time");
+
+	return success;
+}
+
+BOOL DumpMSOSV2ModelID(PUNI_MSOSV2_DESCRIPTOR pUni)
+{
+	BOOL success = TRUE;
+	DESC_MSOS_BEGIN("Model ID");
+
+	DESC_VALUE((&((pUni)->Common)), wLength, KF_U);
+	DESC_VALUE((&((pUni)->Common)), wDescriptorType, KF_X4 " (%s)", GetMSOSV2DescriptorTypeString((pUni)->Common.wDescriptorType));
+
+	DESC_VALUE_EX("ModelID", BytesToGuidString(pUni->FeatureModelID.ModelID), "%s");
+
+	DESC_MSOS_END("Model ID");
+	return success;
+}
+
+BOOL DumpMSOSV2CCGP(PUNI_MSOSV2_DESCRIPTOR pUni)
+{
+	BOOL success = TRUE;
+	
+	DESC_MSOS_BEGIN("CCGP");
+
+	DESC_VALUE((&((pUni)->Common)), wLength, KF_U);
+	DESC_VALUE((&((pUni)->Common)), wDescriptorType, KF_X4 " (%s)", GetMSOSV2DescriptorTypeString((pUni)->Common.wDescriptorType));
+	
+	DESC_MSOS_END("CCGP");
+	
+	return success;
+}
+
+BOOL DumpMSOSV2VendorRevision(PUNI_MSOSV2_DESCRIPTOR pUni)
+{
+	BOOL success = TRUE;
+	DESC_MSOS_BEGIN("Vendor Revision");
+
+	DESC_VALUE((&((pUni)->Common)), wLength, KF_U);
+	DESC_VALUE((&((pUni)->Common)), wDescriptorType, KF_X4 " (%s)", GetMSOSV2DescriptorTypeString((pUni)->Common.wDescriptorType));
+
+	DESC_VALUE((&((pUni)->FeatureVendorRevision)), VendorRevision, KF_X4);
+	
+	DESC_MSOS_END("Vendor Revision");
+	return success;
+}
+
+BOOL DumpMSOSV2Function(PUNI_MSOSV2_DESCRIPTOR pUni)
+{
+	BOOL success = TRUE;
+	
+	INT remainingLength = (pUni)->SubsetHeaderFunction.wSubsetLength;
+
+	DESC_MSOS_BEGIN("Function Set");
+
+	DESC_VALUE((&((pUni)->Common)), wLength, KF_U);
+	DESC_VALUE((&((pUni)->Common)), wDescriptorType, KF_X4 " (%s)", GetMSOSV2DescriptorTypeString((pUni)->Common.wDescriptorType));
+	DESC_VALUE((&((pUni)->SubsetHeaderFunction)), bFirstInterface, KF_X2);
+	DESC_VALUE((&((pUni)->SubsetHeaderFunction)), wSubsetLength, KF_U);
+
+	AdvanceMSOSV2UniDescriptor((pUni), remainingLength);
+	while (IsMSOSV2UniDescriptorValid(pUni, remainingLength))
+	{
+		switch ((pUni)->Common.wDescriptorType)
+		{
+		//! Microsoft OS 2.0 compatible ID descriptor.
+		case MSOSV2_DESCRIPTOR_TYPE_FEATURE_COMPATBLE_ID:
+			DumpMSOSV2FeatureCompatID(pUni);
+			AdvanceMSOSV2UniDescriptor(pUni, remainingLength);
+			break;
+
+
+		//! Microsoft OS 2.0 registry property descriptor.
+		case MSOSV2_DESCRIPTOR_TYPE_FEATURE_REG_PROPERTY:
+			DumpMSOSV2RegProperty(pUni);
+			AdvanceMSOSV2UniDescriptor(pUni, remainingLength);
+			break;
+
+			//! Microsoft OS 2.0 minimum USB resume time descriptor.
+		case MSOSV2_DESCRIPTOR_TYPE_FEATURE_MIN_RESUME_TIME:
+			DumpMSOSV2MinResumeTime(pUni);
+			AdvanceMSOSV2UniDescriptor(pUni, remainingLength);
+			break;
+
+			//! Microsoft OS 2.0 model ID descriptor.
+		case MSOSV2_DESCRIPTOR_TYPE_FEATURE_MODEL_ID:
+			DumpMSOSV2ModelID(pUni);
+			AdvanceMSOSV2UniDescriptor(pUni, remainingLength);
+			break;
+
+			//! Microsoft OS 2.0 CCGP device descriptor.
+		case MSOSV2_DESCRIPTOR_TYPE_FEATURE_CCGP_DEVICE:
+			DumpMSOSV2CCGP(pUni);
+			AdvanceMSOSV2UniDescriptor(pUni, remainingLength);
+			break;
+
+			//! Microsoft OS 2.0 vendor revision descriptor.
+		case MSOSV2_DESCRIPTOR_TYPE_FEATURE_VENDOR_REVISION:
+			DumpMSOSV2VendorRevision(pUni);
+			AdvanceMSOSV2UniDescriptor(pUni, remainingLength);
+			break;
+
+		default:
+			AdvanceMSOSV2UniDescriptor(pUni, remainingLength);
+			break;
+		}
+	}
+
+	DESC_MSOS_END("Function Set");
+
+	return success;
+}
+BOOL DumpMSOSV2ConfigSet(PUNI_MSOSV2_DESCRIPTOR pUni)
+{
+	BOOL success = TRUE;
+	INT remainingLength = (pUni)->SubsetHeaderConfig.wTotalLength;
+	
+	DESC_MSOS_BEGIN_FMT("Config Set", " #%u (%i Bytes)", (pUni)->SubsetHeaderConfig.bConfigurationValue, remainingLength);
+	DESC_VALUE((&((pUni)->Common)), wLength, KF_U);
+	DESC_VALUE((&((pUni)->Common)), wDescriptorType, KF_X4 " (%s)", GetMSOSV2DescriptorTypeString((pUni)->Common.wDescriptorType));
+	DESC_VALUE((&((pUni)->SubsetHeaderConfig)), bConfigurationValue, KF_X2);
+	DESC_VALUE((&((pUni)->SubsetHeaderConfig)), wTotalLength, KF_U);
+
+	while (IsMSOSV2UniDescriptorValid(pUni, remainingLength))
+	{
+		switch ((pUni)->Common.wDescriptorType)
+		{
+			//! Microsoft OS 2.0 function subset header.
+		case MSOSV2_DESCRIPTOR_TYPE_SUBSET_HEADER_FUNCTION:
+			DumpMSOSV2Function(pUni);
+			AdvanceMSOSV2UniDescriptorEx(pUni, pUni->SubsetHeaderFunction.wSubsetLength, remainingLength);
+			break;
+
+			//! Microsoft OS 2.0 compatible ID descriptor.
+		case MSOSV2_DESCRIPTOR_TYPE_FEATURE_COMPATBLE_ID:
+			DumpMSOSV2FeatureCompatID(pUni);
+			AdvanceMSOSV2UniDescriptor(pUni, remainingLength);
+
+			break;
+
+
+			//! Microsoft OS 2.0 registry property descriptor.
+		case MSOSV2_DESCRIPTOR_TYPE_FEATURE_REG_PROPERTY:
+			DumpMSOSV2RegProperty(pUni);
+			AdvanceMSOSV2UniDescriptor(pUni, remainingLength);
+			break;
+
+
+			//! Microsoft OS 2.0 minimum USB resume time descriptor.
+		case MSOSV2_DESCRIPTOR_TYPE_FEATURE_MIN_RESUME_TIME:
+			DumpMSOSV2MinResumeTime(pUni);
+			AdvanceMSOSV2UniDescriptor(pUni, remainingLength);
+			break;
+
+			//! Microsoft OS 2.0 model ID descriptor.
+		case MSOSV2_DESCRIPTOR_TYPE_FEATURE_MODEL_ID:
+			DumpMSOSV2ModelID(pUni);
+			AdvanceMSOSV2UniDescriptor(pUni, remainingLength);
+			break;
+
+			//! Microsoft OS 2.0 CCGP device descriptor.
+		case MSOSV2_DESCRIPTOR_TYPE_FEATURE_CCGP_DEVICE:
+			DumpMSOSV2CCGP(pUni);
+			AdvanceMSOSV2UniDescriptor(pUni, remainingLength);
+			break;
+
+			//! Microsoft OS 2.0 vendor revision descriptor.
+		case MSOSV2_DESCRIPTOR_TYPE_FEATURE_VENDOR_REVISION:
+			DumpMSOSV2VendorRevision(pUni);
+			AdvanceMSOSV2UniDescriptor(pUni, remainingLength);
+			break;
+
+		default:
+			AdvanceMSOSV2UniDescriptor(pUni, remainingLength);
+			break;
+		}
+	}
+
+	DESC_MSOS_END("Config Set");
+
+	return success;
+}
+BOOL DumpMSOSV2DescriptorSet(PUNI_MSOSV2_DESCRIPTOR pUni)
+{
+	BOOL success = TRUE;
+	INT remainingLength = pUni->SetHeader.wTotalLength;
+
+	if (pUni->Common.wDescriptorType != MSOSV2_DESCRIPTOR_TYPE_SET_HEADER_DESCRIPTOR)
+	{
+		// TODO ERROR
+		return FALSE;
+	}
+	DESC_MSOS_BEGIN("Descriptor Set");
+
+	DESC_VALUE((&pUni->SetHeader), wLength, KF_U);
+	DESC_VALUE((&pUni->SetHeader), wDescriptorType, KF_X4 " (%s)", GetMSOSV2DescriptorTypeString(pUni->SetHeader.wDescriptorType));
+	DESC_VALUE((&pUni->SetHeader), dwWindowsVersion, KF_X8);
+	DESC_VALUE((&pUni->SetHeader), wTotalLength, KF_U);
+	
+	AdvanceMSOSV2UniDescriptor(pUni, remainingLength);
+	while(IsMSOSV2UniDescriptorValid(pUni, remainingLength))
+	{
+		switch (pUni->Common.wDescriptorType)
+		{
+		//! Microsoft OS 2.0 configuration subset header.
+		case MSOSV2_DESCRIPTOR_TYPE_SUBSET_HEADER_CONFIGURATION:
+			DumpMSOSV2ConfigSet(pUni);
+			AdvanceMSOSV2UniDescriptorEx(pUni, pUni->SubsetHeaderConfig.wTotalLength, remainingLength);
+			break;
+
+		//! Microsoft OS 2.0 function subset header.
+		case MSOSV2_DESCRIPTOR_TYPE_SUBSET_HEADER_FUNCTION:
+			DumpMSOSV2Function(pUni);
+			AdvanceMSOSV2UniDescriptorEx(pUni, pUni->SubsetHeaderFunction.wSubsetLength, remainingLength);
+			break;
+
+		//! Microsoft OS 2.0 compatible ID descriptor.
+		case MSOSV2_DESCRIPTOR_TYPE_FEATURE_COMPATBLE_ID:
+			DumpMSOSV2FeatureCompatID(pUni);
+			AdvanceMSOSV2UniDescriptor(pUni, remainingLength);
+			break;
+
+		//! Microsoft OS 2.0 registry property descriptor.
+		case MSOSV2_DESCRIPTOR_TYPE_FEATURE_REG_PROPERTY:
+			DumpMSOSV2RegProperty(pUni);
+			AdvanceMSOSV2UniDescriptor(pUni, remainingLength);
+			break;
+
+		//! Microsoft OS 2.0 minimum USB resume time descriptor.
+		case MSOSV2_DESCRIPTOR_TYPE_FEATURE_MIN_RESUME_TIME:
+			DumpMSOSV2MinResumeTime(pUni);
+			AdvanceMSOSV2UniDescriptor(pUni, remainingLength);
+			break;
+
+		//! Microsoft OS 2.0 model ID descriptor.
+		case MSOSV2_DESCRIPTOR_TYPE_FEATURE_MODEL_ID:
+			DumpMSOSV2ModelID(pUni);
+			AdvanceMSOSV2UniDescriptor(pUni, remainingLength);
+			break;
+
+		//! Microsoft OS 2.0 CCGP device descriptor.
+		case MSOSV2_DESCRIPTOR_TYPE_FEATURE_CCGP_DEVICE:
+			DumpMSOSV2CCGP(pUni);
+			AdvanceMSOSV2UniDescriptor(pUni, remainingLength);
+			break;
+
+		//! Microsoft OS 2.0 vendor revision descriptor.
+		case MSOSV2_DESCRIPTOR_TYPE_FEATURE_VENDOR_REVISION:
+			DumpMSOSV2VendorRevision(pUni);
+			AdvanceMSOSV2UniDescriptor(pUni, remainingLength);
+			break;
+			
+		default:
+			AdvanceMSOSV2UniDescriptor(pUni, remainingLength);
+			break;
+		}
+	}
+	DESC_MSOS_END("Descriptor Set");
+
+	return success;
+}
+BOOL DumpMSOSV2Descriptors(PBOS_PLATFORM_DESCRIPTOR windowsPlatformDescriptor)
+{
+	UINT length;
+	WINUSB_SETUP_PACKET setupPacket;
+	PUCHAR pDescriptorSetBuffer;
+	BOOL success = TRUE;
+	UINT versionCount, versionIndex;
+	PBOS_WINDOWS_PLATFORM_VERSION pWindowsVersion;
+
+	DESC_MSOS_BEGIN("MSOSV2");
+
+	versionCount = (windowsPlatformDescriptor->bLength - sizeof(BOS_PLATFORM_DESCRIPTOR)) / sizeof(BOS_WINDOWS_PLATFORM_VERSION);
+
+	for (versionIndex = 0; versionIndex < versionCount; versionIndex++)
+	{
+		DESC_MSOS_BEGIN_FMT("Set"," #%u", versionIndex);
+
+		pWindowsVersion = (PBOS_WINDOWS_PLATFORM_VERSION)&windowsPlatformDescriptor->CapabilityData[sizeof(BOS_WINDOWS_PLATFORM_VERSION) * versionIndex];
+
+		DESC_VALUE(pWindowsVersion, dwWindowsVersion, KF_X8);
+		DESC_VALUE(pWindowsVersion, wMSOSDescriptorSetTotalLength, KF_U);
+		DESC_VALUE(pWindowsVersion, bMS_VendorCode, KF_X2);
+		DESC_VALUE(pWindowsVersion, bAltEnumCode, KF_X2);
+
+		// get the MSOS V2 descriptor set
+		setupPacket.RequestType = 0xC0;
+		setupPacket.Request = pWindowsVersion->bMS_VendorCode;
+		setupPacket.Value = 0;
+		setupPacket.Index = 0x07;
+		setupPacket.Length = pWindowsVersion->wMSOSDescriptorSetTotalLength;
+
+		pDescriptorSetBuffer = malloc(setupPacket.Length);
+		if (K.ControlTransfer(InterfaceHandle, setupPacket, pDescriptorSetBuffer, setupPacket.Length, &length, NULL))
+		{
+			DumpMSOSV2DescriptorSet((PUNI_MSOSV2_DESCRIPTOR)pDescriptorSetBuffer);
+		}
+		free(pDescriptorSetBuffer);
+		
+		DESC_MSOS_END("Set");
+	}
+
+	DESC_MSOS_END("MSOSV2");
+	return success;
+}
 
 BOOL DumpBOSDescriptor(VOID)
 {
 	BOS_DESCRIPTOR bosDescrHeader;
-	UINT length, i, j;
+	UINT length;
 	CHAR strTemp[256];
 	
 	if (K.GetDescriptor(InterfaceHandle, USB_DESCRIPTOR_TYPE_BOS, 0, 0, (PUCHAR)&bosDescrHeader, sizeof(bosDescrHeader), &length))
@@ -829,7 +1263,19 @@ BOOL DumpBOSDescriptor(VOID)
 					break;
 				case BOS_CAPABILITY_TYPE_PLATFORM:
 					pBosPlatform = (PBOS_PLATFORM_DESCRIPTOR)pCapDescr;
-					DESC_VALUE_EX("PlatformCapabilityUUID", BytesToGuidString(pBosPlatform->PlatformCapabilityUUID), "%s");
+					if (memcmp(&BOS_WIN_PLATFORM_GUID,&pBosPlatform->PlatformCapabilityUUID, 16)==0)
+					{
+						// The device supports the Microsoft OS 2.0 descriptor
+						DESC_VALUE_EX("PlatformCapabilityUUID", BytesToGuidString(pBosPlatform->PlatformCapabilityUUID), "%s (Windows)");
+						
+						// We will enumerate the MSOSV2 descriptors at the end so make a copy of this.
+						g_pBosWindowsPlatformDescriptor = malloc(pBosPlatform->bLength);
+						memcpy(g_pBosWindowsPlatformDescriptor, pBosPlatform, pBosPlatform->bLength);
+					}
+					else
+					{
+						DESC_VALUE_EX("PlatformCapabilityUUID", BytesToGuidString(pBosPlatform->PlatformCapabilityUUID), "%s (Unknown)");
+					}
 					break;
 				default:
 					DESC_VALUE_EX2(KLIST_CATEGORY_FORMAT, "CapabilityData", BytesToHexString(pCapDescr->CapabilityData, pCapDescr->bLength - 3), "%s");
@@ -869,12 +1315,12 @@ BOOL GetDescriptorReport(__in KLST_DEVINFO_HANDLE deviceElement, __in BOOL detai
 		}
 
 		if (!K.GetDescriptor(InterfaceHandle,
-			USB_DESCRIPTOR_TYPE_DEVICE,
-			0,
-			0,
-			(PUCHAR)&deviceDescriptor,
-			sizeof(deviceDescriptor),
-			&length))
+		                     USB_DESCRIPTOR_TYPE_DEVICE,
+		                     0,
+		                     0,
+		                     (PUCHAR)&deviceDescriptor,
+		                     sizeof(deviceDescriptor),
+		                     &length))
 		{
 			WinError(0);
 			goto Error;
@@ -912,12 +1358,18 @@ BOOL GetDescriptorReport(__in KLST_DEVINFO_HANDLE deviceElement, __in BOOL detai
 				success = TRUE;
 
 			DumpMSOSV1Descriptors();
+			
 			DumpBOSDescriptor();
 
+			if (g_pBosWindowsPlatformDescriptor)
+				DumpMSOSV2Descriptors(g_pBosWindowsPlatformDescriptor);
 		}
 	}
 
 Error:
+	if (g_pBosWindowsPlatformDescriptor)
+		free(g_pBosWindowsPlatformDescriptor);
+	
 	if (InterfaceHandle)
 		K.Free(InterfaceHandle);
 
@@ -931,16 +1383,16 @@ LONG WinError(__in_opt DWORD errorCode)
 {
 	LPSTR buffer = NULL;
 
-	errorCode = errorCode ? labs(errorCode) : GetLastError();
+	errorCode = errorCode ? errorCode : GetLastError();
 	if (!errorCode) return errorCode;
 
 	if (FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER,
-		NULL,
-		errorCode,
-		0,
-		(LPSTR)&buffer,
-		0,
-		NULL) > 0)
+	                   NULL,
+	                   errorCode,
+	                   0,
+	                   (LPSTR)&buffer,
+	                   0,
+	                   NULL) > 0)
 	{
 		printf("%s\n", buffer);
 	}
@@ -952,7 +1404,7 @@ LONG WinError(__in_opt DWORD errorCode)
 	if (buffer)
 		LocalFree(buffer);
 
-	return -labs(errorCode);
+	return -(LONG)errorCode;
 }
 
 CONST PCHAR GetDescriptorString(USHORT stringIndex)
@@ -1024,11 +1476,11 @@ VOID DumpDescriptorDevice(PUSB_DEVICE_DESCRIPTOR desc)
 	GetHwIdDisplayText(desc->idVendor, desc->idProduct, vendorName, productName);
 
 	GetClassDisplayText(desc->bDeviceClass,
-		desc->bDeviceSubClass,
-		desc->bDeviceProtocol,
-		className,
-		subClassName,
-		protocolName);
+	                    desc->bDeviceSubClass,
+	                    desc->bDeviceProtocol,
+	                    className,
+	                    subClassName,
+	                    protocolName);
 
 
 	DESC_VALUE(desc, bLength, KF_U);
@@ -1141,7 +1593,7 @@ BOOL DumpDescriptorInterface(PPUNI_DESCRIPTOR uniRef, PLONG remainingLength)
 	CHAR protocolName[MAX_PATH];
 	PUSB_INTERFACE_DESCRIPTOR desc = &((*uniRef)->Interface);
 
-	INT numEndpoints = (INT)(desc->bNumEndpoints);
+	INT numEndpoints = desc->bNumEndpoints;
 	USB_INTERFACE_DESCRIPTOR currentInterface;
 
 	if (!IsUniDescriptorValid(*uniRef, *remainingLength))
@@ -1212,9 +1664,9 @@ int GetHidDescriptorItemValue(UCHAR itemType, PUCHAR data)
 	switch (itemType & 0x3)
 	{
 	case 1:	// byte
-		return (int)(((PUCHAR)data)[0]);
+		return data[0];
 	case 2:	// word
-		return (int)(((PUSHORT)data)[0]);
+		return ((PUSHORT)data)[0];
 	case 3:	// dword ?
 		return (int)(((PULONG)data)[0]);
 	}
@@ -1222,8 +1674,8 @@ int GetHidDescriptorItemValue(UCHAR itemType, PUCHAR data)
 }
 
 BOOL DumpDescriptorHidReport(__in PHID_DESCRIPTOR desc,
-	__in PUSB_INTERFACE_DESCRIPTOR currentInterface,
-	__in UCHAR descriptorPos)
+                             __in PUSB_INTERFACE_DESCRIPTOR currentInterface,
+                             __in UCHAR descriptorPos)
 {
 	static CHAR usageName[MAX_PATH];
 	static CHAR usagePage[MAX_PATH];
@@ -1274,7 +1726,7 @@ BOOL DumpDescriptorHidReport(__in PHID_DESCRIPTOR desc,
 
 			if ((transferred < (usageID & 0x3)) || ((usageID & 0x3) == 0x3))
 			{
-				printf("Hid report descriptor invalid near byte offset %d.\n", ((LONG)reportLength) - transferred);
+				printf("Hid report descriptor invalid near byte offset %d.\n", (LONG)reportLength - transferred);
 				break;
 			}
 
@@ -1346,8 +1798,8 @@ BOOL DumpDescriptorHidReport(__in PHID_DESCRIPTOR desc,
 }
 
 BOOL DumpDescriptorHidPhysical(__in PHID_DESCRIPTOR desc,
-	__in PUSB_INTERFACE_DESCRIPTOR currentInterface,
-	__in UCHAR descriptorPos)
+                               __in PUSB_INTERFACE_DESCRIPTOR currentInterface,
+                               __in UCHAR descriptorPos)
 {
 	UNREFERENCED_PARAMETER(desc);
 	UNREFERENCED_PARAMETER(currentInterface);
@@ -1356,8 +1808,8 @@ BOOL DumpDescriptorHidPhysical(__in PHID_DESCRIPTOR desc,
 }
 
 BOOL DumpDescriptorHid(__inout PPUNI_DESCRIPTOR uniRef,
-	__in PUSB_INTERFACE_DESCRIPTOR currentInterface,
-	__inout PLONG remainingLength)
+                       __in PUSB_INTERFACE_DESCRIPTOR currentInterface,
+                       __inout PLONG remainingLength)
 {
 	UCHAR descriptorPos;
 	BOOL success = TRUE;
@@ -1650,9 +2102,9 @@ void ShowHelp(void)
 void ShowCopyright(void)
 {
 	printf("%s v%s (%s)\n",
-		RC_FILENAME_STR,
-		RC_VERSION_STR,
-		DEFINE_TO_STR(VERSION_DATE));
+	       RC_FILENAME_STR,
+	       RC_VERSION_STR,
+	       DEFINE_TO_STR(VERSION_DATE));
 
-	printf("%s", "Copyright (c) 2011-2012 Travis Lee Robinson. <libusbdotnet@gmail.com>\n\n");
+	printf("%s", "Copyright (c) 2011-2021 Travis Lee Robinson. <libusbdotnet@gmail.com>\n\n");
 }
