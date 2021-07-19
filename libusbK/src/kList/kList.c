@@ -753,7 +753,7 @@ BOOL DumpMSOSV1Descriptors(VOID)
 		setupPacket.RequestType = 0xC0;
 		setupPacket.Request = msosV1Descr.bMS_VendorCode;
 		setupPacket.Value = 0;
-		setupPacket.Index = MSOSV1_FEATURE_TYPE_EXTENDED_COMPAT_ID;
+		setupPacket.Index = MSOS_FEATURE_TYPE_V1_EXTENDED_COMPAT_ID;
 		setupPacket.Length = sizeof(compatIdDescriptorHeader);
 		if (K.ControlTransfer(InterfaceHandle, setupPacket, (PUCHAR)&compatIdDescriptorHeader, sizeof(compatIdDescriptorHeader), &length, NULL))
 		{
@@ -780,7 +780,7 @@ BOOL DumpMSOSV1Descriptors(VOID)
 					DESC_VALUE_EX("SubCompatibleID", BytesAsString(funcDescr->SubCompatibleID, sizeof(funcDescr->SubCompatibleID)), "%s");
 
 
-					setupPacket.Index = MSOSV1_FEATURE_TYPE_EXTENDED_PROPS;
+					setupPacket.Index = MSOS_FEATURE_TYPE_V1_EXTENDED_PROPS;
 					setupPacket.Length = sizeof(extPropDescriptorHeader);
 					setupPacket.Value = (USHORT)funcDescr->bFirstInterfaceNumber << 8;
 
@@ -958,7 +958,7 @@ BOOL DumpMSOSV2Function(PUNI_MSOSV2_DESCRIPTOR pUni)
 		switch ((pUni)->Common.wDescriptorType)
 		{
 		//! Microsoft OS 2.0 compatible ID descriptor.
-		case MSOSV2_DESCRIPTOR_TYPE_FEATURE_COMPATBLE_ID:
+		case MSOSV2_DESCRIPTOR_TYPE_FEATURE_COMPATIBLE_ID:
 			DumpMSOSV2FeatureCompatID(pUni);
 			AdvanceMSOSV2UniDescriptor(pUni, remainingLength);
 			break;
@@ -1026,7 +1026,7 @@ BOOL DumpMSOSV2ConfigSet(PUNI_MSOSV2_DESCRIPTOR pUni)
 			break;
 
 			//! Microsoft OS 2.0 compatible ID descriptor.
-		case MSOSV2_DESCRIPTOR_TYPE_FEATURE_COMPATBLE_ID:
+		case MSOSV2_DESCRIPTOR_TYPE_FEATURE_COMPATIBLE_ID:
 			DumpMSOSV2FeatureCompatID(pUni);
 			AdvanceMSOSV2UniDescriptor(pUni, remainingLength);
 
@@ -1109,7 +1109,7 @@ BOOL DumpMSOSV2DescriptorSet(PUNI_MSOSV2_DESCRIPTOR pUni)
 			break;
 
 		//! Microsoft OS 2.0 compatible ID descriptor.
-		case MSOSV2_DESCRIPTOR_TYPE_FEATURE_COMPATBLE_ID:
+		case MSOSV2_DESCRIPTOR_TYPE_FEATURE_COMPATIBLE_ID:
 			DumpMSOSV2FeatureCompatID(pUni);
 			AdvanceMSOSV2UniDescriptor(pUni, remainingLength);
 			break;
@@ -1181,7 +1181,7 @@ BOOL DumpMSOSV2Descriptors(PBOS_PLATFORM_DESCRIPTOR windowsPlatformDescriptor)
 		setupPacket.RequestType = 0xC0;
 		setupPacket.Request = pWindowsVersion->bMS_VendorCode;
 		setupPacket.Value = 0;
-		setupPacket.Index = 0x07;
+		setupPacket.Index = MSOS_FEATURE_TYPE_V2_DESCRIPTOR_SET;
 		setupPacket.Length = pWindowsVersion->wMSOSDescriptorSetTotalLength;
 
 		pDescriptorSetBuffer = malloc(setupPacket.Length);
