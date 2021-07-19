@@ -536,7 +536,7 @@ typedef enum _USB_DESCRIPTOR_TYPE
 #define USB_CONFIG_POWERED_MASK                   0xc0
 
 //! Values used in the \c bmAttributes field of a \ref USB_CONFIGURATION_DESCRIPTOR
-enum USB_CONFIG_BM_ATTRIBUTE_ENUM
+typedef enum _USB_CONFIG_BM_ATTRIBUTE_ENUM
 {
     //! The device is powered by it's host.
     USB_CONFIG_BUS_POWERED = 0x80,
@@ -546,7 +546,7 @@ enum USB_CONFIG_BM_ATTRIBUTE_ENUM
 
     //! The device is capable of waking the the host from a low power/sleeping state.
     USB_CONFIG_REMOTE_WAKEUP = 0x20,
-};
+}USB_CONFIG_BM_ATTRIBUTE_ENUM;
 
 //! Endpoint direction mask for the \c bEndpointAddress field of a \ref USB_ENDPOINT_DESCRIPTOR
 #define USB_ENDPOINT_DIRECTION_MASK               0x80
@@ -573,7 +573,7 @@ enum USB_CONFIG_BM_ATTRIBUTE_ENUM
 *
 * These are the correct values based on the USB 2.0 specification.
 */
-enum USB_REQUEST_ENUM
+typedef enum _USB_REQUEST_ENUM
 {
     //! Request status of the specific recipient
     USB_REQUEST_GET_STATUS = 0x00,
@@ -607,14 +607,14 @@ enum USB_REQUEST_ENUM
 
     //! Set then report an endpoint's synchronization frame
     USB_REQUEST_SYNC_FRAME = 0x0C,
-};
+}USB_REQUEST_ENUM;
 
 //! USB defined class codes
 /*!
 * see http://www.usb.org/developers/defined_class for more information.
 *
 */
-enum USB_DEVICE_CLASS_ENUM
+typedef enum _USB_DEVICE_CLASS_ENUM
 {
     //! Reserved class
     USB_DEVICE_CLASS_RESERVED = 0x00,
@@ -642,7 +642,7 @@ enum USB_DEVICE_CLASS_ENUM
 
     //! vendor-specific class
     USB_DEVICE_CLASS_VENDOR_SPECIFIC = 0xFF,
-};
+}USB_DEVICE_CLASS_ENUM;
 
 //! A structure representing the standard USB device descriptor.
 /*!
@@ -791,6 +791,10 @@ typedef struct _USB_SUPERSPEED_ENDPOINT_COMPANION_DESCRIPTOR
 	USHORT wBytesPerInterval;
 } USB_SUPERSPEED_ENDPOINT_COMPANION_DESCRIPTOR, *PUSB_SUPERSPEED_ENDPOINT_COMPANION_DESCRIPTOR;
 
+/*! \addtogroup usb_bos_desc
+* @{
+*/
+
 //! BOS device capability descriptor
 /*
  * This is a variable length descriptor.  The length of the \b CapabilityData is determined using the \b bLength member.
@@ -812,7 +816,7 @@ typedef struct _BOS_DEV_CAPABILITY_DESCRIPTOR
 }BOS_DEV_CAPABILITY_DESCRIPTOR, *PBOS_DEV_CAPABILITY_DESCRIPTOR;
 
 //! USB BOS capability types
-enum BOS_CAPABILITY_TYPE
+typedef enum _BOS_CAPABILITY_TYPE
 {
 	//! Wireless USB device capability. 
 	BOS_CAPABILITY_TYPE_WIRELESS_USB_DEVICE_CAPABILITY = 0x01,
@@ -861,7 +865,7 @@ enum BOS_CAPABILITY_TYPE
 
 	//! Summarizes configuration information for a function implemented by the device.
 	BOS_CONFIGURATION_SUMMARY = 0x10,
-};
+}BOS_CAPABILITY_TYPE;
 
 //!  USB 3.0 and USB 2.0 LPM Binary Device Object Store (BOS).
 /*
@@ -888,6 +892,7 @@ typedef struct _BOS_DESCRIPTOR
 	
 }BOS_DESCRIPTOR, *PBOS_DESCRIPTOR;
 
+//! USB 2.0 Extension descriptor
 typedef struct _BOS_USB_2_0_EXTENSION_DESCRIPTOR
 {
 	//! Size of this descriptor (in bytes)
@@ -896,11 +901,15 @@ typedef struct _BOS_USB_2_0_EXTENSION_DESCRIPTOR
 	//! Descriptor type
 	UCHAR  bDescriptorType;
 
+	//! Capability type. See \ref BOS_CAPABILITY_TYPE
 	UCHAR  bDevCapabilityType;
 
+	//! Bitmap encoding of supported device level features.
 	UINT bmAttributes;
+	
 }BOS_USB_2_0_EXTENSION_DESCRIPTOR, *PBOS_USB_2_0_EXTENSION_DESCRIPTOR;
 
+//! SuperSpeed Device Capability Descriptor
 typedef struct _BOS_SS_USB_DEVICE_CAPABILITY_DESCRIPTOR
 {
 	//! Size of this descriptor (in bytes)
@@ -909,19 +918,27 @@ typedef struct _BOS_SS_USB_DEVICE_CAPABILITY_DESCRIPTOR
 	//! Descriptor type
 	UCHAR  bDescriptorType;
 
+	//! Capability type. See \ref BOS_CAPABILITY_TYPE
 	UCHAR  bDevCapabilityType;
 
+	//! Bitmap encoding of supported device level features.
 	UCHAR  bmAttributes;
 
+	//! Bitmap encoding of the supported speeds. 
 	USHORT wSpeedSupported;
 
+	//! The lowest speed at which all the functionality	supported by the device is available to the user
 	UCHAR  bFunctionalitySupport;
-
+	
+	//! U1 Device Exit Latency. Worst-case latency to transition from U1 to U0.
 	UCHAR  bU1DevExitLat;
 
+	//! U2 Device Exit Latency. Worst-case latency to transition from U2 to U0.
 	USHORT bU2DevExitLat;
+	
 }BOS_SS_USB_DEVICE_CAPABILITY_DESCRIPTOR, *PBOS_SS_USB_DEVICE_CAPABILITY_DESCRIPTOR;
 
+//! Container ID Descriptor
 typedef struct _BOS_CONTAINER_ID_DESCRIPTOR
 {
 	//! Size of this descriptor (in bytes)
@@ -930,13 +947,18 @@ typedef struct _BOS_CONTAINER_ID_DESCRIPTOR
 	//! Descriptor type
 	UCHAR  bDescriptorType;
 
+	//! Capability type. See \ref BOS_CAPABILITY_TYPE
 	UCHAR  bDevCapabilityType;
 
+	// Reserved.
 	UCHAR  bReserved;
 
+	//! This is a 128-bit number that is used to uniquely identify the device instance across all modes of operation.
 	UCHAR  ContainerID[16];
+	
 }BOS_CONTAINER_ID_DESCRIPTOR, *PBOS_CONTAINER_ID_DESCRIPTOR;
 
+//! Platform specific capabilities
 typedef struct _BOS_PLATFORM_DESCRIPTOR
 {
 	//! Size of this descriptor (in bytes)
@@ -961,6 +983,7 @@ typedef struct _BOS_PLATFORM_DESCRIPTOR
 	UCHAR CapabilityData[0];
 }BOS_PLATFORM_DESCRIPTOR, * PBOS_PLATFORM_DESCRIPTOR;
 
+//! This structure represents the windows version records that follow a BOS windows platform descriptor.
 typedef struct _BOS_WINDOWS_PLATFORM_VERSION
 {
 	//! Minimum version of Windows
@@ -989,24 +1012,47 @@ typedef struct _BOS_WINDOWS_PLATFORM_VERSION
 	UCHAR bAltEnumCode;
 
 }BOS_WINDOWS_PLATFORM_VERSION, *PBOS_WINDOWS_PLATFORM_VERSION;
+/*! @} */
 
+/*! \addtogroup msosv1_desc
+* @{
+*/
+
+//! Special Microsoft string descriptor used to indicate that a device supports Microsoft OS V1.0 descriptors.
 typedef struct _USB_MSOSV1_STRING_DESCRIPTOR
 {
-	//! Size of this descriptor (in bytes)
-	UCHAR bLength;			// 0x12
-	UCHAR bDescriptorType;	// 0x3
-	UCHAR qwSignature[14];	// MSFT100
-	UCHAR bMS_VendorCode;	// Vendor specific vendor code
+	//! Size of this descriptor. Shall always be 18 bytes
+	UCHAR bLength;
+
+	//! Descriptor type (0x03)
+	UCHAR bDescriptorType;
+
+	//! Microsoft signature. Shall always be "MSFT100"
+	UCHAR qwSignature[14];
+
+	//! Vendor specific vendor code
+	UCHAR bMS_VendorCode;
+
+	//! Padding
 	UCHAR bPad;
-	//! Descriptor type
 }USB_MSOSV1_STRING_DESCRIPTOR, *PUSB_MSOSV1_STRING_DESCRIPTOR;
 
-enum MSOSV1_FEATURE_TYPE
+//! Microsoft feature descriptor types.
+/*
+ * When requesting Microsoft OS feature descriptors, these values are used in the \b wIndex of the control packet
+ * to indicate the feature descriptor that is being requested.
+ */
+typedef enum _MSOS_FEATURE_TYPE
 {
-	MSOSV1_FEATURE_TYPE_GENRE = 0x0001,
-	MSOSV1_FEATURE_TYPE_EXTENDED_COMPAT_ID = 0x0004,
-	MSOSV1_FEATURE_TYPE_EXTENDED_PROPS = 0x0005,
-};
+	//! Microsoft OS V1.0 compatible IDs descriptor
+	MSOS_FEATURE_TYPE_V1_EXTENDED_COMPAT_ID = 0x0004,
+
+	//! Microsoft OS V1.0 extended properties descriptor
+	MSOS_FEATURE_TYPE_V1_EXTENDED_PROPS = 0x0005,
+
+	//! Microsoft OS V2.0 descriptor set
+	MSOS_FEATURE_TYPE_V2_DESCRIPTOR_SET = 0x0007,
+}MSOS_FEATURE_TYPE;
 
 // !The extended compat ID OS descriptor has two components:
 /*
@@ -1154,8 +1200,14 @@ typedef struct _MSOS_CUSTOM_PROP_ELEMENT
 	PUCHAR pPropertyData;
 }MSOS_CUSTOM_PROP_ELEMENT,*PMSOS_CUSTOM_PROP_ELEMENT;
 
+/*! @} */
+
+/*! \addtogroup msosv2_desc
+* @{
+*/
+
 //! Microsoft OS 2.0 descriptor wDescriptorType values
-enum MSOSV2_DESCRIPTOR_TYPE
+typedef enum _MSOSV2_DESCRIPTOR_TYPE
 {
 	//! The MS OS 2.0 descriptor set header.
 	MSOSV2_DESCRIPTOR_TYPE_SET_HEADER_DESCRIPTOR = 0x00,
@@ -1167,7 +1219,7 @@ enum MSOSV2_DESCRIPTOR_TYPE
 	MSOSV2_DESCRIPTOR_TYPE_SUBSET_HEADER_FUNCTION = 0x02,
 
 	//! Microsoft OS 2.0 compatible ID descriptor.
-	MSOSV2_DESCRIPTOR_TYPE_FEATURE_COMPATBLE_ID = 0x03,
+	MSOSV2_DESCRIPTOR_TYPE_FEATURE_COMPATIBLE_ID = 0x03,
 
 	//! Microsoft OS 2.0 registry property descriptor.
 	MSOSV2_DESCRIPTOR_TYPE_FEATURE_REG_PROPERTY = 0x04,
@@ -1183,7 +1235,7 @@ enum MSOSV2_DESCRIPTOR_TYPE
 
 	//! Microsoft OS 2.0 vendor revision descriptor.
 	MSOSV2_DESCRIPTOR_TYPE_FEATURE_VENDOR_REVISION = 0x08,
-};
+}MSOSV2_DESCRIPTOR_TYPE;
 
 //! All MS OS V2.0 descriptors start with these two fields.
 typedef struct _MSOSV2_COMMON_DESCRIPTOR
@@ -1208,7 +1260,7 @@ typedef struct _MSOSV2_SET_HEADER_DESCRIPTOR
 	//! Windows version.
 	UINT dwWindowsVersion;
 
-	//! The size of entire MS OS 2.0 descriptor set. The value shall match the value in the descriptor set information structure.  See \ref BOS_WINDOWS_PLATFORM_DESCRIPTOR::wMSOSDescriptorSetTotalLength
+	//! The size of entire MS OS 2.0 descriptor set. The value shall match the value in the descriptor set information structure.  See \ref BOS_WINDOWS_PLATFORM_VERSION::wMSOSDescriptorSetTotalLength
 	USHORT wTotalLength;
 	
 }MSOSV2_SET_HEADER_DESCRIPTOR,*PMSOSV2_SET_HEADER_DESCRIPTOR;
@@ -1266,7 +1318,7 @@ typedef struct _MSOSV2_FEATURE_COMPATBLE_ID_DESCRIPTOR
 	//! The length, bytes, of the compatible ID descriptor including value descriptors. Shall be set to 20.
 	USHORT wLength;
 
-	//! \ref MSOSV2_DESCRIPTOR_TYPE_FEATURE_COMPATBLE_ID
+	//! \ref MSOSV2_DESCRIPTOR_TYPE_FEATURE_COMPATIBLE_ID
 	USHORT wDescriptorType;
 
 	//! Compatible ID String
@@ -1421,6 +1473,7 @@ typedef struct _MSOSV2_FEATURE_VENDOR_REVISION_DESCRIPTOR
 	USHORT VendorRevision;
 	
 }MSOSV2_FEATURE_VENDOR_REVISION_DESCRIPTOR, * PMSOSV2_FEATURE_VENDOR_REVISION_DESCRIPTOR;
+/*! @} */
 
 #if _MSC_VER >= 1200
 #pragma warning(pop)
