@@ -132,3 +132,23 @@ standard C library are provided for the folllowing languages:
 
 /*! @} */
 
+/*! \addtogroup msosv1_desc Microsoft OS V1.0 Descriptors
+* \brief Descriptor structures and enums for working with Microsoft OS V1.0 Descriptors
+*  @{
+*/
+
+/*! @} */
+
+/*! \addtogroup msosv2_desc Microsoft OS V2.0 Descriptors
+* \brief Descriptor structures and enums for working with Microsoft OS V2.0 Descriptors
+*  @{
+*/
+
+/*! @} */
+
+/*! \addtogroup usb_bos_desc USB BOS Descriptors
+* \brief Descriptor structures and enums for working with USB BOS Descriptors
+*  @{
+*/
+
+/*! @} */

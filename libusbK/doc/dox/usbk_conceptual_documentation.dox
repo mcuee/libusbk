@@ -78,6 +78,9 @@
 	<TR><TD>\ref stmk (\b StmK)</TD><TD>\copybrief stmk</TD></TR>
 	<TR><TD>\ref isok (\b IsoK)</TD><TD>\copybrief isok</TD></TR>
 	<TR><TD>\ref isochk (\b IsochK)</TD><TD>\copybrief isochk</TD></TR>
+	<TR><TD>\ref msosv1_desc</TD><TD>\copybrief msosv1_desc</TD></TR>
+	<TR><TD>\ref msosv2_desc</TD><TD>\copybrief msosv2_desc</TD></TR>
+	<TR><TD>\ref usb_bos_desc</TD><TD>\copybrief usb_bos_desc</TD></TR>
 </TABLE>
   
 <H2>Getting Started</H2>
