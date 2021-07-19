@@ -810,6 +810,22 @@ static BOOL l_EnumKey_Guids(KUSB_ENUM_REGKEY_PARAMS* RegEnumParams)
 				status = RegQueryValueExA(hkeyDevInfo, "DeviceInterfaceGUID", NULL, NULL, (LPBYTE)devInterfaceGuidArray, &length);
 				if (status != ERROR_SUCCESS)
 				{
+					// if there isn't a DeviceInterfaceGUIDs/DeviceInterfaceGUID property then we must use the default for libusbK or libusb0
+					if (RegEnumParams->TempItem->DriverID == KUSB_DRVID_LIBUSB0)
+					{
+						memcpy(devInterfaceGuidArray, Libusb0DeviceGuidA, strlen(Libusb0DeviceGuidA));
+						length = (DWORD)strlen(Libusb0DeviceGuidA);
+						status = ERROR_SUCCESS;
+					}
+					else if (RegEnumParams->TempItem->DriverID == KUSB_DRVID_LIBUSBK)
+					{
+						memcpy(devInterfaceGuidArray, LibusbKDeviceGuidA, strlen(LibusbKDeviceGuidA));
+						length = (DWORD)strlen(LibusbKDeviceGuidA);
+						status = ERROR_SUCCESS;
+					}
+				}
+				if (status != ERROR_SUCCESS)
+				{
 					USBERRN("RegQueryValueExA Failed. ErrorCode:%08Xh", GetLastError());
 					RegCloseKey(hkeyDevInfo);
 					goto NextInstance;
