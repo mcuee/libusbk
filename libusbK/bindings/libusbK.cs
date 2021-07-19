@@ -1080,7 +1080,191 @@ namespace libusbK
         /// <Summary>Interface association descriptor type.</Summary>
         INTERFACE_ASSOCIATION = 0x0B,
 
+        /// <Summary>BOS descriptor type</Summary>
+        BOS = 0x0F,
+
+        /// <Summary>Device capabilities descriptor type</Summary>
+        DEVICE_CAPS = 0x10,
+
+        /// <Summary>Superspeed endpoint companion descriptor type</Summary>
         USB_SUPERSPEED_ENDPOINT_COMPANION = 0x30,
+    }
+
+    /// <Summary>Values used in the \c bmAttributes field of a \ref USB_CONFIGURATION_DESCRIPTOR</Summary>
+    public enum USB_CONFIG_BM_ATTRIBUTE_ENUM
+    {
+        /// <Summary>The device is powered by it's host.</Summary>
+        USB_CONFIG_BUS_POWERED = 0x80,
+
+        /// <Summary>The device has an external power source.</Summary>
+        USB_CONFIG_SELF_POWERED = 0x40,
+
+        /// <Summary>The device is capable of waking the the host from a low power/sleeping state.</Summary>
+        USB_CONFIG_REMOTE_WAKEUP = 0x20,
+    }
+
+    /// <Summary>USB defined request codes</Summary>
+    public enum USB_REQUEST_ENUM
+    {
+        /// <Summary>Request status of the specific recipient</Summary>
+        USB_REQUEST_GET_STATUS = 0x00,
+
+        /// <Summary>Clear or disable a specific feature</Summary>
+        USB_REQUEST_CLEAR_FEATURE = 0x01,
+
+        /// <Summary>Set or enable a specific feature</Summary>
+        USB_REQUEST_SET_FEATURE = 0x03,
+
+        /// <Summary>Set device address for all future accesses</Summary>
+        USB_REQUEST_SET_ADDRESS = 0x05,
+
+        /// <Summary>Get the specified descriptor</Summary>
+        USB_REQUEST_GET_DESCRIPTOR = 0x06,
+
+        /// <Summary>Update existing descriptors or add new descriptors</Summary>
+        USB_REQUEST_SET_DESCRIPTOR = 0x07,
+
+        /// <Summary>Get the current device configuration value</Summary>
+        USB_REQUEST_GET_CONFIGURATION = 0x08,
+
+        /// <Summary>Set device configuration</Summary>
+        USB_REQUEST_SET_CONFIGURATION = 0x09,
+
+        /// <Summary>Return the selected alternate setting for the specified interface</Summary>
+        USB_REQUEST_GET_INTERFACE = 0x0A,
+
+        /// <Summary>Select an alternate interface for the specified interface</Summary>
+        USB_REQUEST_SET_INTERFACE = 0x0B,
+
+        /// <Summary>Set then report an endpoint's synchronization frame</Summary>
+        USB_REQUEST_SYNC_FRAME = 0x0C,
+    }
+
+    /// <Summary>USB defined class codes</Summary>
+    public enum USB_DEVICE_CLASS_ENUM
+    {
+        /// <Summary>Reserved class</Summary>
+        USB_DEVICE_CLASS_RESERVED = 0x00,
+
+        /// <Summary>Audio class</Summary>
+        USB_DEVICE_CLASS_AUDIO = 0x01,
+
+        /// <Summary>Communications class</Summary>
+        USB_DEVICE_CLASS_COMMUNICATIONS = 0x02,
+
+        /// <Summary>Human Interface Device class</Summary>
+        USB_DEVICE_CLASS_HUMAN_INTERFACE = 0x03,
+
+        /// <Summary>Imaging class</Summary>
+        USB_DEVICE_CLASS_IMAGING = 0x06,
+
+        /// <Summary>Printer class</Summary>
+        USB_DEVICE_CLASS_PRINTER = 0x07,
+
+        /// <Summary>Mass storage class</Summary>
+        USB_DEVICE_CLASS_STORAGE = 0x08,
+
+        /// <Summary>Hub class</Summary>
+        USB_DEVICE_CLASS_HUB = 0x09,
+
+        /// <Summary>vendor-specific class</Summary>
+        USB_DEVICE_CLASS_VENDOR_SPECIFIC = 0xFF,
+    }
+
+    /// <Summary>USB BOS capability types</Summary>
+    public enum BOS_CAPABILITY_TYPE
+    {
+        /// <Summary>Wireless USB device capability.</Summary>
+        WIRELESS_USB_DEVICE_CAPABILITY = 0x01,
+
+        /// <Summary>USB 2.0 extensions.</Summary>
+        USB_2_0_EXTENSION = 0x02,
+
+        /// <Summary>SuperSpeed USB device capability.</Summary>
+        SS_USB_DEVICE_CAPABILITY = 0x03,
+
+        /// <Summary>Container ID type.</Summary>
+        CONTAINER_ID = 0x04,
+
+        /// <Summary>Platform specific capability.</Summary>
+        PLATFORM = 0x05,
+
+        /// <Summary>Defines the various PD Capabilities of this device.</Summary>
+        BOS_POWER_DELIVERY_CAPABILITY = 0x06,
+
+        /// <Summary>Provides information on each battery supported by the device.</Summary>
+        BOS_BATTERY_INFO_CAPABILITY = 0x07,
+
+        /// <Summary>The consumer characteristics of a port on the device.</Summary>
+        BOS_PD_CONSUMER_PORT_CAPABILITY = 0x08,
+
+        /// <Summary>The provider characteristics of a port on the device.</Summary>
+        BOS_PD_PROVIDER_PORT_CAPABILITY = 0x09,
+
+        /// <Summary>Defines the set of SuperSpeed Plus USB specific device level capabilities.</Summary>
+        BOS_SUPERSPEED_PLUS = 0x0A,
+
+        /// <Summary>Precision Time Measurement (PTM) Capability Descriptor.</Summary>
+        BOS_PRECISION_TIME_MEASUREMENT = 0x0B,
+
+        /// <Summary>Defines the set of Wireless USB 1.1-specific device level capabilities.</Summary>
+        BOS_WIRELESS_USB_EXT = 0x0C,
+
+        /// <Summary>Billboard capability.</Summary>
+        BOS_BILLBOARD = 0x0D,
+
+        /// <Summary>Authentication Capability Descriptor.</Summary>
+        BOS_AUTHENTICATION = 0x0E,
+
+        /// <Summary>Billboard Ex capability.</Summary>
+        BOS_BILLBOARD_EX = 0x0F,
+
+        /// <Summary>Summarizes configuration information for a function implemented by the device.</Summary>
+        BOS_CONFIGURATION_SUMMARY = 0x10,
+    }
+
+    /// <Summary>Microsoft feature descriptor types.</Summary>
+    public enum MSOS_FEATURE_TYPE
+    {
+        /// <Summary>Microsoft OS V1.0 compatible IDs descriptor</Summary>
+        V1_EXTENDED_COMPAT_ID = 0x0004,
+
+        /// <Summary>Microsoft OS V1.0 extended properties descriptor</Summary>
+        V1_EXTENDED_PROPS = 0x0005,
+
+        /// <Summary>Microsoft OS V2.0 descriptor set</Summary>
+        V2_DESCRIPTOR_SET = 0x0007,
+    }
+
+    /// <Summary>Microsoft OS 2.0 descriptor wDescriptorType values</Summary>
+    public enum MSOSV2_DESCRIPTOR_TYPE
+    {
+        /// <Summary>The MS OS 2.0 descriptor set header.</Summary>
+        SET_HEADER_DESCRIPTOR = 0x00,
+
+        /// <Summary>Microsoft OS 2.0 configuration subset header.</Summary>
+        SUBSET_HEADER_CONFIGURATION = 0x01,
+
+        /// <Summary>Microsoft OS 2.0 function subset header.</Summary>
+        SUBSET_HEADER_FUNCTION = 0x02,
+
+        /// <Summary>Microsoft OS 2.0 compatible ID descriptor.</Summary>
+        FEATURE_COMPATIBLE_ID = 0x03,
+
+        /// <Summary>Microsoft OS 2.0 registry property descriptor.</Summary>
+        FEATURE_REG_PROPERTY = 0x04,
+
+        /// <Summary>Microsoft OS 2.0 minimum USB resume time descriptor.</Summary>
+        FEATURE_MIN_RESUME_TIME = 0x05,
+
+        /// <Summary>Microsoft OS 2.0 model ID descriptor.</Summary>
+        FEATURE_MODEL_ID = 0x06,
+
+        /// <Summary>Microsoft OS 2.0 CCGP device descriptor.</Summary>
+        FEATURE_CCGP_DEVICE = 0x07,
+
+        /// <Summary>Microsoft OS 2.0 vendor revision descriptor.</Summary>
+        FEATURE_VENDOR_REVISION = 0x08,
     }
 
     /// <Summary>Usb handle specific properties that can be retrieved with \ref UsbK_GetProperty.</Summary>
@@ -1972,6 +2156,420 @@ namespace libusbK
         {
             return string.Format("bLength: {0}\nbDescriptorType: {1}\nbEndpointAddress: {2}\nbmAttributes: {3}\nwMaxPacketSize: {4}\nbInterval: {5}\n", bLength, bDescriptorType.ToString("X2") + "h", bEndpointAddress.ToString("X2") + "h", bmAttributes.ToString("X2") + "h", wMaxPacketSize, bInterval);
         }
+    }
+
+    /// <Summary>BOS device capability descriptor</Summary>
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
+    public struct BOS_DEV_CAPABILITY_DESCRIPTOR
+    {
+        /// <Summary>Size of this descriptor (in bytes)</Summary>
+        public byte bLength;
+
+        /// <Summary>Descriptor type</Summary>
+        public byte bDescriptorType;
+
+        /// <Summary>Capability type</Summary>
+        public byte bDevCapabilityType;
+
+        /// <Summary>Capability Data</Summary>
+    }
+
+    /// <Summary>USB 3.0 and USB 2.0 LPM Binary Device Object Store (BOS).</Summary>
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
+    public struct BOS_DESCRIPTOR
+    {
+        /// <Summary>Size of this descriptor (in bytes)</Summary>
+        public byte bLength;
+
+        /// <Summary>Descriptor type</Summary>
+        public byte bDescriptorType;
+
+        /// <Summary>Length of this descriptor and all sub descriptors</Summary>
+        public ushort wTotalLength;
+
+        /// <Summary>Number of device capability descriptors</Summary>
+        public byte bNumDeviceCaps;
+    }
+
+    /// <Summary>USB 2.0 Extension descriptor</Summary>
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
+    public struct BOS_USB_2_0_EXTENSION_DESCRIPTOR
+    {
+        /// <Summary>Size of this descriptor (in bytes)</Summary>
+        public byte bLength;
+
+        /// <Summary>Descriptor type</Summary>
+        public byte bDescriptorType;
+
+        /// <Summary>Capability type. See \ref BOS_CAPABILITY_TYPE</Summary>
+        public byte bDevCapabilityType;
+
+        /// <Summary>Bitmap encoding of supported device level features.</Summary>
+        public uint bmAttributes;
+    }
+
+    /// <Summary>SuperSpeed Device Capability Descriptor</Summary>
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
+    public struct BOS_SS_USB_DEVICE_CAPABILITY_DESCRIPTOR
+    {
+        /// <Summary>Size of this descriptor (in bytes)</Summary>
+        public byte bLength;
+
+        /// <Summary>Descriptor type</Summary>
+        public byte bDescriptorType;
+
+        /// <Summary>Capability type. See \ref BOS_CAPABILITY_TYPE</Summary>
+        public byte bDevCapabilityType;
+
+        /// <Summary>Bitmap encoding of supported device level features.</Summary>
+        public byte bmAttributes;
+
+        /// <Summary>Bitmap encoding of the supported speeds.</Summary>
+        public ushort wSpeedSupported;
+
+        /// <Summary>The lowest speed at which all the functionality	supported by the device is available to the user</Summary>
+        public byte bFunctionalitySupport;
+
+        /// <Summary>U1 Device Exit Latency. Worst-case latency to transition from U1 to U0.</Summary>
+        public byte bU1DevExitLat;
+
+        /// <Summary>U2 Device Exit Latency. Worst-case latency to transition from U2 to U0.</Summary>
+        public ushort bU2DevExitLat;
+    }
+
+    /// <Summary>Container ID Descriptor</Summary>
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
+    public struct BOS_CONTAINER_ID_DESCRIPTOR
+    {
+        /// <Summary>Size of this descriptor (in bytes)</Summary>
+        public byte bLength;
+
+        /// <Summary>Descriptor type</Summary>
+        public byte bDescriptorType;
+
+        /// <Summary>Capability type. See \ref BOS_CAPABILITY_TYPE</Summary>
+        public byte bDevCapabilityType;
+
+        // Reserved.
+        public byte bReserved;
+
+        /// <Summary>This is a 128-bit number that is used to uniquely identify the device instance across all modes of operation.</Summary>
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)]
+        public byte[] ContainerID;
+    }
+
+    /// <Summary>Platform specific capabilities</Summary>
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
+    public struct BOS_PLATFORM_DESCRIPTOR
+    {
+        /// <Summary>Size of this descriptor (in bytes)</Summary>
+        public byte bLength;
+
+        /// <Summary>Descriptor type</Summary>
+        public byte bDescriptorType;
+
+        // Capability type. See \ref BOS_CAPABILITY_TYPE
+        public byte bDevCapabilityType;
+
+        /// <Summary>Reserved</Summary>
+        public byte bReserved;
+
+        /// <Summary>A 128-bit number that uniquely identifies a platform-specific capability of the device.</Summary>
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)]
+        public byte[] PlatformCapabilityUUID;
+
+        /// <Summary>Capability Data</Summary>
+    }
+
+    /// <Summary>This structure represents the windows version records that follow a BOS windows platform descriptor.</Summary>
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
+    public struct BOS_WINDOWS_PLATFORM_VERSION
+    {
+        /// <Summary>Minimum version of Windows</Summary>
+        public uint dwWindowsVersion;
+
+        /// <Summary>The length, in bytes of the MS OS 2.0 descriptor set.</Summary>
+        public ushort wMSOSDescriptorSetTotalLength;
+
+        /// <Summary>Vendor defined code.</Summary>
+        public byte bMS_VendorCode;
+
+        /// <Summary>Alternate enumeration indicator.</Summary>
+        public byte bAltEnumCode;
+    }
+
+    /// <Summary>Special Microsoft string descriptor used to indicate that a device supports Microsoft OS V1.0 descriptors.</Summary>
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
+    public struct USB_MSOSV1_STRING_DESCRIPTOR
+    {
+        /// <Summary>Size of this descriptor. Shall always be 18 bytes</Summary>
+        public byte bLength;
+
+        /// <Summary>Descriptor type (0x03)</Summary>
+        public byte bDescriptorType;
+
+        /// <Summary>Microsoft signature. Shall always be "MSFT100"</Summary>
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 14)]
+        public byte[] qwSignature;
+
+        /// <Summary>Vendor specific vendor code</Summary>
+        public byte bMS_VendorCode;
+
+        /// <Summary>Padding</Summary>
+        public byte bPad;
+    }
+// !The extended compat ID OS descriptor has two components:
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
+    public struct MSOSV1_EXTENDED_COMPAT_ID_DESCRIPTOR
+    {
+        /// <Summary>The length, in bytes, of the complete extended compat ID descriptor</Summary>
+        public uint dwLength;
+
+        /// <Summary>The descriptor’s version number, in binary coded decimal (BCD) format</Summary>
+        public ushort bcdVersion;
+
+        /// <Summary>An index that identifies the particular OS feature descriptor</Summary>
+        public ushort wIndex;
+
+        /// <Summary>The number of custom property sections</Summary>
+        public byte bCount;
+
+        /// <Summary>Reserved</Summary>
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 7)]
+        public byte[] Rsvd;
+    }
+
+    /// <Summary>A function section defines the compatible ID and a subcompatible ID for a specified interface or function.</Summary>
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
+    public struct MSOSV1_FUNCTION_DESCRIPTOR
+    {
+        /// <Summary>The interface or function number</Summary>
+        public byte bFirstInterfaceNumber;
+
+        /// <Summary>Reserved</Summary>
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 1)]
+        public byte[] Rsvd1;
+
+        /// <Summary>The function’s compatible ID</Summary>
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 8)]
+        public byte[] CompatibleID;
+
+        /// <Summary>The function’s subcompatible ID</Summary>
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 8)]
+        public byte[] SubCompatibleID;
+
+        /// <Summary>Reserved</Summary>
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 6)]
+        public byte[] Rsvd2;
+    }
+// !The extended properties OS descriptor is a Microsoft OS feature descriptor that can be used to store vendor-specific property data.
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
+    public struct MSOSV1_EXTENDED_PROP_DESCRIPTOR
+    {
+        /// <Summary>The length, in bytes, of the complete extended prop descriptor</Summary>
+        public uint dwLength;
+
+        /// <Summary>The descriptor’s version number, in binary coded decimal (BCD) format</Summary>
+        public ushort bcdVersion;
+
+        /// <Summary>The index for extended properties OS descriptors</Summary>
+        public ushort wIndex;
+
+        /// <Summary>The number of custom property sections that follow this header section</Summary>
+        public ushort wCount;
+
+        /// <Summary>Placeholder for \b wCount number of custom properties.  See \ref MSOSV1_CUSTOM_PROP_DESCRIPTOR and \ref MSOS_CUSTOM_PROP_ELEMENT</Summary>
+    }
+
+    /// <Summary>A custom property section contains the information for a single property</Summary>
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
+    public struct MSOSV1_CUSTOM_PROP_DESCRIPTOR
+    {
+        /// <Summary>The size of this custom properties section</Summary>
+        public uint dwSize;
+
+        /// <Summary>The type of data associated with the section</Summary>
+        public uint dwPropertyDataType;
+
+        /// <Summary>Placeholder for variable length property name and data field. see \ref MSOS_CUSTOM_PROP_ELEMENT</Summary>
+    }
+
+    /// <Summary>
+    ///     Helper structure for parsing a /ref MSOSV1_CUSTOM_PROP_DESCRIPTOR or a \ref
+    ///     MSOSV2_FEATURE_REG_PROPERTY_DESCRIPTOR
+    /// </Summary>
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
+    public struct MSOS_CUSTOM_PROP_ELEMENT
+    {
+        public ushort wPropertyNameLength;
+        public IntPtr pPropertyName;
+        public ushort wPropertyDataLength;
+        public IntPtr pPropertyData;
+    }
+
+    /// <Summary>All MS OS V2.0 descriptors start with these two fields.</Summary>
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
+    public struct MSOSV2_COMMON_DESCRIPTOR
+    {
+        /// <Summary>The length, in bytes, of this descriptor.</Summary>
+        public ushort wLength;
+
+        /// <Summary>See \ref MSOSV2_DESCRIPTOR_TYPE</Summary>
+        public ushort wDescriptorType;
+    }
+
+    /// <Summary>Microsoft OS 2.0 descriptor set header</Summary>
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
+    public struct MSOSV2_SET_HEADER_DESCRIPTOR
+    {
+        /// <Summary>The length, in bytes, of this header. Shall be set to 10.</Summary>
+        public ushort wLength;
+
+        /// <Summary>\ref SET_HEADER_DESCRIPTOR</Summary>
+        public ushort wDescriptorType;
+
+        /// <Summary>Windows version.</Summary>
+        public uint dwWindowsVersion;
+
+        /// <Summary>
+        ///     The size of entire MS OS 2.0 descriptor set. The value shall match the value in the descriptor set information
+        ///     structure.  See \ref BOS_WINDOWS_PLATFORM_VERSION::wMSOSDescriptorSetTotalLength
+        /// </Summary>
+        public ushort wTotalLength;
+    }
+
+    /// <Summary>Microsoft OS 2.0 configuration subset header</Summary>
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
+    public struct MSOSV2_SUBSET_HEADER_CONFIGURATION_DESCRIPTOR
+    {
+        /// <Summary>The length, in bytes, of this subset header. Shall be set to 8.</Summary>
+        public ushort wLength;
+
+        /// <Summary>\ref SUBSET_HEADER_CONFIGURATION</Summary>
+        public ushort wDescriptorType;
+
+        /// <Summary>The configuration value for the USB configuration to which this subset applies.</Summary>
+        public byte bConfigurationValue;
+
+        /// <Summary>Reserved</Summary>
+        public byte bReserved;
+
+        /// <Summary>The size of entire configuration subset including this header.</Summary>
+        public ushort wTotalLength;
+    }
+
+    /// <Summary>Microsoft OS 2.0 function subset header</Summary>
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
+    public struct MSOSV2_SUBSET_HEADER_FUNCTION_DESCRIPTOR
+    {
+        /// <Summary>The length, in bytes, of this subset header. Shall be set to 8.</Summary>
+        public ushort wLength;
+
+        /// <Summary>\ref SUBSET_HEADER_FUNCTION</Summary>
+        public ushort wDescriptorType;
+
+        /// <Summary>The interface number for the first interface of the function to which this subset applies.</Summary>
+        public byte bFirstInterface;
+
+        /// <Summary>Reserved</Summary>
+        public byte bReserved;
+
+        /// <Summary>The size of entire function subset including this header.</Summary>
+        public ushort wSubsetLength;
+    }
+
+    /// <Summary>Microsoft OS 2.0 compatible ID descriptor</Summary>
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
+    public struct MSOSV2_FEATURE_COMPATBLE_ID_DESCRIPTOR
+    {
+        /// <Summary>The length, bytes, of the compatible ID descriptor including value descriptors. Shall be set to 20.</Summary>
+        public ushort wLength;
+
+        /// <Summary>\ref FEATURE_COMPATIBLE_ID</Summary>
+        public ushort wDescriptorType;
+
+        /// <Summary>Compatible ID String</Summary>
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 8)]
+        public byte[] CompatibleID;
+
+        /// <Summary>Sub-compatible ID String</Summary>
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 8)]
+        public byte[] SubCompatibleID;
+    }
+
+    /// <Summary>Microsoft OS 2.0 registry property descriptor</Summary>
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
+    public struct MSOSV2_FEATURE_REG_PROPERTY_DESCRIPTOR
+    {
+        /// <Summary>The length, in bytes, of this descriptor.</Summary>
+        public ushort wLength;
+
+        /// <Summary>\ref FEATURE_REG_PROPERTY</Summary>
+        public ushort wDescriptorType;
+
+        /// <Summary>The type of data associated with the section</Summary>
+        public ushort wPropertyDataType;
+
+        /// <Summary>Placeholder for variable length property name and data field. see \ref MSOS_CUSTOM_PROP_ELEMENT</Summary>
+    }
+
+    /// <Summary>Microsoft OS 2.0 minimum USB resume time descriptor</Summary>
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
+    public struct MSOSV2_FEATURE_MIN_RESUME_TIME_DESCRIPTOR
+    {
+        /// <Summary>The length, in bytes, of this descriptor. Shall be set to 6.</Summary>
+        public ushort wLength;
+
+        /// <Summary>\ref FEATURE_MIN_RESUME_TIME</Summary>
+        public ushort wDescriptorType;
+
+        /// <Summary>The number of milliseconds the device requires to recover from port resume. (Valid values are 0 to 10)</Summary>
+        public byte bResumeRecoveryTime;
+
+        /// <Summary>The number of milliseconds the device requires resume signaling to be asserted.  (Valid values 1 to 20)</Summary>
+        public byte bResumeSignalingTime;
+    }
+
+    /// <Summary>Microsoft OS 2.0 model ID descriptor</Summary>
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
+    public struct MSOSV2_FEATURE_MODEL_ID_DESCRIPTOR
+    {
+        /// <Summary>The length, in bytes, of this descriptor. Shall be set to 20.</Summary>
+        public ushort wLength;
+
+        /// <Summary>\ref FEATURE_MODEL_ID</Summary>
+        public ushort wDescriptorType;
+
+        /// <Summary>This is a 128-bit number that uniquely identifies a physical device.</Summary>
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)]
+        public byte[] ModelID;
+    }
+
+    /// <Summary>Microsoft OS 2.0 CCGP device descriptor</Summary>
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
+    public struct MSOSV2_FEATURE_CCGP_DESCRIPTOR
+    {
+        /// <Summary>The length, in bytes, of this descriptor. Shall be set to 4.</Summary>
+        public ushort wLength;
+
+        /// <Summary>\ref FEATURE_CCGP_DEVICE</Summary>
+        public ushort wDescriptorType;
+    }
+
+    /// <Summary>Microsoft OS 2.0 vendor revision descriptor</Summary>
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
+    public struct MSOSV2_FEATURE_VENDOR_REVISION_DESCRIPTOR
+    {
+        /// <Summary>The length, in bytes, of this descriptor. Shall be set to 6.</Summary>
+        public ushort wLength;
+
+        /// <Summary>\ref FEATURE_VENDOR_REVISION</Summary>
+        public ushort wDescriptorType;
+
+        /// <Summary>Revision number associated with the descriptor set.</Summary>
+        public ushort VendorRevision;
     }
 
     /// <Summary>A structure representing the standard USB configuration descriptor.</Summary>
