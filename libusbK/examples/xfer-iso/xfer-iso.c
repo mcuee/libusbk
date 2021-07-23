@@ -233,11 +233,11 @@ int __cdecl main(int argc, char* argv[])
 	memset(&gPipeInfo, 0, sizeof(gPipeInfo));
 	while (Usb.SelectInterface(usbHandle, ++interfaceIndex, TRUE))
 	{
+		UCHAR gAltsettingIndex = (UCHAR)-1;
 		if (gIntfIndex != UINT_MAX && gIntfIndex != interfaceIndex) continue;
 
 		memset(&gInterfaceDescriptor, 0, sizeof(gInterfaceDescriptor));
 		memset(&gPipeInfo, 0, sizeof(gPipeInfo));
-		UCHAR gAltsettingIndex = (UCHAR)-1;
 		while (Usb.QueryInterfaceSettings(usbHandle, ++gAltsettingIndex, &gInterfaceDescriptor))
 		{
 			if (gAltfSetting == UINT_MAX || gAltfSetting == gInterfaceDescriptor.bAlternateSetting)

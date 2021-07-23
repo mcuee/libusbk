@@ -35,6 +35,9 @@
 #include "inf_parser.h"
 
 #define CATSIGN_STANDALONE
+#ifndef _WIN32_WINNT_WIN7
+#define _WIN32_WINNT_WIN7                   0x0601 // Windows 7
+#endif
 
 static BOOL ShouldUseSHA256()
 {

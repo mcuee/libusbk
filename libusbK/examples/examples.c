@@ -44,7 +44,7 @@ BOOL Examples_GetArgVal(int argc, char* argv[], LPCSTR argName, PUINT argValue, 
 	{
 		CHAR buf[128];
 		UINT i;
-
+		CHAR* pFound;
 		const UINT len = strlen(argv[argPos]);
 		for (i = 0; i < len && i < _countof(buf) - 1; i++)
 			buf[i] = (char) tolower(argv[argPos][i]);
@@ -64,7 +64,7 @@ BOOL Examples_GetArgVal(int argc, char* argv[], LPCSTR argName, PUINT argValue, 
 			return TRUE;
 		}
 
-		char* pFound = strstr(buf, argName);
+		pFound = strstr(buf, argName);
 		if (pFound)
 		{
 			pFound += strlen(argName);
@@ -93,6 +93,7 @@ BOOL Examples_GetArgStr(int argc, char* argv[], LPCSTR argName, LPSTR argValue, 
 	for (argPos = 1; argPos < argc; argPos++)
 	{
 		CHAR buf[128];
+		CHAR* pFound;
 		UINT i;
 
 		const UINT len = strlen(argv[argPos]);
@@ -114,7 +115,7 @@ BOOL Examples_GetArgStr(int argc, char* argv[], LPCSTR argName, LPSTR argValue, 
 			argValue[*argValLength] = '\0';
 			return TRUE;
 		}
-		char* pFound = strstr(buf, argName);
+		pFound = strstr(buf, argName);
 		if (pFound)
 		{
 			pFound += strlen(argName);
