@@ -1,0 +1,8 @@
+EXPORTS
+    dcmd_env_tag
+	dcmd_make_args
+	dcmd_make_tokens
+	dcmd_update_cfg
+	dcmd_fprintf
+	dcmd_rundll
+

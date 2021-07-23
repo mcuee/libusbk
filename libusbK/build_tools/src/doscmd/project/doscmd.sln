@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "doscmd", "doscmd.vcproj", "{1F01B7A7-E1B5-4FC0-BFCC-43E8BB50F7BE}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		chk|amd64 = chk|amd64
+		chk|i386 = chk|i386
+		fre|amd64 = fre|amd64
+		fre|i386 = fre|i386
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1F01B7A7-E1B5-4FC0-BFCC-43E8BB50F7BE}.chk|amd64.ActiveCfg = Debug|x64
+		{1F01B7A7-E1B5-4FC0-BFCC-43E8BB50F7BE}.chk|amd64.Build.0 = Debug|x64
+		{1F01B7A7-E1B5-4FC0-BFCC-43E8BB50F7BE}.chk|i386.ActiveCfg = Debug|Win32
+		{1F01B7A7-E1B5-4FC0-BFCC-43E8BB50F7BE}.chk|i386.Build.0 = Debug|Win32
+		{1F01B7A7-E1B5-4FC0-BFCC-43E8BB50F7BE}.fre|amd64.ActiveCfg = Release|x64
+		{1F01B7A7-E1B5-4FC0-BFCC-43E8BB50F7BE}.fre|amd64.Build.0 = Release|x64
+		{1F01B7A7-E1B5-4FC0-BFCC-43E8BB50F7BE}.fre|i386.ActiveCfg = Release|Win32
+		{1F01B7A7-E1B5-4FC0-BFCC-43E8BB50F7BE}.fre|i386.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

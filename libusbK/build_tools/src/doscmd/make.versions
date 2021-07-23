@@ -1,0 +1,5 @@
+﻿;
+PACKAGE = 1.2.2.19; NUL; NUL;
+;
+doscmd.exe = PACKAGE; .\doscmd_version_h.in; .\src\doscmd_version.h;
+doscmd.dll = doscmd.exe; .\doscmd_version_h.in; .\src\doscmd_version.h;
