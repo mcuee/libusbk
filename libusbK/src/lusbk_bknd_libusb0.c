@@ -50,8 +50,6 @@ KUSB_EXP BOOL KUSB_API LUsb0_ControlTransfer(
 	int ret;
 	PKUSB_HANDLE_INTERNAL handle;
 
-	UNUSED(Overlapped);
-
 	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
 	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
 
@@ -72,6 +70,9 @@ KUSB_EXP BOOL KUSB_API LUsb0_ControlTransfer(
 	}
 
 	PoolHandle_Dec_UsbK(handle);
+
+	if (Overlapped && Overlapped.hEvent)
+		return SetEvent(Overlapped.hEvent);
 
 	return success;
 }
