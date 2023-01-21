@@ -11,26 +11,26 @@
 <IMG src="ftv2blank.png" style="display: none" />
 
 \par What is it?
-libusbK is a complete driver/library solution for vendor class usb device interfaces.
-If you are a usb developers or usb device manufacturer seeking a driver
+libusbK is a complete driver/library solution for vendor class USB device interfaces.
+If you are a USB developer or USB device manufacturer seeking a driver
 solution for a new USB widget then libusbK could be for you.
 \par
-libusbK encompasses a 100% WinUSB compatible api/funtion set.  All WinUSB power/pipe polices
-are fully supported by the libusbK driver.  In Addition, libusbK has full support for isochronous
+libusbK encompasses a 100% WinUSB compatible API/function set.  All WinUSB power/pipe policies
+are fully supported by the libusbK driver.  In addition, libusbK has full support for isochronous
 endpoints and an extensive set of additional modules to simplify development.
 
 \attention
 libusbK is not an end-user component.
-IE. If your googling for a usb driver because windows can't seem to find one, this is not the solution.
+I.e. if you are looking for a usb driver because Windows can't seem to find one, this is not the solution.
 
 \par Licensing
-LibusbK is dual license under GPL and modified BSD.
+LibusbK is dual licensed under GPL and modified BSD.
 For redistribution purposes, libusbK can be licensed under either agreement.
 See the \b license folder which accompanies each libusbK package for license details.
 
 \par Bindings for other languages
 The main libusbK library is written in standard C, but official bindings for the libusbK
-standard C library are provided for the folllowing languages:
+standard C library are provided for the following languages:
 -# C#
 -# VB.NET
 -# Pascal (Compliments of Ekkehard Domning) 
