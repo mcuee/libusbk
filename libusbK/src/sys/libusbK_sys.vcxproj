@@ -1,125 +1,167 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
-    <ProjectConfiguration Include="Debug|Win32">
-      <Configuration>Debug</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
       <Platform>x64</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release|Win32">
-      <Configuration>Release</Configuration>
-      <Platform>Win32</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Release|x64">
       <Configuration>Release</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|ARM64">
+      <Configuration>Debug</Configuration>
+      <Platform>ARM64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|ARM64">
+      <Configuration>Release</Configuration>
+      <Platform>ARM64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <Inf Include="libusbK.inf" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectName>libusbK</ProjectName>
-    <ProjectGuid>{6F681E4D-0C70-4D7E-A55F-74913E78138E}</ProjectGuid>
+    <ProjectGuid>{0BA0EDDC-C296-48A3-8D92-6F1EB1591ABD}</ProjectGuid>
+    <TemplateGuid>{8c0e3d8b-df43-455b-815a-4a0e72973bc6}</TemplateGuid>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <MinimumVisualStudioVersion>12.0</MinimumVisualStudioVersion>
+    <Configuration>Debug</Configuration>
+    <Platform Condition="'$(Platform)' == ''">x64</Platform>
     <RootNamespace>libusbK</RootNamespace>
-    <Keyword>MakeFileProj</Keyword>
-    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>libusbK</ProjectName>
+  </PropertyGroup>
+  <PropertyGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <PlatformToolset>WindowsKernelModeDriver10.0</PlatformToolset>
+    <ConfigurationType>Driver</ConfigurationType>
+    <DriverType>KMDF</DriverType>
+    <DriverTargetPlatform>Universal</DriverTargetPlatform>
+  </PropertyGroup>
+  <PropertyGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <PlatformToolset>WindowsKernelModeDriver10.0</PlatformToolset>
+    <ConfigurationType>Driver</ConfigurationType>
+    <DriverType>KMDF</DriverType>
+    <DriverTargetPlatform>Universal</DriverTargetPlatform>
+  </PropertyGroup>
+  <PropertyGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
+    <PlatformToolset>WindowsKernelModeDriver10.0</PlatformToolset>
+    <ConfigurationType>Driver</ConfigurationType>
+    <DriverType>KMDF</DriverType>
+    <DriverTargetPlatform>Universal</DriverTargetPlatform>
+  </PropertyGroup>
+  <PropertyGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
+    <PlatformToolset>WindowsKernelModeDriver10.0</PlatformToolset>
+    <ConfigurationType>Driver</ConfigurationType>
+    <DriverType>KMDF</DriverType>
+    <DriverTargetPlatform>Universal</DriverTargetPlatform>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>Makefile</ConfigurationType>
-    <PlatformToolset>v142</PlatformToolset>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>Makefile</ConfigurationType>
-    <PlatformToolset>v142</PlatformToolset>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <TargetVersion>Windows10</TargetVersion>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <ALLOW_DATE_TIME>1</ALLOW_DATE_TIME>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>Makefile</ConfigurationType>
-    <PlatformToolset>v142</PlatformToolset>
+    <TargetVersion>Windows10</TargetVersion>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <ALLOW_DATE_TIME>1</ALLOW_DATE_TIME>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>Makefile</ConfigurationType>
-    <PlatformToolset>v142</PlatformToolset>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'" Label="Configuration">
+    <TargetVersion>Windows10</TargetVersion>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <ALLOW_DATE_TIME>1</ALLOW_DATE_TIME>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'" Label="Configuration">
+    <TargetVersion>Windows10</TargetVersion>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <ALLOW_DATE_TIME>1</ALLOW_DATE_TIME>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-  </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-  </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-  </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+  <ImportGroup Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup>
-    <_ProjectFileVersion>15.0.28016.0</_ProjectFileVersion>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <OutDir>$(SolutionDir)bin\sys\i386\</OutDir>
-    <IntDir>$(ProjectDir)objchk_wxp_x86\i386\</IntDir>
-    <NMakeBuildCommandLine>$(SolutionDir)make.cmd build nogetc BUILD_QUIET=0 chk WXP WDK_SOURCES_LIST=libusbK.sys%3b
-ECHO DONE
-</NMakeBuildCommandLine>
-    <NMakeReBuildCommandLine>$(SolutionDir)make.cmd build nogetc BUILD_QUIET=0 chk WXP WDK_SOURCES_LIST=libusbK.sys%3b</NMakeReBuildCommandLine>
-    <NMakeCleanCommandLine>$(SolutionDir)make.cmd clean nogetc BUILD_QUIET=0 chk WXP WDK_SOURCES_LIST=libusbK.sys%3b</NMakeCleanCommandLine>
-    <NMakeOutput>libusbK.sys</NMakeOutput>
-    <NMakePreprocessorDefinitions>WDK_DRIVER=1;_X86_=1;i386=1;STD_CALL;CONDITION_HANDLING=1;NT_UP=1;NT_INST=0;WIN32=100;_NT1X_=100;WINNT=1;_WIN32_WINNT=0x0601;WINVER=0x0601;_WIN32_IE=0x0800;WIN32_LEAN_AND_MEAN=1;DEVL=1;DBG=1;__BUILDMACHINE__=WinDDK;FPO=0;_DLL=1;NDEBUG;DEPRECATE_DDK_FUNCTIONS=1;MSC_NOOPT;NTDDI_VERSION=0x06010000;KMDF_MAJOR_VERSION=1;KMDF_MINOR_VERSION=9;KMDF_MAJOR_VERSION_STRING=01;KMDF_MINOR_VERSION_STRING=009;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
-    <NMakeIncludeSearchPath>..;Z:\WinDDK\7600.16385.1\inc\api;Z:\WinDDK\7600.16385.1\inc\ddk;Z:\WinDDK\7600.16385.1\inc\crt;Z:\WinDDK\7600.16385.1\inc\wdf\kmdf\1.9;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
-  </PropertyGroup>
+  <PropertyGroup />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <OutDir>$(SolutionDir)bin\sys\amd64\</OutDir>
-    <IntDir>$(ProjectDir)objchk_win7_amd64\amd64\</IntDir>
-    <NMakeBuildCommandLine>$(SolutionDir)make.cmd build nogetc BUILD_QUIET=0 chk x64 WDK_SOURCES_LIST=libusbK.sys%3b</NMakeBuildCommandLine>
-    <NMakeReBuildCommandLine>$(SolutionDir)make.cmd build nogetc BUILD_QUIET=0 chk x64 WDK_SOURCES_LIST=libusbK.sys%3b</NMakeReBuildCommandLine>
-    <NMakeCleanCommandLine>$(SolutionDir)make.cmd clean nogetc BUILD_QUIET=0 chk x64 WDK_SOURCES_LIST=libusbK.sys%3b</NMakeCleanCommandLine>
-    <NMakeOutput>libusbK.sys</NMakeOutput>
-    <NMakePreprocessorDefinitions>WDK_DRIVER=1;_WIN64;_AMD64_;AMD64;CONDITION_HANDLING=1;NT_UP=1;NT_INST=0;WIN32=100;_NT1X_=100;WINNT=1;_WIN32_WINNT=0x0601;WINVER=0x0601;_WIN32_IE=0x0800;WIN32_LEAN_AND_MEAN=1;DEVL=1;DBG=1;__BUILDMACHINE__=WinDDK;_DLL=1;NDEBUG;DEPRECATE_DDK_FUNCTIONS=1;MSC_NOOPT;NTDDI_VERSION=0x06010000;KMDF_MAJOR_VERSION=1;KMDF_MINOR_VERSION=9;KMDF_MAJOR_VERSION_STRING=01;KMDF_MINOR_VERSION_STRING=009;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
-    <NMakeIncludeSearchPath>..;Z:\WinDDK\7600.16385.1\inc\api;Z:\WinDDK\7600.16385.1\inc\ddk;Z:\WinDDK\7600.16385.1\inc\crt;Z:\WinDDK\7600.16385.1\inc\wdf\kmdf\1.9;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>$(SolutionDir)bin\sys\i386\</OutDir>
-    <IntDir>$(ProjectDir)objfre_wxp_x86\i386\</IntDir>
-    <NMakeBuildCommandLine>$(SolutionDir)make.cmd build nogetc BUILD_QUIET=0 fre WXP WDK_SOURCES_LIST=libusbK.sys%3b</NMakeBuildCommandLine>
-    <NMakeReBuildCommandLine>$(SolutionDir)make.cmd build nogetc BUILD_QUIET=0 fre WXP WDK_SOURCES_LIST=libusbK.sys%3b</NMakeReBuildCommandLine>
-    <NMakeCleanCommandLine>$(SolutionDir)make.cmd clean nogetc BUILD_QUIET=0 fre WXP WDK_SOURCES_LIST=libusbK.sys%3b</NMakeCleanCommandLine>
-    <NMakeOutput>libusbK.sys</NMakeOutput>
-    <NMakePreprocessorDefinitions>WIN32;NDEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
-    <NMakeIncludeSearchPath>..;Z:\WinDDK\7600.16385.1\inc\api;Z:\WinDDK\7600.16385.1\inc\ddk;Z:\WinDDK\7600.16385.1\inc\crt;Z:\WinDDK\7600.16385.1\inc\wdf\kmdf\1.9;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
+    <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>$(SolutionDir)bin\sys\amd64\</OutDir>
-    <IntDir>$(ProjectDir)objfre_win7_amd64\amd64\</IntDir>
-    <NMakeBuildCommandLine>$(SolutionDir)make.cmd build nogetc BUILD_QUIET=0 fre x64 WDK_SOURCES_LIST=libusbK.sys%3b</NMakeBuildCommandLine>
-    <NMakeReBuildCommandLine>$(SolutionDir)make.cmd build nogetc BUILD_QUIET=0 fre x64 WDK_SOURCES_LIST=libusbK.sys%3b</NMakeReBuildCommandLine>
-    <NMakeCleanCommandLine>$(SolutionDir)make.cmd clean nogetc BUILD_QUIET=0 fre x64 WDK_SOURCES_LIST=libusbK.sys%3b</NMakeCleanCommandLine>
-    <NMakeOutput>libusbK.sys</NMakeOutput>
-    <NMakePreprocessorDefinitions>WIN32;NDEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
-    <NMakeIncludeSearchPath>..;Z:\WinDDK\7600.16385.1\inc\api;Z:\WinDDK\7600.16385.1\inc\ddk;Z:\WinDDK\7600.16385.1\inc\crt;Z:\WinDDK\7600.16385.1\inc\wdf\kmdf\1.9;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
+    <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
   </PropertyGroup>
-  <ItemDefinitionGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
+    <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
+    <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WppEnabled>true</WppEnabled>
+      <WppRecorderEnabled>true</WppRecorderEnabled>
+      <WppScanConfigurationData Condition="'%(ClCompile.ScanConfigurationData)' == ''">trace.h</WppScanConfigurationData>
+      <WppKernelMode>true</WppKernelMode>
+      <AdditionalIncludeDirectories>..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/D "KMDF_MAJOR_VERSION=1" /D "KMDF_MINOR_VERSION=9" %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <DriverSign>
+      <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
+    </DriverSign>
+    <Link>
+      <AdditionalDependencies>%(AdditionalDependencies);usbd.lib;usbdex.lib;ntstrsafe.lib</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WppEnabled>true</WppEnabled>
+      <WppRecorderEnabled>true</WppRecorderEnabled>
+      <WppScanConfigurationData Condition="'%(ClCompile.ScanConfigurationData)' == ''">trace.h</WppScanConfigurationData>
+      <WppKernelMode>true</WppKernelMode>
+      <AdditionalIncludeDirectories>..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/D "KMDF_MAJOR_VERSION=1" /D "KMDF_MINOR_VERSION=9" %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <DriverSign>
+      <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
+    </DriverSign>
+    <Link>
+      <AdditionalDependencies>%(AdditionalDependencies);usbd.lib;usbdex.lib;ntstrsafe.lib</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
+    <ClCompile>
+      <WppEnabled>true</WppEnabled>
+      <WppRecorderEnabled>true</WppRecorderEnabled>
+      <WppScanConfigurationData Condition="'%(ClCompile.ScanConfigurationData)' == ''">trace.h</WppScanConfigurationData>
+      <WppKernelMode>true</WppKernelMode>
+      <AdditionalIncludeDirectories>..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/D "KMDF_MAJOR_VERSION=1" /D "KMDF_MINOR_VERSION=9" %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <DriverSign>
+      <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
+    </DriverSign>
+    <Link>
+      <AdditionalDependencies>%(AdditionalDependencies);usbd.lib;usbdex.lib;ntstrsafe.lib</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
+    <ClCompile>
+      <WppEnabled>true</WppEnabled>
+      <WppRecorderEnabled>true</WppRecorderEnabled>
+      <WppScanConfigurationData Condition="'%(ClCompile.ScanConfigurationData)' == ''">trace.h</WppScanConfigurationData>
+      <WppKernelMode>true</WppKernelMode>
+      <AdditionalIncludeDirectories>..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/D "KMDF_MAJOR_VERSION=1" /D "KMDF_MINOR_VERSION=9" %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <DriverSign>
+      <FileDigestAlgorithm>sha256</FileDigestAlgorithm>
+    </DriverSign>
+    <Link>
+      <AdditionalDependencies>%(AdditionalDependencies);usbd.lib;usbdex.lib;ntstrsafe.lib</AdditionalDependencies>
+    </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="drv_device.c" />
-    <ClCompile Include="drv_driver.c" />
-    <ClCompile Include="drv_general.c" />
-    <ClCompile Include="drv_interface.c" />
-    <ClCompile Include="drv_pipe.c" />
-    <ClCompile Include="drv_policy.c" />
-    <ClCompile Include="drv_queue_default.c" />
-    <ClCompile Include="drv_queue_pipe.c" />
-    <ClCompile Include="drv_registry.c" />
-    <ClCompile Include="drv_request.c" />
-    <ClCompile Include="drv_xfer_bulk.c" />
-    <ClCompile Include="drv_xfer_control.c" />
-    <ClCompile Include="drv_xfer_iso.c" />
-    <ClCompile Include="drv_xfer_simple.c" />
+    <FilesToPackage Include="$(TargetPath)" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\includes\lusbk_shared.h" />
@@ -138,10 +180,23 @@ ECHO DONE
     <ClInclude Include="lusbk_version.h" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="drv_lusbk_rc.rc" />
+    <ClCompile Include="drv_device.c" />
+    <ClCompile Include="drv_driver.c" />
+    <ClCompile Include="drv_general.c" />
+    <ClCompile Include="drv_interface.c" />
+    <ClCompile Include="drv_pipe.c" />
+    <ClCompile Include="drv_policy.c" />
+    <ClCompile Include="drv_queue_default.c" />
+    <ClCompile Include="drv_queue_pipe.c" />
+    <ClCompile Include="drv_registry.c" />
+    <ClCompile Include="drv_request.c" />
+    <ClCompile Include="drv_xfer_bulk.c" />
+    <ClCompile Include="drv_xfer_control.c" />
+    <ClCompile Include="drv_xfer_iso.c" />
+    <ClCompile Include="drv_xfer_simple.c" />
   </ItemGroup>
   <ItemGroup>
-    <Text Include="readme.txt" />
+    <ResourceCompile Include="drv_lusbk_rc.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

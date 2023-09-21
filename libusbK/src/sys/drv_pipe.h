@@ -27,7 +27,7 @@ VOID Pipe_StartAll(__in PDEVICE_CONTEXT deviceContext,
 				   __in BOOLEAN startIoTarget);
 
 PPIPE_CONTEXT Pipe_GetContextFromName(__in PDEVICE_CONTEXT DeviceContext,
-                                      IN PUNICODE_STRING FileName);
+                                      __in PUNICODE_STRING FileName);
 
 NTSTATUS Pipe_InitDefaultContext(__in PDEVICE_CONTEXT deviceContext);
 
@@ -49,7 +49,8 @@ NTSTATUS Pipe_RefreshQueue(
     __in PPIPE_CONTEXT pipeContext);
 
 ULONG Pipe_CalcMaxTransferSize(
-    __in BOOLEAN IsHS, WDF_USB_PIPE_TYPE pipeType,
+    __in BOOLEAN IsHS, 
+	__in WDF_USB_PIPE_TYPE pipeType,
     __in ULONG maxPacketSize,
     __in ULONG originalMaxTransferSize);
 
