@@ -1,0 +1,88 @@
+;
+; libusbK.inf
+;
+
+[Version]
+Signature="$WINDOWS NT$"
+Class=USBDevice
+ClassGuid={88BAE032-5A81-49f0-BC3D-A4FF138216D6}
+Provider=%ManufacturerName%
+CatalogFile=libusbK.cat
+DriverVer=
+PnpLockDown=1
+
+[DestinationDirs]
+DefaultDestDir = 12
+libusbK_Device_CoInstaller_CopyFiles = 11
+
+[SourceDisksNames]
+1 = %DiskName%,,,""
+
+[SourceDisksFiles]
+libusbK.sys  = 1,,
+WdfCoInstaller$KMDFCOINSTALLERVERSION$.dll=1 ; make sure the number matches with SourceDisksNames
+
+;*****************************************
+; Install Section
+;*****************************************
+
+[Manufacturer]
+%ManufacturerName%=Standard,NT$ARCH$
+
+[Standard.NT$ARCH$]
+%libusbK.DeviceDesc%=libusbK_Device, USB\VID_vvvv&PID_pppp
+
+[libusbK_Device.NT]
+CopyFiles=Drivers_Dir
+
+[Drivers_Dir]
+libusbK.sys
+
+[libusbK_Device.NT.HW]
+AddReg=libusbK_AddReg
+
+[libusbK_AddReg]
+; By default, USBDevice class uses iProduct descriptor to name the device in
+; Device Manager on Windows 8 and higher.
+; Uncomment for this device to use %DeviceName% on Windows 8 and higher:
+;HKR,,FriendlyName,,%libusbK.DeviceDesc%
+
+;-------------- Service installation
+[libusbK_Device.NT.Services]
+AddService = libusbK,%SPSVCINST_ASSOCSERVICE%, libusbK_Service_Inst
+
+; -------------- libusbK driver install sections
+[libusbK_Service_Inst]
+DisplayName    = %libusbK.SVCDESC%
+ServiceType    = 1               ; SERVICE_KERNEL_DRIVER
+StartType      = 3               ; SERVICE_DEMAND_START
+ErrorControl   = 1               ; SERVICE_ERROR_NORMAL
+ServiceBinary  = %12%\libusbK.sys
+
+;
+;--- libusbK_Device Coinstaller installation ------
+;
+
+[libusbK_Device.NT.CoInstallers]
+AddReg=libusbK_Device_CoInstaller_AddReg
+CopyFiles=libusbK_Device_CoInstaller_CopyFiles
+
+[libusbK_Device_CoInstaller_AddReg]
+HKR,,CoInstallers32,0x00010000, "WdfCoInstaller$KMDFCOINSTALLERVERSION$.dll,WdfCoInstaller"
+
+[libusbK_Device_CoInstaller_CopyFiles]
+WdfCoInstaller$KMDFCOINSTALLERVERSION$.dll
+
+[libusbK_Device.NT.Wdf]
+KmdfService =  libusbK, libusbK_wdfsect
+[libusbK_wdfsect]
+KmdfLibraryVersion = $KMDFVERSION$
+
+[Strings]
+SPSVCINST_ASSOCSERVICE= 0x00000002
+ManufacturerName="<Your manufacturer name>" ;TODO: Replace with your manufacturer name
+ClassName="Universal Serial Bus devices"
+DiskName = "libusbK Installation Disk"
+libusbK.DeviceDesc = "libusbK Device"
+libusbK.SVCDESC = "libusbK Service"
+REG_MULTI_SZ = 0x00010000
