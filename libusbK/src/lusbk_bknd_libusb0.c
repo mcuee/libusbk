@@ -226,7 +226,7 @@ int usb_control_msg(HANDLE *dev, int requesttype, int request,
 		req.vendor.value = value;
 		req.vendor.index = index;
 
-		if (requesttype & 0x80)
+		if (requesttype & USB_ENDPOINT_IN)
 			code = LIBUSB_IOCTL_VENDOR_READ;
 		else
 			code = LIBUSB_IOCTL_VENDOR_WRITE;
