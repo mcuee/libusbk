@@ -68,6 +68,10 @@ KUSB_EXP BOOL KUSB_API LUsb0_ControlTransfer(
 	}
 	else
 	{
+		if (ret == -EINVAL)
+			SetLastError(ERROR_INVALID_PARAMETER);
+		else if (ret == -ENOMEM)
+			SetLastError(ERROR_NOT_ENOUGH_MEMORY);
 		success = FALSE;
 	}
 
@@ -226,7 +230,7 @@ int usb_control_msg(HANDLE *dev, int requesttype, int request,
 		req.vendor.value = value;
 		req.vendor.index = index;
 
-		if (requesttype & 0x80)
+		if (requesttype & USB_ENDPOINT_IN)
 			code = LIBUSB_IOCTL_VENDOR_READ;
 		else
 			code = LIBUSB_IOCTL_VENDOR_WRITE;
@@ -280,6 +284,7 @@ int _usb_io_sync(HANDLE dev, unsigned int code, void *out, int out_size,
 {
 	OVERLAPPED ol;
 	DWORD _ret;
+	DWORD err;
 
 	memset(&ol, 0, sizeof(ol));
 
@@ -293,11 +298,20 @@ int _usb_io_sync(HANDLE dev, unsigned int code, void *out, int out_size,
 
 	if (!DeviceIoControl(dev, code, out, out_size, in, in_size, NULL, &ol))
 	{
-		if (GetLastError() != ERROR_IO_PENDING)
+		err = GetLastError();
+
+		if (err != ERROR_IO_PENDING)
 		{
 			CloseHandle(ol.hEvent);
+			SetLastError(err);
 			return FALSE;
 		}
+	} else {
+		// successful synchronous completion
+		if (ret)
+			*ret = (int) in_size;
+		CloseHandle(ol.hEvent);
+		return TRUE;
 	}
 
 	if (GetOverlappedResult(dev, &ol, &_ret, TRUE))
@@ -308,6 +322,8 @@ int _usb_io_sync(HANDLE dev, unsigned int code, void *out, int out_size,
 		return TRUE;
 	}
 
+	err = GetLastError();
 	CloseHandle(ol.hEvent);
+	SetLastError(err);
 	return FALSE;
 }
