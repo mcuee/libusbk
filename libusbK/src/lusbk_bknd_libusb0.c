@@ -68,6 +68,10 @@ KUSB_EXP BOOL KUSB_API LUsb0_ControlTransfer(
 	}
 	else
 	{
+		if (ret == -EINVAL)
+			SetLastError(ERROR_INVALID_PARAMETER);
+		else if (ret == -ENOMEM)
+			SetLastError(ERROR_NOT_ENOUGH_MEMORY);
 		success = FALSE;
 	}
 
