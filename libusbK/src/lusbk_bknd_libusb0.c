@@ -284,6 +284,7 @@ int _usb_io_sync(HANDLE dev, unsigned int code, void *out, int out_size,
 {
 	OVERLAPPED ol;
 	DWORD _ret;
+	DWORD err;
 
 	memset(&ol, 0, sizeof(ol));
 
@@ -297,11 +298,20 @@ int _usb_io_sync(HANDLE dev, unsigned int code, void *out, int out_size,
 
 	if (!DeviceIoControl(dev, code, out, out_size, in, in_size, NULL, &ol))
 	{
-		if (GetLastError() != ERROR_IO_PENDING)
+		err = GetLastError();
+
+		if (err != ERROR_IO_PENDING)
 		{
 			CloseHandle(ol.hEvent);
+			SetLastError(err);
 			return FALSE;
 		}
+	} else {
+		// successful synchronous completion
+		if (ret)
+			*ret = (int) in_size;
+		CloseHandle(ol.hEvent);
+		return TRUE;
 	}
 
 	if (GetOverlappedResult(dev, &ol, &_ret, TRUE))
@@ -312,6 +322,8 @@ int _usb_io_sync(HANDLE dev, unsigned int code, void *out, int out_size,
 		return TRUE;
 	}
 
+	err = GetLastError();
 	CloseHandle(ol.hEvent);
+	SetLastError(err);
 	return FALSE;
 }
