@@ -17,9 +17,8 @@ http://libusbk.sourceforge.net/UsbK3/usbk_about.html
 http://libusbk.sourceforge.net/UsbK3/index.html
 
 ## Licensing ##
-Dual license with New BSD option and GPL option. The New BSD Option will facilitate
-the WHQL certification now that Microsoft has added "excluded license"
-to the WLK license.
+Dual license with New BSD option and GPL option. This should
+make it easier to facilitate different use cases.
 
 ### Code Examples ###
 Many examples are provided for the library users to develop
