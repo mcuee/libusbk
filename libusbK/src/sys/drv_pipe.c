@@ -258,7 +258,7 @@ VOID Pipe_InitQueueConfig(
 
 		In libusbK, RawIO means we use a parallel queue.  Any pipe policies or functionality
 		that could cause multiple IO transactions per request are no longer supported. IE:
-		Transfer splitting, ALLOW_ARTIAL_READS, AUTO_FLUSH, IGNORE_SHORT_PACKETS, SHORT_PACKET_TERMINATE.
+		Transfer splitting, ALLOW_PARTIAL_READS, AUTO_FLUSH, IGNORE_SHORT_PACKETS, SHORT_PACKET_TERMINATE.
 		*/
 
 		WDF_DRIVER_VERSION_AVAILABLE_PARAMS_INIT(&verParams, KMDF_MAJOR_VERSION, KMDF_MINOR_VERSION);

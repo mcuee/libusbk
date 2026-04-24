@@ -731,7 +731,7 @@ NTSTATUS Device_Configure(WDFDEVICE Device)
 	else
 	{
 		USBDBG("Using multiple interface configuration..\n");
-		settingPairs = ExAllocatePoolWithTag(
+		settingPairs = ExAllocatePool2(
 		                   PagedPool,
 		                   sizeof(WDF_USB_INTERFACE_SETTING_PAIR) * deviceContext->InterfaceCount,
 		                   POOL_TAG);

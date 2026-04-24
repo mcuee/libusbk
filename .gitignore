@@ -2,6 +2,7 @@
 *.user
 *.filters
 Debug/
+Release/
 Backup/
 libusbK/package/
 *.AssemblyReference.cache
