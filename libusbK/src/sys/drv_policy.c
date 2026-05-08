@@ -292,7 +292,7 @@ NTSTATUS Policy_InitPower(__in PDEVICE_CONTEXT deviceContext)
 	wakeSettings.Enabled = deviceContext->DeviceRegSettings.SystemWakeEnabled ? WdfTrue : WdfFalse;
 
 	// WakeSettings.UserControlOfWakeSettings
-	wakeSettings.UserControlOfWakeSettings = wakeSettings.Enabled;
+	wakeSettings.UserControlOfWakeSettings = (WDF_POWER_POLICY_SX_WAKE_USER_CONTROL)wakeSettings.Enabled;
 
 	/*
 	Assign wake settings.
