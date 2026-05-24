@@ -19,21 +19,33 @@ jobs:
           path: C:\EWDK_ISO
           key: ewdk-26100-v1
 
-      - name: Download EWDK ISO via BITS
+      - name: Download EWDK ISO via Curl
         if: steps.cache-ewdk.outputs.cache-hit != 'true'
         shell: powershell
         run: |
           New-Item -ItemType Directory -Force -Path C:\EWDK_ISO
-          $Url = "https://go.microsoft.com/fwlink/?linkid=2271831"
           
-          Write-Output "Starting high-reliability BITS download for EWDK ISO..."
-          Start-BitsTransfer -Source $Url -Destination "C:\EWDK_ISO\EWDK.iso" -Priority High
-          
-          # Quick sanity check: Ensure the file actually exists and isn't empty
+          # 1. Resolve the fwlink redirect to get the true, direct Microsoft download URL
+          $ShortUrl = "https://go.microsoft.com/fwlink/?linkid=2271831"
+          Write-Output "Resolving Microsoft shortlink..."
+          $Request = [System.Net.WebRequest]::Create($ShortUrl)
+          $Request.Method = "HEAD"
+          $Response = $Request.GetResponse()
+          $DirectUrl = $Response.ResponseUri.AbsoluteUri
+          $Response.Close()
+          Write-Output "Resolved target address: $DirectUrl"
+
+          # 2. Stream the true large payload directly down using curl.exe
+          Write-Output "Streaming multi-gigabyte ISO payload via native curl..."
+          curl.exe -L -o "C:\EWDK_ISO\EWDK.iso" "$DirectUrl"
+
+          # 3. Sanity check validation
           $file = Get-Item "C:\EWDK_ISO\EWDK.iso"
-          Write-Output "Downloaded file size: (($file.Length / 1GB).ToString('F2')) GB"
+          $sizeGB = ($file.Length / 1GB).ToString("F2")
+          Write-Output "Downloaded clean image file size: $sizeGB GB"
+          
           if ($file.Length -lt 2GB) {
-              throw "Download payload seems too small or truncated. Aborting build."
+              throw "Download payload size error ($sizeGB GB). The target package was truncated or blocked."
           }
 
       # Step 2: Mount the ISO safely, clearing any stale loops
@@ -43,10 +55,10 @@ jobs:
         run: |
           $IsoPath = "C:\EWDK_ISO\EWDK.iso"
           
-          # Clean up any previously stuck or bad mount points first
+          # Clean up any leftover mounts from interrupted runs
           Get-DiskImage -ImagePath $IsoPath | Dismount-DiskImage -ErrorAction SilentlyContinue
           
-          Write-Output "Mounting clean ISO image..."
+          Write-Output "Mounting validated EWDK environment image..."
           $MountDrive = (Mount-DiskImage -ImagePath $IsoPath -PassThru | Get-Volume).DriveLetter
           
           if (-not $MountDrive) {
