@@ -45,19 +45,18 @@ jobs:
           nuget install Microsoft.Windows.WDK.x64 -Version 10.0.26100.2454 -OutputDirectory packages
           nuget install Microsoft.Windows.SDK.CPP.x64 -Version 10.0.26100.2454 -OutputDirectory packages
 
-      # Build User-space Libraries (x86, x64, ARM64)
       - name: Build User Libraries
         shell: cmd
         working-directory: libusbK
         run: |
-          echo === Building x86 (Win32) User Space Libs ===
-          msbuild libusbK.sln /p:Configuration=Release /p:Platform=Win32 /t:libusbK_dll;libusbK_static /m
+          echo === Building x86 User Space Libs ===
+          msbuild libusbK.sln /p:Configuration=Release /p:Platform=x86 /p:TargetVersion="Windows10" /p:TargetPlatformVersion="10.0.26100.0" /t:libusbK_dll;libusbK_static /m
 
           echo === Building x64 User Space Libs ===
-          msbuild libusbK.sln /p:Configuration=Release /p:Platform=x64 /t:libusbK_dll;libusbK_static /m
+          msbuild libusbK.sln /p:Configuration=Release /p:Platform=x64 /p:TargetVersion="Windows10" /p:TargetPlatformVersion="10.0.26100.0" /t:libusbK_dll;libusbK_static /m
 
           echo === Building ARM64 User Space Libs ===
-          msbuild libusbK.sln /p:Configuration=Release /p:Platform=ARM64 /t:libusbK_dll;libusbK_static /m
+          msbuild libusbK.sln /p:Configuration=Release /p:Platform=ARM64 /p:TargetVersion="Windows10" /p:TargetPlatformVersion="10.0.26100.0" /t:libusbK_dll;libusbK_static /m
 
       # Build Kernel Drivers (x64, ARM64 Only)
       - name: Build Kernel Drivers
@@ -65,10 +64,10 @@ jobs:
         working-directory: libusbK
         run: |
           echo === Building x64 Driver (.sys) ===
-          msbuild libusbK.sln /p:Configuration=Release /p:Platform=x64 /p:DriverTargetPlatform="Windows Driver" /t:libusbK_sys /m
+          msbuild libusbK.sln /p:Configuration=Release /p:Platform=x64 /p:TargetVersion="Windows10" /p:TargetPlatformVersion="10.0.26100.0" /p:DriverTargetPlatform="Windows Driver" /t:libusbK_sys /m
 
           echo === Building ARM64 Driver (.sys) ===
-          msbuild libusbK.sln /p:Configuration=Release /p:Platform=ARM64 /p:DriverTargetPlatform="Windows Driver" /t:libusbK_sys /m
+          msbuild libusbK.sln /p:Configuration=Release /p:Platform=ARM64 /p:TargetVersion="Windows10" /p:TargetPlatformVersion="10.0.26100.0" /p:DriverTargetPlatform="Windows Driver" /t:libusbK_sys /m
 
       # Securely Export Build Output Binaries
       - name: Collect and Upload Artifacts
