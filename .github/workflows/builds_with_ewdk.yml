@@ -4,20 +4,25 @@ on: [push, pull_request]
 
 jobs:
   build-project:
-    name: Build Targets (Windows 11 / 24H2+)
-    runs-on: windows-2022
+    name: Build (${{ matrix.os }} - ${{ matrix.platform }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ "windows-2022", "windows-2025" ]
+        platform: [ "Win32", "x64", "ARM64" ]
+
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup MSBuild Configuration
-        uses: microsoft/setup-msbuild@v2
-        with:
-          vs-version: '[17.0,18.0)' # Targets Visual Studio 2022 Build Env
+        uses: microsoft/setup-msbuild@v3
 
+      # Note: We keep NuGet setup at v3 as it is the current release for this ecosystem action
       - name: Setup NuGet Environment
-        uses: NuGet/setup-nuget@v2
+        uses: NuGet/setup-nuget@v3
 
       # Install exact WDK targets directly into the libusbK subdirectory 
       - name: Restore WDK Packages & Build Elements
@@ -27,40 +32,33 @@ jobs:
           nuget install Microsoft.Windows.WDK.x64 -Version 10.0.26100.2454 -OutputDirectory packages
           nuget install Microsoft.Windows.SDK.CPP.x64 -Version 10.0.26100.2454 -OutputDirectory packages
 
+      # Build User-space Libraries (x86, x64, ARM64)
       - name: Build User Libraries
         shell: cmd
         working-directory: libusbK
         run: |
-          echo === Building x86 User Space Libs ===
-          msbuild src\lib\libusbK_lib.vcxproj /p:Configuration=Release /p:Platform=Win32 /p:TargetVersion="Windows10" /p:TargetPlatformVersion="10.0.26100.0" /m
-
-          echo === Building x64 User Space Libs ===
-          msbuild src\lib\libusbK_lib.vcxproj /p:Configuration=Release /p:Platform=x64 /p:TargetVersion="Windows10" /p:TargetPlatformVersion="10.0.26100.0" /m
-
-          echo === Building ARM64 User Space Libs ===
-          msbuild src\lib\libusbK_lib.vcxproj /p:Configuration=Release /p:Platform=ARM64 /p:TargetVersion="Windows10" /p:TargetPlatformVersion="10.0.26100.0" /m
+          echo === Building User Space Libs ===
+          msbuild src\lib\libusbK_lib.vcxproj /p:Configuration=Release /p:Platform=${{ matrix.platform }} /p:TargetVersion="Windows10" /p:TargetPlatformVersion="10.0.26100.0" /m
 
       # Build Kernel Drivers (x64, ARM64 Only)
+      # Condition skips driver compilation safely when the matrix selects Win32 (x86)
       - name: Build Kernel Drivers
+        if: matrix.platform != 'Win32'
         shell: cmd
         working-directory: libusbK
         run: |
-          echo === Building x64 Driver (.sys) ===
-          msbuild src\sys\libusbK_sys.vcxproj /p:Configuration=Release /p:Platform=x64 /p:TargetVersion="Windows10" /p:TargetPlatformVersion="10.0.26100.0" /p:DriverTargetPlatform="Desktop" /p:ApiValidatorAnalyze=false /p:InfVerif=false /m
-
-          echo === Building ARM64 Driver (.sys) ===
-          msbuild src\sys\libusbK_sys.vcxproj /p:Configuration=Release /p:Platform=ARM64 /p:TargetVersion="Windows10" /p:TargetPlatformVersion="10.0.26100.0" /p:DriverTargetPlatform="Desktop" /p:ApiValidatorAnalyze=false /p:InfVerif=false /m
+          echo === Building Driver (.sys) ===
+          msbuild src\sys\libusbK_sys.vcxproj /p:Configuration=Release /p:Platform=${{ matrix.platform }} /p:TargetVersion="Windows10" /p:TargetPlatformVersion="10.0.26100.0" /p:DriverTargetPlatform="Desktop" /p:ApiValidatorAnalyze=false /p:InfVerif=false /m
 
       # Securely Export Build Output Binaries
-      # Widened the pattern matches globally to catch libusbK's output location mapping natively
       - name: Collect and Upload Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: libusbK-WDK26100-Output
+          name: libusbK-${{ matrix.os }}-${{ matrix.platform }}-Output
           path: |
-            libusbK\**\*.dll
-            libusbK\**\*.lib
-            libusbK\**\*.sys
-            libusbK\**\*.inf
-            libusbK\**\*.cat
+            libusbK/**/*.dll
+            libusbK/**/*.lib
+            libusbK/**/*.sys
+            libusbK/**/*.inf
+            libusbK/**/*.cat
           if-no-files-found: error
