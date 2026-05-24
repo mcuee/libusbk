@@ -3,117 +3,82 @@ name: libusbK builds with EWDK
 on: [push, pull_request]
 
 jobs:
-  build-all:
-    name: Build All Targets (EWDK 26100)
+  build-project:
+    name: Build Targets (Windows 11 / 24H2+)
     runs-on: windows-2022
-    
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-    # Step 1: Download and cache the EWDK ISO
-      - name: Cache EWDK ISO
-        id: cache-ewdk
-        uses: actions/cache@v4
+      - name: Setup MSBuild Configuration
+        uses: microsoft/setup-msbuild@v2
         with:
-          path: C:\EWDK_ISO
-          key: ewdk-26100-v1
+          vs-version: '[17.0,18.0)' # Targets Visual Studio 2022 Build Env
 
-      - name: Download EWDK ISO via Curl
-        if: steps.cache-ewdk.outputs.cache-hit != 'true'
+      - name: Setup NuGet Environment
+        uses: NuGet/setup-nuget@v2
+
+      # Injects structural MSBuild hooks directly where the solution file lives
+      - name: Configure WDK Build Intercepts
         shell: powershell
         run: |
-          New-Item -ItemType Directory -Force -Path C:\EWDK_ISO
-          
-          # 1. Resolve the fwlink redirect to get the true, direct Microsoft download URL
-          $ShortUrl = "https://go.microsoft.com/fwlink/?linkid=2271831"
-          Write-Output "Resolving Microsoft shortlink..."
-          $Request = [System.Net.WebRequest]::Create($ShortUrl)
-          $Request.Method = "HEAD"
-          $Response = $Request.GetResponse()
-          $DirectUrl = $Response.ResponseUri.AbsoluteUri
-          $Response.Close()
-          Write-Output "Resolved target address: $DirectUrl"
+          $PropsContent = @"
+          <Project>
+            <PropertyGroup>
+              <TargetVersion>Windows10</TargetVersion>
+              <TargetPlatformVersion>10.0.26100.0</TargetPlatformVersion>
+              <LatestTargetPlatformVersion>10.0.26100.0</LatestTargetPlatformVersion>
+              <IncludeWdkHeaders>true</IncludeWdkHeaders>
+            </PropertyGroup>
+          </Project>
+          "@
+          # Placed cleanly inside the libusbK subdirectory next to the .sln
+          $PropsContent | Out-File -FilePath "libusbK\Directory.Build.props" -Encoding utf8
+          Write-Output "Injected custom build intercepts configuration profile successfully."
 
-          # 2. Stream the true large payload directly down using curl.exe
-          Write-Output "Streaming multi-gigabyte ISO payload via native curl..."
-          curl.exe -L -o "C:\EWDK_ISO\EWDK.iso" "$DirectUrl"
-
-          # 3. Sanity check validation
-          $file = Get-Item "C:\EWDK_ISO\EWDK.iso"
-          $sizeGB = ($file.Length / 1GB).ToString("F2")
-          Write-Output "Downloaded clean image file size: $sizeGB GB"
-          
-          if ($file.Length -lt 2GB) {
-              throw "Download payload size error ($sizeGB GB). The target package was truncated or blocked."
-          }
-
-      # Step 2: Mount the ISO safely, clearing any stale loops
-      - name: Mount EWDK ISO
-        id: mount-iso
+      # Install WDK targets directly into the libusbK subdirectory 
+      - name: Restore WDK Packages & Build Elements
         shell: powershell
+        working-directory: libusbK
         run: |
-          $IsoPath = "C:\EWDK_ISO\EWDK.iso"
-          
-          # Clean up any leftover mounts from interrupted runs
-          Get-DiskImage -ImagePath $IsoPath | Dismount-DiskImage -ErrorAction SilentlyContinue
-          
-          Write-Output "Mounting validated EWDK environment image..."
-          $MountDrive = (Mount-DiskImage -ImagePath $IsoPath -PassThru | Get-Volume).DriveLetter
-          
-          if (-not $MountDrive) {
-              throw "Failed to acquire a valid Virtual Drive Letter from the EWDK ISO image."
-          }
-          
-          echo "EWDK_DRIVE=${MountDrive}:" >> $env:GITHUB_ENV
-          Write-Output "EWDK safely mapped to virtual volume ${MountDrive}:"
+          nuget install Microsoft.Windows.WDK.x64 -Version 10.0.26100.2451 -OutputDirectory packages
+          nuget install Microsoft.Windows.SDK.CPP.x64 -Version 10.0.26100.2451 -OutputDirectory packages
 
-      # Step 3: Compile Libraries (x86, x64, ARM64) using the EWDK environment
-      - name: Build User-space Libraries
+      # Build User-space Libraries (x86, x64, ARM64)
+      - name: Build User Libraries
         shell: cmd
+        working-directory: libusbK
         run: |
-          :: Enter the EWDK environment and pass the build commands
-          call "%EWDK_DRIVE%\LaunchBuildEnv.cmd" && (
-            
-            echo === Building x86 Library ===
-            msbuild ./libusbK/libusbK.sln /p:Configuration=Release /p:Platform=Win32 /t:libusbK_dll;libusbK_static /m
-            
-            echo === Building x64 Library ===
-            msbuild ./libusbK/libusbK.sln /p:Configuration=Release /p:Platform=x64 /t:libusbK_dll;libusbK_static /m
-            
-            echo === Building ARM64 Library ===
-            msbuild ./libusbK/libusbK.sln /p:Configuration=Release /p:Platform=ARM64 /t:libusbK_dll;libusbK_static /m
-          )
+          echo === Building x86 (Win32) User Space Libs ===
+          msbuild libusbK.sln /p:Configuration=Release /p:Platform=Win32 /t:libusbK_dll;libusbK_static /m
 
-      # Step 4: Compile Drivers (x64, ARM64) using the EWDK environment
-      - name: Build Drivers
+          echo === Building x64 User Space Libs ===
+          msbuild libusbK.sln /p:Configuration=Release /p:Platform=x64 /t:libusbK_dll;libusbK_static /m
+
+          echo === Building ARM64 User Space Libs ===
+          msbuild libusbK.sln /p:Configuration=Release /p:Platform=ARM64 /t:libusbK_dll;libusbK_static /m
+
+      # Build Kernel Drivers (x64, ARM64 Only)
+      - name: Build Kernel Drivers
         shell: cmd
+        working-directory: libusbK
         run: |
-          call "%EWDK_DRIVE%\LaunchBuildEnv.cmd" && (
-            
-            echo === Building x64 Driver ===
-            msbuild ./libusbK/libusbK.sln /p:Configuration=Release /p:Platform=x64 /p:DriverTargetPlatform="Universal" /t:libusbK_sys /m
-            
-            echo === Building ARM64 Driver ===
-            msbuild ./libusbK/libusbK.sln /p:Configuration=Release /p:Platform=ARM64 /p:DriverTargetPlatform="Universal" /t:libusbK_sys /m
-          )
+          echo === Building x64 Driver (.sys) ===
+          msbuild libusbK.sln /p:Configuration=Release /p:Platform=x64 /p:DriverTargetPlatform="Windows Driver" /t:libusbK_sys /m
 
-      # Step 5: Clean up by unmounting the ISO image
-      - name: Dismount EWDK ISO
-        if: always()
-        shell: powershell
-        run: |
-          Dismount-DiskImage -ImagePath "C:\EWDK_ISO\EWDK.iso"
+          echo === Building ARM64 Driver (.sys) ===
+          msbuild libusbK.sln /p:Configuration=Release /p:Platform=ARM64 /p:DriverTargetPlatform="Windows Driver" /t:libusbK_sys /m
 
-      # Step 6: Package Binaries
-      - name: Upload Artifacts
+      # Securely Export Build Output Binaries
+      - name: Collect and Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: libusbK-EWDK-Output
+          name: libusbK-WDK26100-Output
           path: |
-            **\Output\**\*.dll
-            **\Output\**\*.lib
-            **\Output\**\*.sys
-            **\Output\**\*.inf
-            **\Output\**\*.cat
+            libusbK\**\Output\**\*.dll
+            libusbK\**\Output\**\*.lib
+            libusbK\**\Output\**\*.sys
+            libusbK\**\Output\**\*.inf
+            libusbK\**\Output\**\*.cat
           if-no-files-found: error
