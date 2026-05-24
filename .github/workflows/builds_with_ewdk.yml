@@ -19,25 +19,7 @@ jobs:
       - name: Setup NuGet Environment
         uses: NuGet/setup-nuget@v2
 
-      # Injects structural MSBuild hooks directly where the solution file lives
-      - name: Configure WDK Build Intercepts
-        shell: powershell
-        run: |
-          $PropsContent = @"
-          <Project>
-            <PropertyGroup>
-              <TargetVersion>Windows10</TargetVersion>
-              <TargetPlatformVersion>10.0.26100.0</TargetPlatformVersion>
-              <LatestTargetPlatformVersion>10.0.26100.0</LatestTargetPlatformVersion>
-              <IncludeWdkHeaders>true</IncludeWdkHeaders>
-            </PropertyGroup>
-          </Project>
-          "@
-          # Placed cleanly inside the libusbK subdirectory next to the .sln
-          $PropsContent | Out-File -FilePath "libusbK\Directory.Build.props" -Encoding utf8
-          Write-Output "Injected custom build intercepts configuration profile successfully."
-
-      # Install WDK targets directly into the libusbK subdirectory 
+      # Install exact WDK targets directly into the libusbK subdirectory 
       - name: Restore WDK Packages & Build Elements
         shell: powershell
         working-directory: libusbK
@@ -50,13 +32,13 @@ jobs:
         working-directory: libusbK
         run: |
           echo === Building x86 User Space Libs ===
-          msbuild libusbK.sln /p:Configuration=Release /p:Platform=x86 /p:TargetVersion="Windows10" /p:TargetPlatformVersion="10.0.26100.0" /t:libusbK_dll;libusbK_static /m
+          msbuild src\lib\libusbK_lib.vcxproj /p:Configuration=Release /p:Platform=Win32 /p:TargetVersion="Windows10" /p:TargetPlatformVersion="10.0.26100.0" /m
 
           echo === Building x64 User Space Libs ===
-          msbuild libusbK.sln /p:Configuration=Release /p:Platform=x64 /p:TargetVersion="Windows10" /p:TargetPlatformVersion="10.0.26100.0" /t:libusbK_dll;libusbK_static /m
+          msbuild src\lib\libusbK_lib.vcxproj /p:Configuration=Release /p:Platform=x64 /p:TargetVersion="Windows10" /p:TargetPlatformVersion="10.0.26100.0" /m
 
           echo === Building ARM64 User Space Libs ===
-          msbuild libusbK.sln /p:Configuration=Release /p:Platform=ARM64 /p:TargetVersion="Windows10" /p:TargetPlatformVersion="10.0.26100.0" /t:libusbK_dll;libusbK_static /m
+          msbuild src\lib\libusbK_lib.vcxproj /p:Configuration=Release /p:Platform=ARM64 /p:TargetVersion="Windows10" /p:TargetPlatformVersion="10.0.26100.0" /m
 
       # Build Kernel Drivers (x64, ARM64 Only)
       - name: Build Kernel Drivers
@@ -64,10 +46,10 @@ jobs:
         working-directory: libusbK
         run: |
           echo === Building x64 Driver (.sys) ===
-          msbuild libusbK.sln /p:Configuration=Release /p:Platform=x64 /p:TargetVersion="Windows10" /p:TargetPlatformVersion="10.0.26100.0" /p:DriverTargetPlatform="Windows Driver" /t:libusbK_sys /m
+          msbuild src\sys\libusbK_sys.vcxproj /p:Configuration=Release /p:Platform=x64 /p:TargetVersion="Windows10" /p:TargetPlatformVersion="10.0.26100.0" /p:DriverTargetPlatform="Windows Driver" /m
 
           echo === Building ARM64 Driver (.sys) ===
-          msbuild libusbK.sln /p:Configuration=Release /p:Platform=ARM64 /p:TargetVersion="Windows10" /p:TargetPlatformVersion="10.0.26100.0" /p:DriverTargetPlatform="Windows Driver" /t:libusbK_sys /m
+          msbuild src\sys\libusbK_sys.vcxproj /p:Configuration=Release /p:Platform=ARM64 /p:TargetVersion="Windows10" /p:TargetPlatformVersion="10.0.26100.0" /p:DriverTargetPlatform="Windows Driver" /m
 
       # Securely Export Build Output Binaries
       - name: Collect and Upload Artifacts
