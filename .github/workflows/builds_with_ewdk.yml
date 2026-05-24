@@ -11,7 +11,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # Step 1: Download and cache the EWDK ISO to save bandwidth on future runs
+    # Step 1: Download and cache the EWDK ISO
       - name: Cache EWDK ISO
         id: cache-ewdk
         uses: actions/cache@v4
@@ -19,23 +19,42 @@ jobs:
           path: C:\EWDK_ISO
           key: ewdk-26100-v1
 
-      - name: Download EWDK ISO
+      - name: Download EWDK ISO via BITS
         if: steps.cache-ewdk.outputs.cache-hit != 'true'
         shell: powershell
         run: |
           New-Item -ItemType Directory -Force -Path C:\EWDK_ISO
-          # Replace this URL with the official Microsoft EWDK 26100 direct download link
-          $Url = "https://go.microsoft.com/fwlink/?linkid=2271831" 
-          Invoke-WebRequest -Uri $Url -OutFile "C:\EWDK_ISO\EWDK.iso"
+          $Url = "https://go.microsoft.com/fwlink/?linkid=2271831"
+          
+          Write-Output "Starting high-reliability BITS download for EWDK ISO..."
+          Start-BitsTransfer -Source $Url -Destination "C:\EWDK_ISO\EWDK.iso" -Priority High
+          
+          # Quick sanity check: Ensure the file actually exists and isn't empty
+          $file = Get-Item "C:\EWDK_ISO\EWDK.iso"
+          Write-Output "Downloaded file size: (($file.Length / 1GB).ToString('F2')) GB"
+          if ($file.Length -lt 2GB) {
+              throw "Download payload seems too small or truncated. Aborting build."
+          }
 
-      # Step 2: Mount the ISO to a virtual drive
+      # Step 2: Mount the ISO safely, clearing any stale loops
       - name: Mount EWDK ISO
         id: mount-iso
         shell: powershell
         run: |
-          $MountDrive = (Mount-DiskImage -ImagePath "C:\EWDK_ISO\EWDK.iso" -PassThru | Get-Volume).DriveLetter
+          $IsoPath = "C:\EWDK_ISO\EWDK.iso"
+          
+          # Clean up any previously stuck or bad mount points first
+          Get-DiskImage -ImagePath $IsoPath | Dismount-DiskImage -ErrorAction SilentlyContinue
+          
+          Write-Output "Mounting clean ISO image..."
+          $MountDrive = (Mount-DiskImage -ImagePath $IsoPath -PassThru | Get-Volume).DriveLetter
+          
+          if (-not $MountDrive) {
+              throw "Failed to acquire a valid Virtual Drive Letter from the EWDK ISO image."
+          }
+          
           echo "EWDK_DRIVE=${MountDrive}:" >> $env:GITHUB_ENV
-          Write-Output "EWDK successfully mounted to ${MountDrive}:"
+          Write-Output "EWDK safely mapped to virtual volume ${MountDrive}:"
 
       # Step 3: Compile Libraries (x86, x64, ARM64) using the EWDK environment
       - name: Build User-space Libraries
