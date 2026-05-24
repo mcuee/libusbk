@@ -1,0 +1,82 @@
+name: libusbK builds with nuget WDK
+
+on: [push, pull_request]
+
+jobs:
+  build-project:
+    name: Build (${{ matrix.platform }})
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: ["Win32", "x64", "ARM64"]
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Setup MSBuild Configuration
+        uses: microsoft/setup-msbuild@v3
+
+      - name: Setup NuGet Environment
+        uses: NuGet/setup-nuget@v3
+
+      # Pulls down the driver compilation environment directly into the workspace
+      - name: Restore WDK Packages
+        shell: powershell
+        working-directory: libusbK
+        run: |
+          nuget install Microsoft.Windows.WDK.x64 -Version "10.0.26100.2454" -OutputDirectory packages
+
+      # Dynamically maps the restored NuGet WDK paths structurally into the compiler framework
+      - name: Configure WDK Include Intercepts
+        shell: powershell
+        run: |
+          $PropsContent = @"
+          <Project>
+            <PropertyGroup>
+              <TargetVersion>Windows10</TargetVersion>
+              <TargetPlatformVersion>10.0.26100.0</TargetPlatformVersion>
+              <IncludeWdkHeaders>true</IncludeWdkHeaders>
+            </PropertyGroup>
+            <ItemDefinitionGroup>
+              <ClCompile>
+                <AdditionalIncludeDirectories>`$(SolutionDir)packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\build\native\include;`$(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+              </ClCompile>
+            </ItemDefinitionGroup>
+          </Project>
+          "@
+          $PropsContent | Out-File -FilePath "libusbK\Directory.Build.props" -Encoding utf8
+          Write-Output "Successfully generated structural Directory.Build.props file."
+
+      # Build User-space Libraries (x86, x64, ARM64)
+      # This step will inherently pick up the TargetPlatformVersion from the props file safely
+      - name: Build User Libraries
+        shell: cmd
+        working-directory: libusbK
+        run: |
+          echo === Building User Space Libs ===
+          msbuild src\lib\libusbK_lib.vcxproj /p:Configuration=Release /p:Platform=${{ matrix.platform }} /m
+
+      # Build Kernel Drivers (x64, ARM64 Only)
+      # The Directory.Build.props file guarantees 'ntddk.h' resolves natively inside the global workspace
+      - name: Build Kernel Drivers
+        if: matrix.platform != 'Win32'
+        shell: cmd
+        working-directory: libusbK
+        run: |
+          echo === Building Driver (.sys) ===
+          msbuild src\sys\libusbK_sys.vcxproj /p:Configuration=Release /p:Platform=${{ matrix.platform }} /p:DriverTargetPlatform="Desktop" /p:ApiValidatorAnalyze=false /p:InfVerif=false /m
+
+      # Collect and Securely Export Output Binaries
+      - name: Collect and Upload Artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: libusbK-windows-2022-${{ matrix.platform }}-Output
+          path: |
+            libusbK/**/*.dll
+            libusbK/**/*.lib
+            libusbK/**/*.sys
+            libusbK/**/*.inf
+            libusbK/**/*.cat
+          if-no-files-found: error
