@@ -4,26 +4,12 @@ on: [push, pull_request]
 
 jobs:
   build-project:
-    name: Build (${{ matrix.os }} - ${{ matrix.platform }})
+    name: Build (${{ matrix.platform }})
+    runs-on: windows-2022
     strategy:
       fail-fast: false
       matrix:
-        include:
-          # --- Windows Server 2022 (VS2022 Baseline) ---
-          - os: "windows-2022"
-            platform: "Win32"
-            wdk_version: "10.0.26100.2454"
-            target_version: "10.0.26100.0"
-          - os: "windows-2022"
-            platform: "x64"
-            wdk_version: "10.0.26100.2454"
-            target_version: "10.0.26100.0"
-          - os: "windows-2022"
-            platform: "ARM64"
-            wdk_version: "10.0.26100.2454"
-            target_version: "10.0.26100.0"
-
-    runs-on: ${{ matrix.os }}
+        platform: ["Win32", "x64", "ARM64"]
 
     steps:
       - name: Checkout Repository
@@ -35,36 +21,36 @@ jobs:
       - name: Setup NuGet Environment
         uses: NuGet/setup-nuget@v3
 
-      - name: Restore WDK Packages & Build Elements
+      # Pulls down the driver compilation environment directly into the workspace
+      - name: Restore WDK Packages
         shell: powershell
         working-directory: libusbK
         run: |
-          nuget install Microsoft.Windows.WDK.x64 -Version "${{ matrix.wdk_version }}" -OutputDirectory packages
-          nuget install Microsoft.Windows.SDK.CPP.x64 -Version "${{ matrix.wdk_version }}" -OutputDirectory packages
+          nuget install Microsoft.Windows.WDK.x64 -Version "10.0.26100.2454" -OutputDirectory packages
 
-      # Build User-space Libraries
-      # Overrode WindowsTargetPlatformVersion & WindowsSDKVersion to force MSBuild to skip local disk checks
+      # Build User-space Libraries (x86, x64, ARM64)
       - name: Build User Libraries
         shell: cmd
         working-directory: libusbK
         run: |
           echo === Building User Space Libs ===
-          msbuild src\lib\libusbK_lib.vcxproj /p:Configuration=Release /p:Platform=${{ matrix.platform }} /p:TargetVersion="Windows10" /p:TargetPlatformVersion="${{ matrix.target_version }}" /p:WindowsTargetPlatformVersion="${{ matrix.target_version }}" /p:WindowsSDKVersion="${{ matrix.target_version }}\" /m
+          msbuild src\lib\libusbK_lib.vcxproj /p:Configuration=Release /p:Platform=${{ matrix.platform }} /m
 
       # Build Kernel Drivers (x64, ARM64 Only)
+      # We explicitly hook the NuGet-restored WDK content path using fixed quotes to prevent command line parsing crashes
       - name: Build Kernel Drivers
         if: matrix.platform != 'Win32'
         shell: cmd
         working-directory: libusbK
         run: |
           echo === Building Driver (.sys) ===
-          msbuild src\sys\libusbK_sys.vcxproj /p:Configuration=Release /p:Platform=${{ matrix.platform }} /p:PlatformToolset=v143 /p:TargetVersion="Windows10" /p:TargetPlatformVersion="${{ matrix.target_version }}" /p:ApiValidatorAnalyze=false /p:InfVerif=false /p:AdditionalIncludeDirectories="%CD%\packages\Microsoft.Windows.WDK.x64.${{ matrix.wdk_version }}\build\native\include" /m
+          msbuild src\sys\libusbK_sys.vcxproj /p:Configuration=Release /p:Platform=${{ matrix.platform }} /p:TargetVersion="Windows10" /p:TargetPlatformVersion="10.0.26100.0" /p:DriverTargetPlatform="Desktop" /p:ApiValidatorAnalyze=false /p:InfVerif=false /p:AdditionalIncludeDirectories="%CD%\packages\Microsoft.Windows.WDK.x64.10.0.26100.2454\build\native\include" /p:WdkContentRoot="%CD%\packages\Microsoft.Windows.WDK.x64.10.0.26100.2454" /m
 
-      # Securely Export Build Output Binaries
+      # Collect and Securely Export Output Binaries
       - name: Collect and Upload Artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: libusbK-${{ matrix.os }}-${{ matrix.platform }}-Output
+          name: libusbK-windows-2022-${{ matrix.platform }}-Output
           path: |
             libusbK/**/*.dll
             libusbK/**/*.lib
