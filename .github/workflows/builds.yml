@@ -9,27 +9,33 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # --- Windows Server 2022 Configurations ---
+          # --- Windows Server 2022 (VS2022 / WDK 26100 Ecosystem) ---
           - os: "windows-2022"
             platform: "Win32"
             wdk_version: "10.0.26100.2454"
+            target_version: "10.0.26100.0"
           - os: "windows-2022"
             platform: "x64"
             wdk_version: "10.0.26100.2454"
+            target_version: "10.0.26100.0"
           - os: "windows-2022"
             platform: "ARM64"
             wdk_version: "10.0.26100.2454"
+            target_version: "10.0.26100.0"
 
-          # --- Windows Server 2025 Configurations ---
+          # --- Windows Server 2025 (VS2026 / WDK 28000 Ecosystem) ---
           - os: "windows-2025"
             platform: "Win32"
-            wdk_version: "10.0.26100.2454" # Synced to 26100 to match VS2022 IDE host engine
+            wdk_version: "10.0.28000.1839"
+            target_version: "10.0.28000.0"
           - os: "windows-2025"
             platform: "x64"
-            wdk_version: "10.0.26100.2454"
+            wdk_version: "10.0.28000.1839"
+            target_version: "10.0.28000.0"
           - os: "windows-2025"
             platform: "ARM64"
-            wdk_version: "10.0.26100.2454"
+            wdk_version: "10.0.28000.1839"
+            target_version: "10.0.28000.0"
 
     runs-on: ${{ matrix.os }}
 
@@ -43,7 +49,6 @@ jobs:
       - name: Setup NuGet Environment
         uses: NuGet/setup-nuget@v3
 
-      # Restores exact WDK elements into the local working directory path
       - name: Restore WDK Packages & Build Elements
         shell: powershell
         working-directory: libusbK
@@ -51,41 +56,23 @@ jobs:
           nuget install Microsoft.Windows.WDK.x64 -Version "${{ matrix.wdk_version }}" -OutputDirectory packages
           nuget install Microsoft.Windows.SDK.CPP.x64 -Version "${{ matrix.wdk_version }}" -OutputDirectory packages
 
-      # Build User-space Libraries (x86, x64, ARM64)
-      # Added TargetUniversalCRTVersion override to completely bypass local C:\ SDK discovery checks
+      # Build User-space Libraries
       - name: Build User Libraries
         shell: cmd
         working-directory: libusbK
         run: |
           echo === Building User Space Libs ===
-          msbuild src\lib\libusbK_lib.vcxproj ^
-            /p:Configuration=Release ^
-            /p:Platform=${{ matrix.platform }} ^
-            /p:TargetVersion="Windows10" ^
-            /p:TargetPlatformVersion="10.0.26100.0" ^
-            /p:TargetUniversalCRTVersion="10.0.26100.0" ^
-            /m
+          msbuild src\lib\libusbK_lib.vcxproj /p:Configuration=Release /p:Platform=${{ matrix.platform }} /p:TargetVersion="Windows10" /p:TargetPlatformVersion="${{ matrix.target_version }}" /p:WindowsSDK_ExecutablePath_x64="%CD%\packages\Microsoft.Windows.WDK.x64.${{ matrix.wdk_version }}\tools\bin\x64" /m
 
       # Build Kernel Drivers (x64, ARM64 Only)
-      # Combines full path routing variables so both runner images successfully find ntddk.h
+      # Removed the trailing backslash from WdkContentRoot to fix the MSB4102 path escape crash
       - name: Build Kernel Drivers
         if: matrix.platform != 'Win32'
         shell: cmd
         working-directory: libusbK
         run: |
           echo === Building Driver (.sys) ===
-          msbuild src\sys\libusbK_sys.vcxproj ^
-            /p:Configuration=Release ^
-            /p:Platform=${{ matrix.platform }} ^
-            /p:TargetVersion="Windows10" ^
-            /p:TargetPlatformVersion="10.0.26100.0" ^
-            /p:TargetUniversalCRTVersion="10.0.26100.0" ^
-            /p:DriverTargetPlatform="Desktop" ^
-            /p:ApiValidatorAnalyze=false ^
-            /p:InfVerif=false ^
-            /p:AdditionalIncludeDirectories="%CD%\packages\Microsoft.Windows.WDK.x64.${{ matrix.wdk_version }}\build\native\include" ^
-            /p:WdkContentRoot="%CD%\packages\Microsoft.Windows.WDK.x64.${{ matrix.wdk_version }}\" ^
-            /m
+          msbuild src\sys\libusbK_sys.vcxproj /p:Configuration=Release /p:Platform=${{ matrix.platform }} /p:TargetVersion="Windows10" /p:TargetPlatformVersion="${{ matrix.target_version }}" /p:DriverTargetPlatform="Desktop" /p:ApiValidatorAnalyze=false /p:InfVerif=false /p:AdditionalIncludeDirectories="%CD%\packages\Microsoft.Windows.WDK.x64.${{ matrix.wdk_version }}\build\native\include" /p:WdkContentRoot="%CD%\packages\Microsoft.Windows.WDK.x64.${{ matrix.wdk_version }}" /m
 
       # Securely Export Build Output Binaries
       - name: Collect and Upload Artifacts
