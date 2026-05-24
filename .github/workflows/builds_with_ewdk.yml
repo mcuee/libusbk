@@ -1,0 +1,82 @@
+name: libusbK builds with EWDK
+
+on: [push, pull_request]
+
+jobs:
+  build-all:
+    name: Build All Targets (EWDK 26100)
+    runs-on: windows-2022
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # Step 1: Download and cache the EWDK ISO to save bandwidth on future runs
+      - name: Cache EWDK ISO
+        id: cache-ewdk
+        uses: actions/cache@v4
+        with:
+          path: C:\EWDK_ISO
+          key: ewdk-26100-v1
+
+      - name: Download EWDK ISO
+        if: steps.cache-ewdk.outputs.cache-hit != 'true'
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force -Path C:\EWDK_ISO
+          # Replace this URL with the official Microsoft EWDK 26100 direct download link
+          $Url = "https://go.microsoft.com/fwlink/?linkid=2271831" 
+          Invoke-WebRequest -Uri $Url -OutFile "C:\EWDK_ISO\EWDK.iso"
+
+      # Step 2: Mount the ISO to a virtual drive
+      - name: Mount EWDK ISO
+        id: mount-iso
+        shell: powershell
+        run: |
+          $MountDrive = (Mount-DiskImage -ImagePath "C:\EWDK_ISO\EWDK.iso" -PassThru | Get-Volume).DriveLetter
+          echo "EWDK_DRIVE=${MountDrive}:" >> $env:GITHUB_ENV
+          Write-Output "EWDK successfully mounted to ${MountDrive}:"
+
+      # Step 3: Compile Libraries (x86, x64, ARM64) using the EWDK environment
+      - name: Build User-space Libraries
+        shell: cmd
+        run: |
+          :: Enter the EWDK environment and pass the build commands
+          call "%EWDK_DRIVE%\LaunchBuildEnv.cmd" && (
+            
+            echo === Building x86 Library ===
+            msbuild ./libusbK/libusbK.sln /p:Configuration=Release /p:Platform=Win32 /t:libusbK_dll;libusbK_static /m
+            
+            echo === Building x64 Library ===
+            msbuild ./libusbK/libusbK.sln /p:Configuration=Release /p:Platform=x64 /t:libusbK_dll;libusbK_static /m
+            
+            echo === Building ARM64 Library ===
+            msbuild ./libusbK/libusbK.sln /p:Configuration=Release /p:Platform=ARM64 /t:libusbK_dll;libusbK_static /m
+          )
+
+      # Step 4: Compile Drivers (x64, ARM64) using the EWDK environment
+      - name: Build Drivers
+        shell: cmd
+        run: |
+          call "%EWDK_DRIVE%\LaunchBuildEnv.cmd" && (
+            
+            echo === Building x64 Driver ===
+            msbuild ./libusbK/libusbK.sln /p:Configuration=Release /p:Platform=x64 /p:DriverTargetPlatform="Universal" /t:libusbK_sys /m
+            
+            echo === Building ARM64 Driver ===
+            msbuild ./libusbK/libusbK.sln /p:Configuration=Release /p:Platform=ARM64 /p:DriverTargetPlatform="Universal" /t:libusbK_sys /m
+          )
+
+      # Step 5: Clean up by unmounting the ISO image
+      - name: Dismount EWDK ISO
+        if: always()
+        shell: powershell
+        run: |
+          Dismount-DiskImage -ImagePath "C:\EWDK_ISO\EWDK.iso"
+
+      # Step 6: Package Binaries
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: libusbK-EWDK-Output
+          path: **/Output/
