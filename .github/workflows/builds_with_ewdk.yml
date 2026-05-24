@@ -42,8 +42,8 @@ jobs:
         shell: powershell
         working-directory: libusbK
         run: |
-          nuget install Microsoft.Windows.WDK.x64 -Version 10.0.26100.2451 -OutputDirectory packages
-          nuget install Microsoft.Windows.SDK.CPP.x64 -Version 10.0.26100.2451 -OutputDirectory packages
+          nuget install Microsoft.Windows.WDK.x64 -Version 10.0.26100.2454 -OutputDirectory packages
+          nuget install Microsoft.Windows.SDK.CPP.x64 -Version 10.0.26100.2454 -OutputDirectory packages
 
       # Build User-space Libraries (x86, x64, ARM64)
       - name: Build User Libraries
