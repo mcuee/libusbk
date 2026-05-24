@@ -1,0 +1,91 @@
+name: libusbK builds with nuget WDK
+
+on: [push, pull_request]
+
+jobs:
+  build-project:
+    name: Build (${{ matrix.os }} - ${{ matrix.platform }})
+    strategy:
+      fail-fast: false
+      matrix:
+        # Define OS/Platform variations alongside explicit WDK/SDK matching versions
+        include:
+          # --- Windows Server 2022 Matrix Configurations ---
+          - os: "windows-2022"
+            platform: "Win32"
+            wdk_version: "10.0.26100.2454"
+            target_version: "10.0.26100.0"
+          - os: "windows-2022"
+            platform: "x64"
+            wdk_version: "10.0.26100.2454"
+            target_version: "10.0.26100.0"
+          - os: "windows-2022"
+            platform: "ARM64"
+            wdk_version: "10.0.26100.2454"
+            target_version: "10.0.26100.0"
+
+          # --- Windows Server 2025 Matrix Configurations ---
+          - os: "windows-2025"
+            platform: "Win32"
+            wdk_version: "10.0.28000.1839"
+            target_version: "10.0.28000.0"
+          - os: "windows-2025"
+            platform: "x64"
+            wdk_version: "10.0.28000.1839"
+            target_version: "10.0.28000.0"
+          - os: "windows-2025"
+            platform: "ARM64"
+            wdk_version: "10.0.28000.1839"
+            target_version: "10.0.28000.0"
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Setup MSBuild Configuration
+        uses: microsoft/setup-msbuild@v3
+
+      - name: Setup NuGet Environment
+        uses: NuGet/setup-nuget@v3
+
+      # Restores the modern 28000-series toolkits on Win2025 and 26100-series on Win2022
+      - name: Restore WDK Packages & Build Elements
+        shell: powershell
+        working-directory: libusbK
+        run: |
+          nuget install Microsoft.Windows.WDK.x64 -Version "${{ matrix.wdk_version }}" -OutputDirectory packages
+          nuget install Microsoft.Windows.SDK.CPP.x64 -Version "${{ matrix.wdk_version }}" -OutputDirectory packages
+
+      # Build User-space Libraries (x86, x64, ARM64)
+      - name: Build User Libraries
+        shell: cmd
+        working-directory: libusbK
+        run: |
+          echo === Building User Space Libs ===
+          msbuild src\lib\libusbK_lib.vcxproj /p:Configuration=Release /p:Platform=${{ matrix.platform }} /p:TargetVersion="Windows10" /p:TargetPlatformVersion="${{ matrix.target_version }}" /m
+
+      # Build Kernel Drivers (x64, ARM64 Only)
+      # Native macro mapping allows clean builds without needing folder overrides
+      - name: Build Kernel Drivers
+        if: matrix.platform != 'Win32'
+        shell: cmd
+        working-directory: libusbK
+        run: |
+          echo === Building Driver (.sys) ===
+          msbuild src\sys\libusbK_sys.vcxproj /p:Configuration=Release /p:Platform=${{ matrix.platform }} /p:TargetVersion="Windows10" /p:TargetPlatformVersion="${{ matrix.target_version }}" /p:DriverTargetPlatform="Desktop" /p:ApiValidatorAnalyze=false /p:InfVerif=false /m
+
+      # Securely Export Build Output Binaries
+      # Formatted name mapping prevents artifacts from overwriting each other in the matrix split
+      - name: Collect and Upload Artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: libusbK-${{ matrix.os }}-${{ matrix.platform }}-Output
+          path: |
+            libusbK/**/*.dll
+            libusbK/**/*.lib
+            libusbK/**/*.sys
+            libusbK/**/*.inf
+            libusbK/**/*.cat
+          if-no-files-found: error
