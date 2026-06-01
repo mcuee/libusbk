@@ -145,12 +145,12 @@
 	#define memcmppgm2ram(a,b,c)	memcmp(a,b,c)
 	#define strcmppgm2ram(a,b)		strcmp(a,b)
 	#define memcpypgm2ram(a,b,c)	memcpy(a,b,c)
-	#define strcpypgm2ram(a,b)		strcpy(a,b)
+	#define strcpypgm2ram(a,b)		strncpy(a,b,sizeof(a))
 	#define strncpypgm2ram(a,b,c)	strncpy(a,b,c)
 	#define strstrrampgm(a,b)		strstr(a,b)
 	#define	strlenpgm(a)			strlen(a)
 	#define strchrpgm(a,b)			strchr(a,b)
-	#define strcatpgm2ram(a,b)		strcat(a,b)
+	#define strcatpgm2ram(a,b)		strncat(a,b,sizeof(a)-strlen(a)-1)
 #endif
 
 
