@@ -88,6 +88,16 @@ jobs:
             /p:Platform=${{ matrix.platform }} ^
             /m /nologo /v:minimal
 
+      - name: Build Dynamic DLLs
+        shell: cmd
+        working-directory: libusbK
+        run: |
+          echo === Building Dynamic DLLs ===
+          msbuild src\dll\libusbK_dll.vcxproj ^
+            /p:Configuration=Release ^
+            /p:Platform=${{ matrix.platform }} ^
+            /m /nologo /v:minimal
+
       # Build kernel driver (x64 and ARM64 only)
       - name: Build Kernel Drivers
         if: matrix.platform != 'Win32'
