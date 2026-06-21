@@ -50,12 +50,10 @@ KUSB_EXP BOOL KUSB_API LUsb0_ControlTransfer(
 	int ret;
 	PKUSB_HANDLE_INTERNAL handle;
 
-	UNUSED(Overlapped);
-
 	Pub_To_Priv_UsbK(InterfaceHandle, handle, return FALSE);
 	ErrorSetAction(!PoolHandle_Inc_UsbK(handle), ERROR_RESOURCE_NOT_AVAILABLE, return FALSE, "->PoolHandle_Inc_UsbK");
 
-	ret = usb_control_msg(Dev_Handle(), SetupPacket.RequestType, SetupPacket.Request, SetupPacket.Value, SetupPacket.Index, Buffer, BufferLength, LIBUSB_DEFAULT_TIMEOUT);
+	ret = usb_control_msg(Dev_Handle(), SetupPacket.RequestType, SetupPacket.Request, SetupPacket.Value, SetupPacket.Index, Buffer, BufferLength, LIBUSB_DEFAULT_TIMEOUT, Overlapped);
 
 	if (ret >= 0)
 	{
@@ -123,7 +121,7 @@ int usb_set_configuration(HANDLE *dev, int configuration)
 	req.timeout = LIBUSB_DEFAULT_TIMEOUT;
 
 	if (!_usb_io_sync(dev, LIBUSB_IOCTL_SET_CONFIGURATION,
-		&req, sizeof(libusb_request), NULL, 0, NULL))
+		&req, sizeof(libusb_request), NULL, 0, NULL, NULL))
 	{
 		USBERR("could not set config %d: ", configuration);
 		return FALSE;
@@ -134,7 +132,8 @@ int usb_set_configuration(HANDLE *dev, int configuration)
 
 // See libusb-win32 windows.c:671-815
 int usb_control_msg(HANDLE *dev, int requesttype, int request,
-	int value, int index, PUCHAR bytes, int size, int timeout)
+	int value, int index, PUCHAR bytes, int size, int timeout,
+	LPOVERLAPPED Overlapped)
 {
 	int read = 0;
 	libusb_request req;
@@ -259,7 +258,8 @@ int usb_control_msg(HANDLE *dev, int requesttype, int request,
 		in_size = 0;
 	}
 
-	if (!_usb_io_sync(dev, code, out, out_size, in, in_size, &read))
+	if (!_usb_io_sync(dev, code, out, out_size, in, in_size, &read,
+			  Overlapped))
 	{
 		USBERR("sending control message failed");
 		if (!(requesttype & USB_ENDPOINT_IN))
@@ -280,9 +280,10 @@ int usb_control_msg(HANDLE *dev, int requesttype, int request,
 }
 
 int _usb_io_sync(HANDLE dev, unsigned int code, void *out, int out_size,
-	void *in, int in_size, int *ret)
+	void *in, int in_size, int *ret, LPOVERLAPPED Overlapped)
 {
 	OVERLAPPED ol;
+	OVERLAPPED *olp;
 	DWORD _ret;
 	DWORD err;
 
@@ -291,19 +292,31 @@ int _usb_io_sync(HANDLE dev, unsigned int code, void *out, int out_size,
 	if (ret)
 		*ret = 0;
 
-	ol.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+	if (!Overlapped)
+	{
+		ol.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
 
-	if (!ol.hEvent)
-		return FALSE;
+		if (!ol.hEvent)
+			return FALSE;
 
-	if (!DeviceIoControl(dev, code, out, out_size, in, in_size, NULL, &ol))
+		olp = &ol;
+	}
+	else
+	{
+		olp = Overlapped;
+	}
+
+	if (!DeviceIoControl(dev, code, out, out_size, in, in_size, NULL, olp))
 	{
 		err = GetLastError();
 
 		if (err != ERROR_IO_PENDING)
 		{
-			CloseHandle(ol.hEvent);
-			SetLastError(err);
+			USBERR("DeviceIoControl failed");
+			if (!Overlapped) {
+				CloseHandle(ol.hEvent);
+				SetLastError(err);
+			}
 			return FALSE;
 		}
 	} else {
@@ -314,16 +327,20 @@ int _usb_io_sync(HANDLE dev, unsigned int code, void *out, int out_size,
 		return TRUE;
 	}
 
-	if (GetOverlappedResult(dev, &ol, &_ret, TRUE))
+	if (GetOverlappedResult(dev, olp, &_ret, TRUE))
 	{
 		if (ret)
 			*ret = (int)_ret;
-		CloseHandle(ol.hEvent);
+		if (!Overlapped)
+			CloseHandle(ol.hEvent);
 		return TRUE;
 	}
 
-	err = GetLastError();
-	CloseHandle(ol.hEvent);
-	SetLastError(err);
+	USBERR("GetOverlappedResult failed");
+	if (!Overlapped) {
+		err = GetLastError();
+		CloseHandle(ol.hEvent);
+		SetLastError(err);
+	}
 	return FALSE;
 }

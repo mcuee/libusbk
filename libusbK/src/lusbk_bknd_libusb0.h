@@ -27,9 +27,10 @@ binary distributions.
 #endif
 
 int _usb_io_sync(HANDLE dev, unsigned int code, void *out, int out_size,
-	void *in, int in_size, int *ret);
+	void *in, int in_size, int *ret, LPOVERLAPPED Overlapped);
 
 int usb_control_msg(HANDLE *dev, int requesttype, int request,
-	int value, int index, PUCHAR bytes, int size, int timeout);
+	int value, int index, PUCHAR bytes, int size, int timeout,
+	LPOVERLAPPED Overlapped);
 
 int usb_set_configuration(HANDLE *dev, int configuration);
